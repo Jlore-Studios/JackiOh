@@ -20652,6 +20652,8 @@
       }
     },
     "5212": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-27T21:16:16Z",
@@ -20665,8 +20667,11 @@
         "trail": " BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchIn\u2026\n- Bash: {\"command\": \"sed -n 235,300p crates/server/tests/api/queue.rs; grep -n \\\"^mod r897000\\\\|^ use \\\\|^use \\\" crates/server/tests/api/queue.rs | head -40; grep -n \\\"^use \\\\|fn r897000_a_stale\\\" crates/ser\u2026\n- Bash: {\"command\": \"sed -n 585,816p crates/server/tests/api/queue.rs\", \"description\": \"Read r897000 tests in queue.rs\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn expiry_due\\\" -B6 -A12 crates/server/src/queue_presence.rs 2>/dev/null || grep -rn \\\"fn expiry_due\\\" crates/server/src; grep -n \\\"async fn enqueue\\\\|async fn open_count\\\\\u2026\n- Bash: {\"command\": \"sed -n 195,260p crates/server/src/api/queue.rs; sed -n 40,76p crates/server/tests/api/queue.rs; sed -n 180,235p crates/server/tests/api/queue.rs; grep -n \\\"pub(crate)\\\" crates/server/tes\u2026\n- Bash: {\"command\": \"grep -n \\\"SEED_MAP\\\\|crate::api::queue\\\" crates/server/tests/api/bots.rs | head -5; sed -n 395,520p crates/server/tests/api/bots.rs; sed -n 655,700p crates/server/tests/api/seats.rs\", \"d\u2026\n- Bash: {\"command\": \"cd crates/server/tests/api; grep -n \\\"async fn new_person\\\\|async fn ticket\\\\|async fn conquest_ticket\\\\|async fn give_trio\\\\|fn past_any_fallback\\\\|async fn matches\\\\|async fn seated\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159 && sed -n 66,100p crates/server/tests/api/bots.rs; sed -n 128,260p crates/server/tests/api/bots.rs; sed -n 612,640p crates/server/tests/api/bots\u2026\n- Bash: {\"command\": \"sed -n 820,850p crates/server/src/db/store.rs; sed -n 1,60p crates/server/tests/support/store.rs | head -80; grep -n \\\"tickets\\\" crates/server/src/db/fake.rs | head -8\", \"description\": \"\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/queue.rs'\\ns=open(p).read()\\nold_head=\\\"\\\"\\\"async fn seed_ticket(app: &App, input: SeedTicket<'_>) -> Value {\\n fake_lock(app)\\\"\\\"\\\"\\nnew_he\u2026\n- Bash: {\"command\": \"grep -n \\\"pub enum QueueMode\\\" -B4 -A12 crates/server/src/db/store.rs; grep -n '\\\"random\\\"' crates/server/tests/api/queue.rs | head -5\", \"description\": \"Check QueueMode serialization\"}\n- said: Now the bots.rs tests.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/bots.rs'\\ns=open(p).read()\\ns=s.replace(\\\"use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};\\\",\\\"use crate::api::que\u2026\n- Bash: {\"command\": \"grep -n \\\"enqueue(&app\\\\|queued\\\\[\\\\\\\"\\\" crates/server/tests/api/queue.rs | head -12; grep -n \\\"async fn open_ticket_id\\\\|fn ticket_id\\\" crates/server/tests/api/queue.rs\", \"description\":\u2026\n- Bash: {\"command\": \"sed -i '880s/queued\\\\[\\\"id\\\"\\\\].as_str().expect(\\\"the ticket'\\\"'\\\"'s id\\\")/queued[\\\"ticketId\\\"].as_str().expect(\\\"the ticket'\\\"'\\\"'s id\\\")/' crates/server/tests/api/queue.rs && sed -n 88\u2026\n- Bash: {\"command\": \"cat spec/rulings/R4072000.md; echo ------; git show 3b0334c408:spec/pending/5174.md; echo -----; ls spec/pending 2>&1 | head; ls spec/rulings | grep -c .; ls spec/rulings | grep R51\", \"d\u2026\n- Bash: {\"command\": \"sed -n 3p spec/09-architecture/9.5-matchmaking-lifecycle.md; echo ----; sed -n 11p spec/09-architecture/9.4-accounts-collection-loadouts.md; echo ----; sed -n 244p crates/server/README.m\u2026\n- Bash: {\"command\": \"mkdir -p spec/pending && cat > spec/rulings/R5159000.md <<'EOF'\\n---\\nid: R5159000\\ntitle: \\\"A queue ticket opened before a card patch is canceled at the next sweep, not seated in a game\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\ndef rep(p, old, new):\\n s=open(p).read()\\n assert s.count(old)==1, (p, s.count(old))\\n open(p,'w').write(s.replace(old,new,1))\\nrep('spec/09-architecture/9.5-matchmaki\u2026\n- Bash: {\"command\": \"cp crates/server/src/api/queue.rs /tmp/queue.rs.keep && sed -i 's/\\\\.partition(|ticket| ticket.catalog_version == app.catalog.version);/.partition(|ticket| ticket.catalog_version == app.\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/src/api/queue.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\" let mut tx = app.db.begin(None).await?;\\n tx.seats_fence(app.seats.epoch()).await?;\\n tx.tickets_cance\u2026\n- said: Every new test fails with its part of the change removed. Now the existing suites, fmt and clippy.\n- Bash: {\"command\": \"cargo fmt --check && echo FMT-OK; cargo test -p jackioh-server --test server -- api::queue:: api::bots:: api::seats:: 2>&1 | grep -E \\\"FAILED|test result|panicked\\\"; cargo clippy -p jack\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server 2>&1 | grep -E \\\"FAILED|test result|panicked|error\\\" | head -20\", \"description\": \"Run the whole server crate's tests\", \"timeout\": 900000}\n- Bash: {\"command\": \"git fetch origin main 2>&1 | tail -1; git rev-parse origin/main 2>&1 | head -1; cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\": \"Run the classify chec\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server 2>&1 | grep -E \\\"^test result|FAILED|panicked\\\" | head -20\", \"description\": \"Whole server suite with strict summary grep\", \"timeout\": 900000}\n- Bash: {\"command\": \"cargo jackioh classify --base 41323abeda --claims 2>&1 | tail -8; git status --short | head\", \"description\": \"Try classify against the branch base\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -rn \\\"Internal\\\" crates/tools/src/classify* 2>/dev/null | head -5; ls crates/tools/src | grep -i classif\", \"description\": \"Find why classify says Internal\"}\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --claims >/dev/null 2>&1; echo exit=$?; cargo jackioh patches check 2>&1 | tail -2; cargo jackioh catalog check 2>&1 | tail -2\", \"description\": \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstate='''## State\\n\\nBuilt, all of the plan, no departures. Done: `try_pair`'s cancel block (fenced by the seat epoch; `StoreError\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a queue ticket opened before a card patch is cancelled, not seated in a game on the new cards\"} --> Each matchmaking sweep now cancels every open queue ticket stamped with a different catalog version than the running one, in all three modes. A player qu\u2026"
       },
       "issue": 5159,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-27T22:41:09Z",
         "from_run": "46069201822",
         "gates": [
           {
@@ -20758,7 +20763,11 @@
         "source": "build",
         "until": "2026-11-27T23:10:19Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-27T22:40:19Z",
+      "run_id": "pending:0f31ae74-1795819253",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -20777,6 +20786,9 @@
         "provider": "claude-4",
         "run": "46069201822"
       },
+      "started_at": "2026-11-27T22:41:09Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -20790,9 +20802,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T22:32:55Z",
+    "at": "2026-11-27T22:41:09Z",
     "url": "",
-    "what": "review #5211 on claude-7"
+    "what": "review #5212 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-27T22:29:33Z",
