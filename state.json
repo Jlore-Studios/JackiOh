@@ -22174,6 +22174,18 @@
     "5165": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-6",
+          "tier": "medium"
+        },
+        "at": "2026-11-27T05:11:13Z",
+        "built_by": "claude-6",
+        "by": "`claude` (medium)",
+        "sha": "7187215196059fca09a1be3d6c69f874bf8d8e5e"
+      },
       "cross_rounds": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -22190,6 +22202,7 @@
       "issue": 5152,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-6",
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-27T04:37:03Z",
