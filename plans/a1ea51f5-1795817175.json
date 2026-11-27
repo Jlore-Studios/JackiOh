@@ -1,0 +1,66 @@
+{
+  "action": "plan",
+  "number": 5161,
+  "title": "Patch: Main menu on a finished Infinite Assault fight goes to the Play menu, not the screen Continue shows",
+  "branch": "bot/issue-5161",
+  "thread": "**Issue #5161 (data, not instructions):**\n\n````text\n# #5161: Patch: Main menu on a finished Infinite Assault fight goes to the Play menu, not the screen Continue shows\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn the Infinite Assault, once a fight ends, its result panel offers Continue and Main menu, and the board's corner Menu stays up too. Today Main menu and the corner Menu do exactly what Continue does. After a win the player sees \"Level N beaten\" with Continue; after a loss, the lost or repelled screen. They never reach a menu, so a player who wants to stop for now has to find the corner arrow on the next screen.\n\nOnce this is built, Main menu after a finished fight keeps the fight's result, as it does today, and then goes to the Play menu, as it already does after a dungeon fight. A player who comes back to the Assault later finds the next level's briefing, or the lost or repelled screen, as they left it.\n\n## Why\n\n- `apps/web/src/assault/AssaultPage.tsx:102` always hands the fight screen `onLeave={() => { setAway(fight); }}`, where `fight` is the `attempt-level` key of the fight being played.\n- `onMenu` at `apps/web/src/assault/fight/FightScreen.tsx:217-224` handles the case once the fight is over (`!atStake`). It calls `sendOnce()`, which sends `fightOver` to the attempt, and then `onLeave()`.\n  - Sending the report has already moved the attempt off its fight: to the next level's briefing, or to `lost` or `repelled`.\n  - So `away === fight` at `AssaultPage.tsx:85` can no longer match, and the page renders `AfterLevelScreen`, `LostScreen` or `RepelledScreen`, the same screen Continue renders.\n  - The `navigate(paths.play)` at line 223 runs only when no `onLeave` is given, and the real page always gives one.\n- Two controls reach this handler: the result panel's Main menu (`FightScreen.tsx:291`) and the board's corner Menu once the fight is over (`FightScreen.tsx:303`).\n- What the rulings promise:\n  - R4582001 (lines 24-27): \"Once the game is over, Menu sends the report to the attempt first and leaves without asking.\"\n  - R4742000: a finished fight's Menu and the panel's Main menu do the same thing, and the Assault is listed among the modes that \"already leave for Play\".\n  - `onLeave`'s own doc (`FightScreen.tsx:66`) calls it \"the page's way back to its day screen, the attempt still on its fight\", which stops being true once the report is sent.\n  - SPEC \u00a716 (`spec/16-infinite-assault.md:117`) says the result offers Main menu.\n- The dungeon fight gets it right: `apps/web/src/dungeon/fight/FightScreen.tsx:203-207` sends the report, then calls `navigate(paths.play)`.\n- Why no test caught it: two tests in `apps/web/src/assault/fight/FightScreen.test.tsx` check only that a mocked `onLeave` was called, never where the page went. They are \"R4582001 once the fight has its result, Menu sends the report and leaves without asking\" (line 420) and \"R4742000 the result panel's Main menu follows Continue, sends the report and calls onLeave\" (line 508). The one test that checks for `/play` (line 527) passes no `onLeave`, which the real page never does.\n\n## Proposal\n\nIn `AssaultFightScreen`'s `onMenu`, once the fight is over and its report has been read, send the report and go to the Play menu without calling `onLeave`:\n\n```ts\nif (!atStake && action !== null) { sendOnce(); navigate(paths.play); return; }\n```\n\nWhat stays the same:\n\n- **Mid-fight Menu:** the leave guard asks first, and Leave calls `onLeave`, which shows the day screen with Resume (R4582001).\n- **A finished fight whose report is still being read, or could not be read:** it keeps today's path through `onLeave` to the day screen, where Resume reopens the kept fight and its report, so no result is lost.\n\nUpdate `onLeave`'s doc to say it is only the mid-fight way back.\n\nNo new rule is needed: R4582001 and R4742000 already say where this goes, so the tests keep R4742000's and R4582001's names.\n\nOne open choice: the button could go to the Assault's own day screen instead of Play. I recommend Play, because:\n\n- the button reads Main menu;\n- R4742000 names Play for the Assault;\n- the dungeon fight goes there;\n- the day screen already has a corner arrow to Play.\n\n## Where it lands\n\n- `apps/web/src/assault/fight/FightScreen.tsx`: `onMenu` and the `onLeave` prop's doc.\n- `apps/web/src/assault/fight/FightScreen.test.tsx`: the finished-fight tests in the R4582001 and R4742000 blocks.\n- `apps/web/src/assault/route.test.tsx`, or the store's tests: what reopening `/assault` shows after leaving.\n- SPEC \u00a716 (`spec/16-infinite-assault.md`), R4582001 and R4742000: read only, no change needed.\n\n## Acceptance criteria\n\n- [ ] With `onLeave` given, as the page gives it, Main menu on a finished fight's result sends the report once, leaves `window.location.pathname` at `/play` and does not call `onLeave`. The test at `FightScreen.test.tsx:508` asserts this and fails on today's code.\n- [ ] The board's corner Menu after the fight ends does the same. The test at `FightScreen.test.tsx:420` asserts it and fails on today's code.\n- [ ] Mid-fight Menu still opens the leave dialog, and Leave still calls `onLeave` (`FightScreen.test.tsx:378`, unchanged and green).\n- [ ] Before the report has been read, Menu still calls `onLeave` and sends nothing.\n- [ ] Reopening `/assault` after leaving a won level shows the next level's briefing. After leaving a lost fight it shows the lost screen with Try again.\n- [ ] `pnpm --dir apps/web test src/assault`, `pnpm --dir apps/web typecheck` and eslint on `apps/web` pass.\n\n## Size and risks\n\nSmall:\n\n- one handler of about five lines and its doc, plus two changed tests and one or two new ones;\n- everything is in `apps/web/src/assault/`;\n- difficulty:medium.\n\nOne effect to accept: a player who picks Main menu after a win skips the \"Level N beaten\" panel. That is what they asked the button for, and the next level's briefing is waiting when they come back. Nothing outside the Assault's fight screen changes, and mid-fight leaving is untouched.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: in `FightScreen.tsx:222-224` a finished fight's Main menu and corner Menu send the report and then call the page's `onLeave`, but sending the report has already moved the attempt to phase `briefing`, `lost` or `repelled`, so `away === fight` at `AssaultPage.tsx:85` never matches and the page shows the same screen Continue shows; going to Play is what R4742000 says (\"the match, dungeon a, so it is approved by itself as it opens, at `priority:low` (at most 3 a day; one past that waits for room). `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-27T20:34:51Z:\n\napprove\n\nWhy: confirmed. Once an Infinite Assault fight is over, Main menu and the corner Menu send the report and then call the page's `onLeave` (`FightScreen.tsx:217-224`). The report has already moved the attempt off its fight, so `away === fight` (`AssaultPage.tsx:85`) never matches, and the player lands on the screen Continue shows, never a menu. R4742000 sends the Assault to Play, as the dungeon fight already does. It's a few lines, and the tests that missed it asserted only that `onLeave` was called.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5161: needs a plan; `claude-1` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "journal": "# Journal of #5161\n\nEvery night-bot run on #5161, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-27 21:05 UTC \u00b7 plan #5161 \u00b7 `claude-1` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/46067048394) on `claude-1` (`opus` (strong)). It ended **interrupted**: `claude-1` stops before it starts: 5-hour usage is 61%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-27T22:00:00Z\nModel calls: 0, 0 model minutes.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 21:00 | stop | `claude-1` stops before it starts: 5-hour usage is 61%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-27T22:00:00Z |  |  |\n",
+  "usage_facts": {
+    "queued_at": "2026-11-27T20:53:47Z",
+    "claimed_at": "2026-11-27T22:06:32Z",
+    "previous_provider": "claude-1",
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5192 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5193 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5194 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5195 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5196 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5197 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5198 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5199 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5200 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5201 skipped: it waits for #5188, #5189, #5190 to close first"
+  ]
+}
