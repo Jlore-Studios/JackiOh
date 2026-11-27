@@ -542,7 +542,7 @@ describe("a face in play is the card as the view says it stands; the collection'
 
   it("R752 a radiant Heroic Power prints its rolled power's Radiant words and name, marked against the base", () => {
     const f = face("core-098", true, { liveCost: 0, inPlay: { power: { name: "armor" } } });
-    expect(f.text.full).toBe("Indestructible\nTank Up\nActivate: Spend (0): Your hero gains 4 Armor, then this power refreshes."); // R3551002
+    expect(f.text.full).toBe("Indestructible\nTank Up\nActivate: Spend (0): Your hero gains 2 Armor."); // R3551002, R5183001
     // R277: the rolled power is marked against the same power's base words.
     expect(markedText(f.text.full, legacyText(f.text).marks).length).toBeGreaterThan(0);
     expect(f.printed?.full).toBe(fillParams(def("core-098"), "radiant"));

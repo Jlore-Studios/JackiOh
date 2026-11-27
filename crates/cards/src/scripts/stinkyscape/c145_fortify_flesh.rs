@@ -1,12 +1,13 @@
 //! S #145 Fortify Flesh (SPEC §8.10 row S 145; §4.4, §6.1, R124, R1438, R1867008): (4) Spell, Rare.
-//!   Base:    "Your hero gains a random {least} to {most} Armor." — 3 to 5.
-//!   Radiant: "Lucky 1 / Your hero gains a random {least} to {most} Armor." — 3 to 5, the base range
-//!            since issue #4292 (3 to 7 before).
+//!   Base:    "Your hero gains a random {least} to {most} Armor." — 5 to 8 since #5183 (R5183004; 3 to 5
+//!            before).
+//!   Radiant: "Lucky 1 / Your hero gains a random {least} to {most} Armor." — the base range since issue
+//!            #4292 (3 to 7 before).
 //!
 //! Engine: one luck-based roll from the match rng, uniform from the declared least to the declared
 //! most, both ends included (a Buff that lifts the low end past the high one rolls between the
-//! two), then `gain_hero_armor`: the hero's Armor, §4.4 step 2's reduction of every hit kept for
-//! the rest of the game, stacking with any Armor already there (C+ #46's, R124). Lucky is the
+//! two), then `gain_hero_armor`: the hero's Armor, §4.4 step 2's reduction of every hit, which each
+//! hit it meets wears by 1 (R5183000), stacking with any Armor already there (C+ #46's, R124). Lucky is the
 //! card's Lucky now plus its controller's Luck (C+ #25 Soul Shot's shape): the Radiant face prints
 //! Lucky 1, so it rolls once more and keeps the higher (§6.1 Lucky X, R1438, R987).
 
@@ -71,20 +72,20 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1867008_armor_rises_by_3_4_or_5_each_seen_over_the_seeds() {
+        fn r1867008_r5183004_armor_rises_by_5_to_8_each_seen_over_the_seeds() {
             let mut seen: IndexSet<i32> = IndexSet::new();
             for seed in 0..120 {
                 let (gained, draws) = gained(&format!("fortify-{seed}"), json!([FORTIFY, FILLER]));
-                assert!((3..=5).contains(&gained), "{gained} in 3 to 5");
+                assert!((5..=8).contains(&gained), "{gained} in 5 to 8");
                 assert_eq!(draws, 1, "one roll");
                 seen.insert(gained);
             }
-            let expected: IndexSet<i32> = [3, 4, 5].into_iter().collect();
+            let expected: IndexSet<i32> = [5, 6, 7, 8].into_iter().collect();
             assert_eq!(seen, expected);
         }
 
         #[test]
-        fn armor_persists_on_later_turns_and_stacks_with_armor_already_there() {
+        fn r5183000_armor_persists_on_later_turns_stacks_with_armor_already_there_and_a_hit_wears_it() {
             let mut s = scenario(json!({
                 "seed": "fortify-persist",
                 "p1": { "hand": [FORTIFY, FILLER], "armor": 2 },
@@ -97,13 +98,13 @@ mod tests {
 
             s.play(FORTIFY, json!({}));
             let armor = armor_of(&s, P1);
-            assert!((5..=7).contains(&armor), "2 stacked with a roll of 3 to 5: {armor}");
+            assert!((7..=10).contains(&armor), "2 stacked with a roll of 5 to 8: {armor}");
 
             let before = s.state().players.p1.hero.health;
             s.attack(&hammer.id, "hero");
             let dealt = before - s.state().players.p1.hero.health;
             assert_eq!(dealt, (6 - armor).max(0), "a 6-hit through {armor} Armor");
-            assert_eq!(armor_of(&s, P1), armor, "Armor stays");
+            assert_eq!(armor_of(&s, P1), armor - 1, "the hit wore 1 off it");
         }
 
         /// R3857000: the gain is reported on the caster's hero, its roll and the Armor after it, to
@@ -122,7 +123,7 @@ mod tests {
                 amount: armor - 2,
                 armor,
             };
-            assert!((3..=5).contains(&(armor - 2)), "a roll of 3 to 5: {armor}");
+            assert!((5..=8).contains(&(armor - 2)), "a roll of 5 to 8: {armor}");
             assert_eq!(s.events_of(GameEventType::ArmorGained), vec![gained.clone()]);
             for viewer in [P1, P2] {
                 assert!(s.view(viewer).events.contains(&gained), "{viewer:?} sees the gain");
@@ -137,15 +138,15 @@ mod tests {
                     "p1": { "hand": [FORTIFY, FILLER] },
                     "p2": { "hand": [FILLER] },
                 }));
-                step_param(s.card_mut(FORTIFY), "least", 3);
+                step_param(s.card_mut(FORTIFY), "least", 4);
                 s.play(FORTIFY, json!({}));
                 let armor = armor_of(&s, P1);
-                assert!((5..=6).contains(&armor), "between 5 and 6: {armor}");
+                assert!((8..=9).contains(&armor), "between 8 and 9: {armor}");
             }
         }
 
         #[test]
-        fn r386_an_upgrade_of_most_to_6_rolls_up_to_6() {
+        fn r386_an_upgrade_of_most_to_9_rolls_up_to_9() {
             let mut seen: IndexSet<i32> = IndexSet::new();
             for seed in 0..60 {
                 let mut s = scenario(json!({
@@ -157,8 +158,8 @@ mod tests {
                 s.play(FORTIFY, json!({}));
                 seen.insert(armor_of(&s, P1));
             }
-            assert!(seen.contains(&6), "{seen:?}");
-            assert!(seen.iter().all(|armor| (3..=6).contains(armor)), "{seen:?}");
+            assert!(seen.contains(&9), "{seen:?}");
+            assert!(seen.iter().all(|armor| (5..=9).contains(armor)), "{seen:?}");
         }
     }
 
@@ -170,15 +171,15 @@ mod tests {
         }
 
         #[test]
-        fn r1867008_radiant_rolls_3_to_5_twice_keeping_the_higher() {
+        fn r1867008_r5183004_radiant_rolls_5_to_8_twice_keeping_the_higher() {
             let mut seen: IndexSet<i32> = IndexSet::new();
             for seed in 0..200 {
                 let (gained, draws) = radiant_gained(&format!("fortify-radiant-{seed}"));
-                assert!((3..=5).contains(&gained), "{gained} in 3 to 5");
+                assert!((5..=8).contains(&gained), "{gained} in 5 to 8");
                 assert_eq!(draws, 2, "Lucky 1 rolls twice");
                 seen.insert(gained);
             }
-            assert!(seen.contains(&3) && seen.contains(&5), "{seen:?}");
+            assert!(seen.contains(&5) && seen.contains(&8), "{seen:?}");
         }
 
         #[test]

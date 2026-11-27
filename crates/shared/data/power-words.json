@@ -59,8 +59,8 @@
     "x": 0,
     "title": "Armor Up",
     "radiantTitle": "Tank Up",
-    "base": "Your hero gains {armor} Armor until your next turn.",
-    "radiant": "Your hero gains {armor} Armor, then this power refreshes."
+    "base": "Your hero gains {armor} Armor.",
+    "radiant": "Your hero gains {armor} Armor."
   },
   "insect": {
     "x": 1,

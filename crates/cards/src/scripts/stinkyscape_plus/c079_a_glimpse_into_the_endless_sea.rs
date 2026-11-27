@@ -3,7 +3,8 @@
 //!   Base:    "Exile your deck and every permanent. You are immune to fatigue damage. Start an {count}
 //!            turn countdown. When it ends, win the game." (7; 8 through v0.6.7k, issue #4285)
 //!   Radiant: "Exile your deck and every permanent. Your hero gains {armor} Armor. You are immune to
-//!            fatigue damage. Start an {count} turn countdown. When it ends, win the game." (7, Armor 5)
+//!            fatigue damage. Start an {count} turn countdown. When it ends, win the game." (7, Armor 8 since
+//!            #5183, R5183004; 5 before)
 //!
 //! Engine: the whole library is exiled with no draw, so no fatigue (§2.4), as S+ #80 does. The
 //! countdown is `delay` "in N turns" (R1181000): a badge on its owner's side counts down the turns they
@@ -12,7 +13,7 @@
 //! on the other player's turn counting from their next (R3569005). The card is a Wincon, so Bob's Plan
 //! may pick it: its plan is Core #75 Infinite Reserves, which keeps the empty deck from costing its
 //! owner the game before the countdown ends (R3569006; `c001_bobs_plan.rs`). The Radiant face's Armor is
-//! `gain_hero_armor`, the declared `armor` (R386), kept for the rest of the game (R124). Issue #3951 took
+//! `gain_hero_armor`, the declared `armor` (R386), kept until hits wear it (R124, R5183000). Issue #3951 took
 //! the base face's countdown from 10 to 8, a number, and gave the Radiant face its Armor, which
 //! `script_v0_6_4c` leaves out for the replays of v0.6.4c and before (R767000). Issue #4154 has both
 //! faces exile every permanent after the deck (R4154200): each side's board, the caster's first, by
@@ -245,11 +246,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3569005_radiant_counts_7_and_gives_your_hero_armor_5() {
+        fn r3569005_r5183004_radiant_counts_7_and_gives_your_hero_armor_8() {
             let mut s = game("glimpse-radiant", true);
             s.play(ID, json!({}));
             assert!(s.pile(P1, "library").is_empty());
-            assert_eq!(s.state().players[P1].hero.armor, 5);
+            assert_eq!(s.state().players[P1].hero.armor, 8);
             let (turns, winner) = turns_to_win(&mut s, 12);
             assert_eq!((turns, winner), (7, Some(Winner::P1)));
         }
@@ -340,7 +341,7 @@ mod tests {
                     assert!(s.backrow(P1, lane).is_none() && s.backrow(P2, lane).is_none(), "nor a backrow card");
                 }
                 // The countdown and the Radiant face's Armor are as before.
-                let armor = if radiant { 5 } else { 0 };
+                let armor = if radiant { 8 } else { 0 };
                 assert_eq!(s.state().players[P1].hero.armor, armor);
                 let (turns, winner) = turns_to_win(&mut s, 12);
                 assert_eq!((turns, winner), (7, Some(Winner::P1)));
@@ -359,7 +360,7 @@ mod tests {
                     assert!(s.pile(P2, "exile").is_empty());
                     assert_eq!(s.unit(P1, 1).map(|card| card.id), Some(permanents[0].clone()));
                     assert_eq!(s.unit(P2, 2).map(|card| card.id), Some(permanents[3].clone()));
-                    let armor = if radiant { 5 } else { 0 };
+                    let armor = if radiant { 8 } else { 0 };
                     assert_eq!(s.state().players[P1].hero.armor, armor);
                 }
             });
