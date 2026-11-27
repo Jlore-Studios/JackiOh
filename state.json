@@ -22144,15 +22144,8 @@
       "taken_asks": []
     },
     "5154": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45932733964",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-27T03:27:08Z",
-        "until": "2026-11-27T03:57:08Z"
-      },
       "difficulty_by": {
         "at": "2026-11-27T03:26:59Z",
         "difficulty": "medium",
@@ -22171,10 +22164,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"ls .bot-plan.md 2>&1; wc -l crates/tools/src/fuzz.rs crates/engine/src/testkit/invariants.rs; grep -n \\\"GROWTH_EVENTS_BOUND\\\\|struct FuzzFailure\\\\|struct Failure\\\\|fn play_game_with_opti\u2026\n- Bash: {\"command\": \"sed -n 1195,1260p crates/tools/src/fuzz.rs; sed -n 1440,1700p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"sed -n 2560,2640p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"sed -n 2640,2700p crates/tools/src/fuzz.rs; grep -n \\\"FuzzFailure\\\\b\\\" crates/tools/src/*.rs | grep -v \\\"^crates/tools/src/fuzz.rs:1[2-6]\\\" | head -60; grep -n \\\"Failure {\\\" crates/tools\u2026\n- Bash: {\"command\": \"sed -n 800,850p crates/tools/src/fuzz.rs; sed -n 3290,3400p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"sed -n 2850,3010p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"sed -n 3560,3680p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"sed -n 3930,4080p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"cd crates/engine/src/testkit; grep -n \\\"pub fn before\\\\|pub fn after\\\\|pub fn listed\\\\|pub fn hidden\\\\|pub fn unlisted\\\\|fn listed_refused\\\\|pub struct InvariantMonitor\\\\|pub fn create_i\u2026\n- Bash: {\"command\": \"cd crates/tools/src; sed -n 2400,2560p fuzz.rs | grep -n \\\"fn probe_state\\\" ; grep -n \\\"fn probe_state\\\" fuzz.rs\"}\n- tool error: Exit code 2 /bin/bash: line 1: cd: crates/tools/src: No such file or directory sed: can't read fuzz.rs: No such file or directory grep: fuzz.rs: No such file or directory\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5154; sed -n 3725,3830p crates/engine/src/testkit/invariants.rs; sed -n 5895,5935p crates/engine/src/testkit/invariants.rs; grep -n \\\"fn probe_state\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5154; sed -n 2505,2560p crates/tools/src/fuzz.rs; grep -rn \\\"\\\\.listed(\\\\|listed_refused(\\\" crates --include=*.rs | grep -v \\\"^crates/engine/src/test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5154; sed -n 4780,4830p crates/tools/src/fuzz.rs; sed -n 4930,5040p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5154; sed -n 5075,5200p crates/tools/src/fuzz.rs; sed -n 7020,7060p crates/tools/src/fuzz.rs; grep -n \\\"FailureStage::as_str\\\\|enum FailureStage\\\" cr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5154; grep -rn '\\\\[\\\"step\\\"\\\\]\\\\|\\\"step\\\"' crates/tools crates/engine/src/testkit --include=*.rs | grep -v \\\"^crates/engine/src/testkit/invariants\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5154; grep -n \\\"failure.message\\\\|\\\\.message)\\\" crates/tools/src/*.rs | grep -v \\\"assert\\\\|duos\\\" | head -20; grep -n \\\"macro_rules! string_union\\\" -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5154; grep -n \\\"invariants\\\\|I14_NONCE\\\" crates/engine/src/testkit/mod.rs | head; grep -n \\\"I14_NONCE\\\\|listed_refused\\\\|create_invariant_monitor\\\" c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5154; grep -n \\\"FailureStage::Invariant\\\" crates/tools/src/fuzz.rs | head -20; sed -n 5225,5262p crates/tools/src/fuzz.rs; sed -n 4880,4900p crates/t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5154; sed -n 5255,5330p crates/engine/src/testkit/invariants.rs; sed -n 4740,4780p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5154; grep -n \\\"^pub fn \\\" crates/engine/src/effects/mod.rs | head -80; grep -n \\\"I20\\\\b\\\" crates/engine/src/testkit/invariants.rs | head -5\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5154/.bot-plan.md\", \"content\": \"Draft (planner, #5154): read fuzz.rs play_game_with_options (1449-1690), Failure (2581), report (2858), json (3590), r\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Rule 1\u20135 none hold: the change is the fuzz tool's reporting in crates/tools plus a test-support seam in the engine's testkit (no rules, no resolution loop, no AI, no migration, about 4 files).\"} --> ## Goal A failing fuzz seed's report shows the step that \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-27T03:11:40Z",
       "owner_why": "it plans it",
@@ -22187,9 +22179,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-27T03:09:54Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45932733964",
+      "run_id": "pending:ebadeb86-1795750079",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-27T03:11:40Z",
+      "started_at": "2026-11-27T03:28:13Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -22197,9 +22189,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T03:20:06Z",
+    "at": "2026-11-27T03:28:13Z",
     "url": "",
-    "what": "build #5152 on claude-6"
+    "what": "build #5154 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-27T03:17:53Z",
