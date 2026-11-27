@@ -2359,8 +2359,10 @@ fn immutable_step(state: &GameState) -> ImmutableStep {
 /// (so a grant or an aura that lapses in the step lets it go, R4353000), or, gone from the field, a hand
 /// and a library, when its own keywords held it. Draws nothing.
 ///
-/// R5166001: once the step summons or flickers a card anew, an event changing its text is judged by what
-/// R78's reset kept (a granted Immutable is gone).
+/// R5166001: once the step summons or flickers a card anew past R78's reset (it began on the field, or
+/// left it or reached an exile or a graveyard in the step), an event changing its text is judged by what
+/// the reset kept (a granted Immutable is gone). One summoned straight from a hand or a library keeps
+/// what it was granted there, and is still judged by it.
 fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &GameState) -> Vec<String> {
     let mut found: Vec<String> = Vec::new();
     if step.marks.is_empty() {
@@ -2389,6 +2391,10 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
     // R4783002: the cards the step sent to an exile or a graveyard, where Immutable stops nothing (§6.3),
     // and has not brought back to the field.
     let mut unjudged: IndexSet<&str> = IndexSet::new();
+    // R5166001: the cards the step has put through R78's reset (`zones::reset_instance`): one that left
+    // the field or reached an exile or a graveyard. A card summoned from a hand or a library with neither
+    // keeps what it was granted there (`KEPT_IN_HAND_OR_LIBRARY`).
+    let mut wiped: IndexSet<&str> = IndexSet::new();
     for event in events {
         let (id, lawful) = match event {
             // R4609001: a Replace off the field, in a hand or a library, or (R4783002) in an exile or a
@@ -2424,12 +2430,16 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
             } => (result_instance_id, false),
             // R4609002, R78: left the field and back, or back through Reborn.
             GameEvent::Flickered { instance_id, .. } | GameEvent::Summoned { instance_id, .. } => {
+                if matches!(event, GameEvent::Flickered { .. }) {
+                    wiped.insert(instance_id);
+                }
                 reset.insert(instance_id);
                 unjudged.swap_remove(instance_id.as_str());
                 continue;
             }
             // R4783002: into a zone I23 does not judge.
             GameEvent::Exiled { instance_id, .. } | GameEvent::EnteredGraveyard { instance_id, .. } => {
+                wiped.insert(instance_id);
                 unjudged.insert(instance_id);
                 continue;
             }
@@ -2439,8 +2449,10 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
             continue;
         };
         let id = id.as_str();
-        // R5166001: a card the step summoned or flickered anew (R78) is judged by what its reset kept.
-        let reset_away = reset.contains(id) && !mark.reset_own;
+        // R5166001: a card the step summoned or flickered anew past R78's reset (it began on the field, or
+        // the step wiped it since) is judged by what the reset kept.
+        let reset_away =
+            reset.contains(id) && (mark.zone == ZoneName::Field || wiped.contains(id)) && !mark.reset_own;
         if lawful || reset_away || released.contains(id) || !judged.contains(id) {
             continue;
         }
