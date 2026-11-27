@@ -19758,17 +19758,8 @@
       "verdict_rounds": 1
     },
     "5158": {
-      "action": "plan",
-      "asks": [
-        "c:7227641103"
-      ],
-      "build_next": {
-        "from_run": "46065868093",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-27T21:06:17Z",
-        "until": "2026-11-27T21:36:17Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-27T21:06:07Z",
         "difficulty": "medium",
@@ -19787,10 +19778,9 @@
         "reason": "planned on sonnet",
         "trail": " -60; python3 - <<'EOF'\\nimport re\\nt=\\\"Patch: Radiant\u2026\n- Bash: {\"command\": \"sed -n 2085,2160p crates/cards/src/history.rs\"}\n- Bash: {\"command\": \"grep -rln \\\"KEPT_SCRIPTS\\\" crates apps docs --include=* 2>/dev/null | grep -v target | head -20; sed -n 1,40p crates/tools/src/carried.rs | cut -c1-220\"}\n- Bash: {\"command\": \"grep -n \\\"pub struct CardScripts\\\" -A8 crates/engine/src/*.rs | head -14; cat rustfmt.toml; grep -n \\\"infinite_assault\\\" crates/cards/src/scripts/mod.rs | head -3; grep -n \\\"c224\\\" crate\u2026\n- Bash: {\"command\": \"grep -n \\\"KEPT_SCRIPTS\\\" crates/cards/tests/cross/*.rs crates/tools/src/patches.rs | head -20; ls crates/cards/src; grep -n \\\"infinite_assault\\\" crates/cards/src/scripts.rs crates/cards/\u2026\n- Bash: {\"command\": \"sed -n 1520,1535p crates/cards/tests/cross/activate_listed.rs; sed -n 35,48p crates/cards/tests/cross/forced_attacks.rs; ls crates/cards/src/scripts | head -20; grep -rn \\\"infinite_assau\u2026\n- Bash: {\"command\": \"grep -rn \\\"c224_rollback_point\\\" crates --include=*.rs | grep -v \\\"scripts/infinite_assault/c224\\\" | head; grep -n \\\"mod infinite_assault\\\" -r crates/cards/src crates/cards/build.rs | he\u2026\n- Bash: {\"command\": \"grep -rn \\\"infinite_assault\\\" crates/cards/src/lib.rs crates/cards/build.rs crates/cards/Cargo.toml | head; ls crates/cards/src/scripts/infinite_assault | grep -v \\\"^c[0-9]\\\" ; ls crates\u2026\n- Bash: {\"command\": \"sed -n 600,700p crates/engine/src/wire/view.rs | grep -n \\\"pub attack\\\\|pub health\\\\|pub max_health\\\\|pub keywords\\\" ; sed -n 1860,1880p crates/engine/src/testkit/scenario.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"radiant, 12\\\\|\\\\.attack, 12\\\\|max_health, 12\\\\|, 12);\\\" crates/cards/src/scripts/infinite_assault/c230_everything_youve_ever_played.rs crates/cards/src/scripts/infinite_assaul\u2026\n- Bash: {\"command\": \"grep -n \\\"RADIANT_FALLBACK_FACTOR\\\" crates/engine/src/config.rs; grep -n \\\"fn filler\\\\|pub fn scenario\\\" crates/cards/src/lib.rs | head\"}\n- Bash: {\"command\": \"cat crates/cards/patches/shipped.json | tail -5; grep -n \\\"CATALOG_VERSION\\\" -r crates/cards/src/versions.rs | head -3; ls spec/history | tail -3; sed -n 1,30p crates/cards/src/scripts/s\u2026\n- Bash: {\"command\": \"sed -n 1696,1730p crates/cards/src/history.rs; sed -n 1800,1850p crates/tools/src/patches.rs\"}\n- Bash: {\"command\": \"grep -n \\\"fn player_note_problems\\\" -B30 crates/tools/src/patches.rs | grep -n \\\"const\\\\|///\\\" | head -40\"}\n- Bash: {\"command\": \"sed -n 1665,1760p crates/tools/src/patches.rs\"}\n- Bash: {\"command\": \"grep -n \\\"set_ships\\\" crates/tools/src/patches.rs | head; sed -n 755,800p crates/tools/src/patches.rs\"}\n- Bash: {\"command\": \"sed -n 1585,1610p crates/tools/src/patches.rs\"}\n- Bash: {\"command\": \"grep -c \\\"infiniteassault-\\\" crates/cards/patches/v0.6.15l.json crates/cards/patches/v0.6.13d.json crates/cards/patches/v0.6.13e.json 2>&1; grep -n \\\"infiniteassault\\\\|Infinite Assault\\\\\u2026\n- Bash: {\"command\": \"grep -n \\\"assault\\\\|Assault\\\" crates/cards/src/history.rs | head -20; grep -n \\\"assault_content_at\\\\|fn content_at\\\" -r crates/run/src crates/shared/src | head\"}\n- Bash: {\"command\": \"grep -n \\\"shipped_view\\\\|snapshot\\\\|fn .*history\\\\|removed\\\\|absent\\\" crates/cards/build.rs | head -50\"}\n- Bash: {\"command\": \"sed -n 28,50p crates/cards/build.rs; grep -n \\\"absent\\\" crates/cards/src/history.rs | head -20\"}\n- Bash: {\"command\": \"sed -n 1731,1775p crates/cards/src/history.rs; sed -n 470,500p crates/cards/build.rs\"}\n- Bash: {\"command\": \"grep -n \\\"R5125000\\\" -B3 -A12 crates/shared/src/host/practice/host.rs | head -80\"}\n- Bash: {\"command\": \"sed -n 425,470p crates/cards/build.rs; grep -n \\\"history_json(\\\" crates/cards/build.rs | head\"}\n- Bash: {\"command\": \"sed -n 150,196p crates/cards/build.rs; grep -n \\\"held\\\\|shipped_sets\\\\|Held\\\\|SinglePlayer\\\\|stage\\\" crates/cards/build.rs | head\"}\n- Bash: {\"command\": \"sed -n 36,42p spec/16-infinite-assault.md | cut -c1-900; sed -n 1818,1832p crates/cards/src/history.rs; grep -rn \\\"absent\\\" crates/cards/src/history.rs | sed -n 1,3p; grep -n \\\"fn assaul\u2026\n- Bash: {\"command\": \"grep -c '\\\"boss' crates/cards/patches/v0.6.15l.json; grep -o '\\\"boss[a-z]*-[0-9]*\\\"' crates/cards/patches/v0.6.15l.json | head -3; grep -n \\\"fn set_ships\\\" -B6 -A8 crates/engine/src/wire\u2026\n- Bash: {\"command\": \"grep -n \\\"r5125000\\\\|R5125000\\\" crates/shared/tests/practice.rs | head; grep -rn \\\"deck_sets\\\" crates/shared/src/host/practice/*.rs | head -8\"}\n- Bash: {\"command\": \"grep -rn \\\"no card of\\\\|unknown card\\\\|is not in the catalog\\\\|refused.*absent\\\\|earlier_patch\\\" crates/engine/src/replay*.rs crates/shared/src/host/practice/replay*.rs 2>/dev/null | hea\u2026\n- Bash: {\"command\": \"grep -n \\\"fn area\\\" -A40 crates/tools/src/classify.rs | head -70\"}\n- Bash: {\"command\": \"awk '/^#\\\\[cfg\\\\(test\\\\)\\\\]/{exit} {l=$0; sub(/^[ \\\\t]+/,\\\"\\\",l); if (l==\\\"\\\" || l ~ /^\\\\/\\\\// || l ~ /^use /) next; n++} END{print n}' crates/cards/src/scripts/infinite_assault/c224_rol\u2026\n- Bash: {\"command\": \"rustfmt --edition 2024 --check crates/cards/src/scripts/infinite_assault/c224_rollback_point.rs 2>&1 | head -20; echo rc=$?; ls -a | grep -i fmt\"}\n- Bash: {\"command\": \"grep -n -i \\\"kept\\\\|script_before\\\\|script_v\\\" crates/tools/tests/acceptance.rs | head -20; grep -rn \\\"r4594005\\\" crates --include=*.rs -l\"}\n- Bash: {\"command\": \"grep -n \\\"r4594005\\\" -B3 -A30 crates/engine/tests/rules/commanders.rs | head -80; grep -rn \\\"infiniteassault-224\\\\|rollback\\\" crates --include=*.rs -il | grep -v \\\"scripts/infinite_assau\u2026\n- Bash: {\"command\": \"grep -rn \\\"fn .*loc\\\" crates/tools/tests/*.rs crates/tools/src/catalog.rs | head -10\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5158/.bot-plan.md\", \"content\": \"# Draft plan for #5158 (medium)\\n\\nFindings:\\n- c224_rollback_point.rs:57 `json!({\\\"defId\\\": def_id, \\\"radiant\\\": radi\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"A card-script fix with its kept script, a pending fragment, a loc number and one spec line: no engine rules, AI, cross-crate design, migration or ~40 files, so no hard line holds.\"} --> ## Goal Rollback Point's Radiant face summons each copy on its printed\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-27T20:46:06Z",
       "owner_why": "it plans it",
@@ -19803,12 +19793,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-27T20:35:26Z",
       "requested_by": "jgoetzmann",
-      "run_id": "46065868093",
+      "run_id": "pending:ccf1e61d-1795813616",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-27T20:46:06Z",
+      "started_at": "2026-11-27T21:07:27Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7227641103"
+      ]
     },
     "5159": {
       "action": "plan",
@@ -20106,9 +20098,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T20:57:38Z",
+    "at": "2026-11-27T21:07:27Z",
     "url": "",
-    "what": "plan #5159 on claude-4"
+    "what": "build #5158 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-27T20:53:31Z",
