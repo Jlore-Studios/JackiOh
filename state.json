@@ -20125,15 +20125,8 @@
       "verdict_rounds": 1
     },
     "5188": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46070672183",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-27T21:52:17Z",
-        "until": "2026-11-27T22:22:17Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20145,10 +20138,9 @@
         "reason": "planned on opus",
         "trail": "ash: {\"command\": \"grep -n \\\"visual\\\" docs/issues-and-patches.md | head -10; grep -n \\\"\\\\-\\\\-visual\\\" crates/tools/README.md | head -5\", \"description\": \"Check when a visual patch fragment is required\"}\n- Bash: {\"command\": \"grep -n \\\"Patch:\\\" docs/issues-and-patches.md | head -10; grep -n \\\"^## \\\\|^### \\\" docs/issues-and-patches.md | head -30\", \"description\": \"Read issues-and-patches structure\"}\n- Bash: {\"command\": \"sed -n 120,134p docs/issues-and-patches.md; sed -n 320,330p docs/issues-and-patches.md\", \"description\": \"Read title/version and visual claim rules\"}\n- Bash: {\"command\": \"grep -rn \\\"HookKind\\\" apps/web/src/wire/index.ts packages/*/src/index.ts 2>/dev/null | head -5; grep -n \\\"\\\\\\\"@jackioh/shared\\\\\\\"\\\" apps/web/tsconfig.json apps/web/vite.config.ts apps/we\u2026\n- Bash: {\"command\": \"grep -n \\\"@jackioh/shared\\\" apps/web/tsconfig*.json tsconfig.base.json vitest.config.ts apps/web/vite.config.* 2>/dev/null | head -5\", \"description\": \"Locate @jackioh/shared alias\"}\n- Bash: {\"command\": \"grep -n \\\"HookKind\\\" apps/web/src/test/signatures.ts apps/web/src/fx/hooks.test.ts | head -3; grep -n \\\"generated/GameEvent\\\\|export \\\\* from\\\\|export type {\\\" apps/web/src/wire/index.ts\u2026\n- Bash: {\"command\": \"tr '|' '\\\\n' < apps/web/src/wire/generated/GameEvent.ts | grep -A2 '\\\"type\\\": \\\"trapFired\\\"\\\\|\\\"type\\\": \\\"cardPlayed\\\"\\\\|\\\"type\\\": \\\"summoned\\\"' | cut -c1-300\", \"description\": \"Read trap\u2026\n- Bash: {\"command\": \"grep -n \\\"planEntries(\\\\|onEntryStart(\\\\|function feed\\\\|function entriesOf\\\\|const entriesFor\\\" apps/web/src/audio/director.test.ts | head -15; grep -n \\\"^describe(\\\\|^ it(\\\" apps/web/s\u2026\n- Bash: {\"command\": \"grep -n \\\"card-audio\\\\|CARD_HOOKS\\\\|VOICE_BUDGET\\\\|24 MiB\\\" apps/web/README.md docs/polish/2-sound.md docs/v0.3.0/SURFACE.md 2>/dev/null | head -10; grep -rn \\\"24 \\\\* 1024 \\\\* 1024\\\\|24 \u2026\n- Bash: {\"command\": \"sed -n 1440,1470p apps/web/README.md\", \"description\": \"Read apps/web README audio section\"}\n- Bash: {\"command\": \"grep -n \\\"unused\\\\|dead\\\\|orphan\\\\|never used\\\" apps/web/src/i18n/i18n.test.ts | head -5\", \"description\": \"Check i18n unused-key test\"}\n- said: Findings so far are enough to fix the plan's shape. Writing the full draft now.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5188/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe client gains six recurring card hooks in `card-audio.json5`: `startOfTurn`, `endOfTurn`, `whenever` and\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"grep -n \\\"export function devDeck\\\" -A 15 apps/web/src/audio/test/realGame.ts | head -25\", \"description\": \"Check devDeck contents for proof cards\"}\n- Bash: {\"command\": \"for f in c050_k_pop_fanatic c023_reoccurring_dream c024_efficiency_dividend c037_gravedigger; do echo \\\"== $f\\\"; grep -n \\\"start_of_turn: Some\\\\|end_of_turn: Some\\\" crates/cards/src/scri\u2026\n- Bash: {\"command\": \"node -e 'const c=require(\\\"./crates/cards/catalog.json\\\");for(const id of [\\\"core-024\\\",\\\"core-037\\\",\\\"core-033\\\",\\\"core-091\\\"])console.log(id,c[id].name,c[id].type,c[id].rarity)'\", \"des\u2026\n- Bash: {\"command\": \"cd crates/cards/src/scripts/core && grep -ln \\\"end_of_turn: Some\\\" *.rs | tr '\\\\n' ' '\", \"description\": \"List Core scripts with end_of_turn hooks\"}\n- Bash: {\"command\": \"sed -n 1,12p c093_combo_index.rs; sed -n 1,10p c031_kys_math_equation.rs; cd /home/runner/work/_temp/work/item-5188 && node -e 'const c=require(\\\"./crates/cards/catalog.json\\\");for(const\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5188/.bot-plan.md\", \"content\": \"## Goal\\n\\nThe client gets six new recurring card hooks in `card-audio.json5`:\\n- `startOfTurn`, `endOfTurn`, `wheneve\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"\\\"\\\"The client gains six recurring card hooks in `card-audio.json5` (`startOfTurn`, `endOfTurn`, `whenever`, \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5188/.bot-plan.md\", \"content\": \"## Goal\\n\\nAdd six recurring hooks to `card-audio.json5`:\\n- `startOfTurn`, `endOfTurn`, `whenever` and `activate` pla\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; sed 's/|/ /g' .bot-plan.md | wc -w\", \"description\": \"Recount plan words without table pipes\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5188/.bot-plan.md\", \"old_string\": \"## Risks\\n\\n- R203: only a defId the seat's own view or events named sounds; `named` holds no\u2026\n- tool error: <tool_use_error>String to replace not found in file. String: ## Risks - R203: only a defId the seat's own view or events named sounds; `named` holds no sentinel and empties each turn. - Shipped behav\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5188/.bot-plan.md\", \"old_string\": \"18. Docs/spec: `card-text.yaml` header `voice` entry; ADDING_CARDS rows 6 and 7 (new hooks, p\u2026\n- tool error: <tool_use_error>String to replace not found in file. String: 18. Docs/spec: `card-text.yaml` header `voice` entry; ADDING_CARDS rows 6 and 7 (new hooks, pools, effect lists, four-word cap, census); `\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5188/.bot-plan.md\", \"offset\": 60, \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5188/.bot-plan.md\", \"offset\": 1, \"limit\": 60}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5188/.bot-plan.md\", \"offset\": 99, \"limit\": 200}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nold_cmds = s[s.index(\\\"**Commands**\\\"):s.index(\\\"## Done when\\\")]\\nnew_cmds = \\\"\\\"\\\"**Commands**\\n- `cargo test -p jackioh-tools --\u2026\n- said: ## Goal Add six recurring card hooks to `card-audio.json5`: - `startOfTurn`, `endOfTurn`, `whenever` and `activate` play on `hookResolving` (R2783000). - `hurt` and `hit` play on `damage`. Alongside them: - **Line pools** on every voiced hook, keyed `<id>-<hook>`, `<id>-<hook>2`, and so on. Every s\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-27T21:29:48Z",
       "owner_why": "it plans it",
@@ -20161,9 +20153,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-27T21:24:25Z",
       "requested_by": "jgoetzmann",
-      "run_id": "46070672183",
+      "run_id": "pending:d5a2dbfe-1795816362",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-27T21:29:48Z",
+      "started_at": "2026-11-27T21:53:01Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -20397,9 +20389,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T21:44:57Z",
+    "at": "2026-11-27T21:53:01Z",
     "url": "",
-    "what": "build #5190 on claude-8"
+    "what": "build #5188 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-27T21:42:46Z",
