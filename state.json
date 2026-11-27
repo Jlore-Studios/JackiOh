@@ -22172,6 +22172,8 @@
       "verdict_rounds": 1
     },
     "5165": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-27T03:20:06Z",
@@ -22185,8 +22187,13 @@
         "trail": "F'\\np='apps/web/src/i18n/i18n.test.ts'\\ns=open(p).read()\\ns=s.replace('import chineseJson from \\\"../../../../crates/cards/chines\u2026\n- Monitor: {\"query\": \"until grep -q \\\"Tests \\\\|ELIFECYCLE\\\\|Error\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bgp94ojwz.output; do sleep 5; done; echo do\u2026\n- tool error: <tool_use_error>InputValidationError: Monitor failed due to the following issue: The required parameter `description` is missing This tool's schema was not sent to the API \u2014 it was not in the discove\u2026\n- said: Backgrounded commands notify me on exit; I'll wait.\n- Bash: {\"command\": \"sleep 100; cat /tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bgp94ojwz.output | tail -50\", \"timeout\": 130000}\n- tool error: <tool_use_error>Blocked: sleep 100 followed by: cat /tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bgp94ojwz.output tail -50. To wait for a conditi\u2026\n- ToolSearch: {\"query\": \"select:Monitor\"}\n- Monitor: {\"description\": \"web i18n test run finishing\", \"timeout_ms\": 600000, \"command\": \"until grep -qE \\\"Tests |ELIFECYCLE|Test Files\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-\u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bgp94ojwz.output\"}\n- Monitor: {\"description\": \"wait for background test exit\", \"timeout_ms\": 600000, \"command\": \"while pgrep -f \\\"vitest\\\" >/dev/null; do sleep 5; done; echo exited\"}\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bgp94ojwz.output\"}\n- said: The first test run, which has the old dictionary and so should fail, is still running. I'll wait for its exit notification.\n- Monitor: {\"description\": \"wait for test output file to fill\", \"timeout_ms\": 600000, \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bg\u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bgp94ojwz.output\"}\n- said: The run is still going, so I'm waiting on the monitors.\n- Bash: {\"command\": \"pgrep -fa \\\"vitest|wasm|cargo\\\" | head\"}\n- said: The pretest is still building the wasm module, so the vitest run hasn't started. I'll wait for the monitors to fire.\n- Monitor: {\"description\": \"wasm build + vitest finish\", \"timeout_ms\": 600000, \"command\": \"while pgrep -f \\\"build-wasm.sh|vitest\\\" | grep -v $$ >/dev/null; do sleep 5; if ! pgrep -f \\\"build-wasm.sh\\\" >/dev/null\u2026\n- tool error: A variable in this command can't be checked before it runs\n- Monitor: {\"description\": \"test output file non-empty\", \"timeout_ms\": 600000, \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bgp94ojwz\u2026\n- said: The red-check run is the only thing outstanding, and it's blocked on the wasm build. The edits so far: - **`scripts/ci-scope.sh`:** added the web-job line for `view_for.rs` and `subsystems/*`. - **`i18n.test.ts`:** added the new test and its helpers. - **`zh-CN.json`:** the 13 entries are written, \u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bgp94ojwz.output\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; cp /tmp/zh.new apps/web/src/i18n/zh-CN.json\\npython3 - <<'EOF'\\np='apps/web/src/net/ci-scope.test.ts'\\ns=open(p).read()\\na=' \\\"crates/shared/sr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; (pnpm --dir apps/web typecheck 2>&1 | tail -5) ; (pnpm exec eslint apps/web/src/i18n apps/web/src/net/ci-scope.test.ts 2>&1 | tail -10); (cargo\u2026\n- Monitor: {\"description\": \"typecheck/eslint/spec check done\", \"timeout_ms\": 600000, \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bte\u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bte3x2t46.output\"}\n- said: Typecheck, eslint and the spec check are running. I'll wait for the completion notice.\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/bte3x2t46.output\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; sed -n 102p apps/web/src/i18n/i18n.test.ts; sed -n 110p apps/web/src/i18n/i18n.test.ts; sed -n 126p apps/web/src/i18n/i18n.test.ts; sed -n 132p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; python3 - <<'EOF'\\np='apps/web/src/i18n/i18n.test.ts'\\ns=open(p).read()\\ns=s.replace('.flatMap((name) => [...readFileSync(join(dir, name), \\\"ut\u2026\n- said: Typecheck, eslint and vitest are running in the background; the completion notice will tell me when they're done.\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-5152/a8551cab-adc1-4751-8bb1-d1dc00576773/tasks/boja4d962.output\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; cat >> .bot-notes.md <<'EOF'\\n\\n## State\\nDone: 13 zh-CN.json entries, new R711000 test in i18n.test.ts (red on old dictionary: 13 sentences na\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a Chinese reader's Call to Chaos banner and fatigue-immunity badge read in Chinese, not half-translated by the deck builder's and the leaderboard's keys\"} --> Under zh-CN, 12 Call to Chaos clauses and the badge `You are immune to fatigue damage` now rea\u2026\n- said: The monitor that expired was one of my earlier watchers on the first test run. That run finished long ago and all checks are done, so there is nothing left to re-arm. The final report above stands.\n- said: That monitor was also a leftover. Its job, the typecheck, eslint and spec check run, finished earlier and I read its output. I'm not re-arming it, and the report above is unchanged."
       },
       "issue": 5152,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-27T04:37:03Z",
+      "run_id": "pending:b696e3e7-1795755821",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -22205,6 +22212,9 @@
         "provider": "claude-6",
         "run": "45933562107"
       },
+      "started_at": "2026-11-27T05:04:04Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -22290,9 +22300,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T04:45:10Z",
+    "at": "2026-11-27T05:04:04Z",
     "url": "",
-    "what": "review #5167 on claude-6"
+    "what": "review #5165 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-27T04:56:02Z",
