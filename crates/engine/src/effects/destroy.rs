@@ -144,6 +144,7 @@ pub fn crushed_in(state: &GameState, slot: ZoneSlot) -> Vec<CardInstance> {
 /// R5048000 Crush (S+ #121 Toxopid's Legs): destroy every Unit in the named zone (`crushed_in`), as
 /// §6.3 Destroy does: a mark the next state check collects (R59), Indestructible ignoring it (R46), so
 /// a card summoned there once the check has run finds the zone free. No keyword: a card's text calls it.
+/// R5117000: a Spell's crush passes a Unit Immune to Spells by (R4453000), which keeps its zone.
 pub fn crush(args: CrushArgs) -> Effect {
     Effect::new("crush", move |ctx| {
         let slot = ZoneSlot {
@@ -152,6 +153,9 @@ pub fn crush(args: CrushArgs) -> Effect {
             lane: args.lane,
         };
         for card in crushed_in(ctx.state, slot) {
+            if crate::restrictions::unaffected_by(ctx, &card) {
+                continue;
+            }
             mark_destroyed(&mut *ctx.state, &card);
         }
     })

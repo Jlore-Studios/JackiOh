@@ -5,15 +5,16 @@
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::afflictions::Affliction;
+use jackioh_engine::config::RANDOM_ATTACK_TARGET;
 use jackioh_engine::effects::PLAGUE_PLACEMENT_HOOK;
 use jackioh_engine::{
     ActionBody, ActionType, AttackTarget, CardInstance, CostOptions, FengShuiOutcome, GameState, KeywordKind,
     PlayerId, Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, acting_with_flag,
     active_units_of, adjacent, attack_mod_for, attack_restriction, beneath_at, canonical, card_at,
     carried_at, cleave_struck, converts_to, damage_pool_of, effective_cost, effective_life, find_def,
-    find_instance, find_instance_mut, flags_of, has_keyword, is_locked, lane_multiplier_for, legal_actions,
-    midlane_lanes_of, pierces, position_after_switch, row_size, slot_of, strike_back_multiplier_for,
-    subsystems, unit_damage_cap, unit_view,
+    find_instance, find_instance_mut, flags_of, half_of_lane, has_keyword, is_locked, lane_multiplier_for,
+    legal_actions, midlane_lanes_of, occupant_at, pierces, position_after_switch, row_size, slot_of,
+    strike_back_multiplier_for, subsystems, unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
@@ -66,9 +67,10 @@ fn play_zone(action: &ActionBody) -> Option<&ZoneChoice> {
     }
 }
 
-/// One zone of a placement: `|` past the board's edge, else the id of the card acting there (`-` for
-/// none), the Unit a carrier holds there (R446), how many cards lie beneath (R13, R447) and `L` when it
-/// is Locked. `redact` keeps a hidden card's id and `determinize` keeps it in every world, so all of it
+/// One zone of a placement: `|` past the board's edge, else the id of the card a lane read meets there
+/// (`occupant_at`: the zone's own top, or a GIGA covering it from its own row, R3546001, R4799001; `-`
+/// for none), the Unit a carrier holds there (R446), how many cards lie beneath (R13, R447) and `L` when
+/// it is Locked. `redact` keeps a hidden card's id and `determinize` keeps it in every world, so all of it
 /// is what the seat can read (R185).
 fn zone_part(state: &GameState, slot: ZoneSlot) -> String {
     if slot.lane < 1 || slot.lane > row_size(slot.row) {
@@ -76,16 +78,17 @@ fn zone_part(state: &GameState, slot: ZoneSlot) -> String {
     }
     format!(
         "{}{}:{}{}",
-        card_at(state, slot).map_or("-", |card| card.id.as_str()),
+        occupant_at(state, slot).map_or("-", |card| card.id.as_str()),
         carried_at(state, slot).map_or(String::new(), |unit| format!("+{}", unit.id)),
         beneath_at(state, slot).len(),
         if is_locked(state, slot) { "L" } else { "" },
     )
 }
 
-/// What a play's lane means to it (#1014): the seat's zones beside it in its row, left then right, or
-/// the board's edge, then the lane's four zones (§3.1): the play's own, the seat's other one, and the
-/// enemy's unit and backrow zones opposite. Two lanes with the same key are the same placement.
+/// What a play's lane means to it (#1014): the half of a slashed board the lane is on (R3554003,
+/// R4799001), the seat's zones beside it in its row, left then right, or the board's edge, then the
+/// lane's four zones (§3.1): the play's own, the seat's other one, and the enemy's unit and backrow zones
+/// opposite. Two lanes with the same key are the same placement.
 fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
     let other_row = if zone.row == Row::Units {
         Row::Backrow
@@ -93,7 +96,7 @@ fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String
         Row::Units
     };
     let enemy = seat.opponent();
-    [
+    let zones = [
         (seat, zone.row, zone.lane - 1),
         (seat, zone.row, zone.lane + 1),
         (seat, zone.row, zone.lane),
@@ -104,7 +107,8 @@ fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String
     .into_iter()
     .map(|(player, row, lane)| zone_part(state, ZoneSlot { player, row, lane }))
     .collect::<Vec<_>>()
-    .join("/")
+    .join("/");
+    format!("{:?}/{zones}", half_of_lane(state, zone.lane))
 }
 
 /// Per otherwise-identical play, keep one lane of each placement (`placement_key`): its first in lane
@@ -362,9 +366,79 @@ fn even_trade(state: &GameState, attacker_id: &str, target_id: &str, prices: &Pr
     ((trade.kills || trade.splash_kills) && trade.value >= 0.0).then_some(trade.value)
 }
 
+/// R4792000: `drawn_attack`'s answer for an attack whose target the engine draws.
+pub(crate) struct Drawn {
+    /// The mean of a hit on each target the draw takes from.
+    pub(crate) value: f64,
+    /// The enemy hero is its only target: the move order's tier 0, and `ready_gap` counts it.
+    pub(crate) hero_only: bool,
+    /// Some draw hits the hero or kills its target (or with Cleave a neighbour).
+    pub(crate) lands: bool,
+}
+
+impl Drawn {
+    /// `even_trade`'s read of a drawn attack that may land elsewhere: its mean, when some draw lands
+    /// and the mean is an even trade or better.
+    fn even(&self) -> Option<f64> {
+        (self.lands && self.value >= 0.0).then_some(self.value)
+    }
+}
+
+/// R4792000: whether every target `attacker` may draw is the enemy hero (`attack_targets`, R1200).
+pub(crate) fn draws_only_hero(state: &GameState, attacker: &CardInstance) -> bool {
+    matches!(
+        jackioh_engine::attack_targets(state, attacker).as_slice(),
+        [AttackTarget::Hero { .. }]
+    )
+}
+
+/// R4792000: what `attacker`'s attack is worth while a Mayor acts and the engine draws its target from
+/// the legal ones (R1200, `attack_targets`), each as likely: the mean of a hit on the hero by
+/// `face_value` and on a unit by `trade_value`, a draw being worth its expectation. `face_is_lethal`
+/// reaches the hero only when it is the only target, the one drawn attack `ready_gap` counts. A Radiant
+/// Mayor's Lucky (R1201) is not read. `None` for an attack that names its target, with
+/// `AI_REPLY.drawn_attacks` off, or with no target to draw.
+pub(crate) fn drawn_attack(
+    state: &GameState,
+    attacker: &CardInstance,
+    target_id: &str,
+    face_is_lethal: bool,
+    prices: &Prices,
+) -> Option<Drawn> {
+    if target_id != RANDOM_ATTACK_TARGET || !crate::config::AI_REPLY.drawn_attacks {
+        return None;
+    }
+    let targets = jackioh_engine::attack_targets(state, attacker);
+    if targets.is_empty() {
+        return None;
+    }
+    let hero_only = matches!(targets.as_slice(), [AttackTarget::Hero { .. }]);
+    let mut total = 0.0;
+    let mut lands = false;
+    for target in &targets {
+        match target {
+            AttackTarget::Hero { player } => {
+                total += face_value(state, attacker, *player, face_is_lethal && hero_only);
+                lands = true;
+            }
+            AttackTarget::Unit { instance } => {
+                let trade = trade_value(state, attacker, &instance.id, prices);
+                total += trade.value;
+                lands |= trade.kills || trade.splash_kills;
+            }
+        }
+    }
+    Some(Drawn {
+        value: total / targets.len() as f64,
+        hero_only,
+        lands,
+    })
+}
+
 /// #2825: where an attack on the enemy hero or a winning trade stands among the move order's first
 /// attacks, by the opponent model's own values (`reply.rs`'s `ranked_attacks`): a hit on the hero by
-/// `face_value` (`AI_EVAL.win` for each when `face_is_lethal`), a hit on a unit by `trade_value`.
+/// `face_value` (`AI_EVAL.win` for each when `face_is_lethal`), a hit on a unit by `trade_value`, and
+/// one whose target the engine draws by the mean over its targets (`drawn_attack`, R4792000).
 pub(crate) fn front_value(
     state: &GameState,
     seat: PlayerId,
@@ -383,7 +457,9 @@ pub(crate) fn front_value(
         return f64::NEG_INFINITY;
     };
     let enemy = seat.opponent();
-    if *target_id == format!("hero-{}", enemy.as_str()) {
+    if let Some(drawn) = drawn_attack(state, attacker, target_id, face_is_lethal, prices) {
+        drawn.value
+    } else if *target_id == format!("hero-{}", enemy.as_str()) {
         face_value(state, attacker, enemy, face_is_lethal)
     } else {
         trade_value(state, attacker, target_id, prices).value
@@ -1004,6 +1080,18 @@ fn in_move_order(
                 attacker_id,
                 target_id,
             } => {
+                // R4792000: a drawn attack whose only target is the hero is a hero attack; one that may
+                // land elsewhere is an even trade at its mean (`Drawn::even`), as each attacker has one.
+                if let Some(drawn) = find_instance(state, attacker_id)
+                    .and_then(|attacker| drawn_attack(state, attacker, target_id, false, prices))
+                {
+                    if drawn.hero_only {
+                        hero_attacks.push(action);
+                    } else {
+                        late_attacks.push((action, drawn.even()));
+                    }
+                    continue;
+                }
                 let tier = attack_tier(state, seat, attacker_id, target_id);
                 if tier == 0 {
                     hero_attacks.push(action);
@@ -1259,6 +1347,64 @@ mod tests {
         assert_eq!(
             even_trade(s.state(), &cleaver.id, &reno.id, Prices::NONE),
             Some(trade.value)
+        );
+    }
+
+    /// M #86 Mayor Medinamogger, a (2) 5/4 whose aura draws every target, an attack's among them (R1200).
+    const MAYOR: &str = "meditative-086";
+    /// p1's ready Mayor, Mr. Vanilla in hand, facing p2 at `health` with `field`.
+    fn mayor_facing(health: i32, field: Value) -> Scenario {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "p1": { "field": [MAYOR], "hand": [VANILLA] },
+            "p2": { "health": health, "field": field },
+        }))
+    }
+
+    /// The Mayor's attack, the target the engine's to draw.
+    fn drawn_attack_of(s: &Scenario) -> ActionBody {
+        ActionBody::Attack {
+            attacker_id: s.card(MAYOR).id.clone(),
+            target_id: RANDOM_ATTACK_TARGET.to_string(),
+        }
+    }
+
+    /// R4792000: with the enemy's side empty the drawn attack can only hit the hero, so it is a hero
+    /// attack, first in the move order, where it used to come after every play.
+    #[test]
+    fn r4792000_a_drawn_attack_on_the_hero_alone_is_a_hero_attack() {
+        let s = mayor_facing(20, json!([]));
+        let candidates = candidate_actions(s.state(), PlayerId::P1, Prices::NONE);
+        assert_eq!(candidates.first(), Some(&drawn_attack_of(&s)), "{candidates:?}");
+        let value = front_value(s.state(), PlayerId::P1, &drawn_attack_of(&s), false, Prices::NONE);
+        let face = face_value(s.state(), s.card(MAYOR), PlayerId::P2, false);
+        assert!((value - face).abs() < 1e-9, "{value} vs {face}");
+    }
+
+    /// R4792000: beside the hero the draw may take a 1/2 the Mayor kills and survives: the attack is
+    /// worth the mean of the two hits, an even trade or better, so it still comes before the plays.
+    #[test]
+    fn r4792000_a_drawn_attack_is_worth_the_mean_of_its_targets() {
+        let s = mayor_facing(20, json!([OOMEN]));
+        let (state, mayor) = (s.state(), s.card(MAYOR));
+        let attack = drawn_attack_of(&s);
+        let hit = trade_value(state, mayor, &s.card(OOMEN).id, Prices::NONE);
+        assert!(hit.kills);
+        let mean = (hit.value + face_value(state, mayor, PlayerId::P2, false)) / 2.0;
+        let value = front_value(state, PlayerId::P1, &attack, false, Prices::NONE);
+        assert!((value - mean).abs() < 1e-9, "{value} vs {mean}");
+        let candidates = candidate_actions(state, PlayerId::P1, Prices::NONE);
+        assert_eq!(candidates.first(), Some(&attack), "{candidates:?}");
+    }
+
+    /// R4792000: the Mayor's 5 reach a hero at 5 only while nothing else is there to draw; beside a
+    /// unit the drawn attack is no part of the gap.
+    #[test]
+    fn r4792000_ready_gap_counts_a_drawn_attack_only_on_a_lone_hero() {
+        assert_eq!(ready_gap(mayor_facing(5, json!([])).state(), PlayerId::P1), 0.0);
+        assert_eq!(
+            ready_gap(mayor_facing(5, json!([OOMEN])).state(), PlayerId::P1),
+            5.0
         );
     }
 

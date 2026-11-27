@@ -67,24 +67,25 @@ fn lane_of(action: &ActionBody) -> Option<i32> {
     }
 }
 
-/// One zone as B14's placement reads it: `|` past the board's edge, else the id of the card acting
-/// there (`-` for none), the Unit a carrier holds there, how many cards lie beneath and `L` when it is
-/// Locked.
+/// One zone as B14's placement reads it: `|` past the board's edge, else the id of the card a lane read
+/// meets there, a GIGA covering it included (`-` for none, R4799001), the Unit a carrier holds there, how
+/// many cards lie beneath and `L` when it is Locked.
 fn zone_reading(state: &GameState, slot: ZoneSlot) -> String {
     if slot.lane < 1 || slot.lane > row_size(slot.row) {
         return "|".to_string();
     }
     format!(
         "{}{}:{}{}",
-        card_at(state, slot).map_or("-", |card| card.id.as_str()),
+        occupant_at(state, slot).map_or("-", |card| card.id.as_str()),
         carried_at(state, slot).map_or(String::new(), |unit| format!("+{}", unit.id)),
         beneath_at(state, slot).len(),
         if is_locked(state, slot) { "L" } else { "" },
     )
 }
 
-/// B14's placement of a play into `zone` (#1014): the seat's zones beside it in its row, left then
-/// right, or the board's edge, then the lane's four zones.
+/// B14's placement of a play into `zone` (#1014): the half of a slashed board its lane is on
+/// (R4799001), the seat's zones beside it in its row, left then right, or the board's edge, then the
+/// lane's four zones.
 fn placement(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
     let other_row = if zone.row == Row::Units {
         Row::Backrow
@@ -92,7 +93,7 @@ fn placement(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
         Row::Units
     };
     let enemy = seat.opponent();
-    [
+    let zones = [
         (seat, zone.row, zone.lane - 1),
         (seat, zone.row, zone.lane + 1),
         (seat, zone.row, zone.lane),
@@ -103,7 +104,8 @@ fn placement(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
     .into_iter()
     .map(|(player, row, lane)| zone_reading(state, ZoneSlot { player, row, lane }))
     .collect::<Vec<_>>()
-    .join("/")
+    .join("/");
+    format!("{:?}/{zones}", half_of_lane(state, zone.lane))
 }
 
 /// The lanes `candidate_actions` offers the AI's hand card of `def_id`, lowest first.
@@ -2831,4 +2833,57 @@ fn r1829000_two_positions_that_differ_only_in_summoning_sickness_sign_apart() {
         .expect("the unit")
         .summoned_turn = Some(turn - 1);
     assert_eq!(search_signature(&state, AI), search_signature(&earlier, AI));
+}
+
+/// R4799001: a placement reads a zone a GIGA covers as the GIGA (`occupant_at`, R3546001) and the half of
+/// a slashed board its lane is on (R3554003), so a lane that plays differently is tried. The AI plays Mr.
+/// Vanilla (Core #8) with its own row empty; the GIGA is the Jlockeed Large Language Model token (S+
+/// #T-AI-4), a 2/5 GIGA Taunt.
+mod placements_beside_a_giga_or_a_slash {
+    use super::*;
+
+    const VANILLA: &str = "core-008";
+    const GIGA_WALL: &str = "stinkyscapeplus-t-ai-04";
+    /// The lane the slash voids: lanes 1 and 2 are the Left half, 4 and 5 the Right.
+    const SLASH_LANE: i32 = 3;
+
+    /// The lanes the search's root tries the AI's Mr. Vanilla in (every placement, #1635), against the
+    /// human's `field`, the board slashed at `SLASH_LANE` when `slashed`.
+    fn root_lanes(field: Value, slashed: bool) -> Vec<i32> {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "seed": "search-r4799001",
+            "p1": { "hand": [VANILLA] },
+            "p2": { "field": field },
+        }));
+        if slashed {
+            s.state_mut().slashed_lane = Some(SLASH_LANE);
+        }
+        let state = s.state().clone();
+        lanes_of(&state, VANILLA, &root_candidate_set(&state, AI))
+    }
+
+    #[test]
+    fn r4799001_the_lane_beside_an_enemy_giga_is_a_placement_of_its_own() {
+        // The GIGA anchored in lane 2 covers lane 3 too: lanes 2 and 3 face it, and lane 4, the only inner
+        // lane that does not, read as open beside lane 3 and was never tried.
+        let lanes = root_lanes(json!([{ "def": GIGA_WALL, "lane": 2 }]), false);
+        assert_eq!(
+            lanes,
+            vec![1, 3, 4, 5],
+            "lanes 2 and 3 face the GIGA, the midlane kept"
+        );
+    }
+
+    #[test]
+    fn r4799001_each_half_of_a_slashed_board_is_a_placement_of_its_own() {
+        // Lanes 2 and 4, each beside the void with nothing else near, attack different halves.
+        assert_eq!(root_lanes(json!([]), true), vec![1, 2, 4, 5]);
+    }
+
+    #[test]
+    fn r4799001_a_board_with_no_giga_and_no_slash_keeps_its_placements() {
+        // The inner lanes, alike, are one placement, its midlane lane kept (R2203001).
+        assert_eq!(root_lanes(json!([]), false), vec![1, 3, 5]);
+    }
 }

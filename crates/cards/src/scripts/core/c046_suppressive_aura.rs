@@ -236,9 +236,10 @@ mod tests {
             g.expect_stats(SEVEN_SEVEN, json!({ "attack": 7, "maxHealth": 7 }));
         }
 
-        /// "R69 radiant paid 3 on top of three more radiant auras: an enemy The Rock at 0 max health dies despite Indestructible"
+        /// R5113000: radiant paid 3 on top of three more radiant auras, and an enemy The Rock, Indestructible
+        /// and so Immutable (R4353000), takes none of them and stands.
         #[test]
-        fn r69_radiant_paid_3_on_top_of_three_more_radiant_auras_an_enemy_the_rock_at_0_max_health_dies() {
+        fn r5113000_radiant_paid_3_on_top_of_three_more_radiant_auras_an_enemy_the_rock_takes_none() {
             let mut g = scenario(json!({
                 "p1": {
                     "hand": [radiant_aura()],
@@ -250,23 +251,18 @@ mod tests {
             }));
             let mine = unit_id(&g, PlayerId::P1, 1, "setup: both Rocks should be there");
             let doomed = unit_id(&g, PlayerId::P2, 1, "setup: both Rocks should be there");
-            g.expect_stats(&doomed, json!({ "attack": 4, "maxHealth": 4 }));
+            g.expect_stats(&doomed, json!({ "attack": 10, "maxHealth": 10 }));
 
             g.play(AURA, json!({ "embiggen": true }));
 
-            // R69: no destroy effect is involved, so Indestructible does not save a unit at 0 max health.
-            g.expect_in_zone(&doomed, "graveyard");
-            g.expect_events(json!(["destroyed"]));
-            let death = g.last_events().iter().find_map(|event| match event {
-                GameEvent::Destroyed {
-                    instance_id,
-                    max_health,
-                    killer_id,
-                    ..
-                } if *instance_id == doomed => Some((*max_health, killer_id.clone())),
-                _ => None,
-            });
-            assert_eq!(death, Some((0, None)));
+            g.expect_in_zone(&doomed, "field");
+            g.expect_stats(&doomed, json!({ "attack": 10, "maxHealth": 10, "health": 10 }));
+            assert!(
+                !g.last_events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == doomed)),
+                "nothing is destroyed"
+            );
             // Enemy units only: the auras' own side keeps its 10/10 Rock.
             g.expect_stats(&mine, json!({ "attack": 10, "maxHealth": 10, "health": 10 }));
         }

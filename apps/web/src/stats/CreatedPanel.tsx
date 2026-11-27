@@ -22,8 +22,12 @@ import { cardTierFit, type TierFitCard } from "./tierFit.ts";
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
 const PERCENT = 100;
 
-/** R3184002, R4083000: the Created tables' columns, every one sortable, named as the deck table's sort names them. */
-export type CreatedColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "date";
+/**
+ * R3184002, R4083000: the Created tables' columns, every one sortable, named as the deck table's sort names them.
+ * R5037000: Win rate and Play rate are the Running and Versions views' (`RUNNING_SORT_COLUMNS`); the Created tables
+ * lack them (`CREATED_SORT_COLUMNS`).
+ */
+export type CreatedColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "winRate" | "playRate" | "date";
 
 /** R4083000: the columns the Created tables sort by, in the deck table's order: the Tokens tab's sort select. */
 export const CREATED_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate", "decisiveness"];
@@ -43,11 +47,16 @@ export function createdSortOf(col: string, dir: "asc" | "desc"): CreatedSort {
 }
 
 /**
- * What a row sorts by: a Created card's, and R4678001 a Running row's, which has no Decisiveness. R5033000: a
- * Running row also holds `firstShipped`, the position the server sent for its first version; a Created row has none.
+ * What a row sorts by: a Created card's, and R4678001 a Running row's, its Decisiveness among them (R5036000). R5033000:
+ * a Running row also holds `firstShipped`, the position the server sent for its first version; a Created row has none.
+ * R5037000: a Running row has a Win rate and a Play rate, which a Created card lacks and a server deployed before
+ * them leaves out.
  */
 export type SortedRow = TierFitCard &
-  Pick<PublicCreatedStat, "id" | "name" | "games" | "adjustedWinRate" | "decisiveness"> & { firstShipped?: number | null };
+  Pick<PublicCreatedStat, "id" | "name" | "games" | "adjustedWinRate" | "decisiveness"> & {
+    winRate?: number | null | undefined;
+    playRate?: number | null | undefined;
+  } & { firstShipped?: number | null };
 
 /** R4082000: a card's adjusted win rate as the row shows it, null below the floor or from an older server. */
 function adjustedOf(card: SortedRow): number | null {
@@ -57,6 +66,24 @@ function adjustedOf(card: SortedRow): number | null {
 /** R4552004: a card's decisiveness as the row shows it, null below the floor or from an older server. */
 function decisivenessOf(card: SortedRow): number | null {
   return card.hasEnoughGames ? (card.decisiveness ?? null) : null;
+}
+
+/** R5037000: a play version's win rate as the row shows it, null below the floor, never played or from an older server. */
+function winRateOf(card: SortedRow): number | null {
+  return card.hasEnoughGames ? (card.winRate ?? null) : null;
+}
+
+/** R5037000: a play version's play rate as the row shows it, null when it was never seen or from an older server. */
+function playRateOf(card: SortedRow): number | null {
+  return card.playRate ?? null;
+}
+
+/** R5037000: the figure a sort by `col` compares, the Adjusted win rate for a column that has none of its own. */
+function figureOf(card: SortedRow, col: CreatedColumn): number | null {
+  if (col === "decisiveness") return decisivenessOf(card);
+  if (col === "winRate") return winRateOf(card);
+  if (col === "playRate") return playRateOf(card);
+  return adjustedOf(card);
 }
 
 /**
@@ -92,8 +119,8 @@ export function sortCreated<Row extends SortedRow>(
       const q = cardTierFit(b, tiers);
       if (p !== q) return p === null || q === null ? (p === null ? 1 : -1) : (p - q) * flip;
     }
-    const x = col === "decisiveness" ? decisivenessOf(a) : adjustedOf(a);
-    const y = col === "decisiveness" ? decisivenessOf(b) : adjustedOf(b);
+    const x = figureOf(a, col);
+    const y = figureOf(b, col);
     if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
     return (x - y) * flip;
   });

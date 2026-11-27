@@ -91,6 +91,24 @@ fn r2660000_a_taunt_on_the_bots_board_walls_the_lethal() {
     assert!(!unstoppable_lethal(&state, AI, None));
 }
 
+/// S+ #100 Plesiosize, a (2) Spell: a Unit in its caster's hand gains +8/+8 and GIGA.
+const PLESIOSIZE: &str = "stinkyscapeplus-100";
+/// A 1/1 Taunt, which one attacker kills (a stand-in, #3486).
+const WALL: &str = "stand-in (1) 1/1 Taunt";
+
+/// R4793000: a bot on 3 with 3 mana holds Plesiosize, a 1/1 Taunt and a 1/1 without it. The Taunt alone
+/// dies to one attacker and the other's hit kills; Plesiosize on it first makes it a 9/9 Taunt that
+/// takes both attacks and lives, the one escape. The walk tries Plesiosize on the other 1/1 first, and
+/// the two used to sign as one position, so it never tried the escape and conceded
+#[test]
+fn r4793000_plesiosize_on_the_second_hand_unit_is_an_escape_the_walk_tries() {
+    let state = facing(
+        json!({ "health": 3, "mana": 3, "hand": [PLESIOSIZE, WALL, SMALL] }),
+        json!({}),
+    );
+    assert!(!unstoppable_lethal(&state, AI, None));
+}
+
 /// R2660000: a bot whose 4/4 swings p2 from 4 to 0 wins before p2's board ever attacks
 #[test]
 fn r2660000_a_bot_that_wins_this_turn_is_not_doomed() {

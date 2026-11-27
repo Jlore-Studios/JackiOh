@@ -146,6 +146,21 @@ mod tests {
         assert_eq!(dealt(&s, &victim, &attacker), Some(4));
     }
 
+    /// R5113000: an Immutable attacker takes no other card's combat bonus, as it takes no other card's
+    /// aura, though it shares no tag with the Human it strikes.
+    #[test]
+    fn r5113000_an_immutable_attacker_gets_no_bonus() {
+        const IMMUTABLE: &str = "stand-in (1) 3/5 Immutable";
+        let mut s = scenario(json!({
+            "p1": { "field": [IMMUTABLE, SCARAB], "backrow": [ID] },
+            "p2": { "field": [VANILLA, BIG] },
+        }));
+        let wall = s.unit(P1, 1).unwrap().id;
+        let victim = s.unit(P2, 1).unwrap().id;
+        s.attack(&wall, &victim);
+        assert_eq!(dealt(&s, &wall, &victim), Some(3));
+    }
+
     #[test]
     fn r1120_trample_excess_carries_the_bonus() {
         let mut s = scenario(json!({

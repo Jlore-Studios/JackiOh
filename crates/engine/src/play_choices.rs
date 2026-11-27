@@ -17,7 +17,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::{MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X};
+use crate::config::{MANA_CEILING, MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X};
 use crate::graveyard_play::PlayPayment;
 use crate::rng::Rng;
 use crate::script::TargetCheckArgs;
@@ -748,9 +748,9 @@ pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
         && crate::scripts::script_of(state, instance).cost.is_none()
 }
 
-/// §2.3, R348, R1223: why this X is not one the player may choose for this card, or `Ok` when it is:
-/// 1 ≤ X ≤ the mana the player can spend (`MIN_CHOSEN_X`), their current mana plus what a credit line
-/// still lends them (`credit::spendable_mana`). `legal_x_values` offers exactly the values this passes
+/// §2.3, R348, R1223, R5148000: why this X is not one the player may choose for this card, or `Ok` when
+/// it is: 1 ≤ X ≤ the mana the player can spend (`MIN_CHOSEN_X`), their current mana plus what a credit
+/// line still lends them (`credit::spendable_mana`), and never above `MANA_CEILING`. `legal_x_values` offers exactly the values this passes
 /// and `refuse_x` refuses exactly the ones it names, so the picker and the reducer cannot disagree.
 pub fn why_x_refused(
     state: &GameState,
@@ -774,11 +774,16 @@ pub fn why_x_refused(
             "X is above your current mana"
         }));
     }
+    // R5148000: within the mana to spend, still never above the ceiling.
+    if value > MANA_CEILING {
+        return Err(EngineError::new(format!("X is at most {MANA_CEILING}")));
+    }
     Ok(())
 }
 
 /// The most X a play of this card may choose: the mana the player can spend for an X-cost card (R1223),
 /// and for a copier with an X-cost text what is left of it once its own price is paid (B5 E14, R545).
+/// `why_x_refused` holds it to `MANA_CEILING` besides (R5148000).
 fn most_x(state: &GameState, player: PlayerId, card: &CardInstance) -> i32 {
     // R1223: an X may be chosen out of borrowed mana too.
     let mana = crate::credit::spendable_mana(state, player);

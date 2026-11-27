@@ -673,6 +673,7 @@ mod tests {
 
     mod culture {
         use super::*;
+        use jackioh_engine::config::MANA_CEILING;
 
         #[test]
         fn r60_r3996201_each_card_on_your_field_in_your_hand_and_in_your_deck_rolls_its_own_5x_over_seeds_some_turn_and_some_do_not() {
@@ -723,10 +724,17 @@ mod tests {
             (turned, cards.len() - turned)
         }
 
+        /// R5148000: X stops at the mana ceiling, 15, where the base face's 6X is 90, so some card can
+        /// always stay; 16, where it was 96, is no X to choose.
         #[test]
-        fn r4666000_base_6x_at_x_16_is_96_so_some_card_stays_over_seeds_and_at_x_17_every_card_turns() {
-            assert!((0..200).any(|n| culture(false, 16, n).1 > 0));
-            assert_eq!(culture(false, 17, 0), (5, 0));
+        fn r4666000_r5148000_base_6x_is_90_at_x_15_the_ceiling_so_some_card_stays_over_seeds_and_x_16_is_refused() {
+            assert!((0..200).any(|n| culture(false, MANA_CEILING, n).1 > 0));
+            let mut s = scenario(json!({
+                "seed": "culture-ceiling",
+                "p1": { "hand": [APPROPRIATIONS, VANILLA, ECLIPSE], "field": [TIMMY], "mana": MANA_CEILING },
+                "p2": { "hand": [VANILLA], "field": [TIMMY] },
+            }));
+            s.expect_refused(|s| s.play(APPROPRIATIONS, json!({ "x": MANA_CEILING + 1, "modes": ["Culture"] })));
         }
 
         #[test]
@@ -735,11 +743,11 @@ mod tests {
             assert_eq!(culture(true, 7, 0), (5, 0));
         }
 
+        /// R5148000: the base face's 17X/4 never reaches 100 below the mana ceiling.
         #[test]
-        fn r767000_r4154105_the_kept_v0_6_12b_script_rolls_17x_over_4_and_12x_so_some_card_stays_at_x_23_and_x_8() {
+        fn r767000_r4154105_the_kept_v0_6_12b_script_rolls_17x_over_4_and_12x_so_some_card_stays_at_x_15_and_x_8() {
             crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_12b(), || {
-                assert!((0..200).any(|n| culture(false, 23, n).1 > 0));
-                assert_eq!(culture(false, 24, 0), (5, 0));
+                assert!((0..200).any(|n| culture(false, MANA_CEILING, n).1 > 0));
                 assert!((0..200).any(|n| culture(true, 8, n).1 > 0));
                 assert_eq!(culture(true, 9, 0), (5, 0));
             });

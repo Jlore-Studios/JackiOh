@@ -21,7 +21,7 @@
   --tile-pulse-max: var(--tile-edge);
   --tile-pulse-min: calc(var(--tile-edge) * 0.7);
   opacity: var(--tile-edge);
-  animation: tile-pulse var(--tile-pulse-ms) linear 1;
+  animation: tile-pulse var(--tile-pulse-ms) linear infinite;
 }
 
 .tile-aura-pattern {
@@ -35,7 +35,7 @@
   --tile-pulse-min: calc(var(--tile-pattern-opacity) * 0.6);
   opacity: var(--tile-pattern-opacity);
   transform: scaleX(var(--tile-flip));
-  animation: tile-pulse var(--tile-pulse-ms) linear var(--tile-phase) 1;
+  animation: tile-pulse var(--tile-pulse-ms) linear var(--tile-phase) infinite;
 }
 
 .tile-aura-mote {
@@ -47,7 +47,7 @@
   background: var(--tile-core);
   border-radius: var(--radius-round);
   pointer-events: none;
-  animation: tile-mote var(--mdur) linear var(--mdelay) 1;
+  animation: tile-mote var(--mdur) linear var(--mdelay) infinite;
 }
 
 .tile-aura-mote[data-mote-shape="drop"] {

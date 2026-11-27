@@ -1191,6 +1191,43 @@ mod tests {
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
     }
 
+    /// M #86 Mayor Medinamogger, a 5/4 whose aura draws every target, an attack's among them (R1200).
+    const MAYOR: &str = "meditative-086";
+
+    /// R4792000: p2's ready Mayor facing p1 at 5 health with no unit. `legal_actions` lists its attack
+    /// with the target the engine draws, which can only be p1's hero: the static trader takes it, so the
+    /// reply ends the game, where it used to price the attack at nothing and end its turn.
+    #[test]
+    fn r4792000_the_reply_swings_a_drawn_attack_and_ends_the_game() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "active": "p2",
+            "p1": { "health": 5 },
+            "p2": { "field": [MAYOR] },
+        }));
+        let state = s.state();
+        let legal = legal_actions(state, PlayerId::P2);
+        let drawn = ActionBody::Attack {
+            attacker_id: s.card(MAYOR).id.clone(),
+            target_id: jackioh_engine::config::RANDOM_ATTACK_TARGET.to_string(),
+        };
+        assert!(legal.contains(&drawn), "{legal:?}");
+        let ranked = ranked_attacks(state, PlayerId::P1, &legal, false, Prices::NONE);
+        assert_eq!(ranked, vec![drawn]);
+        let after = simulate_reply(
+            state,
+            PlayerId::P1,
+            &create_node_counter(200, None),
+            &IndexSet::new(),
+            Prices::NONE,
+        )
+        .expect("the reply is not cut");
+        assert_eq!(
+            after.result.and_then(|result| result.winner.player()),
+            Some(PlayerId::P2)
+        );
+    }
+
     #[test]
     fn a_trample_kill_adds_the_excess_it_lands_on_the_hero() {
         let s = vanilla_with(

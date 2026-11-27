@@ -122,8 +122,8 @@ mod r1185002_set_stats_sets_attack_and_health_outright_its_damage_and_buffs_gone
         assert_eq!(stats_of(&s, &body), (SET_TO + 1, SET_TO + 1, SET_TO + 1));
         assert_eq!(
             stats_of(&s, &immutable),
-            (6, 6, 6),
-            "R23: Immutable, it keeps its 5/5 (+1/+1)"
+            (5, 5, 5),
+            "R23, R5113000: Immutable, it keeps its 5/5, and the banner's aura passes it by"
         );
         assert_eq!(s.card(immutable.as_str()).stats_override, None);
         assert_eq!(

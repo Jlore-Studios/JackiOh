@@ -10,6 +10,7 @@ use jackioh_ai::{
     AI_EVAL, AI_GATE, AI_GATE_BUDGET, AI_MULLIGAN, AI_SEARCH, AiOptions, GREEDY_EVAL, MatchConfig,
     MatchHooks, MatchRecord, MatchSetup, Matchup, NextSwing, Prices, SeatController, action_key,
     candidate_actions, decide, evaluate, game_config, greedy_action, play_match, random_action,
+    surcharge_nodes,
 };
 use jackioh_engine::testkit::{
     AI_DIFFICULTY, Action, ActionBody, ActionType, DECK_SIZE, FoldArgs, GameState, PerPlayer, PerPlayerOpt,
@@ -374,40 +375,63 @@ mod the_baselines_b27 {
         );
     }
 
-    /// Every candidate gets its one simulation, its surcharge included: while the enemy's Pareto
-    /// Optimality (M #71) judges the AI's plays, each play pays `AI_SEARCH.judged_card_nodes` per hand
-    /// card beyond its own node (#1240). Flood, Twisting Nether and Genn's Greed, each (4) with one
-    /// variant, come ahead of the (1) True Strike in move order, and True Strike's first variant, on
-    /// the enemy hero at 4 health, wins, but fits only the whole budget, `1 + max_auto_answers` nodes
-    /// per candidate.
-    #[test]
-    fn b27_greedy_action_simulates_every_candidate_on_its_budget_surcharges_included() {
+    /// Flood, Twisting Nether, Genn's Greed and True Strike: three (4) Spells with one variant each,
+    /// ahead of the (1) True Strike in move order.
+    const PARETO_HAND: [&str; 4] = ["core-017", "core-088", "core-094", "core-044"];
+
+    /// The AI holding `hand` and 4 mana against the enemy hero at 4 health, whose face-up Pareto
+    /// Optimality (M #71) judges the AI's plays: each pays `AI_SEARCH.judged_card_nodes` per hand card
+    /// beyond its own node (#1240). Its candidates and their True Strike on the enemy hero, the fourth
+    /// play, which wins.
+    fn pareto_board(hand: &[&str]) -> (GameState, Vec<ActionBody>, ActionBody) {
         let state = open_board(
-            json!({ "hand": ["core-017", "core-088", "core-094", "core-044"], "mana": 4 }),
+            json!({ "hand": hand, "mana": 4 }),
             json!({ "health": 4, "backrow": [{ "def": "meditative-071", "faceUp": true }] }),
         );
         assert!(subsystems::watching(&state, AI));
         let candidates = candidate_actions(&state, AI, Prices::NONE);
-        let hand = state.players[AI].hand.len();
-        let per_play = 1 + AI_SEARCH.judged_card_nodes as usize * hand;
-        let budget = candidates.len() * (1 + AI_SEARCH.max_auto_answers as usize);
-        // True Strike on the enemy hero is the fourth play simulated: within the budget, and not within
-        // one node fewer per candidate.
         assert_eq!(candidates.len(), 6, "{candidates:?}");
-        assert!(4 * per_play <= budget);
-        assert!(4 * per_play > candidates.len() * AI_SEARCH.max_auto_answers as usize);
         let strike = candidates[3].clone();
         assert!(
             matches!(&strike, ActionBody::Play { targets: Some(targets), .. }
                 if targets.first() == Some(&Selection::Hero { player: HUMAN })),
             "{strike:?}"
         );
+        let won = act(&state, AI, &strike);
+        assert_eq!(won.result.and_then(|result| result.winner.player()), Some(AI));
+        (state, candidates, strike)
+    }
+
+    /// Every candidate gets its one simulation, its surcharge included, on a counter of its own that
+    /// pays it (R4799000): True Strike's first variant, on the enemy hero at 4 health, wins.
+    #[test]
+    fn b27_greedy_action_simulates_every_candidate_on_its_budget_surcharges_included() {
+        let (state, _, strike) = pareto_board(&PARETO_HAND);
+        assert_eq!(
+            surcharge_nodes(&state, AI, &strike),
+            AI_SEARCH.judged_card_nodes as usize * state.players[AI].hand.len()
+        );
         assert_eq!(
             greedy_action(&state, AI, &mut create_rng("match-greedy-budget", 0)),
             Some(strike.clone())
         );
-        let won = act(&state, AI, &strike);
-        assert_eq!(won.result.and_then(|result| result.winner.player()), Some(AI));
+    }
+
+    /// R4799000: with a fifth card in hand, a (9) Unit it cannot play, each play's surcharge is 15, and
+    /// the four plays up to True Strike take 64 nodes, more than the 54 one counter of
+    /// `1 + max_auto_answers` a candidate gave all six: the strike was refused and scored as standing
+    /// still. Each now pays its own, and greedy takes the lethal it takes with four cards.
+    #[test]
+    fn r4799000_greedy_action_pays_each_candidates_surcharge_whatever_the_ones_before_it_took() {
+        let mut hand = PARETO_HAND.to_vec();
+        hand.push("stand-in (9) 9/9");
+        let (state, candidates, strike) = pareto_board(&hand);
+        let per_play = 1 + surcharge_nodes(&state, AI, &strike);
+        assert!(4 * per_play > candidates.len() * (1 + AI_SEARCH.max_auto_answers as usize));
+        assert_eq!(
+            greedy_action(&state, AI, &mut create_rng("match-greedy-budget", 0)),
+            Some(strike.clone())
+        );
     }
 
     #[test]

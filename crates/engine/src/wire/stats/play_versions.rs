@@ -18,21 +18,28 @@
 //! tab's Running view names beside the version a card's current play version began at. R5033000: and the
 //! position of its first version in the shipped history, which the Date sort reads.
 //!
+//! R5037000: each row also reads the Cards tab's Win rate (R3185000) and Play rate (R3950000), plain
+//! tallies summed over the span as the games are, never an average of its versions' rates.
+//!
 //! R5040000: `major_line_versions` cuts each live play version to the newest major's line;
 //! `play_version_figures` over the cut versions is the Major patch running view's table, its field read
 //! over the cut rows alone.
 //!
 //! R5035000: each play version's iteration, `v1`, `v1b`, `v2` (`jackioh_cards::play_versions_of` counts
 //! it over its card's whole shipped history), which each row sends as its label.
+//!
+//! R5036000: each row's Decisiveness (R4552001) over its span, against one baseline of every record the
+//! table counts.
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use super::window::{Part, PatchStep, PatchTier, part_of, patch_windows, split_by_version};
 use super::{
-    CardStats, CardTier, CreatedStats, DECIMALS, GameMode, GameSource, ModeFilter, NO_FIGURE, PERCENT,
-    PilotFilter, StatsField, StatsTotals, Tally, add_created, add_stats, adjusted_interval,
-    adjusted_win_rate, held_adjusted, percent, seen, stats_field, tier_of, to_fixed,
+    CardStats, CardTier, CreatedStats, DECIMALS, DecisivenessRow, GameMode, GameSource, ModeFilter,
+    NO_FIGURE, PERCENT, PilotFilter, StatsField, StatsTotals, SwingRows, SwingTally, Tally, add_created,
+    add_stats, add_swing_rows, adjusted_interval, adjusted_win_rate, decisiveness_rows, format_decisiveness,
+    held_adjusted, percent, play_rate, seen, stats_field, swing_baseline, tier_of, to_fixed, win_rate,
 };
 use crate::catalog::RULE_MADE_DEF_IDS;
 use crate::config::{PUBLIC_STATS_MIN_LIVE_GAMES, TIER_BAND_HIGH, TIER_BAND_LOW};
@@ -131,9 +138,18 @@ pub struct PlayVersionFigures {
     pub adjusted_win_rate: Option<f64>,
     pub adjusted_low: Option<f64>,
     pub adjusted_high: Option<f64>,
+    /// R5036000: R4552001's Decisiveness over its span; none below the floor or with no turns.
+    pub decisiveness: Option<f64>,
     /// R3022000: its tier, only once it has the floor's games.
     pub tier: Option<CardTier>,
     pub has_enough_games: bool,
+    /// R5037000: its win rate over the `games` it counts, as R3185000 reads a card's; `None` with no
+    /// games, so a play version nobody held never reads as 0%. The floor (R654) is `has_enough_games`'s.
+    pub win_rate: Option<f64>,
+    /// R5037000: how often it was played when seen, its played games over its seen games (R3950000), a
+    /// card only a rule makes its used Created games over the games a seat made one (R3070000); `None`
+    /// when it was never seen, as 0% would say it was seen and never played.
+    pub play_rate: Option<f64>,
 }
 
 /// R4675001: every play version's figures, and the field and band they are read against.
@@ -144,6 +160,9 @@ pub struct PlayVersionTable {
     pub field: StatsField,
     pub band_low: f64,
     pub band_high: f64,
+    /// R5036000: the typical play version's Decisiveness (R4552001's `m` over these rows), which the
+    /// tooltip names.
+    pub decisiveness: f64,
     pub min_sample: i64,
     pub versions: Vec<PlayVersionFigures>,
 }
@@ -164,10 +183,29 @@ impl VersionParts {
     }
 }
 
-/// A play version's breakdowns over its span, and its Created figures there (R2089000).
+/// A play version's breakdowns over its span, its Created figures there (R2089000), and the record
+/// sources its span counts (`span_sources`).
 struct Summed {
     stats: Option<CardStats>,
     created: Option<CreatedStats>,
+    sources: &'static [GameSource],
+}
+
+impl Summed {
+    /// R5036000: the turns `card`'s Decisiveness is read off. A card only a rule makes reads its Created
+    /// copies' turns (R4552002), as its games are the seats that made one (R3070000).
+    fn swing_row<'a>(&'a self, card: &str, empty: &'a SwingTally) -> DecisivenessRow<'a> {
+        match self.created.as_ref() {
+            Some(created) if RULE_MADE_DEF_IDS.contains(&card) => DecisivenessRow {
+                tally: &created.swing,
+                made: true,
+            },
+            _ => DecisivenessRow {
+                tally: self.stats.as_ref().map_or(empty, |stats| stats.swing.or(empty)),
+                made: false,
+            },
+        }
+    }
 }
 
 /// The record sources a span counts: live alone once its live games reach R654's gate, else live and
@@ -187,10 +225,11 @@ fn summed(version: &PlayVersion, parts: &IndexMap<&str, VersionParts>) -> Summed
         .filter_map(|shipped| parts.get(shipped.as_str()))
         .collect();
     let live_games = spanned.iter().map(|parts| parts.live_games).sum();
+    let sources = span_sources(live_games);
     let mut stats: Option<CardStats> = None;
     let mut created: Option<CreatedStats> = None;
     for parts in spanned {
-        for source in span_sources(live_games) {
+        for source in sources {
             let part = parts.of(*source);
             if let Some(card) = part.cards.get(&version.card) {
                 match stats.as_mut() {
@@ -206,7 +245,38 @@ fn summed(version: &PlayVersion, parts: &IndexMap<&str, VersionParts>) -> Summed
             }
         }
     }
-    Summed { stats, created }
+    Summed {
+        stats,
+        created,
+        sources,
+    }
+}
+
+/// R5036000: every turn of the records the table counts: each (version, source) a row's span counts,
+/// once; in the modes `mode` reads; every pilot, as `windowed_swing_rows` reads a window's.
+fn counted_swing_rows(
+    totals: &StatsTotals,
+    versions: &[PlayVersion],
+    sums: &[Summed],
+    mode: ModeFilter,
+) -> SwingRows {
+    let counted: IndexSet<(&str, GameSource)> = versions
+        .iter()
+        .zip(sums)
+        .flat_map(|(version, sum)| {
+            version
+                .versions
+                .iter()
+                .flat_map(|shipped| sum.sources.iter().map(move |source| (shipped.as_str(), *source)))
+        })
+        .collect();
+    let mut rows = SwingRows::new();
+    for (key, total) in &totals.game_totals {
+        if counted.contains(&(key.patch.as_str(), key.source)) && mode.counts(key.mode) {
+            add_swing_rows(&mut rows, &total.swing);
+        }
+    }
+    rows
 }
 
 /// R4675001: every play version's figures over `totals`: R377's breakdowns of its card summed over the
@@ -237,6 +307,16 @@ pub fn play_version_figures(totals: &StatsTotals, query: &PlayVersionQuery) -> P
         .collect();
     let floor = i32::try_from(query.min_sample).unwrap_or(i32::MAX);
     let field = stats_field(sums.iter().filter_map(|sum| sum.stats.as_ref()), floor);
+    // R5036000: one baseline for every row, as one field is.
+    let empty = SwingTally::default();
+    let rows: Vec<DecisivenessRow> = query
+        .versions
+        .iter()
+        .zip(&sums)
+        .map(|(version, sum)| sum.swing_row(&version.card, &empty))
+        .collect();
+    let baseline = swing_baseline(&counted_swing_rows(totals, query.versions, &sums, query.mode));
+    let (decisive_field, decisive) = decisiveness_rows(&rows, &baseline);
     // R4678001: each shipped version's window, as the patch bar lists them (R1973002).
     let windows = patch_windows(
         query.history,
@@ -264,12 +344,24 @@ pub fn play_version_figures(totals: &StatsTotals, query: &PlayVersionQuery) -> P
         .versions
         .iter()
         .zip(&sums)
-        .map(|(version, sum)| figures_of(version, sum, &field, query, &window_of, &position_of))
+        .zip(&decisive)
+        .map(|((version, sum), decisiveness)| {
+            figures_of(
+                version,
+                sum,
+                &field,
+                query,
+                &window_of,
+                &position_of,
+                *decisiveness,
+            )
+        })
         .collect();
     PlayVersionTable {
         field,
         band_low: TIER_BAND_LOW,
         band_high: TIER_BAND_HIGH,
+        decisiveness: decisive_field.typical,
         min_sample: query.min_sample,
         versions,
     }
@@ -324,6 +416,7 @@ fn figures_of(
     query: &PlayVersionQuery,
     window_of: &IndexMap<&str, usize>,
     position_of: &IndexMap<&str, usize>,
+    decisiveness: Option<f64>,
 ) -> PlayVersionFigures {
     let stats = sum.stats.as_ref();
     // R3070000: a card only a rule makes is in no deck: it reads the seats that made one (R2089000).
@@ -342,6 +435,8 @@ fn figures_of(
     });
     let games = i64::from(counted.games);
     let has_enough_games = games >= query.min_sample;
+    let rate = win_rate(&counted);
+    let played = play_rate(stats, sum.created.as_ref(), made.as_ref());
     let (adjusted, range) = match made {
         Some(made) => {
             held_adjusted(&made, field).map_or((None, None), |(rate, range)| (Some(rate), Some(range)))
@@ -369,8 +464,11 @@ fn figures_of(
         adjusted_win_rate: adjusted,
         adjusted_low: range.map(|(low, _)| low),
         adjusted_high: range.map(|(_, high)| high),
+        decisiveness: decisiveness.filter(|_| has_enough_games),
         tier,
         has_enough_games,
+        win_rate: rate,
+        play_rate: played,
     }
 }
 
@@ -379,17 +477,18 @@ fn figures_of(
 pub fn format_play_versions(table: &PlayVersionTable) -> String {
     let field = &table.field;
     let mut lines = vec![format!(
-        "Play versions read against a field of {} play versions (centre {} points, spread {} points); band {}–{}; a tier from {} games.",
+        "Play versions read against a field of {} play versions (centre {} points, spread {} points); band {}–{}; a typical play version's Decisiveness {}; a tier from {} games.",
         field.cards,
         to_fixed(field.center * PERCENT, DECIMALS),
         to_fixed(field.spread * PERCENT, DECIMALS),
         percent(Some(table.band_low)),
         percent(Some(table.band_high)),
+        format_decisiveness(Some(table.decisiveness)),
         table.min_sample
     )];
     for row in &table.versions {
         lines.push(format!(
-            "{} {} {}..{}{} games {} adjusted {} ({}–{}) tier {}",
+            "{} {} {}..{}{} games {} adjusted {} ({}–{}) decisiveness {} tier {}",
             row.id,
             row.name,
             row.first,
@@ -399,6 +498,7 @@ pub fn format_play_versions(table: &PlayVersionTable) -> String {
             percent(row.adjusted_win_rate),
             percent(row.adjusted_low),
             percent(row.adjusted_high),
+            format_decisiveness(row.decisiveness),
             row.tier.map_or(NO_FIGURE, CardTier::as_str)
         ));
     }
@@ -425,12 +525,13 @@ pub fn format_play_versions(table: &PlayVersionTable) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::DORMANT_STARSHIP_DEF_ID;
+    use crate::config::{DECISIVENESS_PRIOR_CENTER, DORMANT_STARSHIP_DEF_ID};
     use crate::wire::catalog_types::{PerPlayer, PlayerId};
     use crate::wire::events::{GameOverReason, Winner};
     use crate::wire::stats::{
-        CardStatsFilter, GameRecord, GameSummary, PatchTier, Pilot, RecordsKey, SeatSummary, SourceFilter,
-        card_stats_of,
+        CardStatsFilter, CreatedUse, GameRecord, GameSummary, PatchTier, Pilot, RecordsKey, SeatSummary,
+        SourceFilter, SwingReport, SwingTurn, WindowQuery, WindowRequest, card_stats_of, swing_report,
+        swing_rows_of, windowed_card_stats, windowed_swing_rows,
     };
 
     const A: &str = "core-001";
@@ -497,21 +598,23 @@ mod tests {
         totals
     }
 
+    /// Every source, mode, patch and seat.
+    fn all() -> CardStatsFilter {
+        CardStatsFilter {
+            source: SourceFilter::All,
+            mode: None,
+            patch: None,
+            pilot: PilotFilter::Unified,
+        }
+    }
+
     /// `card`'s breakdowns over `records` alone, every source, mode and patch: a sum folded by hand.
     fn by_hand(records: &[GameRecord], card: &str) -> CardStats {
-        card_stats_of(
-            &folded(records),
-            &CardStatsFilter {
-                source: SourceFilter::All,
-                mode: None,
-                patch: None,
-                pilot: PilotFilter::Unified,
-            },
-        )
-        .cards
-        .into_iter()
-        .find(|stats| stats.card == card)
-        .expect("the card is held")
+        card_stats_of(&folded(records), &all())
+            .cards
+            .into_iter()
+            .find(|stats| stats.card == card)
+            .expect("the card is held")
     }
 
     fn query(versions: &[PlayVersion], min_sample: i64) -> PlayVersionQuery<'_> {
@@ -676,7 +779,7 @@ mod tests {
         assert_eq!(
             lines[1],
             format!(
-                "core-001~v0 core-001 name v0..v0 games 0 adjusted {NO_FIGURE} ({NO_FIGURE}–{NO_FIGURE}) tier {NO_FIGURE}"
+                "core-001~v0 core-001 name v0..v0 games 0 adjusted {NO_FIGURE} ({NO_FIGURE}–{NO_FIGURE}) decisiveness — tier {NO_FIGURE}"
             )
         );
         assert!(
@@ -754,6 +857,120 @@ mod tests {
         assert_eq!(reached, [1, 4, 4, 2, 1, 0]);
         // No history names no window.
         assert_eq!(read(&[]), [0; 6]);
+    }
+
+    /// A live game on `patch` holding `deck`, which p1 wins when `won`, where p1 played `played` and, with
+    /// `seen` false, never had any card in hand.
+    fn played_game(
+        id: &str,
+        patch: &str,
+        deck: &[&str],
+        won: bool,
+        played: &[&str],
+        seen: bool,
+    ) -> GameRecord {
+        let mut record = game(id, GameSource::Live, patch, deck, won);
+        record.game.seats.p1.played = played.iter().map(|card| card.to_string()).collect();
+        if !seen {
+            record.game.seats.p1.opening = vec![];
+        }
+        record
+    }
+
+    // R5037000: a one-version play version reads the Cards tab's figures for the same records: R3185000's
+    // win rate over the decks that held the card, R3950000's played over seen.
+    #[test]
+    fn r5037000_a_one_version_play_versions_win_rate_and_play_rate_are_the_cards_tabs() {
+        let a = version(A, &["v1"], true);
+        let records = [
+            played_game("m1", "v1", &[A], true, &[A], true),
+            played_game("m2", "v1", &[A], false, &[], true),
+            played_game("m3", "v1", &[A], true, &[], false),
+            played_game("m4", "v1", &[A], false, &[A], true),
+        ];
+        let table = play_version_figures(&folded(&records), &query(std::slice::from_ref(&a), 1));
+        let row = row(&table, &a.id);
+        assert_eq!(row.games, 4);
+        assert_eq!(row.win_rate, Some(0.5));
+        // Played in two of the three games that saw it; the fourth never had it in hand.
+        assert_eq!(row.play_rate, Some(2.0 / 3.0));
+        let card = by_hand(&records, A);
+        assert_eq!(row.win_rate, win_rate(&card.in_deck));
+        assert_eq!(row.play_rate, play_rate(Some(&card), None, None));
+    }
+
+    // R5037000: a span sums its versions' tallies, so its rates differ from the mean of theirs.
+    #[test]
+    fn r5037000_a_two_version_span_reads_the_summed_tallies() {
+        let span = version(A, &["v1", "v2"], true);
+        let first = version(B, &["v1"], false);
+        let versions = [span.clone(), first.clone()];
+        let records = [
+            played_game("m1", "v1", &[A, B], true, &[A, B], true),
+            played_game("m2", "v2", &[A], false, &[A], true),
+            played_game("m3", "v2", &[A], false, &[], true),
+            played_game("m4", "v2", &[A], false, &[], false),
+        ];
+        let table = play_version_figures(&folded(&records), &query(&versions, 1));
+        let row_a = row(&table, &span.id);
+        // One win in four games, and two plays in the three games that saw it.
+        assert_eq!(
+            (row_a.games, row_a.win_rate, row_a.play_rate),
+            (4, Some(0.25), Some(2.0 / 3.0))
+        );
+        // v1 alone reads 100% and 100%, v2 alone 0% and 50%: the mean of the two would be 50% and 75%.
+        let v1 = row(&table, &first.id);
+        assert_eq!((v1.win_rate, v1.play_rate), (Some(1.0), Some(1.0)));
+        let card = by_hand(&records, A);
+        assert_eq!(row_a.win_rate, win_rate(&card.in_deck));
+        assert_eq!(row_a.play_rate, play_rate(Some(&card), None, None));
+    }
+
+    // R5037000, R3070000: the Dormant Starship is in no deck: it reads its used games over the games a
+    // seat made one.
+    #[test]
+    fn r5037000_a_card_only_a_rule_makes_reads_its_used_games_over_its_made_games() {
+        let starship = version(DORMANT_STARSHIP_DEF_ID, &["v1"], true);
+        let card = DORMANT_STARSHIP_DEF_ID.to_string();
+        let mut used = game("m1", GameSource::Live, "v1", &[A], true);
+        used.game.seats.p1.created_used = Some(vec![CreatedUse {
+            card: card.clone(),
+            turn: 5,
+            radiant: false,
+            variant: None,
+            source: None,
+        }]);
+        let mut unused_won = game("m2", GameSource::Live, "v1", &[A], true);
+        unused_won.game.seats.p1.created_unused = Some(vec![card.clone()]);
+        let mut unused_lost = game("m3", GameSource::Live, "v1", &[A], false);
+        unused_lost.game.seats.p1.created_unused = Some(vec![card]);
+        let table = play_version_figures(
+            &folded(&[used, unused_won, unused_lost]),
+            &query(std::slice::from_ref(&starship), 1),
+        );
+        let row = &table.versions[0];
+        assert_eq!(row.games, 3);
+        assert_eq!(row.win_rate, Some(2.0 / 3.0));
+        assert_eq!(row.play_rate, Some(1.0 / 3.0));
+    }
+
+    // R5037000: a play version nobody saw has a win rate and no play rate, which 0% would misread as seen
+    // and never played; one wholly before the records has neither.
+    #[test]
+    fn r5037000_a_version_never_seen_reads_no_play_rate_and_one_before_the_records_reads_none() {
+        let old = version(A, &["v0"], false);
+        let now = version(A, &["v1"], true);
+        let versions = [old.clone(), now.clone()];
+        let records = [
+            played_game("m1", "v1", &[A], true, &[], false),
+            played_game("m2", "v1", &[A], false, &[], false),
+        ];
+        let table = play_version_figures(&folded(&records), &query(&versions, 1));
+        let seen_never = row(&table, &now.id);
+        assert_eq!((seen_never.games, seen_never.win_rate), (2, Some(0.5)));
+        assert_eq!(seen_never.play_rate, None);
+        let before = row(&table, &old.id);
+        assert_eq!((before.games, before.win_rate, before.play_rate), (0, None, None));
     }
 
     // R5033000: a row's `first_shipped` is its first version's position in the history, ship order and never
@@ -1013,6 +1230,188 @@ mod tests {
             ids(&major_line_versions(&line_versions(), &two_majors()[..3])),
             ["core-001~v1", "core-002~v2"]
         );
+    }
+
+    /// R5036000: `game` on live `patch` whose p1 plays `played` on its first turn, its two turns read at
+    /// `evals`.
+    fn swung(
+        id: &str,
+        patch: &str,
+        deck: &[&str],
+        won: bool,
+        played: &[&str],
+        evals: [i64; 2],
+    ) -> GameRecord {
+        let mut record = game(id, GameSource::Live, patch, deck, won);
+        let p1 = &mut record.game.seats.p1;
+        p1.played = played.iter().map(|card| card.to_string()).collect();
+        p1.played_turns = Some(vec![1; played.len()]);
+        p1.swing_turns = Some(
+            [(1, evals[0]), (3, evals[1])]
+                .map(|(turn, eval)| SwingTurn {
+                    turn,
+                    eval,
+                    acting: Vec::new(),
+                    facing: Vec::new(),
+                })
+                .to_vec(),
+        );
+        record
+    }
+
+    /// R5036000: the Cards tab's Decisiveness at `at` (R4552001), as `GET /api/stats/cards` reads it: every
+    /// card a counted deck held and every Created card, beside the turns of the window every card shares,
+    /// over a history of `at` alone.
+    fn cards_tab(totals: &StatsTotals, at: &str) -> SwingReport {
+        let history = [PatchStep {
+            version: at.to_string(),
+            tier: PatchTier::Major,
+            plays: Vec::new(),
+        }];
+        let report = windowed_card_stats(
+            totals,
+            &WindowQuery {
+                history: &history,
+                at,
+                live_pilot: PilotFilter::Unified,
+                mode: ModeFilter::All,
+                request: WindowRequest::Gated,
+            },
+        );
+        let empty = SwingTally::default();
+        swing_report(
+            report
+                .cards
+                .iter()
+                .map(|card| (card.stats.card.as_str(), card.stats.swing.or(&empty))),
+            report
+                .created
+                .iter()
+                .map(|row| (row.stats.card.as_str(), &row.stats.swing)),
+            &swing_baseline(&windowed_swing_rows(
+                totals,
+                &history,
+                at,
+                ModeFilter::All,
+                WindowRequest::Gated,
+            )),
+        )
+    }
+
+    // R5036000: over one version a play version's Decisiveness is its card's on the Cards tab over the same
+    // records; below the floor it has none, as it has no tier. Fewer rows than `ADJUSTED_FIELD_MIN_CARDS`,
+    // so both read the named priors and agree to the bit.
+    #[test]
+    fn r5036000_a_play_versions_decisiveness_over_one_version_is_the_cards_tabs() {
+        let versions = [version(A, &["v1"], true), version(B, &["v1"], true)];
+        let totals = folded(&[
+            swung("m1", "v1", &[A, B], true, &[A], [0, 30_000]),
+            swung("m2", "v1", &[A, B], false, &[B], [0, -20_000]),
+            swung("m3", "v1", &[A, B], true, &[A, B], [5_000, 10_000]),
+            swung("m4", "v1", &[A, B], false, &[A], [-10_000, 0]),
+        ]);
+        let swing = cards_tab(&totals, "v1");
+        let table = play_version_figures(&totals, &query(&versions, 1));
+        for play in &versions {
+            let read = row(&table, &play.id).decisiveness;
+            assert!(read.is_some(), "{}", play.id);
+            assert_eq!(read, swing.cards[play.card.as_str()].decisiveness, "{}", play.id);
+        }
+        assert_eq!(table.decisiveness, swing.deck_field.typical);
+
+        let table = play_version_figures(&totals, &query(&versions, 5));
+        for row in &table.versions {
+            assert_eq!(
+                (row.has_enough_games, row.decisiveness),
+                (false, None),
+                "{}",
+                row.id
+            );
+        }
+    }
+
+    // R5036000: over two versions a play version reads its tallies summed over both (R1044000), against the
+    // baseline of every record the table counts, another card's span among them.
+    #[test]
+    fn r5036000_over_two_versions_a_play_version_reads_its_summed_tallies_against_one_baseline() {
+        let a = version(A, &["v1", "v2"], true);
+        let b = version(B, &["v3"], true);
+        let on_v1 = [
+            swung("m1", "v1", &[A], true, &[A], [0, 30_000]),
+            swung("m2", "v1", &[A], false, &[A], [5_000, -10_000]),
+        ];
+        let on_v2 = [swung("m3", "v2", &[A], true, &[A], [-5_000, 20_000])];
+        let on_v3 = [swung("m4", "v3", &[B], false, &[B], [-30_000, 30_000])];
+        let spanned = [&on_v1[..], &on_v2].concat();
+        let every = [&spanned[..], &on_v3].concat();
+        let table = play_version_figures(&folded(&every), &query(&[a.clone(), b], 1));
+        let empty = SwingTally::default();
+        // A's Decisiveness over `records`, beside the turns of `beside`.
+        let read = |records: &[GameRecord], beside: &[GameRecord]| {
+            let held = by_hand(records, A);
+            swing_report(
+                [(A, held.swing.or(&empty))],
+                std::iter::empty(),
+                &swing_baseline(&swing_rows_of(&folded(beside), &all())),
+            )
+            .cards[A]
+                .decisiveness
+        };
+        let decisiveness = row(&table, &a.id).decisiveness;
+        assert!(decisiveness.is_some());
+        assert_eq!(decisiveness, read(&spanned, &every));
+        assert_ne!(decisiveness, read(&on_v1, &every));
+        assert_ne!(decisiveness, read(&spanned, &spanned));
+    }
+
+    // R5036000: records written before R4552000 carry no turns, so a span of them has its games and tier and
+    // no Decisiveness, and the table's typical value is the named prior's.
+    #[test]
+    fn r5036000_a_span_with_no_swing_rows_has_no_decisiveness() {
+        let versions = [version(A, &["v1"], true)];
+        let totals = folded(&[
+            game("m1", GameSource::Live, "v1", &[A], true),
+            game("m2", GameSource::Live, "v1", &[A], false),
+        ]);
+        let table = play_version_figures(&totals, &query(&versions, 1));
+        let row = &table.versions[0];
+        assert!(row.has_enough_games);
+        assert!(row.tier.is_some());
+        assert_eq!(row.decisiveness, None);
+        assert_eq!(table.decisiveness, DECISIVENESS_PRIOR_CENTER);
+    }
+
+    // R5036000, R4552002: the Dormant Starship is in no deck, so its play version reads its Created copies'
+    // turns, as the Cards tab reads them.
+    #[test]
+    fn r5036000_a_card_only_a_rule_makes_reads_its_created_copies_turns() {
+        let starship = version(DORMANT_STARSHIP_DEF_ID, &["v1"], true);
+        let mut made = swung("m1", "v1", &[A], true, &[], [0, 30_000]);
+        // p1 made one and played it on its first turn.
+        let used = vec![CreatedUse {
+            card: DORMANT_STARSHIP_DEF_ID.to_string(),
+            turn: 1,
+            radiant: false,
+            variant: None,
+            source: None,
+        }];
+        made.game.seats.p1.created_used = Some(used.clone());
+        made.game.seats.p1.created_played = Some(used);
+        let totals = folded(&[made]);
+        let table = play_version_figures(&totals, &query(std::slice::from_ref(&starship), 1));
+        let created = card_stats_of(&totals, &all())
+            .created
+            .into_iter()
+            .find(|row| row.card == DORMANT_STARSHIP_DEF_ID)
+            .expect("a seat made one");
+        let swing = swing_report(
+            std::iter::empty(),
+            [(DORMANT_STARSHIP_DEF_ID, &created.swing)],
+            &swing_baseline(&swing_rows_of(&totals, &all())),
+        );
+        let read = table.versions[0].decisiveness;
+        assert!(read.is_some());
+        assert_eq!(read, swing.created[DORMANT_STARSHIP_DEF_ID].decisiveness);
     }
 
     #[test]

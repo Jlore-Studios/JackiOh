@@ -71,8 +71,8 @@
 //!      Position while it is Indestructible, has Can't Defend or is Evasive, or while an aura bars Defense
 //!      (§4.5 step 1: R2179000, R2657000, R3543002, R1849006), and no seat that `can_lose` (R2201000) at
 //!      hero health 0 or less (a Duos seat's is its pool's, §13.4); on every state
-//!      mana and card `damage` are 0 or more (§2.3), and every `damage` event deals more than 0 (R63,
-//!      R1361, R1362).
+//!      mana and card `damage` are 0 or more (§2.3), mana at most `MANA_CEILING` (R5148000), and every
+//!      `damage` event deals more than 0 (R63, R1361, R1362).
 //!   I18 every plain attack does what its seat's forecast said (R3100000, R4111000; #4111): `before` keeps
 //!      the `combat_forecast` entry of a chosen `attack`, and `after` holds `PlayedAttack::read` of the
 //!      step to it, a Cleave attack's splash and a Trample attack's overflow included (R4290000); what it
@@ -142,7 +142,8 @@ use serde_json::{Map, Value};
 
 use crate::combat::{HERO_TARGET_PREFIX, hero_seat_of};
 use crate::config::{
-    BACKROW_ZONES, FATIGUE_DAMAGE, MIN_CHOSEN_X, MIN_PLAGUE_PAYMENT, UNIT_ZONES, WINDFURY_ATTACKS,
+    BACKROW_ZONES, FATIGUE_DAMAGE, MANA_CEILING, MIN_CHOSEN_X, MIN_PLAGUE_PAYMENT, UNIT_ZONES,
+    WINDFURY_ATTACKS,
 };
 use crate::damage::DamageTarget;
 use crate::duos::{DuosState, duos_view_for};
@@ -768,8 +769,9 @@ fn price_held(card: &CardInstance) -> Vec<&'static str> {
 /// under one that woke inside it (S+ #63 Overdrive Dome, fuzz seeds 1596, 2217), and so may an animated
 /// card back in its backrow by then (R383, M #66 Fiery Waraxe, fuzz seed 1013, #4079).
 fn aura_gives_windfury(state: &GameState) -> bool {
-    crate::layers::aura_entries(state).iter().any(|entry| {
-        entry
+    crate::layers::aura_entries(state).iter().any(|sourced| {
+        sourced
+            .entry
             .mod_
             .keywords
             .as_deref()
@@ -877,6 +879,13 @@ fn state_check_findings(events: &[GameEvent], state: &GameState) -> Vec<String> 
         if mana.current < 0 || mana.max < 0 {
             found.push(format!(
                 "I17 negative mana: {player} holds {} of {} mana on turn {turn} (§2.3)",
+                mana.current, mana.max
+            ));
+        }
+        if mana.current > MANA_CEILING || mana.max > MANA_CEILING {
+            found.push(format!(
+                "I17 mana past the ceiling: {player} holds {} of {} mana on turn {turn}, past {MANA_CEILING} \
+                 (§2.3, R5148000)",
                 mana.current, mana.max
             ));
         }
@@ -6153,6 +6162,29 @@ mod tests {
         let monitor = create_duos_invariant_monitor(&state);
         assert!(monitor.monitors.iter().all(|duel| !duel.judge_forecast));
         assert!(create_invariant_monitor(&state.duels[0]).judge_forecast);
+    }
+
+    /// R5148000: I17 holds each seat's mana, current and maximum, to `MANA_CEILING`.
+    #[test]
+    fn r5148000_i17_finds_mana_past_the_ceiling() {
+        let duos = crate::testkit::duos_scenario::duos_scenario("r5148000-i17", test_decks(), None);
+        let mut state = duos.duels[0].clone();
+        let monitor = create_invariant_monitor(&state);
+        let past = |state: &GameState| -> Vec<String> {
+            monitor
+                .clone()
+                .after(&[], state)
+                .into_iter()
+                .filter(|found| found.contains("I17 mana past the ceiling"))
+                .collect()
+        };
+        state.players[PlayerId::P1].mana.current = MANA_CEILING;
+        assert_eq!(past(&state), Vec::<String>::new(), "15 is held");
+        state.players[PlayerId::P1].mana.current = MANA_CEILING + 1;
+        assert_eq!(past(&state).len(), 1, "16 is past it");
+        state.players[PlayerId::P1].mana.current = 0;
+        state.players[PlayerId::P2].mana.max = MANA_CEILING + 1;
+        assert_eq!(past(&state).len(), 1, "a maximum of 16 is past it");
     }
 
     #[test]

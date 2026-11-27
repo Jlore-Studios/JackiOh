@@ -8,15 +8,13 @@
 use jackioh_engine::{ActionBody, GameState, PlayerId, Rng, mulligan_prompt_for};
 
 use crate::candidates::candidate_set;
-use crate::config::{
-    AI_SEARCH, AI_SKILL_MAX, AI_SKILL_MIN, AI_SKILL_MISS_TEMPERATURE, GREEDY_EVAL, GREEDY_MULLIGAN,
-};
+use crate::config::{AI_SKILL_MAX, AI_SKILL_MIN, AI_SKILL_MISS_TEMPERATURE, GREEDY_EVAL, GREEDY_MULLIGAN};
 use crate::decide::{pick_finalist, probe_world};
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{NextSwing, evaluate};
 use crate::mulligan::mulligan_keep;
 use crate::observe::{ai_to_act, redact, unanswered_draw_offer};
-use crate::simulate::{create_node_counter, simulate_first_answers};
+use crate::simulate::one_ply_step;
 
 /// R747000: `skill` kept inside `AI_SKILL_MIN..=AI_SKILL_MAX`; a NaN is full skill.
 pub fn clamp_skill(skill: f64) -> f64 {
@@ -74,17 +72,17 @@ pub fn skill_miss_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Op
 }
 
 /// R2214000: each candidate's greedy-baseline score on `det` one ply ahead (GREEDY_EVAL after
-/// `simulate_first_answers`); endTurn and an unsimulated step score as standing still.
+/// `simulate_first_answers`, each on a counter of its own that pays its surcharge, `one_ply_step`,
+/// R4799000); endTurn and an unsimulated step score as standing still.
 pub fn one_ply_scores(det: &GameState, seat: PlayerId, candidates: &[ActionBody]) -> Vec<f64> {
     let standing = evaluate(det, seat, NextSwing::Enemy, &GREEDY_EVAL);
-    let counter = create_node_counter(candidates.len() * (1 + AI_SEARCH.max_auto_answers as usize), None);
     candidates
         .iter()
         .map(|action| {
             if matches!(action, ActionBody::EndTurn) {
                 return standing;
             }
-            match simulate_first_answers(det, seat, action, &counter) {
+            match one_ply_step(det, seat, action) {
                 Some(Ok(next)) => evaluate(&next, seat, NextSwing::Enemy, &GREEDY_EVAL),
                 _ => standing,
             }

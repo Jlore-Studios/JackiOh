@@ -93,6 +93,10 @@ one redaction (R1184002); and so is C+ #42 KY's Test's Easy problem (#2929). Ahe
 answers such a question of the AI's own the same way, judged right on its world, a sequence until
 `AI_KY_COMPETITION_EXPECTED_STREAK` (6, Radiant 12) and then Stop (`simulate::worked_step`,
 R1563005); the greedy baseline's simulation does not.
+R4797000: `decide` plays each sampled world with the opponent's automatic turn end off (`search_world`,
+R82, R345, as `unstoppable.rs` does), so a line's End turn stops where the opponent's turn begins, the
+crystals it left unspent still in the seat's turn log for `passed_score` and `reply_score`, even against an
+opponent with nothing to do, and the reply ends that turn (`AI_SEARCH.hold_opponent_turn`).
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
@@ -228,7 +232,8 @@ the power an answer leaves that card the same way; every price is keyed by the p
 `turn_hook_prices` prices it by one run of the engine's own yard step, for each Dormant shipyard on
 either field and each in the seat's hand, and `slumber_worth` adds `AI_EVAL.turn_hook` of it outside the
 slumber share, which that probe's own evaluation already applied (R3575402).
-A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000):
+A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000; Frenzy is
+none, since the twin below holds it too, R4799002):
 `attack_hook_prices` walks the same two turns, within `AI_ATTACK_HOOK_PROBE_NODES`; at the start of each
 player's next turn it plays each of that player's units with a hook at the enemy hero, or at the first
 target `legal_actions` lists, beside the same attack by the unit's hookless twin (Vanilla, granted its
@@ -324,12 +329,16 @@ its first `branching`, End Turn always among them. Inside one card's plays, each
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
 target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units
 first (#1778). Its root tries a play in every distinct placement (the zones beside its lane and
-across it), each in its lowest lane, or its midlane lane when it has one, which a Cry may read (R2203001);
+across it, a zone a GIGA covers read as the GIGA, and the half of a slashed board its lane is on,
+R4799001), each in its lowest lane, or its midlane lane when it has one, which a Cry may read (R2203001);
 deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). The beam
 drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
 are one position). A position also holds the last Spell played while a card that copies it (C #57 Echo) is
 in the seat's hand or graveyard, and each unit's Churnwalker chain; its units' lanes include a Dormant card's
-lane and an animated card's home zone (R4808000). A line that differs from an earlier one only in where its cards stand is a lane variant
+lane and an animated card's home zone (R4808000). A card off the field signs its buffs and granted
+keywords, each only when it holds some and the keywords sorted (`grants_signature`,
+`AI_SEARCH.hand_grants_signed`), so which hand card an S+ #100 Plesiosize or an S+ #23 GIGA-ify went on is
+part of the position, for the beam, the lethal solver and the concession check's walk (R4793000). A line that differs from an earlier one only in where its cards stand is a lane variant
 (#1797; R4132000: a backrow card's lane, and which side of a standing unit a new one goes, included, read off
 `lane_free_signature`, which sorts each side's units and backrow cards and leaves out its empty zones): the
 evaluation reads no lane but through a unit's stats, which that signature keeps, so it takes no place in the
@@ -351,6 +360,17 @@ true state refuses (a cost no determinization could see) is never submitted: `su
 first action of the next finalist the true state accepts, best mean first, with the search's reason, and
 only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer
 or other legal action (#1575).
+
+R4792000: while a Mayor acts (R1200) `legal_actions` lists one attack per attacker, naming
+`RANDOM_ATTACK_TARGET`, and the engine draws its target. Such an attack is worth the mean of a hit on each
+target it may draw (`candidates::drawn_attack`: `attack_targets`, each as likely, a hit on the hero by
+`face_value` and on a unit by `trade_value`), in the reply's `ranked_attacks` and the move order's
+`front_value` alike. The move order puts it with the attacks on the hero when the enemy hero is its only
+target, otherwise with the even trades when some draw hits the hero or kills and the mean is 0 or more
+(`Drawn::even`), otherwise among the other attacks. `ready_gap` counts it only when the hero is its only
+target (`draws_only_hero`), and only then does `face_is_lethal` make its hit the win. A Radiant Mayor's
+Lucky (R1201) is not read. `AI_REPLY.drawn_attacks` off prices it at nothing and counts it on the hero,
+as before.
 
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
@@ -456,6 +476,12 @@ so a wrap-up that fired before the beam still leaves it lines, the root's End tu
 R4604014: so is the slice's own limit (`create_beam_counter`): the root's moves draw on the decision's
 counter however many nodes they cost, so a root move dearer than the whole slice still closes a line;
 the decision's own limit and clock still stop it.
+R4791000: a beam whose slice refused a node, to its budget or the wrap-up, closes on its stop only the
+frontier line the stop cut short, those after it and the children (a line it finished expanding filed its
+End turn already), and ranks a line whose End turn was refused, open in the seat's main phase, as a passed
+one, its hand eval less `AI_EVAL.unspent_mana` a crystal (`closed_score`); `decide` then ends the turn of
+each such shortlisted line on the decision's own nodes before `reply_score`, and a node refused there ends
+the replies. A beam its slice never refused decides node for node as before (`AI_SEARCH.close_cut_lines`).
 `SearchStats.replied` and `worldsScored` say how far they got, and
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.
@@ -570,7 +596,10 @@ A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }
 `[0, 1]` that each decision follows the AI, the rest being the skill miss (`skill::skill_miss_action`,
 R2214000): a softmax at `AI_SKILL_MISS_TEMPERATURE` over the greedy baseline's one-ply scores of the
 candidates the probe world lists (`decide::probe_world` of `redact(state, seat)`, as `decide` lists
-its own, R4216000), read on one determinization of what the seat sees at the shown costs (R762).
+its own, R4216000), read on one determinization of what the seat sees at the shown costs (R762). The
+greedy baseline and the miss simulate each candidate on a counter of its own, sized to its one node, its
+surcharge and `max_auto_answers` answers (`one_ply_step`, R4799000), so a surcharged play (a Zephrys, a
+play Pareto Optimality judges) is simulated whatever the candidates before it took.
 `None` is `AI_SKILL_MAX`: full skill, which takes no draw, so a seat without one plays as it did
 before the knob; `AI_SKILL_MIN` is the miss at every decision, with no search. In
 between, `skill::plays_best(skill, rng)` rolls the seat's own seeded stream once per decision

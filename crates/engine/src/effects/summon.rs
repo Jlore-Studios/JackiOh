@@ -13,7 +13,7 @@ use crate::animated::animate_on_entry;
 use crate::catalog::{CatalogQueryArgs, def_of, excluding_def_id, pick_generated_unique, query};
 use crate::config::CRY_ON_PLAY_ONLY;
 use crate::damage::DamageTarget;
-use crate::effects::buff::{grant_keyword, grant_random_keywords};
+use crate::effects::buff::{grant_arriving_keyword, grant_arriving_random_keywords};
 use crate::effects::radiant::set_radiant;
 use crate::effects::targets::{
     PlayerSpec, ScopeSide, TargetSpec, instance_of, player_of, resolve_target, sides_of,
@@ -733,7 +733,8 @@ fn roll_random_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, count:
     };
     // R174: the roll is aimed at the stay the card has just arrived on, so it is named from a mark
     // taken now — a unit the same list sent to the graveyard and has just summoned back is this one.
-    let effect = grant_random_keywords(json_as(json!({
+    // R5113000: the roll is how the card arrives, so an Immutable one takes it too.
+    let effect = grant_arriving_random_keywords(json_as(json!({
         "target": { "of": "instance", "instanceId": card.id },
         "count": count,
     })));
@@ -745,6 +746,7 @@ fn roll_random_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, count:
 
 /// The `keywords` rider: each keyword granted to the fresh card by its id through `grantKeyword`,
 /// stay-marked as `roll_random_keywords` is (R174), so every grant is announced (`keywordGranted`).
+/// R5113000: it is how the card arrives, so an Immutable one takes it too (S+ #142.1's Can't attack).
 fn grant_summon_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, keywords: Vec<Keyword>) {
     if keywords.is_empty() {
         return;
@@ -752,7 +754,7 @@ fn grant_summon_keywords(ctx: &mut EffectContext<'_>, card: &CardInstance, keywo
     let before = ctx.exits_from;
     ctx.exits_from = Some(exit_mark(ctx.state));
     for keyword in keywords {
-        let effect = grant_keyword(json_as(json!({
+        let effect = grant_arriving_keyword(json_as(json!({
             "target": { "of": "instance", "instanceId": card.id },
             "keyword": keyword,
         })));

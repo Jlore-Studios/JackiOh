@@ -7,7 +7,7 @@ use crate::catalog::def_of;
 use crate::config::{BACKROW_ZONES, FIENDER_STATS_MODE, RADIANT_FALLBACK_FACTOR, UNIT_ZONES};
 use crate::script::{AuraEntry, AuraHook, HookArgs, StatMod};
 use crate::state::{CardInstance, GameState, ModifierKind, Position};
-use crate::tuning::{tuned_keywords, x_of};
+use crate::tuning::tuned_keywords;
 use crate::wire::{
     AttackHealth, CardDef, CardFace, CardType, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Tag, Zone,
     armor_of, has_keyword,
@@ -58,11 +58,12 @@ pub fn worn_stats_override(def: &CardDef, instance: &CardInstance) -> Option<Att
 }
 
 /// B2.7: a face that prints its stats as multiples of X (Classic+ #69 Buff Billy's "[3X/3X]") is those
-/// multiples of the X the card was played for, tuned (`tuning::x_of`), and 0/0 when it has none. A
-/// summon's `statsOverride` still wins, as it wins over any printed stats.
-fn x_stats_of(face: &CardFace, instance: &CardInstance) -> Option<AttackHealth> {
+/// multiples of the X the card was played for, tuned (`tuning::x_of`), and 0/0 when it has none; an
+/// X-cost card's X is read at most `MANA_CEILING` (`mana::counted_x`, R5148000). A summon's
+/// `statsOverride` still wins, as it wins over any printed stats.
+fn x_stats_of(state: &GameState, face: &CardFace, instance: &CardInstance) -> Option<AttackHealth> {
     let multiples = face.x_stats?;
-    let x = x_of(instance);
+    let x = crate::mana::counted_x(state, instance);
     Some(AttackHealth {
         attack: multiples.attack * x,
         health: multiples.health * x,
@@ -75,7 +76,7 @@ fn x_stats_of(face: &CardFace, instance: &CardInstance) -> Option<AttackHealth> 
 pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
     let def = def_of(Some(state), &instance.def_id);
     let face = if instance.radiant { &def.radiant } else { &def.base };
-    let stats = worn_stats_override(def, instance).or_else(|| x_stats_of(face, instance));
+    let stats = worn_stats_override(def, instance).or_else(|| x_stats_of(state, face, instance));
     let keywords = tuned_keywords(&printed_keywords_of(state, instance), instance);
     let tuning_attack = instance
         .tuning
@@ -289,9 +290,16 @@ pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
     sources
 }
 
+/// One aura entry and the id of the card whose aura it is: R5113000 lets an Immutable card take its
+/// own aura and no other card's.
+pub(crate) struct SourcedAura<'a> {
+    pub(crate) source: &'a str,
+    pub(crate) entry: AuraEntry<'a>,
+}
+
 /// Every aura source's entries, in `aura_sources` order: each source's hook asked once.
-pub(crate) fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
-    let mut entries: Vec<AuraEntry<'_>> = Vec::new();
+pub(crate) fn aura_entries(state: &GameState) -> Vec<SourcedAura<'_>> {
+    let mut entries: Vec<SourcedAura<'_>> = Vec::new();
     for source in aura_sources(state) {
         // §6.1/§6.3: Vanilla clears scripts, and an aura is part of a card's Script (§10.9), so a
         // Vanilla'd permanent projects nothing. It still *receives* aura grants.
@@ -306,6 +314,7 @@ pub(crate) fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
         // single `Option` read per entry (perf budget).
         let slashed = state.slashed_lane.is_some();
         let from = source.clone();
+        let source_id: &str = source.id.as_str();
         entries.extend(
             aura(HookArgs {
                 state,
@@ -316,15 +325,22 @@ pub(crate) fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
             .into_iter()
             .map(|entry| {
                 if !slashed {
-                    return entry;
+                    return SourcedAura {
+                        source: source_id,
+                        entry,
+                    };
                 }
                 let from = from.clone();
                 let applies = entry.applies;
-                AuraEntry {
+                let entry = AuraEntry {
                     applies: Box::new(move |unit: &CardInstance| {
                         applies(unit) && crate::geometry::reaches(state, Some(&from), unit)
                     }),
                     mod_: entry.mod_,
+                };
+                SourcedAura {
+                    source: source_id,
+                    entry,
                 }
             }),
         );
@@ -332,23 +348,20 @@ pub(crate) fn aura_entries(state: &GameState) -> Vec<AuraEntry<'_>> {
     entries
 }
 
-/// The contributions of `entries` that reach `unit`. An aura's `applies` predicate reads instance
-/// data only: it must never call back into `unit_view`, or the layers would recurse.
-fn mods_of(entries: &[AuraEntry<'_>], unit: &CardInstance) -> Vec<StatMod> {
+/// The contributions of `entries` that reach `unit`: with `own_only` (R5113000, a card Immutable by
+/// layers 1 to 4) only its own aura's. An aura's `applies` predicate reads instance data only: it must
+/// never call back into `unit_view`, or the layers would recurse.
+fn mods_of(entries: &[SourcedAura<'_>], unit: &CardInstance, own_only: bool) -> Vec<StatMod> {
     entries
         .iter()
-        .filter(|entry| (entry.applies)(unit))
-        .map(|entry| entry.mod_.clone())
+        .filter(|sourced| (!own_only || sourced.source == unit.id) && (sourced.entry.applies)(unit))
+        .map(|sourced| sourced.entry.mod_.clone())
         .collect()
 }
 
 /// Aura contributions for one unit, every source asked for this read alone.
-fn aura_mods(state: &GameState, unit: &CardInstance) -> Vec<StatMod> {
-    aura_entries(state)
-        .into_iter()
-        .filter(|entry| (entry.applies)(unit))
-        .map(|entry| entry.mod_)
-        .collect()
+fn aura_mods(state: &GameState, unit: &CardInstance, own_only: bool) -> Vec<StatMod> {
+    mods_of(&aura_entries(state), unit, own_only)
 }
 
 /// R1180002 (Meditative+ #7 Life Mage): "Aura: Your Spells have <keyword>." — while the source acts,
@@ -378,7 +391,7 @@ pub fn spells_have_aura(keyword: Keyword) -> AuraHook {
 /// derived value, not a cache (CLAUDE.md rule 4).
 pub struct AuraTable<'a> {
     state: &'a GameState,
-    entries: Option<Vec<AuraEntry<'a>>>,
+    entries: Option<Vec<SourcedAura<'a>>>,
 }
 
 impl<'a> AuraTable<'a> {
@@ -495,7 +508,7 @@ const _: () = assert!(
 
 /// §10.4's five layers, attack unfloored: `unit_view` floors it, `unclamped_attack` reads it raw.
 /// Layer 5 reads a sweep's aura entries (`AuraTable`) when given them, else asks every source.
-fn compute_layers(state: &GameState, instance: &CardInstance, table: Option<&[AuraEntry<'_>]>) -> Layered {
+fn compute_layers(state: &GameState, instance: &CardInstance, table: Option<&[SourcedAura<'_>]>) -> Layered {
     compute_layers_on(state, instance, table, false)
 }
 
@@ -504,7 +517,7 @@ fn compute_layers(state: &GameState, instance: &CardInstance, table: Option<&[Au
 fn compute_layers_on(
     state: &GameState,
     instance: &CardInstance,
-    table: Option<&[AuraEntry<'_>]>,
+    table: Option<&[SourcedAura<'_>]>,
     as_it_died: bool,
 ) -> Layered {
     let printed = face_of(state, instance);
@@ -537,22 +550,7 @@ fn compute_layers_on(
     // R4587000: "+N Attack this turn" holds while its turn is now.
     attack += crate::effects::turn_buff::turn_buff_of(state, instance).map_or(0, |buff| buff.attack);
 
-    // Layer 5: auras. A card dormant under a Stack pile is "not on the field for effects" (§3.2, R13),
-    // so no aura reaches it until it resumes on top (one shrinking max health, #46, would kill it).
-    // R1839000: no aura reaches a Dormant card either.
-    let auras: Vec<StatMod> =
-        if (!as_it_died && is_dormant(state, instance)) || crate::slumber::is_slumbering(instance) {
-            Vec::new()
-        } else {
-            match table {
-                Some(entries) => mods_of(entries, instance),
-                None => aura_mods(state, instance),
-            }
-        };
-    for modifier in &auras {
-        attack += modifier.attack.unwrap_or(0);
-        max_health += modifier.max_health.unwrap_or(0);
-    }
+    // Layers 1 to 4 of the keywords: printed, conditional, granted and this turn's.
     let mut listed: Vec<Keyword> = Vec::new();
     if !instance.vanilla && !crate::alt_play::is_dormant(instance) {
         listed.extend(printed.keywords.iter().cloned());
@@ -563,6 +561,26 @@ fn compute_layers_on(
     if let Some(held) = crate::effects::turn_buff::turn_buff_of(state, instance) {
         listed.extend(held.keywords.iter().cloned());
     }
+    // R5113000: a card Immutable by those keywords takes no other card's aura and no player's lend, so
+    // an aura that makes a card Immutable (Indestructible on a Unit, R4353000) still holds beside the rest.
+    let immutable = immutable_by(state, instance, &listed);
+
+    // Layer 5: auras. A card dormant under a Stack pile is "not on the field for effects" (§3.2, R13),
+    // so no aura reaches it until it resumes on top (one shrinking max health, #46, would kill it).
+    // R1839000: no aura reaches a Dormant card either.
+    let auras: Vec<StatMod> =
+        if (!as_it_died && is_dormant(state, instance)) || crate::slumber::is_slumbering(instance) {
+            Vec::new()
+        } else {
+            match table {
+                Some(entries) => mods_of(entries, instance, immutable),
+                None => aura_mods(state, instance, immutable),
+            }
+        };
+    for modifier in &auras {
+        attack += modifier.attack.unwrap_or(0);
+        max_health += modifier.max_health.unwrap_or(0);
+    }
     for modifier in &auras {
         listed.extend(modifier.keywords.iter().flatten().cloned());
     }
@@ -571,7 +589,9 @@ fn compute_layers_on(
     let immune = has_keyword(&listed, KeywordKind::ImmuneToSpells);
     // R4586006: the player-level Attack lend, a layer-5 aura beside the sources' own.
     // R4594002: a Spell's lend passes a Unit Immune to Spells by too, read through the layers above.
-    attack += attack_lent_by_player(state, instance, immune);
+    if !immutable {
+        attack += attack_lent_by_player(state, instance, immune);
+    }
     // §10.4: an aura that sets attack to a value (Classic #88's Radiant "0 Attack") applies after every
     // other layer, so nothing above lifts it; with several, the last in aura order holds.
     for modifier in &auras {
@@ -584,7 +604,9 @@ fn compute_layers_on(
     if let Some(set) = crate::effects::firewall::attack_set_this_turn(state, instance) {
         attack = set;
     }
-    listed.extend(lent_by_player(state, instance, immune));
+    if !immutable {
+        listed.extend(lent_by_player(state, instance, immune));
+    }
     let mut keywords: Vec<Keyword> = with_brittle_count(&listed, instance);
 
     // Position grants: Defense adds Taunt and Armor +1 (§4.1).

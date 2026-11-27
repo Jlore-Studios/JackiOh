@@ -73,6 +73,15 @@
   scroll-behavior: auto !important;
 }
 
+/* R5128000: Low graphics (settings/store.ts puts the attribute on <html>): no surface blurs what is behind it, the
+   costliest thing a compositor draws each frame. The effects it holds off are fx/settings.ts's. */
+:root[data-low-graphics="true"] *,
+:root[data-low-graphics="true"] *::before,
+:root[data-low-graphics="true"] *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 /* #1954: the glove on a fine pointer only; every former pointer, grab or grabbing names one of these.
    #2103: while a mouse button is held the pointing glove is the pressed one, its finger curled and
    the hand shrunk toward the fingertip, which stays the hotspot; release brings the pointing glove

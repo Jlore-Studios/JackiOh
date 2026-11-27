@@ -159,6 +159,11 @@ pub struct AiSearch {
     /// backrow cards stand (left or right of a standing unit alike, R4132000) is a lane variant, at most
     /// this many of a position; it is closed beside the first (#1797).
     pub zone_variants: i32,
+    /// R4793000: `search_signature` signs a card's buffs and granted keywords off the field (a hand
+    /// card's from S+ #100 Plesiosize or S+ #23 GIGA-ify), each only when it holds some, so the beam,
+    /// the lethal solver and the concession check's walk tell apart which hand card a buff or a grant
+    /// went on. false signs neither, as before.
+    pub hand_grants_signed: bool,
     /// #1759, R1759000, R2021000: the stand-downs (a switch to Defense Position of a unit an enemy unit
     /// that could attack it next turn would kill and survive) `expand` keeps past its `width`, beside
     /// endTurn: switches are the move order's last tier, so below the root a full board cut every one. A
@@ -213,6 +218,20 @@ pub struct AiSearch {
     /// proof of a line that won on determinization 0 (`lethal::find_lethal_reaching`). `false` stops it at
     /// the scaled allowance, as before.
     pub lethal_reach: bool,
+    /// R4791000: a beam its budget cut short leaves its open lines' turns unended. With this on, it
+    /// closes on a stop only the frontier line the stop cut short, those after it and their children
+    /// (the lines it finished expanding filed their End turn already), ranks a line it could not end the
+    /// turn of as a passed one, less its unspent crystals at `AI_EVAL.unspent_mana` (`search.rs`), and
+    /// `decide` ends the turn of each shortlisted line still open in the seat's main phase on its own
+    /// nodes before it replies to it. A beam its slice never refused decides as before. `false` scores
+    /// every such line where it stood, unreplied.
+    pub close_cut_lines: bool,
+    /// R4797000: every world `decide` samples is played with the opponent's automatic turn end off
+    /// (`decide::search_world`, R82, R345), so the seat's End turn stops where the opponent's turn begins,
+    /// the crystals it left unspent still in its turn log, and the reply ends that turn. `false` plays
+    /// the worlds as sampled, where an opponent with nothing to do ends its turn inside the seat's End
+    /// turn, the seat's next turn rebuilding its log, and floating cost a line nothing.
+    pub hold_opponent_turn: bool,
     /// Seed of the throwaway determinization that lists candidates for the forced check.
     pub probe_seed: &'static str,
     /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
@@ -259,6 +278,11 @@ pub struct AiSearch {
 
 pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
+    // R4793000: on. Its fork screen, on improve-dev against the control of R4792000 on 798bc44a80: 200
+    // trunk games, 1 fork, 0 live, edge 0.0 (-1.0 to 1.0), inconclusive (R4319000), every game clean; its
+    // scene tests (position_model.rs's and unstoppable_lethal.rs's r4793000_ tests) settle it
+    // (training/improve.md, A screen).
+    hand_grants_signed: true,
     position_switches: 2,
     discount_lines: 1,
     discount_def_ids: &["infiniteassault-072"],
@@ -281,6 +305,14 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     // diverged, every game clean; its scene tests (crates/ai/tests/ai/wide_lethal.rs) settle it
     // (training/improve.md, A screen). false stops every walk at its scaled allowance.
     lethal_reach: true,
+    // R4791000: on. 400 games on improve-dev, 200-200, edge 0.000 (-0.024 to +0.024), 6 decided (3-3), 25
+    // diverged, every game clean, vs control 5991e8da39: inconclusive (R4319000), kept; its scene tests
+    // (crates/ai/tests/ai/budget.rs) settle it (training/improve.md, A screen).
+    close_cut_lines: true,
+    // R4797000: on. 400 games on improve-dev, 202-198, edge +0.010 (-0.018 to +0.038), 8 decided (5-3), 29
+    // diverged, every game clean, vs control 681d5a2bc5 (R4791000): inconclusive (R4319000), kept; its
+    // scene tests (crates/ai/tests/ai/float_discount.rs) settle it (training/improve.md, A screen).
+    hold_opponent_turn: true,
     probe_seed: "ai:probe",
     tribute_sets: 120,
     fat_reference: 30,
@@ -1160,6 +1192,11 @@ pub struct AiReply {
     /// Shield weight. Board-dependent kills only — the Cleave body itself stays priced by
     /// `AI_EVAL.keyword.cleave`.
     pub cleave_share: f64,
+    /// R4792000: an attack whose target the engine draws (`RANDOM_ATTACK_TARGET`, while a Mayor acts,
+    /// R1200) is worth the mean of a hit on each target it draws from (`candidates.rs` `drawn_attack`),
+    /// in the reply and in the move order, and counts in `lethal::ready_gap` only when the enemy hero is
+    /// its only target; false prices it at nothing and counts it on the hero, as before.
+    pub drawn_attacks: bool,
     /// #1696: switches to Defense Position that one reply step tries once no attack is worth making,
     /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
     /// R4187000: also the most walls (`wall_switches`) a step facing lethal weighs against its best attack.
@@ -1191,6 +1228,10 @@ pub const AI_REPLY: AiReply = AiReply {
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
     cleave_share: 1.0,
+    // R4792000: on. Its fork screen, on improve-dev against the control at 798bc44a80: 200 trunk games, 12
+    // forks, 6 live, edge -0.039 (-0.157 to 0.079), inconclusive (R4319000), every game clean; its scene
+    // tests (candidates.rs's and reply.rs's r4792000_ tests) settle it (training/improve.md, A screen).
+    drawn_attacks: true,
     // #1696: on. Its screen read 199-199 with deal 136 aborted at the action cap in both seatings (the
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean
     // (training/improve.md, A screen); about 34 decided (17-17, R4319000); 0 turns it off.

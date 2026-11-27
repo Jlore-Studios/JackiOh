@@ -767,6 +767,15 @@ pub fn simulate_first_answers(
     simulate_answering(state, seat, action, counter, AnswersTried::First, Prices::NONE)
 }
 
+/// R4799000: the greedy baseline's and the skill miss's one-ply simulation of `action` on `det`
+/// (`simulate_first_answers`), on a counter of its own sized to what the step may take: its own node, its
+/// up-front surcharge (`surcharge_nodes`) and `max_auto_answers` answers. So every candidate gets its one
+/// simulation, a surcharged one included, whatever the candidates before it took.
+pub fn one_ply_step(det: &GameState, seat: PlayerId, action: &ActionBody) -> Option<SimStep> {
+    let nodes = 1 + AI_SEARCH.max_auto_answers as usize + surcharge_nodes(det, seat, action);
+    simulate_first_answers(det, seat, action, &create_node_counter(nodes, None))
+}
+
 fn simulate_answering(
     state: &GameState,
     seat: PlayerId,
@@ -926,20 +935,39 @@ fn rides_signature(card: &CardInstance) -> String {
     signature
 }
 
-/// What a card off the field is, for `search_signature` (B5 E39, #898).
+/// R4793000: what a card off the field was given, which rides it onto the field (R1878003): its buffs and
+/// its granted keywords, sorted so two orders of the same grants split nothing. Each only when it holds
+/// something, and only with `AI_SEARCH.hand_grants_signed`, so every other card signs as before.
+fn grants_signature(card: &CardInstance) -> String {
+    let mut signature = String::new();
+    if !AI_SEARCH.hand_grants_signed {
+        return signature;
+    }
+    if card.buffs.attack != 0 || card.buffs.health != 0 {
+        signature.push_str(&format!(";b{}/{}", card.buffs.attack, card.buffs.health));
+    }
+    if !card.granted_keywords.is_empty() {
+        let keywords = sorted(card.granted_keywords.iter().map(|keyword| format!("{keyword:?}")));
+        signature.push_str(&format!(";k{keywords}"));
+    }
+    signature
+}
+
+/// What a card off the field is, for `search_signature` (B5 E39, #898; its grants, R4793000).
 fn card_signature(card: &CardInstance) -> String {
     let enchantments = match &card.enchantments {
         Some(enchantments) if !enchantments.is_empty() => format!(";e{enchantments:?}"),
         _ => String::new(),
     };
     format!(
-        "{}={}{}{}/{:?}{}{enchantments}",
+        "{}={}{}{}/{:?}{}{enchantments}{}",
         card.id,
         card.def_id,
         if card.radiant { "*" } else { "" },
         card.cost_mod,
         card.cost_override,
         rides_signature(card),
+        grants_signature(card),
     )
 }
 

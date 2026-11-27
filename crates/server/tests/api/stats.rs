@@ -2380,6 +2380,7 @@ mod r4675001_play_versions {
             [
                 "bandHigh",
                 "bandLow",
+                "decisiveness",
                 "field",
                 "minSample",
                 "mode",
@@ -2400,6 +2401,7 @@ mod r4675001_play_versions {
                 "adjustedLow",
                 "adjustedWinRate",
                 "card",
+                "decisiveness",
                 "first",
                 "firstShipped",
                 "games",
@@ -2410,7 +2412,9 @@ mod r4675001_play_versions {
                 "live",
                 "name",
                 "patches",
-                "tier"
+                "playRate",
+                "tier",
+                "winRate"
             ]
         );
         for (row, version) in rows.iter().zip(&versions) {
@@ -2452,9 +2456,18 @@ mod r4675001_play_versions {
         assert_eq!(oldest["live"], json!(false));
         assert_eq!(oldest["games"], json!(0));
         assert_eq!(oldest["hasEnoughGames"], json!(false));
-        for figure in ["adjustedWinRate", "adjustedLow", "adjustedHigh", "tier"] {
+        for figure in [
+            "adjustedWinRate",
+            "adjustedLow",
+            "adjustedHigh",
+            "tier",
+            "winRate",
+            "playRate",
+        ] {
             assert_eq!(oldest[figure], Value::Null, "{figure}");
         }
+        // R5036000: nor a Decisiveness, sent as null.
+        assert_eq!(oldest["decisiveness"], Value::Null);
 
         // `?mode=` and `?pilot=` name what the figures count; every game here is a Best of 1.
         let (_, _, conquest) = get_public(&app, "/api/stats/versions?mode=bo3&pilot=human").await;
@@ -3075,9 +3088,21 @@ mod r3950000_play_rate {
         find(&data["cards"], "id", &json!(id)).expect("the card is listed")
     }
 
-    /// `count` live All Random games: p1 holds core-001 to core-004, sees `hand`, plays `played`, and
-    /// makes a Dormant Starship it uses (`Some(true)`), one it never uses (`Some(false)`) or none.
+    /// `count` live All Random games p1 wins: p1 holds core-001 to core-004, sees `hand`, plays `played`,
+    /// and makes a Dormant Starship it uses (`Some(true)`), one it never uses (`Some(false)`) or none.
     fn games(
+        tag: &str,
+        hand: &[&'static str],
+        played: &[&'static str],
+        starship: Option<bool>,
+        count: usize,
+    ) -> Vec<Value> {
+        games_won_by("p1", tag, hand, played, starship, count)
+    }
+
+    /// `games`, won by `winner`.
+    fn games_won_by(
+        winner: &'static str,
         tag: &str,
         hand: &[&'static str],
         played: &[&'static str],
@@ -3099,6 +3124,7 @@ mod r3950000_play_rate {
                         p1_created_used: (starship == Some(true))
                             .then(|| json!([{ "card": STARSHIP, "turn": 5, "radiant": false }])),
                         p1_created_unused: (starship == Some(false)).then(|| vec![STARSHIP]),
+                        winner: Some(winner),
                         ..RecordOptions::default()
                     },
                 )
@@ -3137,6 +3163,59 @@ mod r3950000_play_rate {
         assert_eq!(card(&all, "core-004")["playRate"].as_f64(), Some(0.0));
         // A card only a rule makes (R3070000): used in 30 of the 40 games a seat made one.
         assert_eq!(card(&all, STARSHIP)["playRate"].as_f64(), Some(0.75));
+    }
+
+    // R5037000: a play version's Win rate and Play rate are the Cards tab's over the same records.
+    #[tokio::test]
+    async fn r5037000_a_play_versions_win_rate_and_play_rate_are_the_cards_tabs_over_the_same_records() {
+        let app = test_app().await;
+        let mut records = Vec::new();
+        // The Cards test's four groups, but p1 loses the 30 games in which it makes a Starship and plays
+        // nothing: core-001 is seen in 40 games, wins 10 and plays in the same 10.
+        let seen = ["core-001", "core-002", "core-003"];
+        records.extend(games("played", &seen, &["core-001"], Some(true), 10));
+        records.extend(games_won_by("p2", "held-used", &seen, &[], Some(true), 20));
+        records.extend(games_won_by("p2", "held-unused", &seen, &[], Some(false), 10));
+        records.extend(games("unseen", &["core-002", "core-003"], &[], None, 40));
+        insert_records(&app, records).await;
+
+        let (_, _, cards) = get_public(&app, "/api/stats/cards?source=live&mode=random").await;
+        let (status, _, versions) = get_public(&app, "/api/stats/versions?mode=random").await;
+        assert_eq!(status, 200);
+        let live = |id: &str| {
+            versions["versions"]
+                .as_array()
+                .expect("versions is a list")
+                .iter()
+                .find(|row| row["card"] == json!(id) && row["live"] == json!(true))
+                .expect("the card has a live play version")
+        };
+
+        let a = card(&cards, "core-001");
+        let row = live("core-001");
+        assert_eq!(row["games"], a["games"]);
+        assert_eq!(a["winRate"].as_f64(), Some(0.25));
+        assert_eq!(row["winRate"], a["winRate"]);
+        assert_eq!(a["playRate"].as_f64(), Some(0.25));
+        assert_eq!(row["playRate"], a["playRate"]);
+
+        // core-002 was seen every game and never played: both read 0, as on the Cards tab.
+        let b = card(&cards, "core-002");
+        let row = live("core-002");
+        assert_eq!(row["winRate"], b["winRate"]);
+        assert_eq!(row["playRate"].as_f64(), Some(0.0));
+        assert_eq!(row["playRate"], b["playRate"]);
+
+        // core-004 was held and never seen: the Cards tab reads 0, the play version none rather than 0%.
+        let never = live("core-004");
+        assert_eq!(card(&cards, "core-004")["playRate"].as_f64(), Some(0.0));
+        assert_eq!(never["playRate"], Value::Null);
+        assert_eq!(never["winRate"], Value::Null);
+
+        // The Dormant Starship (R3070000): used in 30 of the 40 games a seat made one, and won in 10 of them.
+        assert_eq!(live(STARSHIP)["playRate"].as_f64(), Some(0.75));
+        assert_eq!(live(STARSHIP)["playRate"], card(&cards, STARSHIP)["playRate"]);
+        assert_eq!(live(STARSHIP)["winRate"], card(&cards, STARSHIP)["winRate"]);
     }
 }
 
@@ -4419,17 +4498,16 @@ mod r4552003_decisiveness {
         }
     }
 
-    #[tokio::test]
-    async fn r4552003_cards_answer_decisiveness_and_the_typical_value_and_no_swing() {
-        let app = test_app().await;
-        // 40 games: p1 plays core-001 on its first turn and its chance then swings far one way or the
-        // other; a Rush Token core-015 made acts on its second turn. core-002 is never played.
+    /// 40 games, their ids `<prefix>-<i>`: p1 plays core-001 on its first turn and its chance then swings
+    /// far one way or the other; a Rush Token core-015 made acts on its second turn. core-002 is never
+    /// played.
+    fn swing_records(prefix: &str) -> Vec<Value> {
         let mut records = Vec::new();
         for i in 0..40 {
             let won = i % 2 == 0;
             let after = if won { 5_000_000 } else { -5_000_000 };
             records.push(make_game_record(
-                &format!("rec-swing-{i}"),
+                &format!("{prefix}-{i}"),
                 RecordOptions {
                     source: Some("live"),
                     p1_deck: Some(vec!["core-001", "core-002", "core-015"]),
@@ -4448,7 +4526,13 @@ mod r4552003_decisiveness {
                 },
             ));
         }
-        insert_records(&app, records).await;
+        records
+    }
+
+    #[tokio::test]
+    async fn r4552003_cards_answer_decisiveness_and_the_typical_value_and_no_swing() {
+        let app = test_app().await;
+        insert_records(&app, swing_records("rec-swing")).await;
 
         let (status, _, data) = get_public(&app, "/api/stats/cards").await;
         assert_eq!(status, 200);
@@ -4479,6 +4563,36 @@ mod r4552003_decisiveness {
             keys.iter().all(|key| !key.to_lowercase().contains("swing")),
             "{keys:?}"
         );
+    }
+
+    // R5036000: every record is on one patch, so a live play version's span and the Cards tab's window
+    // count the same turns, and its Decisiveness, in both scopes, is its card's there.
+    #[tokio::test]
+    async fn r5036000_the_versions_route_sends_a_rows_decisiveness_as_the_cards_tab_reads_it() {
+        let app = test_app().await;
+        insert_records(&app, swing_records("rec-pv-swing")).await;
+
+        let (_, _, cards) = get_public(&app, "/api/stats/cards").await;
+        let card = |id: &str| find(&cards["cards"], "id", &json!(id)).expect("the card is listed");
+        let decisive = card("core-001")["decisiveness"].clone();
+        assert!(decisive.is_number(), "{decisive}");
+        for path in ["/api/stats/versions", "/api/stats/versions?scope=major"] {
+            let (status, _, data) = get_public(&app, path).await;
+            assert_eq!(status, 200, "{path}");
+            let live = |id: &str| {
+                data["versions"]
+                    .as_array()
+                    .expect("versions is a list")
+                    .iter()
+                    .find(|row| row["card"] == json!(id) && row["live"] == json!(true))
+                    .cloned()
+                    .expect("the card has a live play version")
+            };
+            assert_eq!(live("core-001")["decisiveness"], decisive, "{path}");
+            assert_eq!(data["decisiveness"], cards["tiers"]["decisiveness"], "{path}");
+            // Never played and never acting: no turn of its own to read.
+            assert_eq!(live("core-002")["decisiveness"], Value::Null, "{path}");
+        }
     }
 
     #[tokio::test]

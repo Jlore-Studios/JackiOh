@@ -1017,7 +1017,7 @@ describe("R3012000 micro patches nested under their patch", () => {
     expect(phone).toContain("grid-template-columns: minmax(0, 1fr)");
     expect(phone).toContain("overflow-wrap: anywhere");
     expect(phone).toContain("max-width: 100%");
-    expect(phone).toMatch(/\.patch-legend \{[^}]*z-index: var\(--z-overlay\)/u);
+    expect(phone).toMatch(/\.patch-legend \{[^}]*z-index: 3/u);
     expect(phone).toContain("overflow-y: auto");
     // Fingers get 44 px targets in the legend (R2122000).
     const touch = /@media \(pointer: coarse\), \(max-width: 600px\) \{([\s\S]*?)\n\}/gu;

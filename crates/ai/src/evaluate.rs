@@ -517,13 +517,11 @@ fn keyed_price(
 }
 
 /// R2688000: whether the face `card` runs has a "when this attacks" or an "after this attacks" hook
-/// (`script_of`: a Vanilla or Dormant card has none).
+/// (`script_of`: a Vanilla or Dormant card has none). Frenzy is none (R4799002): the hookless twin holds
+/// it too and frenzies as the unit does, so the probe could not measure it; the Taunt walk reads it.
 fn has_attack_hook(state: &GameState, card: &CardInstance) -> bool {
     let script = script_of(state, card);
-    // R3551004: Frenzy answers a kill as an `afterAttack` hook does, as `combat::combatant_hooks` runs it.
-    script.when_attacks.is_some()
-        || script.after_attack.is_some()
-        || unit_has(state, card, KeywordKind::Frenzy)
+    script.when_attacks.is_some() || script.after_attack.is_some()
 }
 
 /// R2688000: what `unit`'s next attack gives its controller through its attack hooks, by `prices`,
