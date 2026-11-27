@@ -1718,5 +1718,11 @@
     "commit": "d1f4b46691114ce22f55b4b0479461974bd7e851",
     "blob": "765c46c5cd82f401eef7e5becf163c888eac4fe8",
     "cardMetricsBlob": "b5ced6b4fe48da327e87bebb0f6d5ee56650e33f"
+  },
+  {
+    "version": "v0.6.15l",
+    "commit": "49b908bc47893c2a2cf4f9bc8371c42e587ddd9d",
+    "blob": "27913f216e195f66c50a75fba2b44077e80860a8",
+    "cardMetricsBlob": "b5ced6b4fe48da327e87bebb0f6d5ee56650e33f"
   }
 ]

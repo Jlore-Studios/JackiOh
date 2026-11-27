@@ -38080,5 +38080,344 @@
     ],
     "fragment": "cap-every-mana-amount-and-every-chosen-x-at-15",
     "changes": []
+  },
+  {
+    "version": "v0.6.15l",
+    "date": "2026-11-27",
+    "title": "Patch: an Embiggened version costs its normal price plus a premium",
+    "source": "issue #5109",
+    "notes": "An embiggen card's Embiggened version costs its normal version's finished price (every rung of R65 and R455, floored at 0) plus its Embiggen premium, B - A; a Garden's premium replaces it and noEmbiggenPremium makes it 0 (R5109000). Every embiggen card's Embiggened line is relabeled with its premium, 'Embiggened (+N):', in English and Chinese, and patch diffs write '(2) Cost, Embiggened (+2)'; the second cost badge stays the realized price and shows under a discount too (R5109001).",
+    "player": {
+      "title": "Embiggen is a flat extra cost",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Embiggen now costs a flat +N on top of the card's current price, so discounts and set prices apply to both versions alike.",
+        "A card that costs (0) after a discount still pays its whole Embiggen extra, and \"costs (1)\" effects make its Embiggened version cost (1) plus the extra.",
+        "Professor Curvature lowers an Embiggen card's two prices together, only when its normal price is (4) or more.",
+        "Under Mountaintop Garden, its extra replaces the card's own, on top of the card's current price."
+      ],
+      "text": [
+        "Every Embiggen card's Embiggened line names its extra cost: \"Embiggened (+2):\" in place of \"Embiggened (4):\".",
+        "The small second price beside the cost gem still shows what the Embiggened version costs right now, discounts included."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "49b908bc47893c2a2cf4f9bc8371c42e587ddd9d"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-004",
+      "classic-021",
+      "classic-025",
+      "classic-028",
+      "classic-035",
+      "classic-036",
+      "classic-048",
+      "classic-050",
+      "classic-061",
+      "classic-068",
+      "classicplus-003",
+      "classicplus-030",
+      "classicplus-058",
+      "classicplus-065",
+      "core-021",
+      "core-032",
+      "core-059",
+      "core-083",
+      "core-100",
+      "core-t-coin",
+      "meditative-066",
+      "meditative-078",
+      "meditativeplus-002",
+      "meditativeplus-003",
+      "meditativeplus-006",
+      "stinkyscape-011",
+      "stinkyscape-020",
+      "stinkyscape-064",
+      "stinkyscape-114",
+      "stinkyscape-127",
+      "stinkyscape-128",
+      "stinkyscape-129",
+      "stinkyscape-154",
+      "stinkyscape-170",
+      "stinkyscapeplus-005",
+      "stinkyscapeplus-043",
+      "stinkyscapeplus-064",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-106",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-124",
+      "stinkyscapeplus-134",
+      "stinkyscapeplus-139",
+      "traininggrounds-018",
+      "traininggrounds-054"
+    ],
+    "fragment": "an-embiggened-version-costs-its-normal-price-plus-a-premium",
+    "changes": [
+      {
+        "id": "core-046",
+        "name": "Suppressive Aura",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-056",
+        "name": "Jilliax",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-059",
+        "name": "Unbiased Immigration",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-083",
+        "name": "Transmogulate",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-035",
+        "name": "Prep",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-036",
+        "name": "Conjure Bones",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-021",
+        "name": "API Key Fishing",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-046",
+        "name": "Conjure Intellect",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-081",
+        "name": "Deadman's Hand",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-003",
+        "name": "Wondrous Wand",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-004",
+        "name": "Jlockeed's Supply Drop",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-005",
+        "name": "Spirit Lash",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-009",
+        "name": "Magic Amplifier",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-019",
+        "name": "Grubby Gloves",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-023",
+        "name": "Enormous Elderberry",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-079",
+        "name": "Orca",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-127",
+        "name": "Jlockeed's Siege Tank",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-128",
+        "name": "Jlockeed's Yamato Cannon",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-129",
+        "name": "Jlockeed's Missile Pod",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-154",
+        "name": "Dice of Doom",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-024",
+        "name": "Forced Propagation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-064",
+        "name": "Surge Wall",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-065",
+        "name": "Thorium Wall",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-066",
+        "name": "Plastanium Wall",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-067",
+        "name": "Phase Wall",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-096",
+        "name": "Open Enrollment",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-138",
+        "name": "Delta Definition",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-139",
+        "name": "Operation Omega",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
