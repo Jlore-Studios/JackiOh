@@ -1165,8 +1165,12 @@ fn coming_cost_hike(state: &GameState, player: PlayerId, side: &PlayerState) -> 
         if of != player {
             continue;
         }
-        let turn_not_started = state.turn <= from_turn
-            || (state.turn == from_turn + 1 && state.active == player && side.turn_log.cards_played == 0);
+        // R48, R5122000: NextTurnOf expires at cleanup when turn > from_turn and of == player
+        // (modifiers::expire_modifiers). Before player's taxed turn begins (turn <= from_turn
+        // or active != player, accounting for extra turns and own-turn self-tax), or at the start
+        // of that taxed turn before cards have been played, the hike is pending.
+        let turn_not_started =
+            state.turn <= from_turn || state.active != player || side.turn_log.cards_played == 0;
         if !turn_not_started {
             continue;
         }

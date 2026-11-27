@@ -249,24 +249,97 @@ fn r5122000_disqualified_modifiers_add_nothing() {
         ),
     );
     assert_eq!(eval(&active_rule, AI), eval(&active_turn_state, AI));
+}
 
-    // 10. Turn already past (state.turn > from_turn + 1)
-    let mut past_turn_state = clone(&plain);
-    past_turn_state.turn = 3;
-    past_turn_state.active = AI;
-    let past_rule = add_modifier(
-        &past_turn_state,
+#[test]
+fn r5122000_extra_turns_preserve_coming_cost_hike() {
+    let plain = board(json!({
+        "p1": { "hand": ["core-005"], "library": ["core-008", "core-011"] },
+        "p2": { "hand": ["core-005"], "library": ["core-008", "core-011"] },
+    }));
+    let expected_delta = AI_EVAL.cost_hike * AI_EVAL.next_turn_mana * f64::from(AI_TAXED_PLAYS * 2);
+
+    // AI casts cost hike on HUMAN on turn 1 (from_turn: 1)
+    let modifier = next_turn_cost_rule(
         HUMAN,
-        next_turn_cost_rule(
-            HUMAN,
-            1,
-            CostRule {
-                amount: Some(2),
-                ..Default::default()
-            },
-        ),
+        1,
+        CostRule {
+            amount: Some(2),
+            ..Default::default()
+        },
     );
-    assert_eq!(eval(&past_rule, AI), eval(&past_turn_state, AI));
+
+    // AI takes an extra turn on turn 2 (R846)
+    let mut extra_turn_2 = clone(&plain);
+    extra_turn_2.turn = 2;
+    extra_turn_2.active = AI;
+    let hiked_2 = add_modifier(&extra_turn_2, HUMAN, modifier.clone());
+    close(eval(&hiked_2, AI) - eval(&extra_turn_2, AI), expected_delta);
+
+    // AI takes another extra turn on turn 3
+    let mut extra_turn_3 = clone(&plain);
+    extra_turn_3.turn = 3;
+    extra_turn_3.active = AI;
+    let hiked_3 = add_modifier(&extra_turn_3, HUMAN, modifier.clone());
+    close(eval(&hiked_3, AI) - eval(&extra_turn_3, AI), expected_delta);
+
+    // Turn 4: HUMAN's turn starts before any cards are played
+    let mut human_turn_start = clone(&plain);
+    human_turn_start.turn = 4;
+    human_turn_start.active = HUMAN;
+    human_turn_start.players[HUMAN].turn_log.cards_played = 0;
+    let hiked_4 = add_modifier(&human_turn_start, HUMAN, modifier.clone());
+    close(eval(&hiked_4, AI) - eval(&human_turn_start, AI), expected_delta);
+
+    // HUMAN plays a card on turn 4: the hike is spent / in progress, so coming_refreshes drops it
+    let mut human_played = clone(&human_turn_start);
+    human_played.players[HUMAN].turn_log.cards_played = 1;
+    let hiked_played = add_modifier(&human_played, HUMAN, modifier);
+    assert_eq!(eval(&hiked_played, AI), eval(&human_played, AI));
+}
+
+#[test]
+fn r5122000_own_turn_self_tax_preserved_across_intervening_turn() {
+    let plain = board(json!({
+        "p1": { "hand": ["core-005"], "library": ["core-008", "core-011"] },
+        "p2": { "hand": ["core-005"], "library": ["core-008", "core-011"] },
+    }));
+    let expected_delta = AI_EVAL.cost_hike * AI_EVAL.next_turn_mana * f64::from(AI_TAXED_PLAYS * 2);
+
+    // AI gains self-tax on turn 1 (from_turn: 1, of: AI)
+    let modifier = next_turn_cost_rule(
+        AI,
+        1,
+        CostRule {
+            amount: Some(2),
+            ..Default::default()
+        },
+    );
+
+    // Turn 1: AI on turn 1 (active: AI, turn: 1)
+    let hiked_1 = add_modifier(&plain, AI, modifier.clone());
+    close(eval(&plain, AI) - eval(&hiked_1, AI), expected_delta);
+
+    // Turn 2: Opponent's turn in between (active: HUMAN, turn: 2)
+    let mut turn_2 = clone(&plain);
+    turn_2.turn = 2;
+    turn_2.active = HUMAN;
+    let hiked_2 = add_modifier(&turn_2, AI, modifier.clone());
+    close(eval(&turn_2, AI) - eval(&hiked_2, AI), expected_delta);
+
+    // Turn 3: AI's next turn begins before cards played (active: AI, turn: 3, cards_played: 0)
+    let mut turn_3 = clone(&plain);
+    turn_3.turn = 3;
+    turn_3.active = AI;
+    turn_3.players[AI].turn_log.cards_played = 0;
+    let hiked_3 = add_modifier(&turn_3, AI, modifier.clone());
+    close(eval(&turn_3, AI) - eval(&hiked_3, AI), expected_delta);
+
+    // AI plays a card on turn 3: coming_refreshes drops it
+    let mut ai_played = clone(&turn_3);
+    ai_played.players[AI].turn_log.cards_played = 1;
+    let hiked_played = add_modifier(&ai_played, AI, modifier);
+    assert_eq!(eval(&hiked_played, AI), eval(&ai_played, AI));
 }
 
 #[test]
