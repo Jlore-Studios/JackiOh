@@ -24373,6 +24373,10 @@
         {
           "at": "2026-11-27T04:35:12Z",
           "minutes": 48.7
+        },
+        {
+          "at": "2026-11-27T05:31:35Z",
+          "minutes": 51.5
         }
       ],
       "tokens_spent": [
@@ -25607,17 +25611,24 @@
           "cost": 0.0,
           "input": 343664,
           "output": 38188
+        },
+        {
+          "at": "2026-11-27T05:31:35Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 378836,
+          "output": 25615
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-27T04:58:46Z",
-          "utilization": 0.88
+          "resets_at": "2026-11-27T09:58:46Z",
+          "utilization": 0.21
         },
-        "observed_at": "2026-11-27T04:35:12Z",
+        "observed_at": "2026-11-27T05:31:35Z",
         "seven_day": {
           "resets_at": "2026-12-03T08:58:46Z",
-          "utilization": 0.87
+          "utilization": 0.92
         },
         "status": "allowed"
       }
@@ -46531,6 +46542,18 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-27T04:37:35Z,agy,usage-command,before,45941017554,88,2026-11-27T04:58:46Z,87,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-27T04:47:53Z,agy,usage-command,call,45941017554,89,2026-11-27T04:58:46Z,87,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-27T04:57:56Z,agy,usage-command,call,45941017554,89,2026-11-27T04:58:46Z,87,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-27T04:58:01Z,agy,usage-command,after,45941017554,90,2026-11-27T04:58:46Z,88,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-27T05:08:25Z,agy,usage-command,call,45941017554,16,2026-11-27T09:58:46Z,91,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-27T05:18:28Z,agy,usage-command,call,45941017554,20,2026-11-27T09:58:46Z,92,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-27T05:28:30Z,agy,usage-command,call,45941017554,20,2026-11-27T09:58:46Z,92,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-27T05:29:44Z,agy,usage-command,after,45941017554,21,2026-11-27T09:58:46Z,92,2026-12-03T08:58:46Z,allowed,100,100,"
+    ]
   },
   "version": 1
 }
