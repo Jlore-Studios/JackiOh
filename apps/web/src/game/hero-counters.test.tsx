@@ -1,5 +1,5 @@
 // #4251: every counter on a hero's portrait reads at once. Health, Armor, the Jade Counter and
-// the Credits keep the oval's corners; Luck, Burn, Toxic and Tipsy ride the hero's tray as
+// the Credits keep the oval's corners; Luck, Burn, Toxic and Woozy ride the hero's tray as
 // labelled chips beside the plate, outside the overflow allowance, and the hold-to-inspect view
 // lists every counter above 0 by name and number. jsdom has no layout engine, so the pixel
 // overlap is the component spec's (`e2e/cypress/component/emotes-layout.cy.tsx`); this file holds
@@ -16,7 +16,7 @@ import {
   HERO_INSPECT_CREDITS,
   HERO_INSPECT_JADE,
   HERO_INSPECT_LUCK,
-  HERO_INSPECT_TIPSY,
+  HERO_INSPECT_WOOZY,
   HERO_INSPECT_TOXIC,
   HeroInspect,
 } from "../emotes/HeroInspect.tsx";
@@ -91,7 +91,7 @@ const COUNTERS: { selector: string; name: string }[] = [
   { selector: '[data-testid="hero-luck"]', name: "Luck" },
   { selector: ".hero-burn", name: "Burn" },
   { selector: ".hero-toxic", name: "Toxic" },
-  { selector: ".hero-tipsy", name: "Tipsy" },
+  { selector: ".hero-woozy", name: "Woozy" },
   { selector: '[data-testid^="market-credits-"]', name: "Credits" },
 ];
 
@@ -143,7 +143,7 @@ describe("#4251 the hero's counters", () => {
           jade={3}
           burn={6}
           toxic={2}
-          tipsy={4}
+          woozy={4}
           marketCredits={7}
           menu="emotes"
           hand={DEFAULT_EMOTE_HAND}
@@ -160,7 +160,7 @@ describe("#4251 the hero's counters", () => {
       [HERO_INSPECT_JADE, "Jade Counter", "3"],
       [HERO_INSPECT_BURN, "Burn", "6"],
       [HERO_INSPECT_TOXIC, "Toxic", "2"],
-      [HERO_INSPECT_TIPSY, "Tipsy", "4"],
+      [HERO_INSPECT_WOOZY, "Woozy", "4"],
       [HERO_INSPECT_CREDITS, "Credits", "7"],
     ];
     for (const [testid, name, count] of stats) {

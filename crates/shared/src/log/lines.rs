@@ -689,7 +689,7 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 CounterKind::Brittle => "{target} brittle counters: {value}",
                 CounterKind::Burn => "{target} burn counters: {value}",
                 CounterKind::Toxic => "{target} toxic counters: {value}",
-                CounterKind::Tipsy => "{target} Tipsy counter: {value}",
+                CounterKind::Woozy => "{target} Woozy counter: {value}",
                 CounterKind::Warhero => "Warhero Tokens are worth {value} Credits",
             };
             // R3548002: the game-wide worth, which names no card.

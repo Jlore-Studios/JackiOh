@@ -147,9 +147,13 @@ builds reads its own game's hold without the state (R2201001).
 - `giga.rs` is GIGA (§3, §6.1, R3546000–R3546004): the four-zone geometry (`spanned_slots`,
   `covering`, `fits`, `first_anchor`, `entry_anchor`) and the both-lanes reads (`lanes_of`,
   `occupant_at`, `adjacent_slots`, `lanes_meet`).
-- `tipsy.rs` is Tipsy X (§6.1, R3548000–R3548001): the counter (`stamp_for`, `add_on_play`,
+- `woozy.rs` is Woozy X (§6.1, R3548000–R3548001): the counter (`stamp_for`, `add_on_play`,
   `decay_at_turn_start`), the chance (`blur_chance`) and the owner's-view-only blur (`blur_for`,
-  drawn from a seed stream, never the game's `Rng`); `warhero.rs` is the Warhero Token's game-wide
+  drawn from a seed stream, never the game's `Rng`). It was Tipsy until #5181 (R5181000): the state
+  still stores the counter and the stamp as `tipsy`, the views send `tipsy` and `tipsyBlur`,
+  `counterChanged` sends the kind `tipsy`, and the seed stream is keyed `:tipsy-blur`, so a game filed
+  before the rename hashes, shows and blurs as it did; `Tipsy` reads as the keyword's kind.
+  `warhero.rs` is the Warhero Token's game-wide
   worth (R3548002): `note_minted`, `worth_of` and the cleanup's `grow_at_cleanup`.
 - `effects/activations.rs` is Refresh for Activates (§6.3, R3548003): `refresh_activates`
   (`refreshActivates`), `refresh_ability` and `is_refresh_ability`; infinite mana (R3548004) is

@@ -1,6 +1,6 @@
-//! Stinkyscape+ E5 (issue #3548, R3548000–R3548004): Tipsy X and its blur, the Warhero Token's
+//! Stinkyscape+ E5 (issue #3548, R3548000–R3548004): Woozy X and its blur, the Warhero Token's
 //! game-wide worth, Refresh for Activates, and infinite mana, proved on fixture scripts
-//! (`fixtures::tipsy_warhero_refresh`, the `testkit` feature's `scenario()`).
+//! (`fixtures::woozy_warhero_refresh`, the `testkit` feature's `scenario()`).
 
 use jackioh_engine::effects;
 use jackioh_engine::effects::{REFRESH_ABILITY_ID, is_refresh_ability};
@@ -10,7 +10,7 @@ use serde_json::json;
 
 use crate::rules::fixtures::catalog::vanilla_deck;
 use crate::rules::fixtures::harness::{apply_now, play_random_game_from, round_trip, setup_catalog};
-use crate::rules::fixtures::tipsy_warhero_refresh::*;
+use crate::rules::fixtures::woozy_warhero_refresh::*;
 
 use PlayerId::{P1, P2};
 
@@ -61,17 +61,17 @@ fn field_id(s: &Scenario, player: PlayerId, def: &str) -> String {
         .clone()
 }
 
-fn tipsy_count(s: &Scenario, player: PlayerId) -> Option<i32> {
-    s.state().players[player].tipsy.map(|counter| counter.count)
+fn woozy_count(s: &Scenario, player: PlayerId) -> Option<i32> {
+    s.state().players[player].woozy.map(|counter| counter.count)
 }
 
-/// The Tipsy `counterChanged` reports so far: each new value with what the play added.
-fn tipsy_reports(s: &Scenario) -> Vec<(i32, Option<i32>)> {
+/// The Woozy `counterChanged` reports so far: each new value with what the play added.
+fn woozy_reports(s: &Scenario) -> Vec<(i32, Option<i32>)> {
     s.events()
         .iter()
         .filter_map(|event| match event {
             GameEvent::CounterChanged {
-                counter: CounterKind::Tipsy,
+                counter: CounterKind::Woozy,
                 value,
                 placed,
                 ..
@@ -114,56 +114,56 @@ fn has_blur(s: &Scenario) -> bool {
         .units
         .into_iter()
         .flatten()
-        .any(|unit| unit.tipsy_blur.is_some())
+        .any(|unit| unit.woozy_blur.is_some())
 }
 
-/// R3548000: playing a card with Tipsy X adds its X to its controller's counter, reported once per
+/// R3548000: playing a card with Woozy X adds its X to its controller's counter, reported once per
 /// play on both seats' views of it.
 #[test]
-fn r3548000_playing_a_tipsy_card_adds_its_x_to_its_players_counter() {
+fn r3548000_playing_a_woozy_card_adds_its_x_to_its_players_counter() {
     let mut s = board(
         "r3548000-adds",
-        json!({ "hand": [TIPSY_SPELL, TIPSY_SPELL] }),
+        json!({ "hand": [WOOZY_SPELL, WOOZY_SPELL] }),
         json!({}),
     );
-    s.play(TIPSY_SPELL, json!({}));
-    assert_eq!(tipsy_count(&s, P1), Some(2));
-    s.play(TIPSY_SPELL, json!({}));
-    assert_eq!(tipsy_count(&s, P1), Some(4));
-    assert_eq!(tipsy_reports(&s), vec![(2, Some(2)), (4, Some(2))]);
-    assert_eq!(s.view(P1).you.tipsy, Some(4));
-    assert_eq!(s.view(P2).opponent.tipsy, Some(4));
+    s.play(WOOZY_SPELL, json!({}));
+    assert_eq!(woozy_count(&s, P1), Some(2));
+    s.play(WOOZY_SPELL, json!({}));
+    assert_eq!(woozy_count(&s, P1), Some(4));
+    assert_eq!(woozy_reports(&s), vec![(2, Some(2)), (4, Some(2))]);
+    assert_eq!(s.view(P1).you.woozy, Some(4));
+    assert_eq!(s.view(P2).opponent.woozy, Some(4));
 }
 
 /// R3548000: the counter drops at its owner's turn start only — never on the opponent's — and is
 /// gone at 0, its view key absent with it.
 #[test]
 fn r3548000_the_counter_drops_at_its_owners_turn_start_and_is_absent_at_zero() {
-    let mut s = board("r3548000-decays", json!({ "hand": [TIPSY_SPELL] }), json!({}));
-    s.play(TIPSY_SPELL, json!({}));
-    assert_eq!(tipsy_count(&s, P1), Some(2));
+    let mut s = board("r3548000-decays", json!({ "hand": [WOOZY_SPELL] }), json!({}));
+    s.play(WOOZY_SPELL, json!({}));
+    assert_eq!(woozy_count(&s, P1), Some(2));
     s.end_turn();
-    assert_eq!(tipsy_count(&s, P1), Some(2));
-    assert_eq!(tipsy_count(&s, P2), None);
+    assert_eq!(woozy_count(&s, P1), Some(2));
+    assert_eq!(woozy_count(&s, P2), None);
     s.end_turn();
-    assert_eq!(tipsy_count(&s, P1), Some(1));
+    assert_eq!(woozy_count(&s, P1), Some(1));
     s.end_turn();
     s.end_turn();
-    assert_eq!(s.state().players[P1].tipsy, None);
-    assert_eq!(s.view(P1).you.tipsy, None);
+    assert_eq!(s.state().players[P1].woozy, None);
+    assert_eq!(s.view(P1).you.woozy, None);
     let json = serde_json::to_value(s.state()).expect("the state serializes");
     assert!(json["players"]["p1"].get("tipsy").is_none());
-    assert_eq!(tipsy_reports(&s).last(), Some(&(0, None)));
+    assert_eq!(woozy_reports(&s).last(), Some(&(0, None)));
 }
 
-/// R3548001: a card drawn, played or summoned while Tipsy is up is stamped with whose counter, how
+/// R3548001: a card drawn, played or summoned while Woozy is up is stamped with whose counter, how
 /// high and on which turn; a card arriving sober carries nothing. The played card reads the level
-/// already there — its own Tipsy counts after it.
+/// already there — its own Woozy counts after it.
 #[test]
-fn r3548001_a_card_drawn_played_or_summoned_while_tipsy_is_stamped() {
+fn r3548001_a_card_drawn_played_or_summoned_while_woozy_is_stamped() {
     let mut s = board(
         "r3548001-stamped",
-        json!({ "hand": [PLAIN, TIPSY_SPELL, PLAIN], "library": [PLAIN, PLAIN] }),
+        json!({ "hand": [PLAIN, WOOZY_SPELL, PLAIN], "library": [PLAIN, PLAIN] }),
         json!({}),
     );
     let turn = s.state().turn;
@@ -173,9 +173,9 @@ fn r3548001_a_card_drawn_played_or_summoned_while_tipsy_is_stamped() {
         .into_iter()
         .find(|card| card.id == sober_id)
         .expect("the sober plain on the field");
-    assert_eq!(sober.tipsy, None);
-    s.play(TIPSY_SPELL, json!({}));
-    let stamp = TipsyStamp {
+    assert_eq!(sober.woozy, None);
+    s.play(WOOZY_SPELL, json!({}));
+    let stamp = WoozyStamp {
         player: P1,
         level: 2,
         turn,
@@ -186,9 +186,9 @@ fn r3548001_a_card_drawn_played_or_summoned_while_tipsy_is_stamped() {
         .into_iter()
         .find(|card| card.id == stamped_id)
         .expect("the stamped plain on the field");
-    assert_eq!(stamped.tipsy, Some(stamp));
+    assert_eq!(stamped.woozy, Some(stamp));
     // The spell raised the counter to 2 and a plain card adds none.
-    assert_eq!(tipsy_count(&s, P1), Some(2));
+    assert_eq!(woozy_count(&s, P1), Some(2));
     let before: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
     s.end_turn();
     s.end_turn();
@@ -198,8 +198,8 @@ fn r3548001_a_card_drawn_played_or_summoned_while_tipsy_is_stamped() {
         .find(|card| !before.contains(&card.id))
         .expect("a drawn card");
     assert_eq!(
-        drawn.tipsy,
-        Some(TipsyStamp {
+        drawn.woozy,
+        Some(WoozyStamp {
             player: P1,
             level: 1,
             turn: turn + 2,
@@ -211,8 +211,8 @@ fn r3548001_a_card_drawn_played_or_summoned_while_tipsy_is_stamped() {
         .find(|card| card.def_id == PLAIN && card.id != sober_id && card.id != stamped_id)
         .expect("a summoned plain");
     assert_eq!(
-        summoned.tipsy,
-        Some(TipsyStamp {
+        summoned.woozy,
+        Some(WoozyStamp {
             player: P1,
             level: 1,
             turn: turn + 2,
@@ -227,7 +227,7 @@ fn blurring_seed_for(hand: Value) -> String {
     for index in 0..50 {
         let seed = format!("r3548001-blur-{index}");
         let mut s = board(&seed, json!({ "hand": hand.clone() }), json!({}));
-        s.play(TIPSY_SPELL, json!({}));
+        s.play(WOOZY_SPELL, json!({}));
         s.play(PLAIN, json!({ "zone": 2 }));
         if has_blur(&s) {
             return seed;
@@ -238,20 +238,20 @@ fn blurring_seed_for(hand: Value) -> String {
 
 /// `blurring_seed_for` the spell and the plain alone: the seed-pinned tests share it.
 fn blurring_seed() -> String {
-    blurring_seed_for(json!([TIPSY_SPELL, PLAIN]))
+    blurring_seed_for(json!([WOOZY_SPELL, PLAIN]))
 }
 
 /// R3548001: a stamped card blurs on its own player's view alone — the opponent's view of the same
 /// card carries nothing.
 #[test]
-fn r3548001_only_the_tipsy_players_own_view_carries_the_blur() {
+fn r3548001_only_the_woozy_players_own_view_carries_the_blur() {
     let seed = blurring_seed();
-    let mut s = board(&seed, json!({ "hand": [TIPSY_SPELL, PLAIN] }), json!({}));
-    s.play(TIPSY_SPELL, json!({}));
+    let mut s = board(&seed, json!({ "hand": [WOOZY_SPELL, PLAIN] }), json!({}));
+    s.play(WOOZY_SPELL, json!({}));
     s.play(PLAIN, json!({ "zone": 2 }));
     assert!(has_blur(&s), "the seed blurs the played plain");
     for unit in s.view(P2).opponent.units.into_iter().flatten() {
-        assert_eq!(unit.tipsy_blur, None);
+        assert_eq!(unit.woozy_blur, None);
     }
 }
 
@@ -260,45 +260,45 @@ fn r3548001_only_the_tipsy_players_own_view_carries_the_blur() {
 #[test]
 fn r3548001_a_reload_shows_the_same_blur_and_the_rng_is_untouched() {
     let seed = blurring_seed();
-    let mut s = board(&seed, json!({ "hand": [TIPSY_SPELL, PLAIN] }), json!({}));
-    s.play(TIPSY_SPELL, json!({}));
+    let mut s = board(&seed, json!({ "hand": [WOOZY_SPELL, PLAIN] }), json!({}));
+    s.play(WOOZY_SPELL, json!({}));
     s.play(PLAIN, json!({ "zone": 2 }));
     let cursor = s.state().rng_cursor;
-    let before: Vec<Option<TipsyBlur>> = s
+    let before: Vec<Option<WoozyBlur>> = s
         .view(P1)
         .you
         .units
         .into_iter()
         .flatten()
-        .map(|unit| unit.tipsy_blur)
+        .map(|unit| unit.woozy_blur)
         .collect();
     assert!(before.iter().any(Option::is_some));
     let reloaded: GameState = round_trip(s.state());
-    let after: Vec<Option<TipsyBlur>> = view_for(&reloaded, P1)
+    let after: Vec<Option<WoozyBlur>> = view_for(&reloaded, P1)
         .you
         .units
         .into_iter()
         .flatten()
-        .map(|unit| unit.tipsy_blur)
+        .map(|unit| unit.woozy_blur)
         .collect();
     assert_eq!(before, after);
     assert_eq!(s.state().rng_cursor, cursor);
 }
 
-/// Every Tipsy blur either seat's view carries: whose view, which card, and what blurs.
-fn blurs_of(state: &GameState) -> Vec<(PlayerId, String, Option<TipsyBlur>)> {
+/// Every Woozy blur either seat's view carries: whose view, which card, and what blurs.
+fn blurs_of(state: &GameState) -> Vec<(PlayerId, String, Option<WoozyBlur>)> {
     let mut out = Vec::new();
     for viewer in [P1, P2] {
         let view = view_for(state, viewer);
         for hand in [&view.you.hand, &view.opponent.hand] {
             if let HandView::Cards(cards) = hand {
                 for card in cards {
-                    out.push((viewer, card.instance_id.clone(), card.tipsy_blur.clone()));
+                    out.push((viewer, card.instance_id.clone(), card.woozy_blur.clone()));
                 }
             }
         }
         for unit in view.you.units.iter().chain(view.opponent.units.iter()).flatten() {
-            out.push((viewer, unit.instance_id.clone(), unit.tipsy_blur.clone()));
+            out.push((viewer, unit.instance_id.clone(), unit.woozy_blur.clone()));
         }
     }
     out
@@ -310,8 +310,8 @@ fn blurs_of(state: &GameState) -> Vec<(PlayerId, String, Option<TipsyBlur>)> {
 fn r3548001_a_replay_folds_to_the_same_blur() {
     register_e5_fixtures();
     let mut deck = vec![
-        TIPSY_SPELL.to_string(),
-        TIPSY_UNIT.to_string(),
+        WOOZY_SPELL.to_string(),
+        WOOZY_UNIT.to_string(),
         WARHERO.to_string(),
         PLAIN.to_string(),
         EXPENSIVE.to_string(),
@@ -370,25 +370,25 @@ fn r3548001_a_replay_folds_to_the_same_blur() {
 /// every blur clears, and a counter risen again blurs only what arrived since.
 #[test]
 fn r3548001_two_to_one_keeps_the_blur_and_zero_clears_it() {
-    let seed = blurring_seed_for(json!([TIPSY_SPELL, TIPSY_SPELL, PLAIN]));
+    let seed = blurring_seed_for(json!([WOOZY_SPELL, WOOZY_SPELL, PLAIN]));
     let mut s = board(
         &seed,
-        json!({ "hand": [TIPSY_SPELL, TIPSY_SPELL, PLAIN] }),
+        json!({ "hand": [WOOZY_SPELL, WOOZY_SPELL, PLAIN] }),
         json!({}),
     );
-    s.play(TIPSY_SPELL, json!({}));
+    s.play(WOOZY_SPELL, json!({}));
     s.play(PLAIN, json!({ "zone": 2 }));
     assert!(has_blur(&s));
     s.end_turn();
     s.end_turn();
-    assert_eq!(tipsy_count(&s, P1), Some(1));
+    assert_eq!(woozy_count(&s, P1), Some(1));
     assert!(has_blur(&s), "from 2 to 1 nothing clears");
     s.end_turn();
     s.end_turn();
-    assert_eq!(tipsy_count(&s, P1), None);
+    assert_eq!(woozy_count(&s, P1), None);
     assert!(!has_blur(&s), "at 0 everything clears");
-    s.play(TIPSY_SPELL, json!({}));
-    assert_eq!(tipsy_count(&s, P1), Some(2));
+    s.play(WOOZY_SPELL, json!({}));
+    assert_eq!(woozy_count(&s, P1), Some(2));
     assert!(!has_blur(&s), "still clear after the counter rises again");
 }
 
@@ -626,4 +626,65 @@ fn r3548004_x_is_still_chosen_out_of_held_mana() {
     );
     let spell = s.hand(P1).into_iter().next().expect("the X spell");
     assert_eq!(legal_x_values(s.state(), P1, &spell), (1..=5).collect::<Vec<_>>());
+}
+
+// R5181000: Woozy was called Tipsy. The shipped snapshots spell the keyword's old name, which reads as
+// the new one and is never written; the state, the views and the counter's reports keep the old name's
+// keys, so a game filed before the rename hashes as it was filed and a view is what it was.
+mod r5181000_the_old_name_reads_as_woozy {
+    use super::*;
+
+    #[test]
+    fn r5181000_the_keyword_and_counter_kinds_read_tipsy_as_woozy_and_write_woozy() {
+        let keyword: Keyword =
+            serde_json::from_value(json!({ "kind": "Tipsy", "n": 2 })).expect("the old kind reads");
+        assert_eq!(keyword, Keyword::Woozy { n: 2 });
+        assert_eq!(
+            serde_json::to_value(&keyword).expect("writes"),
+            json!({ "kind": "Woozy", "n": 2 })
+        );
+        let kind: KeywordKind = serde_json::from_value(json!("Tipsy")).expect("the old kind reads");
+        assert_eq!(kind, KeywordKind::Woozy);
+        assert_eq!(kind.as_str(), "Woozy");
+        // The counter's kind on `counterChanged` is sent as it was, like the state's and the views' keys.
+        let counter: CounterKind = serde_json::from_value(json!("tipsy")).expect("the counter kind reads");
+        assert_eq!(counter, CounterKind::Woozy);
+        assert_eq!(serde_json::to_value(counter).expect("writes"), json!("tipsy"));
+    }
+
+    #[test]
+    fn r5181000_the_state_keeps_the_counter_and_stamp_under_tipsy_so_an_older_game_hashes_the_same() {
+        let mut s = board(
+            "r5181000-stored",
+            json!({ "hand": [WOOZY_SPELL, PLAIN] }),
+            json!({}),
+        );
+        s.play(WOOZY_SPELL, json!({}));
+        s.play(PLAIN, json!({ "zone": 2 }));
+        let stamped = field_id(&s, P1, PLAIN);
+        let json = serde_json::to_value(s.state()).expect("the state serializes");
+        let side = &json["players"]["p1"];
+        assert_eq!(side["tipsy"]["count"], json!(2));
+        assert!(side.get("woozy").is_none(), "{side}");
+        let card = side["units"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .flat_map(|pile| pile.as_array().into_iter().flatten())
+            .find(|card| card["id"].as_str() == Some(stamped.as_str()))
+            .expect("the stamped plain in the stored state");
+        assert_eq!(card["tipsy"]["level"], json!(2));
+        assert!(card.get("woozy").is_none(), "{card}");
+        // What a build before the rename wrote reads back as the same state, to the same hash.
+        let stored: GameState = serde_json::from_value(json).expect("the stored state reads");
+        assert_eq!(stored.players[P1].woozy, s.state().players[P1].woozy);
+        assert_eq!(hash_state(&stored), hash_state(s.state()));
+        assert_eq!(WOOZY_BLUR_STREAM, ":tipsy-blur");
+        // Both seats' views send the counter under the old name too.
+        for (viewer, seat) in [(P1, "you"), (P2, "opponent")] {
+            let view = serde_json::to_value(s.view(viewer)).expect("the view serializes");
+            assert_eq!(view[seat]["tipsy"], json!(2), "{viewer:?}");
+            assert!(view[seat].get("woozy").is_none(), "{viewer:?}");
+        }
+    }
 }

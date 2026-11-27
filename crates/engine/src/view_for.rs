@@ -517,7 +517,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
         copies: None,
         fixed_x: None,
         // R3548001: a bare view carries no blur.
-        tipsy_blur: None,
+        woozy_blur: None,
     }
 }
 
@@ -552,10 +552,10 @@ fn card_view(state: &GameState, judging: Judging, card: &CardInstance, viewer: P
     view.evolved = (card.evolved == Some(true) || card.enters_evolved == Some(true)).then_some(true);
     // R1956001: and the card that generated it, to its owner alone.
     view.created_by = crate::generators::generator_shown_to(state, card, viewer);
-    // R1848003: a set X is the card's price, read where the card is. R3548001: and a Tipsy
+    // R1848003: a set X is the card's price, read where the card is. R3548001: and a Woozy
     // stamp blurs the card for its owner's view alone.
     view.fixed_x = card.fixed_x.filter(|_| crate::mana::is_x_cost(state, card));
-    view.tipsy_blur = crate::tipsy::blur_for(state, card, viewer);
+    view.woozy_blur = crate::woozy::blur_for(state, card, viewer);
     view
 }
 
@@ -962,7 +962,7 @@ fn unit_view_of(
             None
         },
         // R3548001: the field card's blur, if its stamp blurs it for this viewer.
-        tipsy_blur: card.tipsy_blur,
+        woozy_blur: card.woozy_blur,
         attack_reason: attack_reason_of(state, auras, top, viewer),
         switch_reason: switch_reason_of(state, auras, top, viewer),
         // R2321000: the counts cards on the field the viewer may read keep on it.
@@ -1150,7 +1150,7 @@ fn backrow_view(
         // R3556000: a Dormant Field Spell in the backrow wears its countdown (R1839000).
         slumber: card.slumber,
         // R3548001: the backrow card's blur, if its stamp blurs it for this viewer.
-        tipsy_blur: view.tipsy_blur,
+        woozy_blur: view.woozy_blur,
     }))
 }
 
@@ -1640,7 +1640,7 @@ fn side_view(
         // R961: public on both seats, and absent until it first rises (D14).
         jade: side.jade.filter(|value| *value > 0),
         // R3548000: public on both seats, and absent at none, as Jade is.
-        tipsy: side.tipsy.map(|counter| counter.count).filter(|count| *count > 0),
+        woozy: side.woozy.map(|counter| counter.count).filter(|count| *count > 0),
         // R3548004: public on both seats, while a card giving it acts on this seat's field.
         infinite_mana: crate::mana::has_infinite_mana(state, player).then_some(true),
         // R1840005: public on both seats, and absent until first gained.

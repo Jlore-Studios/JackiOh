@@ -10653,20 +10653,20 @@
     "base": {
       "keywords": [
         {
-          "kind": "Tipsy",
+          "kind": "Woozy",
           "n": 1
         }
       ],
-      "text": "Tipsy 1\nLose {loss} health."
+      "text": "Woozy 1\nLose {loss} health."
     },
     "radiant": {
       "keywords": [
         {
-          "kind": "Tipsy",
+          "kind": "Woozy",
           "n": 1
         }
       ],
-      "text": "Tipsy 1\nLose {loss} health."
+      "text": "Woozy 1\nLose {loss} health."
     }
   },
   "classicplus-065-2": {
@@ -29101,20 +29101,20 @@
     "base": {
       "keywords": [
         {
-          "kind": "Tipsy",
+          "kind": "Woozy",
           "n": 2
         }
       ],
-      "text": "Tipsy 2\nEnd of turn: Fuse a different Grape into this."
+      "text": "Woozy 2\nEnd of turn: Fuse a different Grape into this."
     },
     "radiant": {
       "keywords": [
         {
-          "kind": "Tipsy",
+          "kind": "Woozy",
           "n": 2
         }
       ],
-      "text": "Tipsy 2\nEnd of turn: Fuse a different Radiant Grape into this."
+      "text": "Woozy 2\nEnd of turn: Fuse a different Radiant Grape into this."
     }
   },
   "stinkyscapeplus-006-2": {
@@ -37038,11 +37038,11 @@
     "base": {
       "keywords": [
         {
-          "kind": "Tipsy",
+          "kind": "Woozy",
           "n": 1
         }
       ],
-      "text": "Tipsy 1\nDraw a card."
+      "text": "Woozy 1\nDraw a card."
     },
     "radiant": {
       "keywords": [],
