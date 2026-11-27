@@ -46348,22 +46348,13 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-27T04:27:05Z",
+    "idle_since": "2026-11-27T03:36:34Z",
     "last_area": "server",
-    "last_run": "2026-11-27T04:27:05Z",
+    "last_run": "2026-11-27T03:36:34Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "1": {
-        "area": "ai",
-        "count": 1,
-        "last_run": "2026-11-27T04:27:05Z",
-        "provider": "claude-3",
-        "run_id": "45940015409",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
