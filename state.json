@@ -19760,6 +19760,13 @@
     "5158": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-27T21:06:07Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "A card-script fix with its kept script, a pending fragment, a loc number and one spec line: no engine rules, AI, cross-crate design, migration or ~40 files, so no hard line holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
