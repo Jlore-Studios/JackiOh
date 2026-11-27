@@ -46478,14 +46478,6 @@
     "requested": false,
     "run_id": null,
     "running": {
-      "1": {
-        "area": "client",
-        "count": 1,
-        "last_run": "2026-11-27T05:39:47Z",
-        "provider": "claude-7",
-        "run_id": "45947138352",
-        "taken_asks": []
-      },
       "2": {
         "area": "tests",
         "count": 1,
