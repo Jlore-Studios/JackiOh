@@ -4,12 +4,12 @@
 use jackioh_engine::{ActionBody, GameState, PlayerId, Rng, mulligan_prompt_for, subsystems};
 
 use crate::candidates::candidate_actions;
-use crate::config::{AI_SEARCH, GREEDY_EVAL, GREEDY_MULLIGAN};
+use crate::config::{GREEDY_EVAL, GREEDY_MULLIGAN};
 use crate::determinize::{DeterminizeOptions, determinize};
 use crate::evaluate::{NextSwing, Prices, evaluate};
 use crate::mulligan::mulligan_keep;
 use crate::observe::{ai_to_act, redact, unanswered_draw_offer};
-use crate::simulate::{create_node_counter, simulate_first_answers};
+use crate::simulate::one_ply_step;
 
 /// §10.7's random policy for `seat` (subsystems::choose_action with AI_SKIPPED_ACTIONS, its default
 /// skip set, which TS passed explicitly).
@@ -59,16 +59,15 @@ pub fn greedy_action(state: &GameState, seat: PlayerId, rng: &mut Rng) -> Option
         .as_ref()
         .is_some_and(|pending| pending.player_id == seat);
     // Every candidate gets its one simulation, auto-answers of the other seat's prompts included: the
-    // first legal answer each (`simulate_first_answers`), as the gates were fixed on.
-    let counter = create_node_counter(candidates.len() * (1 + AI_SEARCH.max_auto_answers as usize), None);
-
+    // first legal answer each (`simulate_first_answers`), as the gates were fixed on, on a counter of its
+    // own that pays its surcharge (`one_ply_step`, R4799000).
     let mut best: Option<ActionBody> = None;
     let mut best_score = f64::NEG_INFINITY;
     for action in &candidates {
         if matches!(action, ActionBody::EndTurn) {
             continue;
         }
-        let Some(Ok(next)) = simulate_first_answers(&det, seat, action, &counter) else {
+        let Some(Ok(next)) = one_ply_step(&det, seat, action) else {
             continue;
         };
         let score = evaluate(&next, seat, NextSwing::Enemy, &GREEDY_EVAL);

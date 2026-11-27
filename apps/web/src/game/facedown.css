@@ -44,7 +44,7 @@
     linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-900) 10%, transparent), color-mix(in srgb, var(--pal-wood-900) 35%, transparent));
   background-size: var(--jk-veil-tile) var(--jk-veil-tile), 100% 100%;
   pointer-events: none;
-  animation: jk-veil-drift calc(9s * var(--anim-scale, 1)) linear 1;
+  animation: jk-veil-drift calc(9s * var(--anim-scale, 1)) linear infinite;
 }
 
 @keyframes jk-veil-drift {
@@ -158,7 +158,7 @@
 
 .card.card-facedown:not([data-glow]),
 .card[data-unrevealed="true"]:not([data-animating]):not([data-glow]) {
-  animation: jk-facedown-breathe calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) 1;
+  animation: jk-facedown-breathe calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) infinite;
 }
 
 /* #3674: the breath's light, a white wash over the card that fades in and out on the breath's own beat. A `filter` on the
@@ -184,7 +184,7 @@
   background: color-mix(in srgb, var(--pal-white) 8%, transparent);
   opacity: 0;
   pointer-events: none;
-  animation: jk-facedown-glow calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) 1;
+  animation: jk-facedown-glow calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

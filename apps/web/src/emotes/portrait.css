@@ -343,3 +343,9 @@
 :root[data-reduce-motion="true"] .hero-portrait-glint {
   display: none;
 }
+
+/* R5128000: Low graphics stills the idle's light and motes, as Reduce Motion does; a reaction still plays. */
+:root[data-low-graphics="true"] .portrait-art-breath,
+:root[data-low-graphics="true"] .portrait-art-mote {
+  animation: none;
+}

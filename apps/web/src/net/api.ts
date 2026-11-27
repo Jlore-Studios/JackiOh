@@ -1991,8 +1991,20 @@ export type PublicPlayVersion = {
   adjustedWinRate: number | null;
   adjustedLow: number | null;
   adjustedHigh: number | null;
+  /** R5036000: its Decisiveness over its span, null below the floor or with no turns; absent from an older server. */
+  decisiveness?: number | null;
   tier: CardTier | null;
   hasEnoughGames: boolean;
+  /**
+   * R5037000: its win rate over the games it counts, as the Cards tab's reads a card's (R3185000); null with no
+   * games; absent from a server deployed before it. The client shows it from R654's floor (`hasEnoughGames`).
+   */
+  winRate?: number | null;
+  /**
+   * R5037000: its played games over its seen games (R3950000); null when it was never seen, which is no 0%; absent
+   * from a server deployed before it.
+   */
+  playRate?: number | null;
 };
 
 /** R4675001: `GET /api/stats/versions`: every deck card's play versions in catalog order, and the band their tiers read. */
@@ -2001,6 +2013,8 @@ export type PublicStatsVersionsResponse = {
   mode: "all" | "bo1" | "bo3" | "random" | "constructed";
   bandLow: number;
   bandHigh: number;
+  /** R5036000: the typical play version's Decisiveness, a fraction; absent from an older server. */
+  decisiveness?: number;
   minSample: number;
   versions: PublicPlayVersion[];
 };

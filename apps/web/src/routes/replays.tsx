@@ -1,8 +1,8 @@
 // `/replays` (R768000, #768): the practice games this device kept (the last `PRACTICE_REPLAYS_KEPT`,
-// R768) and, signed in, the account's online matches the retention purge has not taken. It holds no log,
-// seed or state (CLAUDE.md rule 7). NOT GATED, BUT ASKED (R970000): the practice half needs no account, so
-// it renders outside `<Gated>`; an account owing the age check or the terms (R757000, R757001) meets the
-// consent screen before its online half. A file the page wrote opens again, held to its caps and this
+// R768, Infinite Assault fights among them, R5125000) and, signed in, the account's online matches the
+// retention purge has not taken. It holds no log, seed or state (CLAUDE.md rule 7). NOT GATED, BUT ASKED
+// (R970000): the practice half needs no account, so it renders outside `<Gated>`; an account owing the age
+// check or the terms (R757000, R757001) meets the consent screen before its online half. A file the page wrote opens again, held to its caps and this
 // build's catalog version, and is never uploaded or kept (#1160). FULL ART (R1313000): a replay's viewer
 // owns no copy, so only a practice replay prints full art.
 
@@ -92,6 +92,12 @@ async function readDevice(host: PracticeHost): Promise<{ lookup: CardLookup; rep
   const replays = await host.request({ type: "replays" });
   if (replays.type !== "replays") throw new Error(replays.type === "failed" ? replays.message : "the practice worker sent no list");
   return { lookup: lookupFromDefs(catalog.defs), replays: replays.replays };
+}
+
+/** R5125000: what a kept game was: practice, or an Infinite Assault level against its enemy. */
+function practiceKind(row: PracticeReplayListing): string {
+  if (row.assault === undefined) return t("Practice");
+  return `${t("Infinite Assault")} · ${t("Level {level}", { level: String(row.assault.level) })} · ${t(row.assault.enemy)}`;
 }
 
 /** How long the game ran, in turns. */
@@ -256,7 +262,9 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
   };
 
   const openPractice = (row: PracticeReplayListing): void => {
-    if (host.current !== null) setOpen({ key: `practice-${String(row.game)}`, source: practiceReplaySource(host.current, row), practice: true, opponentLabel: t("AI") });
+    // R5125000: an Infinite Assault fight names its enemy on the enemy's hero.
+    const opponentLabel = row.assault === undefined ? t("AI") : t(row.assault.enemy);
+    if (host.current !== null) setOpen({ key: `practice-${String(row.game)}`, source: practiceReplaySource(host.current, row), practice: true, opponentLabel });
   };
   const openOnline = (row: OnlineReplayListing): void => {
     if (token !== null) setOpen({ key: `online-${row.matchId}`, source: onlineReplaySource(token, row), matchId: row.matchId, opponentLabel: opponentName(row) });
@@ -345,7 +353,7 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
                 return (
                   <li key={row.game} className="replays__row" data-testid={replaysTestid.practice(row.game)}>
                     <span className="replays__what">
-                      <strong>{t(RESULT_WORDS[row.result])}</strong> · {t("Practice")} ·{" "}
+                      <strong>{t(RESULT_WORDS[row.result])}</strong> · {practiceKind(row)} ·{" "}
                       {turnsText(row.turns)} · {formatDateTime(row.endedAt, { dateStyle: "medium", timeStyle: "short" })}
                       {why === null ? null : <span className="replays__why"> · {why}</span>}
                     </span>

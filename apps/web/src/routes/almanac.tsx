@@ -8,6 +8,7 @@
 // R3838000: its "Show card text" button prints every face's words, no full art (cardText.tsx); R3838001: every card
 // with words opens a hover preview with its whole text beside it, and R3838002 a reference's tooltip does too
 // (`AlwaysFullText`).
+// R5131000: its shelf, set chips and tag chips take in the Infinite Assault's single-player set (`ALMANAC_SETS`).
 
 import { useCallback, useMemo, useState, type ReactElement } from "react";
 
@@ -18,6 +19,7 @@ import { currentCatalog } from "../game/currentCatalog.ts";
 import CardBrowser from "../game/deckbuilder/CardBrowser.tsx";
 import {
   ALMANAC_CHIP_TAGS,
+  ALMANAC_SETS,
   DEFAULT_FILTER,
   DEFAULT_SORT,
   almanacPool,
@@ -104,6 +106,8 @@ export default function AlmanacRoute(): ReactElement {
                 winRates={winRates}
                 ownedControl={false}
                 tags={ALMANAC_CHIP_TAGS}
+                // R5131000: the sets that ship, then the Infinite Assault's.
+                sets={ALMANAC_SETS}
                 onInspect={openDetail}
                 own={own ?? undefined}
                 // #2334: about 700 cards, of which a screen shows a dozen.

@@ -152,11 +152,20 @@ pub fn record_element(state: &mut GameState, player: PlayerId, card: &CardInstan
 }
 
 /// R980: the element a card's view carries, `Some` only while a Feng Shui acts (D14).
-pub fn shown_element(state: &GameState, card: &CardInstance) -> Option<CardElement> {
-    if judges(state).is_empty() {
-        return None;
-    }
-    Some(element_of(state, &card.def_id))
+pub fn shown_element(state: &GameState, judging: Judging, card: &CardInstance) -> Option<CardElement> {
+    judging.0.then(|| element_of(state, &card.def_id))
+}
+
+/// R980, #5136: whether any Feng Shui judges plays now, asked of the state once (`judging`) by a caller
+/// that shows many cards' elements: `judges` reads both fields' acting texts, layers and all, so a
+/// view that asked it again for each card it lists grew slower with every card a long game's graveyards
+/// and exile piles took in. `shown_element` takes it, so it cannot ask per card.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Judging(bool);
+
+/// The `Judging` of `state` as it stands.
+pub fn judging(state: &GameState) -> Judging {
+    Judging(!judges(state).is_empty())
 }
 
 /// R982: what a "last element" line shows before any play.

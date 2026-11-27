@@ -1114,7 +1114,7 @@
   box-shadow:
     inset 0 0 0 2px color-mix(in srgb, var(--radiant, var(--pal-gold-300)) 95%, var(--pal-white)),
     inset 0 0 16px 4px color-mix(in srgb, var(--radiant, var(--pal-gold-300)) 60%, transparent);
-  animation: fx-shield-pulse 2.6s ease-in-out 2 alternate;
+  animation: fx-shield-pulse 2.6s ease-in-out infinite alternate;
 }
 
 /* The pop: during its own divineShieldLost entry the cocoon flashes and bursts outward. */
@@ -1294,7 +1294,7 @@
   border-radius: var(--radius-xs);
   background: radial-gradient(circle, rgb(190 238 255 / 55%), transparent 70%);
   pointer-events: none;
-  animation: fx-hindered-glint 1.6s ease-in-out 2 alternate;
+  animation: fx-hindered-glint 1.6s ease-in-out infinite alternate;
 }
 
 /* ------------------------------------------------------------ brand: a mark lands (R437) --- */
@@ -10753,7 +10753,7 @@
   );
   animation:
     fx-launch-ignite 180ms ease-out var(--fx-ignite) both,
-    fx-launch-flicker var(--fx-flicker) ease-in-out var(--fx-ignite) var(--fx-flickers, 1) alternate;
+    fx-launch-flicker 110ms ease-in-out var(--fx-ignite) infinite alternate;
 }
 
 @keyframes fx-launch-ignite {
@@ -11505,7 +11505,7 @@
   border-radius: var(--radius-round);
   background: var(--fx-tint-glow);
   rotate: calc((var(--fx-spark) / max(1, var(--fx-sparks) - 1) - 0.5) * 70deg);
-  animation: fx-cinematic-spark calc(var(--fx-ms) * 0.09) linear calc(var(--fx-at) + var(--fx-ms) * 0.009 * var(--fx-spark)) 12; /* #5014: ⌈1 / 0.09⌉ turns, the whole cue */
+  animation: fx-cinematic-spark calc(var(--fx-ms) * 0.09) linear calc(var(--fx-at) + var(--fx-ms) * 0.009 * var(--fx-spark)) infinite;
 }
 
 .fx-cinematic-name {

@@ -1186,7 +1186,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R4083000: the Tokens tab sorts by the Cards tab's one sort, kept in the address, a column its tables lack read as
   // Adjusted; a Created header sets it as a deck header does.
   const createdSort = createdSortOf(sortCol, sortDir);
-  // R4678001: Running sorts by it too, with no Decisiveness, and R5033000 with Date.
+  // R4678001: Running sorts by it too; R5036000: Decisiveness among its columns, and R5033000 Date.
   const runningSort = runningSortOf(sortCol, sortDir);
   const sortCreatedBy = (next: CreatedSort): void => {
     setSortCol(next.col);
@@ -1498,6 +1498,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // Tokens tab shows the same row, its sort select offering only the columns its tables have and no Play rate column.
   // R4678001: so does Running, with no Face, which it does not read (R4678000).
   // R4680000: and Versions, as Running, with its Past versions only.
+  // R5037000: Running and Versions have the Cards tab's Win rate column and Play rate behind the Columns toggle.
   // R4681001: the Hall of Fame keeps only the ranges, which its entries read; its ranks are the order.
   const cardOptions = (shown: "cards" | "tokens" | "running" | "versions" | "hall"): ReactElement => {
     if (shown === "hall") {
@@ -1636,7 +1637,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               >
                 {t("Games")}
               </button>
-              {shown === "cards" && (
+              {shown !== "tokens" && (
                 <button
                   type="button"
                   className={`segmented__item stats-view-btn ${visibleCols.playRate ? "segmented__item--selected" : ""}`}
@@ -2497,12 +2498,14 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 view={view}
                 showRanges={showRanges}
                 band={experimentalData}
+                typical={experimentalData.decisiveness}
                 labeledBy="stats-tab-experimental"
                 nameOf={shownName}
                 faceOf={versionFaceOf}
                 plainCardOf={plain.shown ? versionPlainOf : undefined}
                 visibleThumbnail={visibleCols.thumbnail}
                 visibleGames={visibleCols.games}
+                visiblePlayRate={visibleCols.playRate}
                 onOpen={openVersion}
                 onNeed={needSnapshot}
               />
@@ -2514,12 +2517,14 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 view={view}
                 showRanges={showRanges}
                 band={experimentalData}
+                typical={experimentalData.decisiveness}
                 labeledBy="stats-tab-experimental"
                 nameOf={shownName}
                 faceOf={gridFaceOf}
                 plainCardOf={plain.shown ? plainCardOf : undefined}
                 visibleThumbnail={visibleCols.thumbnail}
                 visibleGames={visibleCols.games}
+                visiblePlayRate={visibleCols.playRate}
                 onOpen={(id, opener) => openDrillDown(id, opener)}
               />
             )}

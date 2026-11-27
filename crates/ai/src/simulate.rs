@@ -767,6 +767,15 @@ pub fn simulate_first_answers(
     simulate_answering(state, seat, action, counter, AnswersTried::First, Prices::NONE)
 }
 
+/// R4799000: the greedy baseline's and the skill miss's one-ply simulation of `action` on `det`
+/// (`simulate_first_answers`), on a counter of its own sized to what the step may take: its own node, its
+/// up-front surcharge (`surcharge_nodes`) and `max_auto_answers` answers. So every candidate gets its one
+/// simulation, a surcharged one included, whatever the candidates before it took.
+pub fn one_ply_step(det: &GameState, seat: PlayerId, action: &ActionBody) -> Option<SimStep> {
+    let nodes = 1 + AI_SEARCH.max_auto_answers as usize + surcharge_nodes(det, seat, action);
+    simulate_first_answers(det, seat, action, &create_node_counter(nodes, None))
+}
+
 fn simulate_answering(
     state: &GameState,
     seat: PlayerId,

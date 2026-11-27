@@ -228,7 +228,8 @@ the power an answer leaves that card the same way; every price is keyed by the p
 `turn_hook_prices` prices it by one run of the engine's own yard step, for each Dormant shipyard on
 either field and each in the seat's hand, and `slumber_worth` adds `AI_EVAL.turn_hook` of it outside the
 slumber share, which that probe's own evaluation already applied (R3575402).
-A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000):
+A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000; Frenzy is
+none, since the twin below holds it too, R4799002):
 `attack_hook_prices` walks the same two turns, within `AI_ATTACK_HOOK_PROBE_NODES`; at the start of each
 player's next turn it plays each of that player's units with a hook at the enemy hero, or at the first
 target `legal_actions` lists, beside the same attack by the unit's hookless twin (Vanilla, granted its
@@ -325,7 +326,8 @@ its first `branching`, End Turn always among them. Inside one card's plays, each
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
 target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units
 first (#1778). Its root tries a play in every distinct placement (the zones beside its lane and
-across it), each in its lowest lane, or its midlane lane when it has one, which a Cry may read (R2203001);
+across it, a zone a GIGA covers read as the GIGA, and the half of a slashed board its lane is on,
+R4799001), each in its lowest lane, or its midlane lane when it has one, which a Cry may read (R2203001);
 deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). The beam
 drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
 are one position). A position also holds the last Spell played while a card that copies it (C #57 Echo) is
@@ -571,7 +573,10 @@ A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }
 `[0, 1]` that each decision follows the AI, the rest being the skill miss (`skill::skill_miss_action`,
 R2214000): a softmax at `AI_SKILL_MISS_TEMPERATURE` over the greedy baseline's one-ply scores of the
 candidates the probe world lists (`decide::probe_world` of `redact(state, seat)`, as `decide` lists
-its own, R4216000), read on one determinization of what the seat sees at the shown costs (R762).
+its own, R4216000), read on one determinization of what the seat sees at the shown costs (R762). The
+greedy baseline and the miss simulate each candidate on a counter of its own, sized to its one node, its
+surcharge and `max_auto_answers` answers (`one_ply_step`, R4799000), so a surcharged play (a Zephrys, a
+play Pareto Optimality judges) is simulated whatever the candidates before it took.
 `None` is `AI_SKILL_MAX`: full skill, which takes no draw, so a seat without one plays as it did
 before the knob; `AI_SKILL_MIN` is the miss at every decision, with no search. In
 between, `skill::plays_best(skill, rng)` rolls the seat's own seeded stream once per decision

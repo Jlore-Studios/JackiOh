@@ -25,7 +25,7 @@
   border: 1px solid var(--line-bright, var(--pal-slate-700));
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-slate-900) 70%, transparent);
-  box-shadow: var(--shadow-2);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--pal-black) 25%, transparent);
 }
 
 .stats-summary-label {

@@ -188,15 +188,19 @@ mod tests {
                 s.expect_stats(VANILLA, json!({ "attack": 3, "maxHealth": 3 }));
             }
 
+            /// R5113000: an Indestructible enemy is Immutable (R4353000), so the aura's −1/−1 per counter
+            /// never reaches it and it stands, however many counters it holds.
             #[test]
-            fn r69_an_indestructible_enemy_dies_too_once_its_max_health_reaches_0() {
+            fn r5113000_an_indestructible_enemy_takes_none_of_it_and_stands() {
                 let mut s = scenario(json!({
                     "p1": { "hand": [TOXINS, STOCKPILE] },
                     "p2": { "hand": [STOCKPILE], "field": [{ "def": STATE_OF_GAME, "counters": { "plague": 3 } }] },
                 }));
                 let state = s.card(STATE_OF_GAME).id.clone();
+                let before = s.stats(&state).max_health;
                 s.play(TOXINS, json!({ "zone": 1 }));
-                s.expect_in_zone(&state, "graveyard");
+                s.expect_in_zone(&state, "field");
+                assert_eq!(s.stats(&state).max_health, before);
             }
 
             #[test]

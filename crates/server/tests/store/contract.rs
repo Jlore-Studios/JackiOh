@@ -5900,6 +5900,57 @@ mod game_records {
         }
     }
 
+    /// #5129: the patches `the_every_patch_read_goes_over_the_card_totals_once` folds a record on.
+    const SCAN_PATCHES: [&str; 5] = ["v0.1.1", "v0.2.0", "v0.2.3", "v0.3.0", "v0.3.1"];
+
+    /// #5129: the read of every patch's totals (`kept_snapshot`'s, R3067000) goes over `card_totals` once,
+    /// however many patches the table holds. #4964 read it a patch at a time, after a `select distinct patch`.
+    /// Staging upserts each patch's rows as its records fold, so they lie scattered through the table, and each
+    /// patch's read went through most of the table's pages. The read took minutes, and every /stats request
+    /// was cancelled at the client's 75 s timeout until #4989 made it one read again. Postgres counts the scans
+    /// a transaction has made (`pg_stat_xact_user_tables`); the fake has no table to scan.
+    async fn the_every_patch_read_goes_over_the_card_totals_once(harness: &StoreHarness) {
+        let records: Vec<GameRecord> = SCAN_PATCHES
+            .iter()
+            .enumerate()
+            .map(|(n, patch)| game_record(&format!("m-scan-{n}"), json!({ "patch": patch })))
+            .collect();
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+
+        let mut tx = harness
+            .db
+            .begin(None)
+            .await
+            .unwrap_or_else(|error| panic!("{}: begin: {error}", harness.name));
+        let totals = tx
+            .stats_totals_load(&every_total())
+            .await
+            .unwrap_or_else(|error| panic!("{}: stats_totals_load: {error}", harness.name));
+        assert_eq!(totals, loaded(&records), "{}", harness.name);
+        let patches: IndexSet<&str> = totals.cards.keys().map(|key| key.patch.as_str()).collect();
+        assert_eq!(patches.len(), SCAN_PATCHES.len(), "{}: {patches:?}", harness.name);
+        if let Tx::Pg(t) = &mut tx {
+            let scans: i64 = sqlx::query_scalar(
+                "select coalesce(seq_scan, 0) + coalesce(idx_scan, 0) from pg_stat_xact_user_tables
+                  where schemaname = 'public' and relname = 'card_totals'",
+            )
+            .fetch_one(&mut **t)
+            .await
+            .expect("the transaction's scans of card_totals");
+            assert_eq!(
+                scans, 1,
+                "reading every patch's totals scanned card_totals {scans} times: read the table once, as one \
+                 stream (#4989), not a patch at a time"
+            );
+        }
+        tx.commit()
+            .await
+            .unwrap_or_else(|error| panic!("{}: commit: {error}", harness.name));
+    }
+
     both_stores!(
         r376_reads_a_match_s_mode_off_its_room_its_queue_tickets_or_its_series,
         r376_writes_one_record_per_game_and_refuses_a_second_with_the_same_id,
@@ -5917,6 +5968,7 @@ mod game_records {
         r4672003_folds_the_choices_and_loads_them_as_the_records_give,
         r4673001_keeps_each_faces_drills_and_loads_them_as_the_records_give,
         r4965000_a_filed_read_keeps_what_filing_the_whole_read_keeps,
+        the_every_patch_read_goes_over_the_card_totals_once,
     );
 }
 

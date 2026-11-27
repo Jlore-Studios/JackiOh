@@ -7,7 +7,8 @@
 // included: L3's reason is a deck's) and its `ALMANAC_TAGS`.
 // Chips follow what ships (R1380, R1381): `SHIPPED_SETS`, and a tag chip shows only while a shipped card carries it
 // (`shippedTags`). Issue #2521's two tags reach a shipped set, so their chips show from its patch: Faction in both
-// lists, Resource in the almanac's alone.
+// lists, Resource in the almanac's alone. The almanac's also follow the Infinite Assault's set, which it shows
+// (`ALMANAC_SETS`, R5131000).
 
 import { CATALOG } from "@jackioh/cards";
 import {
@@ -29,7 +30,7 @@ import { isGlitch } from "../../cards/glitch.ts";
 import { DEFAULT_LOCALE, getLocale } from "../../i18n/i18n.ts";
 import { PATCH_LOG } from "../../patches/ribbon.ts";
 import { poolFrom } from "./loadout.ts";
-import { almanacShelf } from "./shelf.ts";
+import { ALMANAC_SETS, almanacShelf, almanacShows } from "./shelf.ts";
 
 /** Cost filter chips and mana-curve buckets: every price from 6 up (Classic+ #64's 10, Ceaseless
  *  Void's 100) shares "6+". */
@@ -104,11 +105,12 @@ export const ASSAULT_TAGS: readonly Tag[] = ["Hallucination", "Overclock", "Batc
  */
 export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", ...ASSAULT_TAGS, "Token"];
 
-/** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
-export function shippedTags(order: readonly Tag[], cards: readonly CardDef[]): readonly Tag[] {
+/** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). `shows`
+ *  picks the sets that lend theirs: the almanac's are every set it shows (R5131000). */
+export function shippedTags(order: readonly Tag[], cards: readonly CardDef[], shows: (set: SetName) => boolean = setShips): readonly Tag[] {
   const carried = new Set<Tag>();
   for (const def of cards) {
-    if (isGlitch(def.id) || !setShips(def.set)) continue;
+    if (isGlitch(def.id) || !shows(def.set)) continue;
     for (const tag of def.tags) carried.add(tag);
   }
   return order.filter((tag) => carried.has(tag));
@@ -119,10 +121,14 @@ const BUNDLED: readonly CardDef[] = Object.values(CATALOG);
 /** R1381: the deck builder's tag chips, read off the bundled catalog. */
 export const DECK_CHIP_TAGS: readonly Tag[] = shippedTags(FILTER_TAGS, BUNDLED);
 
-export const ALMANAC_CHIP_TAGS: readonly Tag[] = shippedTags(ALMANAC_TAGS, BUNDLED);
+/** R1381, R5131000: the almanac's tag chips, the tags of the cards it shows, the Infinite Assault's among them. */
+export const ALMANAC_CHIP_TAGS: readonly Tag[] = shippedTags(ALMANAC_TAGS, BUNDLED, almanacShows);
 
 /** The sets a deck may draw on (R380: one format, every set that ships, R1380), in catalog order. */
 export const FILTER_SETS: readonly SetName[] = SHIPPED_SETS;
+
+/** R5131000: the almanac's set chips, the sets it shows: `FILTER_SETS`, then the Infinite Assault's. */
+export { ALMANAC_SETS };
 
 export const FILTER_RARITIES: readonly Rarity[] = ["Common", "Rare", "Epic", "Legendary", "Mythic"];
 
@@ -161,8 +167,8 @@ export const DEFAULT_FILTER: PoolFilter = {
   ownedOnly: true,
 };
 
-/** Issue #3734: "set" files a card under its set, in the order the sets ship (`SHIPPED_SETS`), and "newest" the
- *  card the latest patch added first. */
+/** Issue #3734: "set" files a card under its set, in the order the sets ship (`SHIPPED_SETS`), the almanac's
+ *  Infinite Assault after them (`ALMANAC_SETS`, R5131000), and "newest" the card the latest patch added first. */
 export type SortKey = "cost" | "name" | "rarity" | "attack" | "health" | "type" | "winRate" | "set" | "newest";
 
 export const SORT_KEYS: readonly SortKey[] = ["cost", "name", "rarity", "attack", "health", "type", "winRate", "set", "newest"];
@@ -353,7 +359,7 @@ function addedAt(def: CardDef): number {
 function comparePrimary(key: "cost" | "name" | "rarity" | "type" | "set" | "newest", left: CardDef, right: CardDef): number {
   switch (key) {
     case "set":
-      return compareNumbers(SHIPPED_SETS.indexOf(left.set), SHIPPED_SETS.indexOf(right.set));
+      return compareNumbers(ALMANAC_SETS.indexOf(left.set), ALMANAC_SETS.indexOf(right.set));
     case "newest":
       // Ascending is newest first: the later patch is the smaller key.
       return compareNumbers(addedAt(right), addedAt(left));
@@ -444,7 +450,8 @@ export function visiblePool(
 
 /**
  * What the almanac's grid shows (R630): every catalog card, tokens included, but Glitch (R674) and a set
- * not shipped (R1420), filtered, then sorted. There is no collection, so `filter.ownedOnly` is not read.
+ * not shipped (R1420) other than the Infinite Assault's (R5131000), filtered, then sorted. There is no
+ * collection, so `filter.ownedOnly` is not read.
  */
 export function almanacPool(
   catalog: CatalogSnapshot,

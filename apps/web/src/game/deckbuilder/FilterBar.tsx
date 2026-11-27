@@ -63,6 +63,8 @@ type FilterBarProps = {
   ownedControl?: boolean;
   /** The tag chips, in order; the deck builder's `DECK_CHIP_TAGS` (R1381) when absent. */
   tags?: readonly Tag[];
+  /** The set chips, in order; the deck builder's `FILTER_SETS` (R1380) when absent, the almanac's `ALMANAC_SETS` (R5131000). */
+  sets?: readonly SetName[];
   /** Issue #3734: the sorts the select offers, in order; every `SORT_KEYS` entry when absent (the Collection has no win rates to sort by). */
   sorts?: readonly SortKey[];
   /** Issue #3734: the keyword chips, in order. None are drawn when absent (the deck builder's bar has none). */
@@ -132,6 +134,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
     ownedUnavailable = false,
     ownedControl = true,
     tags = DECK_CHIP_TAGS,
+    sets = FILTER_SETS,
     sorts = SORT_KEYS,
     keywords,
     ownership,
@@ -332,7 +335,7 @@ export default function FilterBar(props: FilterBarProps): ReactElement {
               <span className="db-group-label" aria-hidden="true">
                 {t("Set")}
               </span>
-              {FILTER_SETS.map((set) => (
+              {sets.map((set) => (
                 <Chip
                   key={set}
                   testId={filterSetId(set)}
