@@ -2952,6 +2952,50 @@ mod i19 {
         assert_eq!(clean, Vec::<String>::new());
     }
 
+    #[test]
+    fn i14_listed_findings_carry_the_branch_action_and_events() {
+        // #5154: a finding names the action I14 sent and the events its branch emitted.
+        let (state, id) = dormant_board("i14-findings");
+        let hit = damage_event(&id, 1);
+        let branch = |state: &GameState, action: &Action| -> ReduceResult {
+            let mut result = reduce(state, action);
+            result.events.push(hit.clone());
+            result
+        };
+        let legal = [ActionBody::EndTurn];
+        let found = listed_findings(&state, P1, &legal, branch);
+        let messages: Vec<String> = listed_refused(&state, P1, &legal, branch);
+        assert_eq!(
+            found.iter().map(|f| f.message.clone()).collect::<Vec<_>>(),
+            messages
+        );
+        let finding = found
+            .iter()
+            .find(|finding| finding.message.contains("I19"))
+            .expect("I19's branch finding");
+        assert_eq!(finding.action.body, ActionBody::EndTurn);
+        assert_eq!(finding.action.player_id, P1);
+        assert_eq!(finding.action.nonce, I14_NONCE);
+        let probed = {
+            let mut copy = state.clone();
+            copy.applied = Vec::new();
+            reduce(&copy, &finding.action)
+        };
+        let mut expected = probed.events;
+        expected.push(hit.clone());
+        assert_eq!(finding.events, expected);
+        // The monitor's seat loop returns the same findings for both seats, and `listed` their messages.
+        let monitor = create_invariant_monitor(&state);
+        assert_eq!(
+            monitor.listed(&state, branch),
+            monitor
+                .listed_findings(&state, branch)
+                .into_iter()
+                .map(|f| f.message)
+                .collect::<Vec<_>>()
+        );
+    }
+
     /// `effect` applied as p1's and settled, as a card's effect is (§10.3): the events it emitted.
     fn settled(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
         let mut events: Vec<GameEvent> = Vec::new();
