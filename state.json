@@ -20791,10 +20791,12 @@
     "what": "spot-check #5213 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-27T23:33:20Z",
+    "at": "2026-11-27T23:39:41Z",
     "notes": [
-      "#5212: closed, so `bot:merging` is off",
-      "#5211: auto-merge is off and it is out of the merge queue, so `bot:merging` is off"
+      "started revise #5211 on claude-7 (run 46083814019)",
+      "started review #5213 on claude-4 (run 46083857679)",
+      "nothing more to start: nothing is queued",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -21500,7 +21502,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T23:33:20Z",
+  "loop_tick": "2026-11-27T23:39:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
