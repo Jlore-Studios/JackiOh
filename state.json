@@ -22126,6 +22126,9 @@
       "requested_by": "jgoetzmann-bot",
       "stop_requested": false,
       "suggestion": true
+    },
+    "5154": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -45437,6 +45440,13 @@
         "at": "2026-11-27T03:08:27Z",
         "number": 5152,
         "title": "Patch: a Chinese reader's Call to Chaos banner and fatigue-immunity badge read in Chinese, not half-translated by the deck builder's and the leaderboard's keys",
+        "verdict": "auto-approved",
+        "why": "approved by itself: no one voted on it"
+      },
+      {
+        "at": "2026-11-27T03:09:50Z",
+        "number": 5154,
+        "title": "Patch: a failing fuzz seed's report prints the step that failed: its action, its seat and the events it emitted",
         "verdict": "auto-approved",
         "why": "approved by itself: no one voted on it"
       }
