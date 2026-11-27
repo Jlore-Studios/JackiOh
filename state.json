@@ -21779,7 +21779,16 @@
       "feedback_since": "2026-11-26T23:21:03Z",
       "issue": 5122,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "gemini",
+        "built_by": "agy",
+        "rejections": [],
+        "reviews": [],
+        "sha": "6edffc40711257e9fc8f8691845fe55b53d32e48",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
