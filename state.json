@@ -28008,10 +28008,6 @@
       "refused_until": "2026-11-27T00:40:00Z",
       "spent": [
         {
-          "at": "2026-11-19T00:06:49Z",
-          "minutes": 34.0
-        },
-        {
           "at": "2026-11-19T00:34:06Z",
           "minutes": 12.0
         },
@@ -28806,16 +28802,13 @@
         {
           "at": "2026-11-26T22:50:56Z",
           "minutes": 22.3
+        },
+        {
+          "at": "2026-11-27T00:58:06Z",
+          "minutes": 2.4
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-17T20:40:53Z",
-          "cache": 1194744,
-          "cost": 1.0233,
-          "input": 40,
-          "output": 10723
-        },
         {
           "at": "2026-11-17T20:51:20Z",
           "cache": 3492507,
@@ -30208,16 +30201,22 @@
           "cost": 1.4707,
           "input": 60,
           "output": 10203
+        },
+        {
+          "at": "2026-11-27T00:58:06Z",
+          "cache": 613015,
+          "cost": 0.4945,
+          "input": 23,
+          "output": 20236
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-27T00:40:00Z",
-          "utilization": 1.0
+          "resets_at": "2026-11-27T05:40:00Z",
+          "utilization": 0.05
         },
-        "observed_at": "2026-11-26T22:50:56Z",
-        "rejected_resets_at": "2026-11-27T00:40:00Z",
-        "status": "rejected"
+        "observed_at": "2026-11-27T00:58:06Z",
+        "status": "allowed"
       }
     },
     "claude-4": {
@@ -45896,6 +45895,13 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-27T00:49:17Z,claude-3,stream,call,45918567571,3,2026-11-27T05:40:00Z,,,allowed,,,",
+      "2026-11-27T00:50:17Z,claude-3,stream,call,45918567571,4,2026-11-27T05:40:00Z,,,allowed,,,",
+      "2026-11-27T00:51:02Z,claude-3,stream,call,45918567571,5,2026-11-27T05:40:00Z,,,allowed,,,"
+    ]
   },
   "version": 1
 }
