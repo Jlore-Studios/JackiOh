@@ -22413,9 +22413,13 @@
     "what": "review #5172 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-27T11:08:17Z",
+    "at": "2026-11-27T11:14:14Z",
     "notes": [
-      "#5156 waits: 3 approved themselves in the last day already"
+      "#5156 waits: 3 approved themselves in the last day already",
+      "delivered build #5166 on claude-6 (run 45961944895): built",
+      "started review #5172 on claude-6 (run 45989035414)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -23121,7 +23125,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T11:08:17Z",
+  "loop_tick": "2026-11-27T11:14:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
