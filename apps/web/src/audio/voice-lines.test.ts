@@ -14,9 +14,17 @@ import { fileURLToPath } from "node:url";
 import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
-import { BANNED_RULES_WORDS, BANNED_WORDS_MAX_SHARE, CARD_HOOK_NAMES, VOICE_MAX_WORDS } from "./constants.ts";
+import {
+  BANNED_RULES_WORDS,
+  BANNED_WORDS_MAX_SHARE,
+  CARD_HOOK_NAMES,
+  VOICE_MAX_WORDS,
+  VOICE_NEW_LINE_MAX_WORDS,
+} from "./constants.ts";
 import { SFX_IDS } from "./sfx.ts";
 import { withVoiceText } from "./soundTables.ts";
+import type { CardHook } from "./types.ts";
+import baselineJson from "./census-baseline.json";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(here, "../../../..");
@@ -25,7 +33,7 @@ const AUDIO_PATH = resolve(here, "card-audio.json5");
 const VOICE_TEXT_PATH = resolve(here, "voice-text.json");
 
 type EntryKind = "unit" | "spell" | "trap";
-type Hook = "play" | "attack" | "death" | "cast" | "trigger";
+type Hook = CardHook;
 
 /** As docs/polish/2-sound.md maps them. */
 const KIND_OF_TYPE: Readonly<Record<string, EntryKind>> = {
@@ -38,15 +46,17 @@ const KIND_OF_TYPE: Readonly<Record<string, EntryKind>> = {
 
 /** The hooks each kind may carry (constants.ts CARD_HOOKS), and the lines SPEC §10.11 requires of it. */
 const HOOKS_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
-  unit: ["play", "attack", "death", "trigger"],
-  spell: ["cast", "trigger"],
-  trap: ["cast", "trigger"],
+  unit: ["play", "attack", "death", "trigger", "startOfTurn", "endOfTurn", "whenever", "activate", "hurt", "hit"],
+  spell: ["cast", "trigger", "startOfTurn", "endOfTurn", "whenever", "activate", "hit"],
+  trap: ["cast", "trigger", "startOfTurn", "endOfTurn", "whenever", "activate", "hit"],
 };
 const LINES_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
   unit: ["play", "attack", "death"],
   spell: ["cast"],
   trap: ["cast"],
 };
+/** The hooks SPEC §10.11 gives a line, of any kind: what B33's counts count. */
+const REQUIRED_HOOKS: ReadonlySet<string> = new Set(["play", "attack", "death", "cast"]);
 /** The fields a hook's assignment allows (types.ts HookAssignment). */
 const ASSIGNMENT_FIELDS: readonly string[] = ["voice", "text", "lines", "effect"];
 
@@ -118,22 +128,34 @@ function allAssignments(): Assignment[] {
   );
 }
 
+/** A voice and its words: one text, or (R5188000) a pool of lines. */
 function isLine(value: unknown): boolean {
-  return isRecord(value) && typeof value.voice === "string" && typeof value.text === "string";
+  return isRecord(value) && typeof value.voice === "string" && (typeof value.text === "string" || Array.isArray(value.lines));
 }
 
-/** Every line the file carries; a trigger's lines count one by one. */
-type Line = { key: string; hook: Hook; text: unknown };
+/** R5188000: a hook's effect, one name or a non-empty list of them, as its names; null when it is neither. */
+function effectNames(effect: unknown): string[] | null {
+  if (typeof effect === "string") return [effect];
+  if (Array.isArray(effect) && effect.length > 0 && effect.every((name) => typeof name === "string")) return effect as string[];
+  return null;
+}
+
+/**
+ * Every line the file carries, by its key and its line's name: a trigger's lines count one by one
+ * (`trigger<n>`, R1088), and so does a pool's (`<hook>`, then `<hook><n>` from 2, R5188000).
+ */
+type Line = { key: string; defId: string; line: string; hook: Hook; text: unknown };
 
 function allLines(): Line[] {
   return allAssignments()
     .filter(({ hook, value }) => (CARD_HOOK_NAMES as readonly string[]).includes(hook) && isRecord(value) && ("voice" in value || "text" in value || "lines" in value))
-    .flatMap(({ key, hook, value }) => {
+    .flatMap(({ defId, hook, value }) => {
       const lines = (value as Json).lines;
+      const named = (line: string, text: unknown): Line => ({ key: `${defId}-${line}`, defId, line, hook: hook as Hook, text });
       if (Array.isArray(lines)) {
-        return lines.map((text, i) => ({ key: `${key}-trigger${i + 1}`, hook: hook as Hook, text }));
+        return lines.map((text, i) => named(hook === "trigger" ? `trigger${i + 1}` : i === 0 ? hook : `${hook}${i + 1}`, text));
       }
-      return [{ key, hook: hook as Hook, text: (value as Json).text }];
+      return [named(hook, (value as Json).text)];
     });
 }
 
@@ -250,7 +272,19 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
   });
 
   it("B33 puts no hook on an entry outside CARD_HOOK_NAMES and its kind's, and no field on a hook but voice, text and effect", () => {
-    expect([...CARD_HOOK_NAMES], "the hooks constants.ts CARD_HOOKS names").toEqual(["play", "attack", "death", "cast", "trigger"]);
+    expect([...CARD_HOOK_NAMES], "the hooks constants.ts CARD_HOOKS names").toEqual([
+      "play",
+      "attack",
+      "death",
+      "cast",
+      "trigger",
+      "startOfTurn",
+      "endOfTurn",
+      "whenever",
+      "activate",
+      "hurt",
+      "hit",
+    ]);
     const wrong: string[] = [];
     for (const { defId, key, hook, value } of allAssignments()) {
       const kind = catalogKind(defId);
@@ -276,6 +310,8 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
           }
           continue;
         }
+        // R5188000: an effect may be a list of the bank's effects.
+        if (field === "effect" && field in value && effectNames(value.effect) !== null) continue;
         if (field in value && typeof value[field] !== "string") wrong.push(`${key}: ${field} is ${JSON.stringify(value[field])}`);
       }
     }
@@ -371,14 +407,16 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
     expect(kinds.filter((kind) => kind === "unit"), "unit entries").toHaveLength(44);
     expect(kinds.filter((kind) => kind === "spell" || kind === "trap"), "spell and trap entries").toHaveLength(67);
     // The lines SPEC §10.11 requires: an attack line (R655) is optional and not counted.
-    const coreLines = allAssignments().filter(({ defId, hook, value }) => defId.startsWith("core-") && hook !== "attack" && isLine(value));
+    const coreLines = allAssignments().filter(
+      ({ defId, hook, value }) => defId.startsWith("core-") && REQUIRED_HOOKS.has(hook) && hook !== "attack" && isLine(value),
+    );
     expect(coreLines, "Core's lines in the table").toHaveLength(155);
   });
 
   it("B33 R1448 gives every card a line per its kind: three times the units plus the spells and traps", () => {
     const units = Object.keys(CARDS).filter((id) => catalogKind(id) === "unit").length;
     // R1448: a Unit's attack line (R655) is required beside its play and death lines.
-    const lines = allAssignments().filter(({ value }) => isLine(value));
+    const lines = allAssignments().filter(({ hook, value }) => REQUIRED_HOOKS.has(hook) && isLine(value));
     expect(lines, "lines in the table").toHaveLength(units * 3 + (Object.keys(CARDS).length - units));
     const required = Object.keys(CARDS).flatMap((id) => {
       const kind = catalogKind(id);
@@ -403,8 +441,20 @@ describe("every voice line is short, plain flavour (B34)", () => {
     expect(wrong, "lines outside /^[A-Za-z ,.'!?-]+$/").toEqual([]);
   });
 
-  it("B34 keeps every line within VOICE_MAX_WORDS for its hook (play 8, attack 4, death 6, cast 8, trigger 8)", () => {
-    expect(VOICE_MAX_WORDS, "the limits the Surface fixes").toEqual({ play: 8, attack: 4, death: 6, cast: 8, trigger: 8 });
+  it("B34 R5188000 keeps every line within VOICE_MAX_WORDS for its hook (play 8, attack 4, death 6, cast 8, trigger 8, a recurring hook's 4)", () => {
+    expect(VOICE_MAX_WORDS, "the limits the Surface fixes").toEqual({
+      play: 8,
+      attack: 4,
+      death: 6,
+      cast: 8,
+      trigger: 8,
+      startOfTurn: 4,
+      endOfTurn: 4,
+      whenever: 4,
+      activate: 4,
+      hurt: 4,
+      hit: 4,
+    });
     expect(wordCount("Too... slow...")).toBe(2);
     expect(wordCount("Oops - Surf's up!")).toBe(3);
 
@@ -412,6 +462,19 @@ describe("every voice line is short, plain flavour (B34)", () => {
       .filter(({ hook, text }) => typeof text === "string" && wordCount(text) > VOICE_MAX_WORDS[hook])
       .map(({ key, hook, text }) => `${key}: ${wordCount(String(text))} words > ${VOICE_MAX_WORDS[hook]}`);
     expect(long, "lines over their word limit").toEqual([]);
+  });
+
+  it("R5188001 keeps every line missing from census-baseline.json within VOICE_NEW_LINE_MAX_WORDS", () => {
+    expect(VOICE_NEW_LINE_MAX_WORDS).toBe(4);
+    const baseline = baselineJson as Readonly<Record<string, readonly string[]>>;
+    const lines = allLines();
+    const added = lines.filter(({ defId, line }) => !(baseline[defId] ?? []).includes(line));
+    // Every line on `main` before R5188000 is in the baseline, so none of today's is new.
+    expect(lines.length - added.length, "lines the baseline holds").toBeGreaterThan(2000);
+    const long = added
+      .filter(({ text }) => typeof text === "string" && wordCount(text) > VOICE_NEW_LINE_MAX_WORDS)
+      .map(({ key, text }) => `${key}: ${wordCount(String(text))} words > ${VOICE_NEW_LINE_MAX_WORDS}`);
+    expect(long, "lines added since the baseline over four words").toEqual([]);
   });
 
   it("B34 passes a corpus with fewer than 2% of its lines restating rules vocabulary, and no more", () => {
@@ -502,8 +565,9 @@ describe("card-audio.json5's layout and effects (R655)", () => {
     const dangling = allAssignments()
       .filter(({ value }) => isRecord(value) && "effect" in value)
       .filter(({ value }) => {
-        const effect = (value as Json).effect;
-        return typeof effect !== "string" || !Object.hasOwn(EFFECTS, effect);
+        // R5188000: a list of effects names each one from the bank.
+        const names = effectNames((value as Json).effect);
+        return names === null || names.some((name) => !Object.hasOwn(EFFECTS, name));
       })
       .map(({ key, value }) => `${key}: effect ${JSON.stringify((value as Json).effect)}`);
     expect(dangling, "hooks whose effect is missing from effects").toEqual([]);
@@ -537,7 +601,7 @@ describe("card-audio.json5's layout and effects (R655)", () => {
 
   it("R655 uses every bank effect on at least one card", () => {
     const used = new Set(
-      allAssignments().flatMap(({ value }) => (isRecord(value) && typeof value.effect === "string" ? [value.effect] : [])),
+      allAssignments().flatMap(({ value }) => (isRecord(value) ? (effectNames(value.effect) ?? []) : [])),
     );
     const dead = Object.keys(EFFECTS).filter((name) => !used.has(name));
     expect(dead, "effects no card's hook names").toEqual([]);

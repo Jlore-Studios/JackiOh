@@ -1,6 +1,8 @@
 // Every audio number another module or a test reads (CLAUDE.md rule 9). The frequencies and envelope
 // times inside one SFX recipe are that recipe's data and stay local to `sfx.ts`.
 
+import type { Rarity } from "@jackioh/shared";
+
 import type { CardHook, CardKind, SfxId } from "./types.ts";
 
 /**
@@ -18,8 +20,40 @@ export const CARD_HOOKS = {
   cast: { kinds: ["spell", "trap"] },
   /** R1088: a card whose effect summons — one of its lines plays for the summon it caused. */
   trigger: { kinds: ["spell", "trap", "unit"] },
+  /** R5188000: a start-of-turn hook of the card begins to resolve, on either seat's turn (`hookResolving`, R2783000). */
+  startOfTurn: { kinds: ["unit", "spell", "trap"] },
+  /** R5188000: an end-of-turn hook of the card begins to resolve (`hookResolving`). */
+  endOfTurn: { kinds: ["unit", "spell", "trap"] },
+  /** R5188000: one of the card's Whenever triggers runs, its condition held (`hookResolving`). */
+  whenever: { kinds: ["unit", "spell", "trap"] },
+  /** R5188000: one of the card's Activate abilities runs (`hookResolving`). */
+  activate: { kinds: ["unit", "spell", "trap"] },
+  /** R5188000: the Unit takes damage and is still on the field when that action ends (`damage` on it, no `destroyed`). */
+  hurt: { kinds: ["unit"] },
+  /** R5188000: damage the card is the source of lands: its Spell's, its effect's or its attack's (`damage`'s `sourceId`). */
+  hit: { kinds: ["unit", "spell", "trap"] },
 } as const satisfies Record<string, { kinds: readonly CardKind[] }>;
 export const CARD_HOOK_NAMES = Object.keys(CARD_HOOKS) as readonly CardHook[];
+/**
+ * R5188000: the hooks that can fire every turn, or many times in one action. Each play sounds their
+ * effect; their line speaks the first time the hook fires in a game, then at most once a turn per card
+ * by TRIGGER_LINE_CHANCE, at VOICE_PRIORITY.recurring.
+ */
+export const RECURRING_HOOKS: ReadonlySet<CardHook> = new Set<CardHook>([
+  "startOfTurn",
+  "endOfTurn",
+  "whenever",
+  "activate",
+  "hurt",
+  "hit",
+]);
+/** R5188000: the chance a recurring hook's line speaks after its first, at most once a turn per card (the cosmetic rng's draw). */
+export const TRIGGER_LINE_CHANCE = 1 / 3;
+/**
+ * R5188000: in a hook's effect list (a wind-up, the release, a tail), each effect starts this long after
+ * the one before it ends.
+ */
+export const EFFECT_SEQUENCE_GAP_MS = 60;
 
 export const AUDIO_SETTINGS_KEY = "jackioh.audio.v1";
 export const LOG_LIMIT = 100;
@@ -31,7 +65,14 @@ export const VOICE_LATE_MS = 600;        // a line not ready this long after it 
  * "react" line (a death, a firing trap) is stale a second later; "summon" speaks only into silence; a
  * "pickup" (R655) answers the viewer's own hand, so it cuts in on any line, a pick-up's included.
  */
-export const VOICE_PRIORITY = { summon: 0, play: 1, react: 2, pickup: 3 } as const;
+export const VOICE_PRIORITY = {
+  /** R5188000: R204's lowest: a recurring hook's line never cuts in, waits briefly and is dropped if it waits too long. */
+  recurring: 0,
+  summon: 0,
+  play: 1,
+  react: 2,
+  pickup: 3,
+} as const;
 export const VOICE_QUEUE_MAX = 2;        // lines waiting behind the one speaking
 export const VOICE_QUEUE_WAIT_MS = 1500; // a waiting line older than this when the channel frees is dropped
 export const VOICE_FADE_S = 0.04;        // how fast a line that is cut in on fades out
@@ -65,11 +106,62 @@ export const PAIR_OFFSET_MS = 220;       // cues of the 2nd event of a collapsed
 export const FLUSH_MAX_SFX = 5;
 export const FLUSH_GAP_MS = 90;
 export const UI_HOVER_THROTTLE_MS = 80;
-/** R501: §10.11's cap on the pre-rendered voice set (R1448, R1884000, R3596000). */
-export const VOICE_BUDGET_BYTES = 24 * 1024 * 1024;
+/**
+ * R501: §10.11's cap on the pre-rendered voice set, counted in 4 KiB blocks (R1448, R1884000, R3596000).
+ * R5188001 raised it from 24 MiB for the card parts' hook lines.
+ */
+export const VOICE_BUDGET_BYTES = 32 * 1024 * 1024;
 export const VOICE_FILE_MAX_MS = 4000;   // longest rendered line (gen-voice.mjs MAX_SECONDS; B35)
-/** An attack line can repeat while the player fiddles with the Unit (R655), so it is the shortest. */
-export const VOICE_MAX_WORDS = { play: 8, attack: 4, death: 6, cast: 8, trigger: 8 } as const satisfies Record<CardHook, number>;
+/**
+ * An attack line can repeat while the player fiddles with the Unit (R655), so it is the shortest; so can
+ * a recurring hook's (R5188000).
+ */
+export const VOICE_MAX_WORDS = {
+  play: 8,
+  attack: 4,
+  death: 6,
+  cast: 8,
+  trigger: 8,
+  startOfTurn: 4,
+  endOfTurn: 4,
+  whenever: 4,
+  activate: 4,
+  hurt: 4,
+  hit: 4,
+} as const satisfies Record<CardHook, number>;
+/**
+ * R5188001: a line added since census-baseline.json, on any hook (a pool's added line on an old hook
+ * included), is this many words at most.
+ */
+export const VOICE_NEW_LINE_MAX_WORDS = 4;
+/**
+ * R5188001: the sound tables (`card-audio.json5`, `voice-text.json`, `voice-manifest.json`), each gzipped
+ * at Node `zlib`'s defaults and summed, stay within this. They measured 90,954 bytes on `41323abeda`,
+ * and about 142,000 in a simulation of the card parts' growth: 3,000 hook entries and 1,331 four-word
+ * lines with their manifest entries. The cap leaves room for that and little more.
+ */
+export const SOUND_TABLES_GZIP_BUDGET_BYTES = 18 * 8192;
+/**
+ * R5188001: the census (sound-space.test.ts): a card in a listed range has at least this many sounds
+ * added since census-baseline.json (lines and effects, each line of a pool counted), by its rarity.
+ */
+export const CENSUS_SOUND_FLOOR: Readonly<Record<Rarity, number>> = {
+  Token: 1,
+  Common: 2,
+  Rare: 3,
+  Epic: 4,
+  Legendary: 5,
+  Mythic: 6,
+};
+/** R5188001: and at most this many of them are voice lines, by its rarity. */
+export const CENSUS_VOICE_CEILING: Readonly<Record<Rarity, number>> = {
+  Token: 0,
+  Common: 1,
+  Rare: 1,
+  Epic: 2,
+  Legendary: 3,
+  Mythic: 4,
+};
 /** R655: a hook with an effect and a line starts the effect first, and the line this much later. */
 export const CARD_EFFECT_DELAY_MS = 200;
 /** R655: each play of a card's effect shifts its pitch by up to this share either way, so repeats differ. */

@@ -23,11 +23,14 @@ import {
 } from "./soundTables.ts";
 import {
   effectFor,
+  effectsFor,
   emoteLineFor,
   emoteVoiceDef,
   entryFor,
   hookFor,
+  hookLines,
   lineFor,
+  pickLine,
   voiceKey,
   voiceKeysForView,
   voiceUrl,
@@ -275,7 +278,7 @@ describe("B42 parseCardAudio", () => {
     const kinded = fixture();
     kinded.cards["core-004"] = { kind: "unit", ...kinded.cards["core-004"] };
     expect(parseError(kinded)).toBe(
-      "card-audio.json5: cards.core-004.kind: unknown hook (expected one of play, attack, death, cast, trigger)",
+      "card-audio.json5: cards.core-004.kind: unknown hook (expected one of play, attack, death, cast, trigger, startOfTurn, endOfTurn, whenever, activate, hurt, hit)",
     );
 
     const slow = fixture();
@@ -383,7 +386,52 @@ describe("R655 parseCardAudio's shape errors", () => {
   it("R655 names an unknown hook", () => {
     expectError((t) => {
       t.cards["core-004"] = { jump: { effect: "zip" } };
-    }, "cards.core-004.jump: unknown hook (expected one of play, attack, death, cast, trigger)");
+    }, "cards.core-004.jump: unknown hook (expected one of play, attack, death, cast, trigger, startOfTurn, endOfTurn, whenever, activate, hurt, hit)");
+  });
+
+  it("R5188000 parses a pool on any voiced hook and an effect list, naming a bad one's path", () => {
+    const table = fixture();
+    table.cards["core-004"] = {
+      play: { voice: "hustler", lines: ["One.", "Two.", "Three."] },
+      attack: { voice: "hustler", lines: ["Go."], effect: ["zip", "thud"] },
+      startOfTurn: { effect: "thud" },
+      hurt: { voice: "hustler", text: "Ow.", effect: ["thud"] },
+      hit: { voice: "hustler", lines: ["Take that."] },
+    };
+    table.cards["core-005"] = { cast: { voice: "crone", lines: ["A.", "B."] }, endOfTurn: { effect: "zip" }, whenever: { effect: "zip" } };
+    table.cards["core-018"] = { activate: { effect: ["zip", "zip"] }, hit: { effect: "thud" } };
+    const parsed = parseCardAudio(table, CATALOG);
+    expect(parsed.cards["core-004"]?.play).toEqual({ voice: "hustler", lines: ["One.", "Two.", "Three."] });
+    expect(parsed.cards["core-004"]?.attack).toEqual({ voice: "hustler", lines: ["Go."], effect: ["zip", "thud"] });
+    expect(parsed.cards["core-004"]?.hurt).toEqual({ voice: "hustler", text: "Ow.", effect: ["thud"] });
+    expect(parsed.cards["core-005"]?.cast).toEqual({ voice: "crone", lines: ["A.", "B."] });
+    expect(parsed.cards["core-018"]?.activate).toEqual({ effect: ["zip", "zip"] });
+
+    expectError((t) => {
+      t.cards["core-004"] = { play: { effect: [] } };
+    }, "cards.core-004.play.effect: must be an effect or a non-empty list of effects");
+    expectError((t) => {
+      t.cards["core-004"] = { play: { effect: 3 } };
+    }, "cards.core-004.play.effect: must be an effect or a non-empty list of effects");
+    expectError((t) => {
+      t.cards["core-004"] = { play: { effect: ["zip", 3] } };
+    }, "cards.core-004.play.effect: must be an effect or a non-empty list of effects");
+    expectError((t) => {
+      t.cards["core-004"] = { play: { effect: ["zip", "bang"] } };
+    }, 'cards.core-004.play.effect[1]: unknown effect "bang"');
+    expectError((t) => {
+      t.cards["core-004"] = { death: { voice: "hustler", lines: [] } };
+    }, "cards.core-004.death.lines: must be a non-empty list of strings");
+    expectError((t) => {
+      t.cards["core-004"] = { death: { voice: "hustler", lines: ["Bye.", " "] } };
+    }, "cards.core-004.death.lines[1]: must be a non-empty string");
+    expectError((t) => {
+      t.cards["core-004"] = { death: { voice: "hustler", text: "Bye.", lines: ["Bye."] } };
+    }, "cards.core-004.death.text: a hook with a pool lists its lines instead");
+    // A Unit's hurt is its own: no other kind takes one.
+    expectError((t) => {
+      t.cards["core-005"] = { hurt: { effect: "zip" } };
+    }, "cards.core-005.hurt: a spell has no hurt hook");
   });
 
   it("R655 names a hook the card's kind may not carry", () => {
@@ -644,6 +692,80 @@ describe("R655 hookFor, lineFor and effectFor", () => {
     expect(entryFor(table, "core-041")).toBeNull();
   });
 
+  /** A unit with a pool on play, a single line on its new hooks, a list of effects, and a trigger. */
+  function pooled(): CardAudioTable {
+    const raw = fixture();
+    raw.cards["core-004"] = {
+      play: { voice: "hustler", lines: ["One.", "Two.", "Three."] },
+      attack: { voice: "hustler", text: "Go.", effect: ["zip", "thud"] },
+      death: { voice: "hustler", text: "Bye." },
+      startOfTurn: { voice: "hustler", lines: ["Morning.", "Again."] },
+      hurt: { voice: "hustler", text: "Ow." },
+      trigger: { voice: "hustler", lines: ["Rise.", "Up."] },
+    };
+    return parseCardAudio(raw, CATALOG);
+  }
+
+  it("R5188000 lineFor reads play, play2, play3 and startOfTurn2, and null for play1 or a missing index", () => {
+    const t = pooled();
+    expect(lineFor(t, "core-004", "play")).toEqual({ text: "One.", persona: SAY });
+    expect(lineFor(t, "core-004", "play2")).toEqual({ text: "Two.", persona: SAY });
+    expect(lineFor(t, "core-004", "play3")).toEqual({ text: "Three.", persona: SAY });
+    expect(lineFor(t, "core-004", "startOfTurn")).toEqual({ text: "Morning.", persona: SAY });
+    expect(lineFor(t, "core-004", "startOfTurn2")).toEqual({ text: "Again.", persona: SAY });
+    expect(lineFor(t, "core-004", "hurt")).toEqual({ text: "Ow.", persona: SAY });
+    // A pool's first line is the bare hook's: `play1` names nothing, nor does a line past its end.
+    expect(lineFor(t, "core-004", "play1")).toBeNull();
+    expect(lineFor(t, "core-004", "play0")).toBeNull();
+    expect(lineFor(t, "core-004", "play4")).toBeNull();
+    expect(lineFor(t, "core-004", "startOfTurn3")).toBeNull();
+    // A single line has no numbered lines.
+    expect(lineFor(t, "core-004", "hurt2")).toBeNull();
+    expect(lineFor(t, "core-004", "attack2")).toBeNull();
+    // R1088's trigger keeps its own numbering: only `trigger<n>`, from 1.
+    expect(lineFor(t, "core-004", "trigger")).toBeNull();
+    expect(lineFor(t, "core-004", "trigger1")).toEqual({ text: "Rise.", persona: SAY });
+    expect(lineFor(t, "core-004", "trigger2")).toEqual({ text: "Up.", persona: SAY });
+    expect(lineFor(t, "core-004", "trigger3")).toBeNull();
+    // A hook the card does not carry, and the sentinel, read nothing.
+    expect(lineFor(t, "core-004", "hit")).toBeNull();
+    expect(lineFor(t, HIDDEN_DEF_ID, "play2")).toBeNull();
+  });
+
+  it("R5188000 hookLines and pickLine read a pool, a single line and a trigger, drawing only to choose", () => {
+    const t = pooled();
+    expect(hookLines(t, "core-004", "play")).toEqual(["play", "play2", "play3"]);
+    expect(hookLines(t, "core-004", "hurt")).toEqual(["hurt"]);
+    expect(hookLines(t, "core-004", "trigger")).toEqual(["trigger1", "trigger2"]);
+    expect(hookLines(t, "core-004", "hit")).toEqual([]);
+    expect(hookLines(t, HIDDEN_DEF_ID, "play")).toEqual([]);
+    let draws = 0;
+    const at = (value: number) => (): number => {
+      draws += 1;
+      return value;
+    };
+    expect(pickLine(t, "core-004", "play", at(0))).toBe("play");
+    expect(pickLine(t, "core-004", "play", at(0.5))).toBe("play2");
+    expect(pickLine(t, "core-004", "play", at(0.99))).toBe("play3");
+    // A random of exactly 1 (out of its range) still picks the last line.
+    expect(pickLine(t, "core-004", "play", at(1))).toBe("play3");
+    expect(draws).toBe(4);
+    expect(pickLine(t, "core-004", "hurt", at(0.9))).toBe("hurt");
+    expect(pickLine(t, "core-004", "hit", at(0.9))).toBeNull();
+    expect(draws, "a single line, or none, draws nothing").toBe(4);
+  });
+
+  it("R5188000 effectsFor lists a hook's effects in order, and effectFor reads the first", () => {
+    const t = pooled();
+    expect(effectsFor(t, "core-004", "attack").map(({ name }) => name)).toEqual(["zip", "thud"]);
+    expect(effectFor(t, "core-004", "attack")?.name).toBe("zip");
+    expect(effectsFor(t, "core-004", "play")).toEqual([]);
+    expect(effectsFor(table, "core-004", "death")).toEqual([
+      { name: "thud", effect: { sfx: "impact", pitch: 0.6, gain: 1, params: { amount: 8 } } },
+    ]);
+    expect(effectsFor(t, HIDDEN_DEF_ID, "attack")).toEqual([]);
+  });
+
   it("R655 CARD_AUDIO is the shipped card-audio.json5 with its words, parsed against the shipped catalog", () => {
     expect(CARD_AUDIO).toEqual(parseCardAudioText(shippedText(), SHIPPED_CATALOG, VOICE_TEXT));
     expect(Object.keys(CARD_AUDIO.cards)).toEqual(Object.keys(SHIPPED_CATALOG));
@@ -699,6 +821,24 @@ describe("R655 hookFor, lineFor and effectFor", () => {
     expect(lineFor(table, "core-004", "play")).toEqual({ text: "Double or nothing, baby!", persona: SAY });
     expect(lineFor(table, "core-006", "trigger2")).toEqual({ text: "Second.", persona: CRONE });
     expect(emoteLineFor(table, "gary", "thanks")).toEqual({ text: "Thanks!", persona: SAY });
+  });
+
+  it("R5188000 withVoiceText fills a pool as lines", () => {
+    const raw = wordless();
+    (raw.cards?.["core-004"] as Record<string, unknown>).hurt = { voice: "hustler" };
+    const text = words();
+    text.cards["core-004"] = { play: ["One.", "Two."], death: "House always wins.", hurt: ["Ow."] };
+    const filled = withVoiceText(raw, text) as Record<string, Record<string, Record<string, unknown>>>;
+    expect(filled.cards?.["core-004"]).toEqual({
+      play: { voice: "hustler", lines: ["One.", "Two."] },
+      attack: { effect: "zip" },
+      death: { voice: "hustler", text: "House always wins.", effect: "zip" },
+      hurt: { voice: "hustler", lines: ["Ow."] },
+    });
+    const table = parseCardAudio(filled, CATALOG);
+    expect(lineFor(table, "core-004", "play")).toEqual({ text: "One.", persona: SAY });
+    expect(lineFor(table, "core-004", "play2")).toEqual({ text: "Two.", persona: SAY });
+    expect(lineFor(table, "core-004", "hurt")).toEqual({ text: "Ow.", persona: SAY });
   });
 
   it("R655 withVoiceText refuses a line written in card-audio.json5, a line no voice speaks and a voice with nothing to speak", () => {
@@ -858,6 +998,23 @@ describe("B43 voiceKeysForView", () => {
     });
 
     expect(voiceKeysForView(view, table)).toEqual(["x-unit-play", "x-unit-death", "x-unit-attack", "x-trap-cast"]);
+  });
+
+  it("R5188000 preloads every line of a pool, in its order", () => {
+    const catalog: CatalogTypes = { "x-unit": { type: "Unit" } };
+    const table = parseCardAudio(
+      {
+        voices: { hustler: SAY },
+        effects: {},
+        cards: { "x-unit": { play: { voice: "hustler", lines: ["In.", "Here."] }, death: { voice: "hustler", lines: ["Out."] } } },
+      },
+      catalog,
+    );
+    const view = baseView({
+      you: emptySide("p1", { hand: [card({ defId: "x-unit" })], units: [unit("p1", { defId: "x-unit" }), null, null, null, null] }),
+      opponent: emptySide("p2", { hand: { count: 0 } }),
+    });
+    expect(voiceKeysForView(view, table)).toEqual(["x-unit-play", "x-unit-play2", "x-unit-death"]);
   });
 
   it("R655 adds no attack line for a unit on the other seat's board alone", () => {

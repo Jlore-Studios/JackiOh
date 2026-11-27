@@ -3,12 +3,14 @@
 // cues pan (R669). Nothing is scheduled on an inactive context: its frozen clock would start every cue on
 // resume. `setBusy(true)` holds background voice work outside animation bursts (B58), avoiding R82's
 // delayed auto-ended turn; requested lines are never held.
-// CARD EFFECTS (R655) guard by bank name. `playPickup` plays the effect, then a priority line after
-// CARD_EFFECT_DELAY_MS; a nearby repeat does nothing and a later one fades the prior effect.
+// CARD EFFECTS (R655) guard by bank name; a hook's list of them plays in order (R5188000). `playPickup`
+// plays the effect, then a priority line after CARD_EFFECT_DELAY_MS; a nearby repeat does nothing and a
+// later one fades the prior effect.
 
 import {
   CARD_EFFECT_DELAY_MS,
   EFFECT_PITCH_JITTER,
+  EFFECT_SEQUENCE_GAP_MS,
   GAIN_SMOOTHING_S,
   HIDDEN_DEF_ID,
   LOG_LIMIT,
@@ -59,7 +61,7 @@ import type {
   VoiceOutcome,
   VoicePriority,
 } from "./types.ts";
-import { effectFor, lineFor, voiceKey, voiceUrl } from "./voiceData.ts";
+import { effectsFor, lineFor, pickLine, voiceKey, voiceUrl } from "./voiceData.ts";
 import { loadSoundTables, onSoundTablesLoaded, soundTablesNow, type SoundTables } from "./soundTablesLoader.ts";
 import { savingData } from "../net/saveData.ts";
 
@@ -321,7 +323,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   const lastEffectAt = new Map<string, number>();
   let sfxEnds: number[] = [];
   let lastPickupAt: number | null = null;
-  let pickupEffect: GainNode | null = null;
+  let pickupEffect: GainNode[] | null = null;
   /** Compressed bytes per key, for the page's lifetime (a failed fetch is kept as null). */
   const bytes = new Map<VoiceKey, Promise<ArrayBuffer | null>>();
   /** Decoded buffers per key, least recently used first, at most VOICE_DECODED_MAX. */
@@ -610,9 +612,10 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   /**
    * Schedules a card's effect for a hook. false: refused (nothing logged). null: accepted while the
-   * context is not running, so nothing was built. Otherwise the cue's own gain node.
+   * context is not running, so nothing was built. Otherwise each effect's own gain node: R5188000's list
+   * plays in order, each EFFECT_SEQUENCE_GAP_MS after the one before ends, guarded as one by its first.
    */
-  function startEffect(defId: string, hook: CardHook, delay: number): GainNode | null | false {
+  function startEffect(defId: string, hook: CardHook, delay: number): GainNode[] | null | false {
     try {
       if (!accepting() || ctx === null || buses === null) return false;
       if (defId === HIDDEN_DEF_ID) return false;
@@ -621,35 +624,41 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
         if (recipes === null) void loadSfx().then(setSfx).catch(() => {});
         return false;
       }
-      const found = effectFor(loadedLines, defId, hook);
-      if (found === null) return false;
+      const found = effectsFor(loadedLines, defId, hook);
+      const first = found[0];
+      if (first === undefined) return false;
       const t = now();
-      const logged: EffectEntry = { kind: "effect", defId, hook, effect: found.name, delayMs: delay, atMs: t };
+      const logged = (name: string, delayMs: number): EffectEntry => ({ kind: "effect", defId, hook, effect: name, delayMs, atMs: t });
 
       if (!running()) {
-        pushLog({ ...logged, suspended: true });
+        for (const { name } of found) pushLog({ ...logged(name, delay), suspended: true });
         return null;
       }
 
-      const last = lastEffectAt.get(found.name);
+      const last = lastEffectAt.get(first.name);
       if (last !== undefined && t - last < SFX_RETRIGGER_MS) return false;
       sfxEnds = sfxEnds.filter((end) => end > t);
       if (sfxEnds.length >= SFX_MAX_VOICES) return false;
 
-      const { effect } = found;
-      const cue = ctx.createGain();
-      cue.gain.value = recipes.SFX[effect.sfx].gain * effect.gain;
-      cue.connect(buses.sfx);
-      const startAt = ctx.currentTime + delay / 1000;
-      const pitch = effect.pitch * (1 + (random() * 2 - 1) * EFFECT_PITCH_JITTER);
-      const lengthMs = recipes.renderSfx(effect.sfx, ctx, cue, startAt, effect.params ?? {}, pitch) * 1000;
+      const cues: GainNode[] = [];
+      let at = delay;
+      for (const { name, effect } of found) {
+        const cue = ctx.createGain();
+        cue.gain.value = recipes.SFX[effect.sfx].gain * effect.gain;
+        cue.connect(buses.sfx);
+        const startAt = ctx.currentTime + at / 1000;
+        const pitch = effect.pitch * (1 + (random() * 2 - 1) * EFFECT_PITCH_JITTER);
+        const lengthMs = recipes.renderSfx(effect.sfx, ctx, cue, startAt, effect.params ?? {}, pitch) * 1000;
 
-      lastEffectAt.set(found.name, t);
-      sfxEnds.push(t + delay + lengthMs);
-      duck(startAt, lengthMs / 1000);
-      later(delay + lengthMs + DISCONNECT_GRACE_MS, () => cue.disconnect());
-      pushLog(logged);
-      return cue;
+        lastEffectAt.set(name, t);
+        sfxEnds.push(t + at + lengthMs);
+        duck(startAt, lengthMs / 1000);
+        later(at + lengthMs + DISCONNECT_GRACE_MS, () => cue.disconnect());
+        pushLog(logged(name, at));
+        cues.push(cue);
+        at += Math.round(lengthMs) + EFFECT_SEQUENCE_GAP_MS;
+      }
+      return cues;
     } catch {
       return false;
     }
@@ -659,15 +668,17 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return startEffect(defId, hook, delayMs ?? 0) !== false;
   }
 
-  /** Fades out a pick-up's effect (its sources run on, silent, to their own ends). */
-  function fadeEffect(cue: GainNode): void {
+  /** Fades out a pick-up's effects (their sources run on, silent, to their own ends). */
+  function fadeEffect(cues: readonly GainNode[]): void {
     if (ctx === null) return;
-    try {
-      const t = ctx.currentTime;
-      cue.gain.cancelScheduledValues(t);
-      cue.gain.setTargetAtTime(0, t, VOICE_FADE_S / 3);
-    } catch {
-      // Already gone.
+    const t = ctx.currentTime;
+    for (const cue of cues) {
+      try {
+        cue.gain.cancelScheduledValues(t);
+        cue.gain.setTargetAtTime(0, t, VOICE_FADE_S / 3);
+      } catch {
+        // Already gone.
+      }
     }
   }
 
@@ -676,10 +687,12 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       if (!accepting() || ctx === null) return false;
       if (defId === HIDDEN_DEF_ID) return false;
       if (loadedLines === null || loadedManifest === null) return false;
-      const hasEffect = effectFor(loadedLines, defId, "attack") !== null;
-      const key = voiceKey(defId, "attack");
+      const hasEffect = effectsFor(loadedLines, defId, "attack").length > 0;
+      // R5188000: one line of an attack pool, by the engine's own cosmetic random (a single line draws nothing).
+      const line = pickLine(loadedLines, defId, "attack", random) ?? "attack";
       const hasLine =
-        readAudioSettings().voiceOn && (Object.hasOwn(loadedManifest.files, key) || lineFor(loadedLines, defId, "attack") !== null);
+        readAudioSettings().voiceOn &&
+        (Object.hasOwn(loadedManifest.files, voiceKey(defId, line)) || lineFor(loadedLines, defId, line) !== null);
       if (!hasEffect && !hasLine) return false;
       const t = now();
       if (lastPickupAt !== null && t - lastPickupAt < PICKUP_MIN_GAP_MS) return false;
@@ -697,7 +710,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
       const effect = hasEffect ? startEffect(defId, "attack", 0) : false;
       if (effect !== false && effect !== null) pickupEffect = effect;
-      const voiced = hasLine && playVoice(defId, "attack", hasEffect ? CARD_EFFECT_DELAY_MS : 0, VOICE_PRIORITY.pickup);
+      const voiced = hasLine && playVoice(defId, line, hasEffect ? CARD_EFFECT_DELAY_MS : 0, VOICE_PRIORITY.pickup);
       return effect !== false || voiced;
     } catch {
       return false;

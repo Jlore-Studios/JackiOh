@@ -6,7 +6,9 @@
 //
 // A readable card colors its sounds by its family, the card art's theme (§5.1, cards/art/themes.ts), and
 // R202's rarity entrance rings beside the light rays. R655 makes card moments hooks in `card-audio.json5`
-// (the `attack` hook is the board's, `usePickupSound`). MN05: Armor and the niche moments, R1363 to R1366.
+// (the `attack` hook is the board's, `usePickupSound`). R5188000 adds the recurring hooks: a turn hook's,
+// a Whenever's and an Activate's on `hookResolving`, `hurt` and `hit` on `damage`, their lines held to the
+// director's `lineGate`. MN05: Armor and the niche moments, R1363 to R1366.
 // R2722002: a hidden card makes its rarity's entrance as it reveals, at the first firing the seat reads,
 // never as it is set (`revealSting`, game/entrance.ts). R3332002: a Legendary's or Mythic's own intro is
 // its sting (`entranceSting`), so the shared entrance sting rings only for one with no intro. R3336000:
@@ -50,6 +52,7 @@ import {
   OVERKILL_MIN_EXCESS,
   PLAY_IMPACT_DELAY_MS,
   PLAY_IMPACT_OPPONENT_GAIN,
+  RECURRING_HOOKS,
   SHEEP_DEF_IDS,
   STING_DELAY_MS,
   VOICE_DELAY_MS,
@@ -67,7 +70,7 @@ import type {
   StingTier,
   VoicePriority,
 } from "./types.ts";
-import { entryFor, hookFor } from "./voiceData.ts";
+import { entryFor, hookFor, pickLine } from "./voiceData.ts";
 import { battleshipCues } from "./battleshipCues.ts";
 import { signatureCues } from "./signatureCues.ts";
 
@@ -114,6 +117,23 @@ export type CueContext = {
    * row's. Absent: never, so every row keeps its sound.
    */
   starshipSounded?: (event: GameEvent) => boolean;
+  /**
+   * R5188000: whether a recurring hook's line (RECURRING_HOOKS) speaks this time: the first time the
+   * card's hook fires in a game, then at most once a turn per card by TRIGGER_LINE_CHANCE. `card` is the
+   * card's instance id where the event names one. Its effect plays either way. Absent: every time.
+   */
+  lineGate?: (card: string, hook: CardHook) => boolean;
+  /**
+   * R5188000: false when this `damage`'s target is gone from the field once its action ends, so it
+   * plays no `hurt`. Absent: it survives.
+   */
+  survives?: (event: GameEvent) => boolean;
+  /**
+   * R5188000: the defId this seat's own events last named an instance by this turn (its `cardPlayed`,
+   * `summoned`, `trapFired` or `hookResolving`), for a `hit` by a card no view holds any more. Never the
+   * sentinel. Absent: none.
+   */
+  named?: (instanceId: string) => string | undefined;
 };
 
 export type CueRow<K extends GameEventType> = {
@@ -182,7 +202,8 @@ function voice(defId: string, line: PlayableLineKind, delayMs: number, priority:
 /**
  * R655: a readable card's sounds for one hook: its effect at `delayMs` and its line then, or
  * CARD_EFFECT_DELAY_MS later when the effect leads it, so the sound reads as the act and the line as the
- * reaction.
+ * reaction. R5188000: a pool's line is picked by the cosmetic rng, and a recurring hook's line speaks
+ * only when `ctx.lineGate` lets `card` (its instance, else `defId`) speak.
  */
 export function hookCues(
   ctx: CueContext,
@@ -190,15 +211,49 @@ export function hookCues(
   hook: CardHook,
   delayMs: number,
   priority: VoicePriority,
+  card?: string,
 ): readonly SoundCue[] {
   const assignment = hookFor(ctx.lines, defId, hook);
   if (assignment === null) return NONE;
   const cues: SoundCue[] = [];
   if (assignment.effect !== undefined) cues.push({ kind: "effect", defId, hook, delayMs, priority });
-  if (assignment.voice !== undefined) {
-    cues.push(voice(defId, hook, assignment.effect === undefined ? delayMs : delayMs + CARD_EFFECT_DELAY_MS, priority));
+  if (assignment.voice === undefined) return cues;
+  if (RECURRING_HOOKS.has(hook) && ctx.lineGate?.(card ?? defId, hook) === false) return cues;
+  const line = pickLine(ctx.lines, defId, hook, ctx.random ?? Math.random);
+  if (line !== null) {
+    cues.push(voice(defId, line, assignment.effect === undefined ? delayMs : delayMs + CARD_EFFECT_DELAY_MS, priority));
   }
   return cues;
+}
+
+/** R2783000's marked hooks (`hookResolving.hook`). */
+type HookKind = Extract<GameEvent, { type: "hookResolving" }>["hook"];
+
+/**
+ * R5188000: the card hook each marked hook plays. A Cry and a Death have none: `play`, `cast` and
+ * `death` already sound at R204's moments (`cardPlayed`, `trapFired`, `destroyed`).
+ */
+const MARKED_HOOKS: Readonly<Record<HookKind, CardHook | null>> = {
+  cry: null,
+  death: null,
+  startOfTurn: "startOfTurn",
+  endOfTurn: "endOfTurn",
+  whenever: "whenever",
+  activate: "activate",
+};
+
+/**
+ * R5188000: the defId of an instance this seat can read: where the view it was planned against or the
+ * newest view shows it, else as its own events last named it (`ctx.named`). Never the sentinel's
+ * stand-in for a card it cannot read (R203).
+ */
+function readableDefOf(ctx: CueContext, instanceId: string): string | undefined {
+  const newest = ctx.newestView?.() ?? null;
+  const defId =
+    defIdOfInstance(ctx.view, instanceId) ??
+    (newest === null ? undefined : defIdOfInstance(newest, instanceId)) ??
+    ctx.named?.(instanceId);
+  return defId === HIDDEN_DEF_ID ? undefined : defId;
 }
 
 /**
@@ -392,7 +447,11 @@ export function isOverkill(amount: number, health: number | null): boolean {
   return beyond >= Math.max(OVERKILL_MIN_EXCESS, health);
 }
 
-/** The hit's impact, with R1363's clank when Armor took half or more and R1364's crunch when it overkills. */
+/**
+ * The hit's impact, with R1363's clank when Armor took half or more and R1364's crunch when it overkills.
+ * R5188000: then the Unit hit plays its `hurt` while it outlives the action (`ctx.survives`), and a
+ * readable card that dealt it its `hit`.
+ */
 function damageCues(event: Extract<GameEvent, { type: "damage" }>, ctx: CueContext): readonly SoundCue[] {
   if (event.amount <= 0) return NONE;
   const cues: SoundCue[] = [
@@ -400,6 +459,14 @@ function damageCues(event: Extract<GameEvent, { type: "damage" }>, ctx: CueConte
   ];
   if (armorTookHalf(event.absorbed, event.amount)) cues.push(sfx("armorClank"));
   if (isOverkill(event.amount, healthBefore(ctx.view, event.targetId))) cues.push(sfx("overkill", undefined, OVERKILL_DELAY_MS));
+  const hurt = ctx.unitNow?.(event.targetId)?.defId ?? defIdOfInstance(ctx.view, event.targetId);
+  if (hurt !== undefined && ctx.survives?.(event) !== false) {
+    cues.push(...hookCues(ctx, hurt, "hurt", 0, VOICE_PRIORITY.recurring, event.targetId));
+  }
+  const source = event.sourceId === null ? undefined : readableDefOf(ctx, event.sourceId);
+  if (source !== undefined && event.sourceId !== null) {
+    cues.push(...hookCues(ctx, source, "hit", 0, VOICE_PRIORITY.recurring, event.sourceId));
+  }
   return cues;
 }
 
@@ -713,7 +780,21 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   rolled: { sfx: "chaosRoll", cues: () => [sfx("chaosRoll")] },
 
   // ---- Issue #2783: the event stream says why (R2783000) ----
-  hookResolving: silent("a marker: the hook's own events sound"),
+  // R5188000: a turn hook's, a Whenever's or an Activate's card plays that hook's sounds as the hook
+  // begins; the seat never sees the marker of a card it could not read (R2783000), and a sentinel plays
+  // nothing (R203).
+  hookResolving: {
+    sfx: null,
+    silentBecause:
+      "a marker with no sound of its own: its card's turn, Whenever or Activate hook sounds (R5188000); a Cry and a Death at R204's moments",
+    cues: (event, ctx) => {
+      // Widened: a kind this build has never seen (issue #769) has no row, so it sounds nothing.
+      const hook = (MARKED_HOOKS as Partial<Record<string, CardHook | null>>)[event.hook] ?? null;
+      return hook === null
+        ? NONE
+        : hookCues(ctx, event.defId, hook, 0, VOICE_PRIORITY.recurring, event.sourceId === "" ? event.defId : event.sourceId);
+    },
+  },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */

@@ -24,6 +24,7 @@ import type {
   CardKind,
   EmoteLineEntry,
   HookAssignment,
+  HookEffect,
   MusicCardEntry,
   MusicManifest,
   Persona,
@@ -195,10 +196,20 @@ function parseAssignment(
 ): HookAssignment {
   const o = record(raw, path);
   onlyFields(o, path, ASSIGNMENT_FIELDS);
-  let effect: string | undefined;
+  // R5188000: an effect is one name from the bank, or a list of them played in order.
+  let effect: HookEffect | undefined;
   if (o.effect !== undefined) {
-    effect = text(o.effect, `${path}.effect`);
-    if (!Object.hasOwn(effects, effect)) fail(`${path}.effect`, `unknown effect "${effect}"`);
+    const named = (name: unknown, at: string): string => {
+      if (typeof name !== "string" || name.trim() === "") fail(`${path}.effect`, "must be an effect or a non-empty list of effects");
+      if (!Object.hasOwn(effects, name)) fail(at, `unknown effect "${name}"`);
+      return name;
+    };
+    if (Array.isArray(o.effect)) {
+      if (o.effect.length === 0) fail(`${path}.effect`, "must be an effect or a non-empty list of effects");
+      effect = o.effect.map((name, i) => named(name, `${path}.effect[${i}]`));
+    } else {
+      effect = named(o.effect, `${path}.effect`);
+    }
   }
   if (o.voice === undefined) {
     if (o.text !== undefined) fail(`${path}.voice`, "a text needs the voice that speaks it");
@@ -207,11 +218,11 @@ function parseAssignment(
   }
   const voice = text(o.voice, `${path}.voice`);
   if (!Object.hasOwn(voices, voice)) fail(`${path}.voice`, `unknown voice "${voice}"`);
-  // R1088: a trigger lists its lines; any other hook speaks one text.
+  // R1088, R5188000: a hook speaks one text or lists a pool of lines (a trigger always lists them).
   if (o.lines !== undefined) {
     if (!Array.isArray(o.lines) || o.lines.length === 0) fail(`${path}.lines`, "must be a non-empty list of strings");
     const lines = o.lines.map((line, i) => text(line, `${path}.lines[${i}]`));
-    if (o.text !== undefined) fail(`${path}.text`, "a trigger lists its lines instead");
+    if (o.text !== undefined) fail(`${path}.text`, "a hook with a pool lists its lines instead");
     return effect === undefined ? { voice, lines } : { voice, lines, effect };
   }
   const spoken = text(o.text, `${path}.text`);
@@ -399,7 +410,8 @@ export function withVoiceText(raw: unknown, voiceText: unknown): unknown {
         }
         if (!Object.hasOwn(own, hook)) failText(`${defId}.voice.${hook}`, `missing (${FILE} gives the hook a voice)`);
         const { voice, ...rest } = assignment;
-        hooks[hook] = { voice, [hook === "trigger" ? "lines" : "text"]: own[hook], ...rest };
+        // R5188000: a pool, written as a list, fills `lines`, as a trigger's always does (R1088).
+        hooks[hook] = { voice, [hook === "trigger" || Array.isArray(own[hook]) ? "lines" : "text"]: own[hook], ...rest };
       }
       filled[defId] = hooks;
     }

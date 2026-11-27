@@ -54,7 +54,7 @@ import { ANOMALY_CODES } from "../cards/anomalies.ts";
 import { themeFor } from "../cards/art/themes.ts";
 import { armorTookHalf, PLAY_TIERS_ASCENDING, UNIT_SLAM, type PlayTier, type PlayType } from "../game/damageFeel.ts";
 import { lookupFromDefs } from "../game/catalog.ts";
-import { baseView, emptySide, unit } from "../test/fixtures.ts";
+import { baseView, emptySide, faceDownBackrow, unit } from "../test/fixtures.ts";
 
 /* Fixtures */
 
@@ -1440,6 +1440,168 @@ describe("R655 a card's hook may carry an effect beside or instead of its line",
   it("R655 the attack hook is no event's: an attack declared plays the plain attack sound alone", () => {
     const declared: GameEvent = { type: "attackDeclared", attackerId: "u1", targetId: "u6", forced: false };
     expect(shape(declared, fx())).toEqual([sfx("attack")]);
+  });
+});
+
+describe("R5188000 the recurring hooks: a turn hook's, a Whenever's and an Activate's marker, hurt and hit", () => {
+  /** #91 Fed Fauci with all six recurring hooks, each a line and an effect; #5 with a hit. */
+  const HOOKED = "core-091";
+  const RECURRING = ["startOfTurn", "endOfTurn", "whenever", "activate", "hurt", "hit"] as const;
+  const TABLE: CardAudioTable = {
+    voices: LINES.voices,
+    effects: { puff: { sfx: "poof", pitch: 0.7, gain: 1 }, tick: { sfx: "clockTick", pitch: 1, gain: 1 } },
+    cards: {
+      ...LINES.cards,
+      [HOOKED]: {
+        kind: "unit",
+        startOfTurn: { voice: "hustler", text: "Morning.", effect: "tick" },
+        endOfTurn: { voice: "hustler", text: "Night.", effect: "tick" },
+        whenever: { voice: "hustler", text: "Again.", effect: "puff" },
+        activate: { voice: "hustler", text: "On it.", effect: "puff" },
+        hurt: { voice: "hustler", text: "Ow.", effect: "puff" },
+        hit: { voice: "hustler", text: "Take that.", effect: "tick" },
+      },
+      [SPELL]: { kind: "spell", cast: { voice: "narrator", text: "Hoarding is self care." }, hit: { voice: "narrator", text: "Burn.", effect: "tick" } },
+    },
+    emotes: {},
+  };
+  type MarkedHook = Extract<GameEvent, { type: "hookResolving" }>["hook"];
+  const marker = (hook: MarkedHook, sourceId = "u1", defId = HOOKED, controller: PlayerId = "p1"): GameEvent => ({
+    type: "hookResolving",
+    sourceId,
+    defId,
+    controller,
+    hook,
+  });
+  const damage = (sourceId: string | null, targetId: string, amount = 2): GameEvent => ({
+    type: "damage",
+    sourceId,
+    targetId,
+    amount,
+    combat: false,
+  });
+  /** Your #91 (`ua`) faces the other seat's (`ub`). */
+  const board = baseView({
+    you: emptySide("p1", { units: [unit("p1", { instanceId: "ua", defId: HOOKED }), null, null, null, null] }),
+    opponent: emptySide("p2", { hand: { count: 4 }, units: [unit("p2", { instanceId: "ub", defId: HOOKED }), null, null, null, null] }),
+  });
+  const hooked = (over: Partial<CueContext> = {}): CueContext => ctx({ lines: TABLE, view: board, ...over });
+  /** The cues an event gives other than plain sfx, in order. */
+  const card = (event: GameEvent, context: CueContext): string[] =>
+    cuesFor(event, context)
+      .filter((c) => c.kind !== "sfx")
+      .map(said);
+
+  it("R5188000 hookResolving plays its four hooks, effect then line at VOICE_PRIORITY.recurring, and nothing for cry or death", () => {
+    for (const hook of ["startOfTurn", "endOfTurn", "whenever", "activate"] as const) {
+      expect(cuesFor(marker(hook), hooked()), hook).toEqual([
+        { kind: "effect", defId: HOOKED, hook, delayMs: 0, priority: VOICE_PRIORITY.recurring },
+        { kind: "voice", defId: HOOKED, line: hook, delayMs: CARD_EFFECT_DELAY_MS, priority: VOICE_PRIORITY.recurring },
+      ]);
+      // Both seats hear a card they can read: the other seat's marker sounds alike.
+      expect(card(marker(hook, "ub", HOOKED, "p2"), hooked()), `${hook} on the other seat`).toEqual([
+        effect(HOOKED, hook, 0),
+        voice(HOOKED, hook, CARD_EFFECT_DELAY_MS),
+      ]);
+    }
+    // A Cry and a Death sound at R204's moments (cardPlayed, destroyed), never on their marker.
+    for (const hook of ["cry", "death"] as const) expect(cuesFor(marker(hook, "c1", UNIT), hooked()), hook).toEqual([]);
+    expect(SOUND_CUES.hookResolving.sfx).toBeNull();
+    // A marked kind this build does not know (a tab left open on an older bundle, #769) sounds nothing.
+    const unknown = { ...marker("whenever"), hook: "afterAttack" } as unknown as GameEvent;
+    expect(cuesFor(unknown, hooked())).toEqual([]);
+    // A card with no such hook plays nothing.
+    expect(cuesFor(marker("whenever", "c2", SPELL), hooked())).toEqual([]);
+  });
+
+  it("R5188000 R203 a hookResolving or damage behind the sentinel plays nothing", () => {
+    const poisoned: CardAudioTable = { ...TABLE, cards: { ...TABLE.cards, [HIDDEN_DEF_ID]: { ...TABLE.cards[HOOKED], kind: "unit" } } };
+    for (const hook of ["startOfTurn", "endOfTurn", "whenever", "activate"] as const) {
+      expect(cuesFor(marker(hook, "h1", HIDDEN_DEF_ID, "p2"), hooked({ lines: poisoned })), hook).toEqual([]);
+    }
+    // A face-down card is no source the view names, and a sentinel the seat's own events gave is none either.
+    const hidden = baseView({
+      you: emptySide("p1", { units: [unit("p1", { instanceId: "ua", defId: HIDDEN_DEF_ID }), null, null, null, null] }),
+      opponent: emptySide("p2", { hand: { count: 4 }, backrow: [faceDownBackrow, null, null, null, null] }),
+    });
+    const context = hooked({ lines: poisoned, view: hidden, named: () => HIDDEN_DEF_ID });
+    expect(card(damage("fd", "ua"), context), "a hidden source and a hidden target").toEqual([]);
+    expect(card(damage("h9", "hero-p1"), context)).toEqual([]);
+  });
+
+  it("R5188000 damage plays the target's hurt while it survives, and the source's hit", () => {
+    expect(card(damage("ub", "ua"), hooked())).toEqual([
+      effect(HOOKED, "hurt", 0),
+      voice(HOOKED, "hurt", CARD_EFFECT_DELAY_MS),
+      effect(HOOKED, "hit", 0),
+      voice(HOOKED, "hit", CARD_EFFECT_DELAY_MS),
+    ]);
+    const priorities = cuesFor(damage("ub", "ua"), hooked()).flatMap((c) => (c.kind === "sfx" ? [] : [c.priority]));
+    expect(new Set(priorities)).toEqual(new Set([VOICE_PRIORITY.recurring]));
+    // Gone from the field once its action ends: the hit kills it, so no hurt.
+    expect(card(damage("ub", "ua"), hooked({ survives: () => false }))).toEqual([effect(HOOKED, "hit", 0), voice(HOOKED, "hit", CARD_EFFECT_DELAY_MS)]);
+    // A hit for nothing hurts no one and hits nothing.
+    expect(cuesFor(damage("ub", "ua", 0), hooked())).toEqual([]);
+    // A hero takes no hurt; a spell no view holds any more hits as its own events named it.
+    expect(card(damage("s1", "hero-p2"), hooked({ named: (id) => (id === "s1" ? SPELL : undefined) }))).toEqual([
+      effect(SPELL, "hit", 0),
+      voice(SPELL, "hit", CARD_EFFECT_DELAY_MS),
+    ]);
+    // A source no view holds and no event named hits nothing; nor does a damage with no source.
+    expect(card(damage("s1", "hero-p2"), hooked())).toEqual([]);
+    expect(card(damage(null, "ua"), hooked())).toEqual([effect(HOOKED, "hurt", 0), voice(HOOKED, "hurt", CARD_EFFECT_DELAY_MS)]);
+    // The target where the newest view has it (a unit that has just arrived).
+    const arrived = unit("p1", { instanceId: "un", defId: HOOKED });
+    expect(card(damage(null, "un"), hooked({ unitNow: (id) => (id === "un" ? arrived : null) }))).toEqual([
+      effect(HOOKED, "hurt", 0),
+      voice(HOOKED, "hurt", CARD_EFFECT_DELAY_MS),
+    ]);
+  });
+
+  it("R5188000 a pool picks its line by the cosmetic rng", () => {
+    const pooled: CardAudioTable = {
+      ...TABLE,
+      cards: {
+        ...TABLE.cards,
+        [HOOKED]: { kind: "unit", whenever: { voice: "hustler", lines: ["A.", "B.", "C."] }, play: { voice: "hustler", lines: ["In.", "Here."] } },
+      },
+    };
+    const at = (value: number): CueContext => hooked({ lines: pooled, random: () => value });
+    expect(ranked(marker("whenever"), at(0))).toEqual([`${HOOKED}/whenever!${String(VOICE_PRIORITY.recurring)}`]);
+    expect(ranked(marker("whenever"), at(0.5))).toEqual([`${HOOKED}/whenever2!${String(VOICE_PRIORITY.recurring)}`]);
+    expect(ranked(marker("whenever"), at(0.99))).toEqual([`${HOOKED}/whenever3!${String(VOICE_PRIORITY.recurring)}`]);
+    // R204's moments pick from a pool too, a play's line at its own priority.
+    expect(ranked(played(HOOKED), at(0.7))).toEqual([`${HOOKED}/play2!${String(VOICE_PRIORITY.play)}`]);
+    // A single line draws nothing from it.
+    const random = vi.fn(() => 0.5);
+    expect(ranked(damage(null, "ua"), hooked({ random }))).toEqual([`${HOOKED}/hurt!${String(VOICE_PRIORITY.recurring)}`]);
+    expect(random).not.toHaveBeenCalled();
+  });
+
+  it("R5188000 a closed lineGate keeps the effect, not the line", () => {
+    const asked: string[] = [];
+    const closed = hooked({
+      lineGate: (cardId, hook) => {
+        asked.push(`${cardId}|${hook}`);
+        return false;
+      },
+    });
+    for (const hook of ["startOfTurn", "endOfTurn", "whenever", "activate"] as const) {
+      expect(card(marker(hook, "ub", HOOKED, "p2"), closed), hook).toEqual([effect(HOOKED, hook, 0)]);
+    }
+    expect(card(damage("ub", "ua"), closed)).toEqual([effect(HOOKED, "hurt", 0), effect(HOOKED, "hit", 0)]);
+    // The gate is asked of the card's instance, each recurring hook by its name.
+    expect(asked).toEqual(["ub|startOfTurn", "ub|endOfTurn", "ub|whenever", "ub|activate", "ua|hurt", "ub|hit"]);
+    // A marker naming no instance asks of its definition; an open gate lets the line speak.
+    asked.length = 0;
+    expect(card(marker("whenever", "", HOOKED), closed)).toEqual([effect(HOOKED, "whenever", 0)]);
+    expect(asked).toEqual([`${HOOKED}|whenever`]);
+    expect(card(marker("whenever"), hooked({ lineGate: () => true }))).toEqual([effect(HOOKED, "whenever", 0), voice(HOOKED, "whenever", CARD_EFFECT_DELAY_MS)]);
+    // R204's own moments never ask it.
+    asked.length = 0;
+    expect(ranked(played(UNIT), closed)).toEqual([`${UNIT}/play!${String(VOICE_PRIORITY.play)}`]);
+    expect(asked).toEqual([]);
+    expect(RECURRING.every((hook) => TABLE.cards[HOOKED]?.[hook] !== undefined)).toBe(true);
   });
 });
 
