@@ -22260,6 +22260,18 @@
     "5172": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "at": "2026-11-27T15:00:10Z",
+        "built_by": "claude-6",
+        "by": "`claude` (strong)",
+        "sha": "e6bbae0e2453e8926e391836a42f3e033f3f6bfd"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-27T07:56:32Z",
@@ -22275,6 +22287,7 @@
       "issue": 5166,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-6",
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-27T11:15:03Z",
