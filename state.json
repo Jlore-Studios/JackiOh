@@ -20049,6 +20049,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-27T20:46:43Z",
@@ -20059,9 +20060,12 @@
       "planned_by_id": "claude-8",
       "planned_model": "sonnet",
       "planned_tier": "medium",
+      "pr": 5208,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-11-27T20:35:44Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "medium",
       "run_id": "46066981762",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-27T20:56:21Z",
@@ -20069,7 +20073,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:7227642752"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "5172": {
       "action": "review",
