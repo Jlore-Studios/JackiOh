@@ -20151,6 +20151,99 @@
       "feedback_since": "2026-11-27T20:07:25Z",
       "issue": 5178,
       "kind": "revise",
+      "own_review": {
+        "from_run": "46061443499",
+        "gates": [
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rustfmt",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo fmt --check",
+            "seconds": 5.1,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "catalog",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh catalog check",
+            "seconds": 198.9,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "patches",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh patches check",
+            "seconds": 2.6,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rulings",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh spec check",
+            "seconds": 3.0,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "clippy",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo clippy --workspace --all-targets -- -D warnings",
+            "seconds": 160.0,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 101,
+            "inconclusive": false,
+            "name": "cargo tests",
+            "ok": false,
+            "pre_existing": true,
+            "run": "cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts && test -z \"$(git status --porcelain -- apps/web/src/wire)\"",
+            "seconds": 922.2,
+            "skipped": "",
+            "tail": "mp/work/item-5178/crates/engine)\n\u001b[1m\u001b[92m   Compiling\u001b[0m jackioh-shared v0.5.0 (/home/runner/work/_temp/work/item-5178/crates/shared)\n\u001b[1m\u001b[92m   Compiling\u001b[0m jackioh-server v0.5.0 (/home/runner/work/_temp/work/item-5178/crates/server)\n\u001b[1m\u001b[92m   Compiling\u001b[0m jackioh-ai v0.5.0 (/home/runner/work/_temp/work/item-5178/crates/ai)\n\u001b[1m\u001b[92m   Compiling\u001b[0m jackioh-run v0.5.0 (/home/runner/work/_temp/work/item-5178/crates/run)\n\u001b[1m\u001b[92m   Compiling\u001b[0m jackioh-wasm-core v0.5.0 (/home/runner/work/_temp/work/item-5178/crates/wasm/core)\n\u001b[1m\u001b[92m   Compiling\u001b[0m jackioh-wasm v0.5.0 (/home/runner/work/_temp/work/item-5178/crates/wasm)\n\u001b[1m\u001b[92m   Compiling\u001b[0m jackioh-wasm-c v0.5.0 (/home/runner/work/_temp/work/item-5178/crates/wasm/c)\n\u001b[1m\u001b[92m   Compiling\u001b[0m jackioh-tools v0.5.0 (/home/runner/work/_temp/work/item-5178/crates/tools)\n\u001b[1m\u001b[92m    Finished\u001b[0m `test` profile [unoptimized] target(s) in 13m 28s\n\u001b[1m\u001b[92m     Running\u001b[0m unittests src/lib.rs (/home/runner/work/JackiOh/JackiOh/target/debug/deps/jackioh_ai-c7aed76ab8f80fb4)\n\u001b[1m\u001b[92m     Running\u001b[0m tests/ai.rs (/home/runner/work/JackiOh/JackiOh/target/debug/deps/ai-b40c3379fe16e77d)\n\u001b[1m\u001b[92m     Running\u001b[0m tests/ai_slow.rs (/home/runner/work/JackiOh/JackiOh/target/debug/deps/ai_slow-36975224f5a5028c)\n\u001b[1m\u001b[92m     Running\u001b[0m unittests src/lib.rs (/home/runner/work/JackiOh/JackiOh/target/debug/deps/jackioh_cards-3a7be67bd231ee5f)\n\u001b[1m\u001b[92m     Running\u001b[0m tests/cards.rs (/home/runner/work/JackiOh/JackiOh/target/debug/deps/cards-07999dc736ee9355)\n\u001b[1m\u001b[92m     Running\u001b[0m unittests src/lib.rs (/home/runner/work/JackiOh/JackiOh/target/debug/deps/jackioh_engine-22be45e52c4334dc)\n\u001b[1m\u001b[92m     Running\u001b[0m tests/export_config.rs (/home/runner/work/JackiOh/JackiOh/target/debug/deps/export_config-be79721f1f95dd2f)\n\u001b[1m\u001b[92m     Running\u001b[0m tests/golden.rs (/home/runner/work/JackiOh/JackiOh/target/debug/deps/golden-a0a277d8517c2a58)\n\u001b[1m\u001b[91merror\u001b[0m: test failed, to rerun pass `-p jackioh-engine --test golden`\n"
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "web tests",
+            "ok": true,
+            "pre_existing": false,
+            "run": "sh scripts/build-wasm.sh && pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts'",
+            "seconds": 32.7,
+            "skipped": "",
+            "tail": ""
+          }
+        ],
+        "head": "3cfed32735d98cdc9d3e3d717448cbed34351492",
+        "kind": "build",
+        "model": "opus",
+        "provider": "claude-3",
+        "round_tier": "strong",
+        "rounds_on": 5178,
+        "rounds_used": 0,
+        "since": "2026-11-27T21:28:20Z",
+        "source": "build",
+        "until": "2026-11-27T21:58:20Z"
+      },
+      "queued_at": "2026-11-27T21:28:20Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [],
