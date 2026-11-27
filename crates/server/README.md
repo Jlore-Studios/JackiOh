@@ -622,7 +622,11 @@ table. So the read files each row as it arrives (`StatsTotalsQuery::cards`, R496
 reads the records first, keeps as filed the card totals of the patches anyone may read and of the window
 before them (`api::stats::snapshot_filing`), folds each deck card's older totals into one per play
 version, and drops the rest; a dev account's older patch reads its own reach when asked, and the play
-rates keep one total per card and key. `stats-import` writes and
+rates keep one total per card and key. Only the play versions' table and the Hall of Fame read those folded
+older totals, so only they make the read that goes over every version's rows, and only when asked
+(R5174000). The snapshot every other figure reads, the win-rate snapshot each match starts with among them,
+names its patches (`CardRows::patches`) and reads their rows alone, through the primary key, since the
+gather lane files a version's worth of rows into both databases for every version main ships. `stats-import` writes and
 folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record written before migration
 0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
 folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the

@@ -934,6 +934,17 @@ impl CardRows {
             CardRows::Filed(filing) => filing.file(patch, card),
         }
     }
+
+    /// SPEC §11 R5174000: the patches whose card totals the read keeps, when that is a list: none for no card
+    /// total, and a filing's own (`CardFiling::patches`). `None` when it may keep a total of any patch, so a
+    /// store reads every patch's rows. Postgres reads only the listed patches' rows, by the primary key.
+    pub fn patches(&self) -> Option<Vec<String>> {
+        match self {
+            CardRows::All | CardRows::Merged => None,
+            CardRows::None => Some(Vec::new()),
+            CardRows::Filed(filing) => filing.patches(),
+        }
+    }
 }
 
 /// R4965000: the card totals a read keeps by the shipped version they are filed under: a run of
@@ -975,6 +986,21 @@ impl CardFiling {
             .iter()
             .find(|(first, last)| *first <= at && at <= *last)?;
         self.versions.get_index(*first).map(String::as_str)
+    }
+
+    /// SPEC §11 R5174000: every patch `file` keeps a total of, when it folds no play version: the run kept as
+    /// filed and `also_kept`. `None` while it folds any, since a folded total may come from any patch before
+    /// the run.
+    pub fn patches(&self) -> Option<Vec<String>> {
+        if !self.folded.is_empty() {
+            return None;
+        }
+        let run = self
+            .versions
+            .iter()
+            .skip(self.kept_from)
+            .take(self.kept_to.saturating_add(1).saturating_sub(self.kept_from));
+        Some(run.chain(&self.also_kept).cloned().collect())
     }
 }
 

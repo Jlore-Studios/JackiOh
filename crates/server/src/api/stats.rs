@@ -38,6 +38,12 @@
 //! long. It sends figures only: a client reads a version's definition from its catalog at `last`.
 //! R5040000: `?scope=major` sends the live play versions alone, each cut to the newest major's line
 //! (`major_line_versions`) and read against those rows' own field, one table per scope too.
+//!
+//! R5174000 (amends R4965000): the snapshot the cards, the game figures, the drill-down and the win-rate
+//! snapshot read loads the card totals of the versions it keeps as filed alone (`Reach::Kept`), a read of
+//! those patches' rows. The play versions' table and the Hall of Fame read the older play versions folded
+//! too (`Reach::Folded`), the one read that goes over every version's card totals, made only when one of
+//! them is asked for.
 
 use std::cmp::Ordering;
 use std::hash::Hash;
@@ -1181,14 +1187,19 @@ async fn totals_for(
 /// R3067000: every patch's totals as kept: one load when none was made in the last
 /// `CARD_STATS_CACHE_TTL_SECONDS`, once however many requests miss it together. A load that fails is
 /// kept for no one: the next request makes it again. R4965000: the records and game totals are read
-/// first, and the card totals then as `snapshot_filing` files them by those records.
-async fn kept_snapshot(app: &App) -> Result<KeptTotals, ApiError> {
-    let (made_at, cell) = app.card_stats.totals_cell(now_ms());
+/// first, and the card totals then as `snapshot_filing` files them by those records. R5174000: only the
+/// versions kept as filed unless `reach` asks for the older play versions too, which only the play
+/// versions' table does, so the page's own read costs the patches it shows and not every version filed.
+async fn kept_snapshot(app: &App, reach: Reach) -> Result<KeptTotals, ApiError> {
+    let (made_at, cell, folds) = app.card_stats.totals_cell(now_ms(), reach);
     let snapshot = cell
         .get_or_try_init(|| async {
             let history = patch_history();
             let records = totals_for(app, None, false, CardRows::None).await?;
-            let filing = snapshot_filing(&history, &records, &deck_play_versions(), &app.catalog.version);
+            let mut filing = snapshot_filing(&history, &records, &deck_play_versions(), &app.catalog.version);
+            if !folds {
+                filing.folded.clear();
+            }
             let totals = totals_for(app, None, false, CardRows::Filed(filing.clone())).await?;
             Ok::<_, ApiError>(Arc::new(Snapshot::new(&history, totals, filing)))
         })
@@ -1397,6 +1408,29 @@ type KeptCell = Arc<OnceCell<Arc<PatchReport>>>;
 /// R3067000: every patch's totals, filled by the first request that needs them; the others wait on it.
 type KeptTotalsCell = Arc<OnceCell<Arc<Snapshot>>>;
 
+/// SPEC §11 R5174000: which card totals a read of the kept snapshot needs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Reach {
+    /// The versions kept as filed (R4965000) alone: what the cards, the game figures, the drill-down and
+    /// the win-rate snapshot read.
+    Kept,
+    /// Those, and every deck card's play versions before them folded (R4965000): what the play versions'
+    /// table (R4675001), and the Hall of Fame cut from it (R4681001), read.
+    Folded,
+}
+
+/// R3067000, R5174000: the cells of every patch's totals made at one time.
+struct TotalsCells {
+    made_at: i64,
+    /// The cell every read takes first.
+    kept: KeptTotalsCell,
+    /// Whether `kept` folds the older play versions in: it does when the play versions' table asked first.
+    kept_folds: bool,
+    /// The cell that folds them in, made when the play versions' table asks after a read of `kept` that
+    /// does not.
+    folded: Option<KeptTotalsCell>,
+}
+
 /// R3067000: every patch's totals, and when their cell was first asked for.
 struct KeptTotals {
     made_at: i64,
@@ -1477,8 +1511,9 @@ pub struct KeptReports {
     /// R4681001: the Hall of Fame's bodies `GET /api/stats/hall-of-fame` reads, one per `?mode=`.
     hall: Kept<PublicStatsMode, Arc<HallOfFameBody>>,
     /// R3067000: every patch's totals, which every kept window and history is cut from, with when they
-    /// were first asked for.
-    totals: Mutex<Option<(i64, KeptTotalsCell)>>,
+    /// were first asked for. R5174000: beside them, the same totals with the older play versions folded in,
+    /// when the play versions' table asked for those after the cards.
+    totals: Mutex<Option<TotalsCells>>,
     /// R1583000: the play rates `GET /api/stats/play-rates` reads, with when they were first asked for.
     play_rates: Mutex<Option<(i64, PlayRatesCell)>>,
 }
@@ -1528,17 +1563,29 @@ impl KeptReports {
     }
 
     /// R3067000: the cell of every patch's totals made less than `CARD_STATS_CACHE_TTL_SECONDS` before
-    /// `now`, or a new empty one in its place, with when it was made.
-    fn totals_cell(&self, now: i64) -> (i64, KeptTotalsCell) {
+    /// `now`, or a new empty one in its place, with when it was made. R5174000: and whether it folds the
+    /// older play versions in. A read that needs them takes a cell that does: the one there when it folds,
+    /// or one made beside it with its time, so everything cut from either is kept and dropped together.
+    fn totals_cell(&self, now: i64, reach: Reach) -> (i64, KeptTotalsCell, bool) {
         let mut kept = lock(&self.totals);
-        if let Some((made_at, cell)) = kept.as_ref()
-            && now - *made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND
+        if let Some(cells) = kept.as_mut()
+            && now - cells.made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND
         {
-            return (*made_at, Arc::clone(cell));
+            if reach == Reach::Kept || cells.kept_folds {
+                return (cells.made_at, Arc::clone(&cells.kept), cells.kept_folds);
+            }
+            let folded = cells.folded.get_or_insert_with(|| Arc::new(OnceCell::new()));
+            return (cells.made_at, Arc::clone(folded), true);
         }
         let cell: KeptTotalsCell = Arc::new(OnceCell::new());
-        *kept = Some((now, Arc::clone(&cell)));
-        (now, cell)
+        let folds = reach == Reach::Folded;
+        *kept = Some(TotalsCells {
+            made_at: now,
+            kept: Arc::clone(&cell),
+            kept_folds: folds,
+            folded: None,
+        });
+        (now, cell, folds)
     }
 
     /// R1583000: the play rates' cell made less than `PLAY_RATES_REFRESH_SECONDS` before `now`, or a
@@ -1636,7 +1683,7 @@ async fn shipped_window(
     pilot: PublicStatsPilot,
     mode: PublicStatsMode,
 ) -> Result<Arc<KeptWindow>, ApiError> {
-    let snapshot = kept_snapshot(app).await?;
+    let snapshot = kept_snapshot(app, Reach::Kept).await?;
     let key = ReportKey {
         patch: at.to_string(),
         source,
@@ -1874,7 +1921,7 @@ async fn kept_history(
     mode: PublicStatsMode,
     face: StatsFace,
 ) -> Result<Arc<KeptHistory>, ApiError> {
-    let snapshot = kept_snapshot(app).await?;
+    let snapshot = kept_snapshot(app, Reach::Kept).await?;
     let cell = app.card_stats.history_cell((pilot, mode, face), snapshot.made_at);
     let kept = cell
         .get_or_try_init(|| async {
@@ -1899,7 +1946,8 @@ async fn kept_history(
 type KeptVersionsCell = Arc<OnceCell<Arc<PlayVersionTable>>>;
 
 /// R4675001: every deck card's play versions' figures for `pilot` and `mode`, as kept: read off every
-/// patch's totals (R3067000: `kept_snapshot`, the one load the cards' windows and histories share), kept
+/// patch's totals (R3067000: `kept_snapshot`; R5174000: with the older play versions folded in, the one
+/// read that needs them, made beside the cards' with its time, or shared with them when it came first), kept
 /// as long as that snapshot, once however many requests miss it together. R5040000: under
 /// `PublicStatsScope::Major`, the live ones alone, each cut to the newest major's line, read against
 /// their own field. R4965000's snapshot keeps the whole newest line as filed (`public_patch_count`
@@ -1910,7 +1958,7 @@ async fn kept_versions(
     mode: PublicStatsMode,
     scope: PublicStatsScope,
 ) -> Result<Arc<PlayVersionTable>, ApiError> {
-    let snapshot = kept_snapshot(app).await?;
+    let snapshot = kept_snapshot(app, Reach::Folded).await?;
     let cell = app
         .card_stats
         .versions_cell((pilot, mode, scope), snapshot.made_at);
@@ -2052,11 +2100,11 @@ fn hall_body_of(table: &PlayVersionTable, mode: PublicStatsMode) -> HallOfFameBo
 }
 
 /// R4681001: one `?mode=`'s Hall of Fame body, as kept: R4681000's lists over the kept versions'
-/// table (`kept_versions`, the one load the cards' windows and histories share), kept as long as
-/// that snapshot, once however many requests miss it together.
+/// table (`kept_versions`, over the snapshot that folds the older play versions in, R5174000), kept as
+/// long as that snapshot, once however many requests miss it together.
 async fn kept_hall(app: &App, mode: PublicStatsMode) -> Result<Arc<HallOfFameBody>, ApiError> {
     let table = kept_versions(app, PublicStatsPilot::Merged, mode, PublicStatsScope::All).await?;
-    let snapshot = kept_snapshot(app).await?;
+    let snapshot = kept_snapshot(app, Reach::Folded).await?;
     let cell = app.card_stats.hall_cell(mode, snapshot.made_at);
     let kept = cell
         .get_or_try_init(|| async { Ok::<_, ApiError>(Arc::new(hall_body_of(&table, mode))) })

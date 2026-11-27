@@ -5356,20 +5356,37 @@ pub async fn stats_totals_load(
     // time cost minutes on staging (2026-11-26): each patch's rows lie scattered through the table, so
     // every patch's read went through most of its pages. R4965000: a row the query's `cards` drops is
     // skipped before its figures are read, and one it folds is added into the total it is kept under.
-    let mut rows = sqlx::query(
+    // R5174000: a read that keeps a list of patches' totals reads those patches' rows alone, through the
+    // primary key, so its cost is theirs and not the whole table's, which grows with every version filed.
+    let only = query.cards.patches();
+    let sql = if only.is_some() {
         "select patch, source, mode, pilot, card, stats,
                 case when $4::boolean then turns end as turns,
                 case when $4::boolean then co end as co
            from public.card_totals
           where source = any($1::text[])
             and ($2::text is null or mode = $2::text)
-            and ($3::text is null or patch = $3::text)",
-    )
-    .bind(&sources)
-    .bind(mode.as_deref())
-    .bind(query.patch.as_deref())
-    .bind(query.drills)
-    .fetch(&mut **t);
+            and ($3::text is null or patch = $3::text)
+            and patch = any($5::text[])"
+    } else {
+        "select patch, source, mode, pilot, card, stats,
+                case when $4::boolean then turns end as turns,
+                case when $4::boolean then co end as co
+           from public.card_totals
+          where source = any($1::text[])
+            and ($2::text is null or mode = $2::text)
+            and ($3::text is null or patch = $3::text)"
+    };
+    let read = sqlx::query(sql)
+        .bind(&sources)
+        .bind(mode.as_deref())
+        .bind(query.patch.as_deref())
+        .bind(query.drills);
+    let read = match &only {
+        Some(patches) => read.bind(patches),
+        None => read,
+    };
+    let mut rows = read.fetch(&mut **t);
     while let Some(row) = rows.try_next().await.map_err(db_error)? {
         let patch: String = get(&row, "patch")?;
         let card: String = get(&row, "card")?;

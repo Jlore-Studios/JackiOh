@@ -2758,6 +2758,11 @@ pub fn stats_totals_load(f: &mut FakeTx<'_>, query: &StatsTotalsQuery) -> Result
     if query.patch.is_none() && query.cards != CardRows::None {
         // R3067000: every patch's totals, counted apart from one patch's load.
         call(f, "statsTotals.loadAllPatches")?;
+        // R5174000: and among those, a read no list of patches bounds, which on Postgres goes over every
+        // version's card totals.
+        if query.cards.patches().is_none() {
+            call(f, "statsTotals.loadWholeTable")?;
+        }
     }
     let totals = f.tables().stats_totals.select(
         &sources_of(query.source),

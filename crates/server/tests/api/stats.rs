@@ -1301,11 +1301,13 @@ mod r2491000_kept_card_history {
     use jackioh_server::db::store::{Db, StoreError};
 
     /// What the fake store was asked to read: every `statsTotals.load`, and among them the loads of
-    /// every patch's totals (R3067000), which it charges as `statsTotals.loadAllPatches` too.
+    /// every patch's totals (R3067000), which it charges as `statsTotals.loadAllPatches` too. R5174000:
+    /// and among those the reads no list of patches bounds, `statsTotals.loadWholeTable`.
     #[derive(Default)]
     struct Loads {
         all: AtomicUsize,
         full: AtomicUsize,
+        whole: AtomicUsize,
     }
 
     /// Counts the fake store's totals loads from here on, through its `on_call` hook.
@@ -1318,6 +1320,7 @@ mod r2491000_kept_card_history {
                     match method {
                         "statsTotals.load" => counter.all.fetch_add(1, Ordering::SeqCst),
                         "statsTotals.loadAllPatches" => counter.full.fetch_add(1, Ordering::SeqCst),
+                        "statsTotals.loadWholeTable" => counter.whole.fetch_add(1, Ordering::SeqCst),
                         _ => 0,
                     };
                     Ok(())
@@ -1539,6 +1542,73 @@ mod r2491000_kept_card_history {
         tokio::time::advance(Duration::from_millis(1)).await;
         assert_eq!(reads_of(&app, &loads, &late).await, (1, 1), "{late}");
         assert_eq!(reads_of(&app, &loads, &paths[0]).await, (0, 0), "{}", paths[0]);
+    }
+
+    // R5174000: the cards, the game figures, a drill-down and the win-rate snapshot every match starts with
+    // read only the versions the snapshot keeps as filed, so their load never goes over every version's card
+    // totals. The play versions' table reads the older ones folded, once, beside the cards' snapshot and with
+    // its time; the Hall of Fame and the cards then share it, and every figure is what an app that read the
+    // older versions first answers.
+    #[tokio::test(start_paused = true)]
+    async fn r5174000_only_the_play_versions_read_every_versions_card_totals() {
+        let past = past_patch().await;
+        let oldest = load_patch_versions()
+            .await
+            .into_iter()
+            .next()
+            .expect("a first patch");
+        let mut records = mixed_records(&past);
+        records.extend((0..2).map(|i| game(format!("mix-oldest-{i}"), &oldest, "bo1", "p1")));
+        let app = test_app().await;
+        insert_records(&app, records.clone()).await;
+        let loads = count_loads(&app).await;
+
+        for path in [
+            "/api/stats/cards?mode=all",
+            "/api/stats/games?mode=all",
+            "/api/stats/cards/core-001",
+        ] {
+            let (status, _, _) = get_public(&app, path).await;
+            assert_eq!(status, 200, "{path}");
+        }
+        let _table = jackioh_server::api::stats::win_rate_snapshot(&app).await;
+        assert_eq!(
+            loads.whole.swap(0, Ordering::SeqCst),
+            0,
+            "a read of the versions kept as filed went over every version's card totals"
+        );
+        assert_eq!(loads.full.swap(0, Ordering::SeqCst), 1);
+        loads.all.store(0, Ordering::SeqCst);
+
+        assert_eq!(reads_of(&app, &loads, "/api/stats/versions").await, (1, 1));
+        assert_eq!(loads.whole.swap(0, Ordering::SeqCst), 1);
+        for path in [
+            "/api/stats/hall-of-fame",
+            "/api/stats/versions?mode=bo1",
+            "/api/stats/cards?mode=bo1",
+            "/api/stats/games?mode=bo1",
+        ] {
+            assert_eq!(reads_of(&app, &loads, path).await, (0, 0), "{path}");
+        }
+        assert_eq!(loads.whole.load(Ordering::SeqCst), 0);
+
+        let reference = test_app().await;
+        insert_records(&reference, records).await;
+        for path in [
+            "/api/stats/versions",
+            "/api/stats/hall-of-fame",
+            "/api/stats/cards?mode=all",
+            "/api/stats/games?mode=all",
+        ] {
+            let (_, _, theirs) = get_public(&reference, path).await;
+            let (_, _, ours) = get_public(&app, path).await;
+            assert_eq!(ours, theirs, "{path}");
+        }
+
+        // At the TTL both are dropped together: the cards load the kept versions again, alone.
+        tokio::time::advance(Duration::from_millis(ttl_ms())).await;
+        assert_eq!(reads_of(&app, &loads, "/api/stats/cards?mode=all").await, (1, 1));
+        assert_eq!(loads.whole.load(Ordering::SeqCst), 0);
     }
 
     // R4675001: the play versions' table is cut from the snapshot the cards read, once per `?pilot=` and
