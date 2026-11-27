@@ -193,7 +193,7 @@ Cards: #95 Call to Chaos (Core Edition), C+ #73 Call to Chaos (Classic+ Edition)
 
 The War Doctrines (R3869001): every token tagged War Doctrine (R1857002), from the sets that ship.
 
-Drawn by: S #137 Starfleet Commander, S #176 Preemptive Strike.
+Drawn by: none.
 
 Cards: S #137.1 Land Doctrine, S #137.2 Sea Doctrine, S #137.3 Air Doctrine, S #137.4 Space Doctrine.
 
