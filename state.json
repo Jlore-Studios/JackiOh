@@ -20775,11 +20775,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-27T23:47:55Z",
+        "at": "2026-11-27T23:55:29Z",
         "difficulty": "medium",
-        "provider": "claude-4",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #5213, a medium change"
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Test-only change in three apps/web/src/audio files: no engine, AI, cross-crate contract, migration or ~40 files, so none of the rule's hard lines holds."
       },
       "failures": 0,
       "forced": false,
