@@ -29,8 +29,13 @@ use crate::patches::patches_io::{
 };
 use crate::patches::{patch_paths, read_catalog, repo_root};
 
-/// The refresh's title, the fragment's file name with it (one refresh is pending at a time).
-const TITLE: &str = "Patch: the tier cards and KPIs read the newest win rates";
+/// The refresh's title at version `at`, the fragment's file name with it. Each names the version it
+/// reads, since a refresh is due only at the newest shipped version and shipping it moves that on: no
+/// refresh takes a stem a shipped version names (R4779000), as every one after v0.6.14m's did under
+/// one fixed title.
+fn title(at: &str) -> String {
+    format!("Patch: the tier cards and KPIs read the win rates at {at}")
+}
 
 /// Refresh the win rates of record when a refresh is due (R3882000).
 #[derive(clap::Args)]
@@ -127,9 +132,11 @@ pub fn refresh(repo_root: &Path, report: &WindowedReport) -> Result<Refresh> {
         })
         .collect();
     let rows = table.cards.len();
+    let title = title(&report.at);
+    let name = fragment_name(&title);
     let fragment = PendingFragment {
         version: None,
-        title: TITLE.to_string(),
+        title,
         sources: format!(
             "winrates-refresh.yml: production's windowed card figures at {} (R3882000)",
             report.at
@@ -151,7 +158,6 @@ pub fn refresh(repo_root: &Path, report: &WindowedReport) -> Result<Refresh> {
         records: Some(table),
         ..PendingFragment::default()
     };
-    let name = fragment_name(TITLE);
     fs::create_dir_all(&paths.pending_dir)
         .with_context(|| format!("{} cannot be created", paths.pending_dir.display()))?;
     write_json(&paths.pending_dir.join(&name), &fragment)?;
@@ -178,7 +184,10 @@ mod tests {
     use serde_json::{Value, json};
 
     use super::*;
-    use crate::patches::patches_io::{CheckFragmentsArgs, check_fragments, player_note_problems};
+    use crate::patches::patches_io::{
+        CheckFragmentsArgs, check_fragments, fragment_stem, player_note_problems,
+    };
+    use crate::patches::reused_fragment_problems;
 
     struct TempDir(PathBuf);
 
@@ -280,7 +289,7 @@ mod tests {
                 ("stinkyscapeplus-001", 12, 20),
             ],
         );
-        let fragment = "the-tier-cards-and-kpis-read-the-newest-win-rates.json".to_string();
+        let fragment = "the-tier-cards-and-kpis-read-the-win-rates-at-v0-1-1.json".to_string();
         assert_eq!(
             refresh(root, &at).unwrap(),
             Refresh::Written {
@@ -319,29 +328,50 @@ mod tests {
     }
 
     #[test]
-    fn r3882000_a_refresh_is_due_once_per_patch_window_at_the_newest_version() {
+    fn r3882000_r4779000_a_refresh_is_due_once_per_patch_window_under_a_title_of_its_own() {
         let temp = tree();
         let root = &temp.0;
+        let pending = root.join("crates/cards/patches/pending");
+        let patches_json = root.join("crates/cards/patches/patches.json");
         let rows = [("core-001", 30, 40)];
         let not_due = |report: &WindowedReport| matches!(refresh(root, report).unwrap(), Refresh::NotDue(_));
+        let written = |report: &WindowedReport| match refresh(root, report).unwrap() {
+            Refresh::Written { fragment, .. } => fragment,
+            Refresh::NotDue(why) => panic!("a refresh is due, not: {why}"),
+        };
         // A report at an older version, or with no card at the floor, writes nothing.
         assert!(not_due(&report("v0.1.0", &["v0.1.0"], &rows)));
         assert!(not_due(&report("v0.1.1", &["v0.1.1"], &[("core-001", 1, 2)])));
-        assert!(!root.join("crates/cards/patches/pending").exists());
+        assert!(!pending.exists());
         // A refresh pending is the patch's refresh.
         let due = report("v0.1.1", &["v0.1.1"], &rows);
-        assert!(!not_due(&due));
+        let first = written(&due);
         assert!(not_due(&due));
-        // Once it ships, every version of the window holds it, so the X is refreshed.
-        fs::remove_dir_all(root.join("crates/cards/patches/pending")).unwrap();
-        write(root, "crates/cards/patches/records/v0.1.1.json", "{}");
-        assert!(not_due(&due));
-        // A version past the window (a patch opened the next X) is due again.
-        let patches = json!([
+        // It ships as the micro v0.1.2, which stays inside the X and records the fragment it shipped
+        // from (R4779000), so every version of the window holds it and the X is refreshed.
+        fs::remove_dir_all(&pending).unwrap();
+        let mut shipped = json!([
             { "version": "v0.1.1", "date": "2026-11-01", "title": "t", "source": "s", "notes": "n" },
-            { "version": "v0.1.2", "date": "2026-11-02", "title": "t", "source": "s", "notes": "n" },
+            { "version": "v0.1.2", "date": "2026-11-02", "title": "t", "source": "s", "notes": "n",
+              "fragment": fragment_stem(&first) },
         ]);
-        write(root, "crates/cards/patches/patches.json", &patches.to_string());
-        assert!(!not_due(&report("v0.1.2", &["v0.1.2"], &rows)));
+        write(root, "crates/cards/patches/patches.json", &shipped.to_string());
+        write(root, "crates/cards/patches/records/v0.1.2.json", "{}");
+        assert!(not_due(&report("v0.1.2", &["v0.1.1", "v0.1.2"], &rows)));
+        // A version past the window (a patch opened the next X) is due again, and its fragment passes
+        // `patches check`'s R4779000 check, which every refresh after v0.6.14m's failed under one title.
+        shipped.as_array_mut().unwrap().push(
+            json!({ "version": "v0.1.3", "date": "2026-11-03", "title": "t", "source": "s", "notes": "n" }),
+        );
+        write(root, "crates/cards/patches/patches.json", &shipped.to_string());
+        let second = written(&report("v0.1.3", &["v0.1.3"], &rows));
+        assert_ne!(second, first);
+        assert_eq!(
+            reused_fragment_problems(
+                &read_patches(&patches_json).unwrap(),
+                &read_fragments(&pending).unwrap()
+            ),
+            Vec::<String>::new()
+        );
     }
 }
