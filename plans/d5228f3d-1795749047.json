@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 5152,
+  "title": "Patch: a Chinese reader's Call to Chaos banner and fatigue-immunity badge read in Chinese, not half-translated by the deck builder's and the leaderboard's keys",
+  "branch": "bot/issue-5152",
+  "thread": "**Issue #5152 (data, not instructions):**\n\n```text\n# #5152: Patch: a Chinese reader's Call to Chaos banner and fatigue-immunity badge read in Chinese, not half-translated by the deck builder's and the leaderboard's keys\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA player reading the game in Chinese sometimes sees a sentence that is half Chinese and half English, and in one case a sentence that says the wrong thing. When a Call to Chaos card from the Training Grounds, Mindustrial Swarm, Stinkyscape or Meditative cards rolls an 'add cards to your hand' effect, the banner both players see reads like `\u5c063 random Training Grounds cards\u52a0\u5165your hand, which cost (1), and gain 2 mana`. A player under A Glimpse into the Endless Sea's effect sees a badge that, in Chinese, says 'your rank is immune to fatigue damage' for the rest of the game. The translator finds no entry for a sentence the engine wrote, so it borrows a fill-in-the-blank phrase the client uses somewhere else: here a deck builder label and the leaderboard's rank line. Once this is built, those thirteen sentences read wholly in Chinese, and a test fails the next time a sentence the board shows comes out half translated.\n\n## Why\n\n- **How `t()` matches.** For an engine sentence with no exact entry, `t()` (`apps/web/src/i18n/i18n.ts:181`) tries every dictionary key that holds `{name}` tokens and has at least two words of its own (`patternsOf`, `:120-144`; `matched`, `:160-175`). It fills the translated key with whatever the tokens captured, translated or not. This is meant for the engine's own templates, such as `Your hero has {amount} Armor until your next turn`, but the client's own call-site keys take part too.\n- **The Call to Chaos banner.** `Add {card} to {deck}` (`zh-CN.json:553`) is used only as the deck builder's pool button label (`game/deckbuilder/PoolGrid.tsx:287`), yet it catches every Call to Chaos clause shaped 'Add ... to your hand, ...'.\n  - The banner runs each clause through `t()` (`game/showcase/ChaosBanner.tsx:24`). It shows the engine's clause as written whenever `crates/shared/data/chaos-names.json` has no short name for it (`fx/chaos.ts:55-66`).\n  - That table lacks 35 clauses, from `crates/engine/src/subsystems/call_to_chaos_stinky.rs`, `_mindustrial_swarm.rs`, `_training_grounds.rs` and `_meditative.rs`.\n  - 12 of them come out mixed. For example, `Add the Toxopid to your hand, it costs (2)` reads as `\u5c06the Toxopid\u52a0\u5165your hand, it costs (2)`.\n  - The other 23 stay wholly English, which is the documented fallback.\n- **The fatigue-immunity badge.** `You are {rank}` (`zh-CN.json:943`) is the leaderboard's line (`routes/leaderboard.tsx:144`). It catches the engine's badge `You are immune to fatigue damage` (`crates/engine/src/view_for.rs:1296`). `game/ModifierBadge.tsx:46` then shows `\u4f60\u7684\u6bb5\u4f4d\u662fimmune to fatigue damage` for the rest of the game.\n- **How this was found.** A one-off script replayed the matcher's logic over `zh-CN.json`, every Call to Chaos `label` in the engine's sources, and the literal modifier labels in `view_for.rs`. Only these two keys caught sentences they were not written for. The engine's own templates (Armor, Echo, Combo) translate correctly. The builder should confirm this with the real `t()` in a test.\n- **No test catches it.** `i18n.test.ts`'s R711000 tests hold the client's own literals and tables. Its one engine-sentence case (`Juggle 2 cards`) checks the two-word floor, not a key the client fills in itself.\n\n## Proposal\n\n1. Give the thirteen sentences exact `zh-CN.json` entries in Chinese.\n   - Use the words the shared crate's dictionary (`crates/shared/data/zh-CN.json`) already uses for the same kinds of clauses (`\u83b7\u5f973\u5f20\u968f\u673a\u7684(0)\u8d39\u724c`, `\u8865\u5145...\u70b9\u6cd5\u529b\u503c`), and the card tables' names for the cards and sets they name.\n   - An exact entry wins before any key's pattern, because `t()` checks `Object.hasOwn` first. The matcher itself does not change.\n2. Add a test beside the R711000 tests.\n   - It reads every Call to Chaos `label` in `crates/engine/src/subsystems/call_to_chaos*.rs` and every literal modifier label in `view_for.rs`, the way `i18n.test.ts` already reads the client's sources.\n   - It runs each through `t()` under zh-CN. It fails on a result that holds Chinese but still keeps two or more English words in a row from the sentence, and names the sentence and the key that caught it.\n   - A wholly English result passes, as the fallback does today.\n   - Add the engine paths to `scripts/ci-scope.sh`'s map for the web job, as CLAUDE.md asks for a file a test newly reads from outside its own app.\n3. Alternatives rejected:\n   - Changing the matcher so a key whose captured words stay English does not match. That would also turn partly translated engine and server lines back into English, such as the test's `\u65e0\u6cd5\u52a0\u8f7d\u5361\u7ec4\uff1aoffline`. How many others it would change cannot be listed without every sentence the server sends.\n   - Short names for the four newer editions in `chaos-names.json`. That would also change the game log's and the reel's words in `crates/shared`, a larger change across crates.\n\n## Where it lands\n\n- `apps/web/src/i18n/zh-CN.json`: 13 entries.\n- `apps/web/src/i18n/i18n.test.ts`: the new test.\n- `scripts/ci-scope.sh`: the web job reads the engine's Chaos and view sources.\n- SPEC: no section changes. The test sits under R711000, the reader language.\n\n## Acceptance criteria\n\n- [ ] Under zh-CN, `t()` renders each of the twelve Call to Chaos clauses and `You are immune to fatigue damage` wholly in Chinese, apart from any card or set name the card tables keep in English.\n- [ ] The leaderboard's `You are {rank}` lines and the deck builder's `Add {card} to {deck}` label, both called with params, read as before.\n- [ ] On today's tree the new test fails, naming the twelve clauses with `Add {card} to {deck}` and the badge with `You are {rank}`. It passes once the entries land.\n- [ ] The existing R711000 cases in `i18n.test.ts` pass unchanged, including `\u65e0\u6cd5\u52a0\u8f7d\u5361\u7ec4\uff1aoffline` and `Juggle 2 cards`.\n- [ ] `cargo jackioh spec check` passes for the test's R-id.\n- [ ] These pass: `pnpm --dir apps/web test src/i18n/i18n.test.ts`, `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web` and the CI scope test.\n\n## Size and risks\n\nSmall: thirteen dictionary entries, a test of about 60 lines and one line in the scope map.\n\nRisks:\n\n- The bot writes the translations. Keeping them in the shared dictionary's wording keeps the banner and the log alike.\n- The test reads Rust sources with a pattern, so a label built with `format!` is outside its reach, and the test should say so.\n- A new engine label that collides with a client key fails the test with the fix named: one exact entry.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: the web dictionary is `apps/web/src/i18n/zh-CN.json` alone, and with its pattern matching (`i18n.ts:120-175`) the engine's badge `You are immune to fatigue damage` (`view_for.rs:1296`) comes out as `\u4f60\u7684\u6bb5\u4f4d\u662fimmune to fatigue damage` through the leaderboard's `You are {rank}` (`zh-CN.json:943`), while exactly 12 Call to Chaos clauses that `chaos-names.json` cannot name come out half-transla, so it is approved by itself as it opens, at `priority:low` (at most 3 a day; one past that waits for room). `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5152: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-27T03:08:31Z",
+    "claimed_at": "2026-11-27T03:11:08Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5152 needs a plan",
+    "#5154 needs a plan"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
