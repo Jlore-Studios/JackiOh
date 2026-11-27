@@ -22157,15 +22157,8 @@
       }
     },
     "5166": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45961058645",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-27T07:55:49Z",
-        "until": "2026-11-27T08:25:49Z"
-      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-27T07:54:36Z",
@@ -22176,9 +22169,8 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"git log --oneline -1; ls /tmp/fz-s4-hc.out /tmp/fz-s2-duos.out /tmp/fz-s4-duos.out 2>&1; grep -E \\\"seeds .*passed|message\\\" /tmp/fz-s4-hc.out /tmp/fz-s2-duos.out /tmp/fz-s4-duos.out 2>/d\u2026\n- Bash: {\"command\": \"git log --oneline d044f4d1b9..HEAD | head -30; git diff --stat d044f4d1b9..HEAD -- crates/ai/tests/ai/wide_lethal.rs crates/cards/src/scripts/classic_plus/c002_groom_shroom.rs crates/eng\u2026\n- Bash: {\"command\": \"git log --oneline d044f4d1b9..HEAD -- crates/engine/src/testkit/invariants.rs; git diff d044f4d1b9..HEAD -- crates/engine/src/testkit/invariants.rs | head -200\", \"description\": \"Inspect \u2026\n- Bash: {\"command\": \"sed -n '107,$p' .bot-plan.md > /tmp/final-plan.md; wc -w /tmp/final-plan.md; grep -n \\\"Not covered\\\\|fail on \\\\`main\\\\`\\\\|^8\\\\. \\\\|Seeds 14921\\\" /tmp/final-plan.md\", \"description\": \"Reco\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/tmp/final-plan.md'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1, a\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\"every root cause reproduced on `main` (`d\u2026\n- Bash: {\"command\": \"cat /tmp/final-plan.md\", \"description\": \"Print the final plan\"}\n- said: **Goal.** Staging's super run 45935559198 (on `bf3c6fd`) goes green on its four red jobs. Each root cause below was reproduced on `main` at `d044f4d` with the job's own command, and all four are fixed in one pull request without skipping or loosening any test. - **daily tests (pool probe, cards)**:\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-27T05:12:01Z",
       "owner_why": "it plans it",
@@ -22190,9 +22182,9 @@
       "planned_tier": "strong",
       "provider": "claude-6",
       "round_tier": "",
-      "run_id": "45961058645",
+      "run_id": "pending:aa66c1a4-1795766176",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-27T07:48:50Z",
+      "started_at": "2026-11-27T07:56:32Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: timed out after 9000s"
@@ -22262,9 +22254,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T07:48:50Z",
+    "at": "2026-11-27T07:56:32Z",
     "url": "",
-    "what": "plan #5166 on claude-6"
+    "what": "build #5166 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-27T07:47:29Z",
