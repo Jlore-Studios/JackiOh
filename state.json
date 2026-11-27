@@ -45646,6 +45646,7 @@
       {
         "at": "2026-11-27T20:35:40Z",
         "number": 5164,
+        "reason": "two real bugs on the Assault's day screen. The beaten levels \u00a716.7 asks to mark are marked only by a `::marker` rule (`assault.css:50`) on rows that are `display: grid`, which browsers never draw, so all 20 rows look alike. And four of the twelve Commanders have no zh-CN entry, so on most days a Chinese reader sees a boss named in English above its Chinese-named cards. The fix is a visible badge, five dictionary entries, and the table-fed walk extended so the next missing name fails a test.",
         "title": "Patch: the Infinite Assault's ladder marks the levels beaten today, and its four untranslated Commanders read in Chinese",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
