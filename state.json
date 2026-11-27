@@ -19803,17 +19803,8 @@
       ]
     },
     "5159": {
-      "action": "plan",
-      "asks": [
-        "c:7227641398"
-      ],
-      "build_next": {
-        "from_run": "46067113559",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-27T21:15:14Z",
-        "until": "2026-11-27T21:45:14Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-27T21:15:03Z",
         "difficulty": "medium",
@@ -19832,10 +19823,9 @@
         "reason": "planned on sonnet",
         "trail": "spec/rulings | grep \\\"^R5[0-9][0-9][0-9][0-9][0-9][0-9]\\\\.md$\\\" | tail -5; ls spec/rulings | grep \\\"^R5159\\\"\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; git show 3b0334c408:spec/pending/5174.md; echo ----; git show 3b0334c408 --stat | head -30; grep -n \\\"R4605000\\\" spec/rulings/R4605000.md | hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; git show 3b0334c408 --stat --format= | head -30; grep -n \\\"sweep\\\\|R897000\\\\|try_pair\\\" crates/server/README.md | head -20\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -n \\\"R897000\\\\|stale\\\\|sweep\\\" \\\"spec/09-architecture/9.5-\\\"*.md | head -20; grep -n \\\"stale catalog\\\\|update_required\\\\|Collection\\\" spec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -n \\\"fn tickets_cancel\\\" -A 22 crates/server/src/db/fake.rs | head -50; grep -n \\\"queued\\\" crates/server/src/api/auth.rs | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -n \\\"seed_ticket\\\\|SeedTicket\\\\|fn due_ticket\\\\|fn .*fallback\\\\|catalogVersion\\\" crates/server/tests/api/bots.rs | head -50; grep -n \\\"^mo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; sed -n 120,360p crates/server/tests/api/bots.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; sed -n 44,120p crates/server/tests/api/bots.rs; sed -n 400,520p crates/server/tests/api/bots.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -n \\\"r1638\\\\|older\\\\|catalog_version\\\\|catalogVersion\\\" crates/server/tests/api/rematch.rs | head -20; grep -rn \\\"fn now_ms\\\" -A 8 crates/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; sed -n 1391,1445p crates/server/tests/api/rematch.rs; grep -rn \\\"pub struct Catalog\\\\b\\\" -A 8 crates/server/src | head -20\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -rn \\\"queue\\\\.expired\\\" --include=* . -l 2>/dev/null | grep -v \\\"^./target\\\\|node_modules\\\" | head; grep -rn \\\"queue.expired\\\" crates docs\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -n \\\"fn tickets_cancel\\\" -A 12 crates/server/src/db/pg.rs | head -25; grep -n \\\"fn seats_fence\\\" -B3 -A 25 crates/server/src/db/fake.rs | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; sed -n 1340,1420p crates/server/src/api/queue.rs; sed -n 1,30p spec/rulings/R1523000.md | cut -c1-1800\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -rn \\\"seats_bump_epoch\\\\|Fenced\\\" crates/server/src crates/server/tests --include=*.rs | grep -v \\\"^crates/server/src/db/pg.rs\\\" | head -3\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -n \\\"macro_rules! one_tx\\\" -A 22 crates/server/src/api/*.rs crates/server/src/*.rs | head -40\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; sed -n 222,245p crates/server/src/api/http.rs; sed -n 465,495p crates/server/src/seats.rs; grep -n \\\"epoch\\\" crates/server/tests/api/seats.rs |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; sed -n 655,720p crates/server/tests/api/seats.rs; sed -n 70,100p crates/server/src/actor/contracts.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -n \\\"pub async fn begin\\\\|pub async fn commit\\\\|pub async fn seats_fence\\\\|pub async fn tickets_cancel\\\\|pub type StoreResult\\\" -A 4 crate\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -n \\\"pub async fn fake_lock\\\" -B2 -A8 crates/server/tests/support/store.rs; grep -n \\\"fn enqueue_ticket\\\" -B3 -A30 crates/server/src/api/q\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -n \\\"SEED_MAP\\\" crates/server/tests/api/*.rs | head -5; cat crates/server/tests/api/mod.rs | head -20; grep -n 'mode: \\\"random\\\"' crates/s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; sed -n 1120,1185p crates/server/tests/api/queue.rs; sed -n 40,70p crates/server/src/api/queue.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -rln \\\"tickets_insert\\\\|write_ticket\\\" crates/server/tests crates/server/src | head -20; grep -n \\\"fn write_ticket\\\" -A 25 crates/server/t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -n \\\"catalogVersion\\\\|catalog_version\\\" crates/server/tests/api/seats.rs crates/server/tests/api/ranked.rs crates/server/tests/api/rate_li\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; for f in account results e2e game_records duos_rooms rematch; do echo \\\"== $f\\\"; grep -n \\\"tickets_insert\\\" crates/server/tests/api/$f.rs | hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; sed -n 88,104p crates/server/tests/api/seats.rs; grep -n \\\"try_pair\\\" crates/server/tests/api/daily.rs crates/server/tests/api/duos_rooms.rs | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; ls crates/tools/src | head -40; grep -rn \\\"spec/rulings\\\" crates/tools/src/classify*.rs 2>/dev/null | head -5; grep -n \\\"rulings\\\" docs/issues-\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; sed -n 1,60p crates/tools/src/classify.rs | cut -c1-220\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -rln \\\"R897000\\\" docs apps/web/src apps/web/README.md crates/server/README.md spec/0* spec/1* 2>/dev/null | head; grep -n \\\"R897000\\\" docs\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5159; grep -n \\\"R897000\\\" docs/implicit-states.md | cut -c1-400; grep -n \\\"R897000\\\" apps/web/README.md | cut -c1-300\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5159/.bot-plan.md\", \"content\": \"# Draft plan #5159 (planner notes)\\n\\nFound: try_pair (crates/server/src/api/queue.rs:702) never reads ticket.catalog_\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: the change is one block in crates/server/src/api/queue.rs, tests, one ruling and two doc lines (about 8 files); it touches no engine, AI, migration or second crate.\"} --> ## Goal A sweep (`try_pair`) cancels every open qu\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-27T20:57:38Z",
       "owner_why": "it plans it",
@@ -19848,12 +19838,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-27T20:54:02Z",
       "requested_by": "jgoetzmann",
-      "run_id": "46067113559",
+      "run_id": "pending:4edd13eb-1795814151",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-27T20:57:38Z",
+      "started_at": "2026-11-27T21:16:16Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7227641398"
+      ]
     },
     "5161": {
       "action": "plan",
@@ -20126,9 +20118,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T21:07:27Z",
+    "at": "2026-11-27T21:16:16Z",
     "url": "",
-    "what": "build #5158 on claude-7"
+    "what": "build #5159 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-27T21:04:46Z",
