@@ -21753,9 +21753,12 @@
     "what": "plan #5123 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-27T00:37:52Z",
+    "at": "2026-11-27T00:43:55Z",
     "notes": [
-      "#5094 is held for `claude-3` until 18:40 (it refused a call)"
+      "#5094: `claude-3` can start again, so its hold is lifted",
+      "started revise #5094 on claude-3 (run 45918516296)",
+      "started plan #5123 on claude-3 (run 45918567571)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22461,7 +22464,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T00:37:52Z",
+  "loop_tick": "2026-11-27T00:43:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
