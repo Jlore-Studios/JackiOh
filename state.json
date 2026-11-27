@@ -33203,10 +33203,6 @@
       "refused_until": "2026-11-24T04:20:00Z",
       "spent": [
         {
-          "at": "2026-11-13T11:22:40Z",
-          "minutes": 8.3
-        },
-        {
           "at": "2026-11-13T11:52:55Z",
           "minutes": 10.9
         },
@@ -34001,16 +33997,13 @@
         {
           "at": "2026-11-27T00:06:02Z",
           "minutes": 77.7
+        },
+        {
+          "at": "2026-11-27T02:46:13Z",
+          "minutes": 102.5
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-12T21:48:37Z",
-          "cache": 144468,
-          "cost": 0.1174,
-          "input": 8,
-          "output": 1882
-        },
         {
           "at": "2026-11-12T22:10:11Z",
           "cache": 72610,
@@ -35403,14 +35396,21 @@
           "cost": 5.8901,
           "input": 2,
           "output": 7146
+        },
+        {
+          "at": "2026-11-27T02:46:13Z",
+          "cache": 6369201,
+          "cost": 2.6204,
+          "input": 153,
+          "output": 30730
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-27T03:40:00Z",
-          "utilization": 0.11
+          "utilization": 0.16
         },
-        "observed_at": "2026-11-27T00:06:02Z",
+        "observed_at": "2026-11-27T02:46:13Z",
         "status": "allowed"
       }
     },
@@ -46270,6 +46270,16 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-27T00:10:50Z,claude-6,ping,before,45914834065,12,2026-11-27T03:40:00Z,,,allowed,50,,",
+      "2026-11-27T00:12:08Z,claude-6,stream,call,45914834065,13,2026-11-27T03:40:00Z,,,allowed,50,,",
+      "2026-11-27T00:29:38Z,claude-6,stream,call,45914834065,14,2026-11-27T03:40:00Z,,,allowed,50,,",
+      "2026-11-27T00:47:39Z,claude-6,stream,call,45914834065,15,2026-11-27T03:40:00Z,,,allowed,50,,",
+      "2026-11-27T01:25:56Z,claude-6,stream,call,45914834065,16,2026-11-27T03:40:00Z,,,allowed,50,,",
+      "2026-11-27T01:53:39Z,claude-6,stream,call,45914834065,16,2026-11-27T03:40:00Z,,,allowed,50,,"
+    ]
   },
   "version": 1
 }
