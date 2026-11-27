@@ -20564,17 +20564,8 @@
     "what": "plan #5207 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-27T22:12:43Z",
-    "notes": [
-      "delivered plan #5161 on claude-1 (run 46074567325): planned",
-      "delivered build #5171 on claude-8 (run 46066981762): built",
-      "started review #5208 on claude-8 (run 46075537189)",
-      "started build #5161 on claude-1 (run 46075598669)",
-      "started plan #5207 on claude-3 (run 46075640411)",
-      "nothing more to start: nothing is queued",
-      "#5207: typed it Bug",
-      "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
-    ],
+    "at": "2026-11-27T22:23:21Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -21279,7 +21270,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T22:12:43Z",
+  "loop_tick": "2026-11-27T22:23:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
