@@ -20400,6 +20400,8 @@
       }
     },
     "5208": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-27T20:56:21Z",
@@ -20413,8 +20415,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; grep -n \\\"fn late_fork\\\\|fn echo\\\\|fn hand_line\\\\|fn write_save\\\\|fn read_lines\\\\|fn scripted_factory\\\\|fn test_header\\\\|fn save_path\\\\|PARTIAL_DEAL_BOUND_S\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/crates/tools/src/fork_screen.rs\", \"offset\": 1280, \"limit\": 50}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/crates/tools/src/fork_screen.rs\", \"offset\": 1500, \"limit\": 75}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/crates/tools/src/fork_screen.rs\", \"offset\": 1795, \"limit\": 275}\n- Bash: {\"command\": \"cd crates/tools/src; grep -n \\\"fn play_deal\\\" fork_screen.rs; sed -n '/^fn play_deal/,/^}/p;/^pub fn play_deal/,/^}/p' fork_screen.rs | head -90\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/crates/tools/src/fork_screen.rs\", \"offset\": 685, \"limit\": 90}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5171 && python3 - <<'EOF'\\np='crates/tools/src/fork_screen.rs'\\ns=open(p).read()\\ndef rep(old,new,count=1):\\n global s\\n assert s.count(old)==count,(\u2026\n- Bash: {\"command\": \"sed -n 92,100p crates/tools/src/fork_screen.rs && python3 - <<'EOF'\\np='scripts/ci-shards.toml'\\ns=open(p).read()\\nold1=s[s.index(\\\"# with no single test over the threshold: the slowest\\\u2026\n- said: Remove the duplicated line, then test. I haven't measured the \"about 20 s\" yet, so I'll check it afterwards.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='scripts/ci-shards.toml'\\ns=open(p).read()\\nd=\\\"# count alone. 8 is the most a count may be (matrix.py's MAX_SHARDS; the web unit\\\\n\\\"\\nassert s.count(d)==1\\ns=s.rep\u2026\n- Bash: {\"command\": \"cargo fmt && git status --short && (time cargo test -p jackioh-tools --bin jackioh r4397000_an_always 2>&1 | tail -6) 2>&1 | tail -10\", \"timeout\": 600000}\n- said: Now the mutation checks, run against production lines one at a time.\n- Bash: {\"command\": \"grep -n \\\"check_header(\\\\|append_deal_line(\\\\|outcome.hash != saved.hash\\\\|if !same\\\\|let Some(mut target)\\\" crates/tools/src/fork_screen.rs | head -20\"}\n- Bash: {\"command\": \"sed -n 870,896p crates/tools/src/fork_screen.rs; sed -n 1003,1010p crates/tools/src/fork_screen.rs; sed -n 1038,1050p crates/tools/src/fork_screen.rs; sed -n 1070,1078p crates/tools/src/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5171; F=crates/tools/src/fork_screen.rs; cp $F /tmp/fs.orig\\nrun(){ # name, python replacement old->new, test\\npython3 - \\\"$1\\\" \\\"$2\\\" <<'EOF'\\nimpor\u2026\n- TaskStop: {\"task_id\": \"bfrg4uvt6\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5171; F=crates/tools/src/fork_screen.rs; cp /tmp/fs.orig $F; git diff --stat; grep -c \\\"let _ = (path, &line)\\\" $F\\nrun(){\\npython3 - \\\"$1\\\" \\\"$2\\\" <\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5171; F=crates/tools/src/fork_screen.rs; grep -n \\\"fn save_plan\\\" -A3 $F | head; \"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5171; F=crates/tools/src/fork_screen.rs\\npython3 - <<'EOF'\\np='crates/tools/src/fork_screen.rs'\\ns=open(p).read()\\nold=\\\"let Some(mut target) = save_\u2026\n- said: Now clippy, the full fork_screen filter timing, spec check, and a final timing of just the five.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5171; cargo clippy -p jackioh-tools --all-targets -- -D warnings 2>&1 | tail -3; cargo jackioh spec check 2>&1 | tail -3; (time cargo test -p jackioh\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5171; printf '\\\\n## State (run 2)\\\\nAll plan steps done in fork_screen.rs tests + ci-shards.toml. fmt, clippy, spec check green; five tests 19.97 s t\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the fork screen's save and resume tests stop playing the 96 rollout games no assertion reads\"} --> The five R4607000 save/resume tests in `crates/tools/src/fork_screen.rs` no longer play any fork arm, and together they now run in 19.97 s on this machine\u2026"
       },
       "issue": 5171,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-27T22:15:37Z",
         "from_run": "46066981762",
         "gates": [
           {
@@ -20506,7 +20511,11 @@
         "source": "build",
         "until": "2026-11-27T22:44:38Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-27T22:14:38Z",
+      "run_id": "pending:1d83203a-1795817716",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -20525,6 +20534,9 @@
         "provider": "claude-8",
         "run": "46066981762"
       },
+      "started_at": "2026-11-27T22:15:37Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -20538,9 +20550,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T22:06:32Z",
+    "at": "2026-11-27T22:15:37Z",
     "url": "",
-    "what": "plan #5161 on claude-1"
+    "what": "review #5208 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-27T22:05:41Z",
