@@ -20075,17 +20075,18 @@
     "what": "plan #5159 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-27T20:40:09Z",
+    "at": "2026-11-27T20:53:31Z",
     "notes": [
-      "#5158 needs a plan",
-      "#5164 needs a plan",
-      "#5171 needs a plan",
-      "#5161 waits for a person: a comment by @jgoetzmann",
-      "started plan #5164 on agy (run 46065801734)",
-      "started plan #5158 on claude-7 (run 46065868093)",
-      "started plan #5171 on claude-8 (run 46065934961)",
-      "nothing more to start: nothing is queued",
-      "pruned 5 plan file(s) older than 7 days"
+      "answered a comment on #5161 that was never answered",
+      "answered a comment on #5159 that was never answered",
+      "answered a comment on #5157 that was never answered",
+      "#5159 needs a plan",
+      "#5161 needs a plan",
+      "delivered plan #5171 on claude-8 (run 46065934961): planned",
+      "started build #5171 on claude-8 (run 46066981762)",
+      "started plan #5161 on claude-1 (run 46067048394)",
+      "started plan #5159 on claude-4 (run 46067113559)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -20791,7 +20792,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T20:40:09Z",
+  "loop_tick": "2026-11-27T20:53:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
