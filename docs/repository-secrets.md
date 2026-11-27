@@ -61,8 +61,8 @@ GitHub's runners have no IPv6.
 | Secret | What it is | Read by |
 | --- | --- | --- |
 | `CLOUDFLARE_API_TOKEN` | The Edit Cloudflare Workers template, plus Containers, for `wrangler deploy` | deploy-staging, promote-production |
-| `CF_ACCESS_CLIENT_ID` | The Access service token's id, so a check can reach staging behind Access | deploy-staging, stats-check, cutover |
-| `CF_ACCESS_CLIENT_SECRET` | That service token's secret | deploy-staging, stats-check, cutover |
+| `CF_ACCESS_CLIENT_ID` | The Access service token's id, so a check can reach staging behind Access | deploy-staging, cutover |
+| `CF_ACCESS_CLIENT_SECRET` | That service token's secret | deploy-staging, cutover |
 | `CLOUDFLARE_BILLING_TOKEN` | A custom token with the account's Billing: Read alone | cf-spend |
 | `RESEND_API_KEY` | A Resend Full access key, to add jackioh.com and make the sending keys | cutover (`email`) |
 

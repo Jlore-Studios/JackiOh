@@ -247,7 +247,7 @@ Free plan (up to 50 users), with One-time PIN as the sign-in. `infra/cloudflare.
 Access application `JackiOh staging` on `staging.jackioh.com`, its two policies, the custom domain,
 and the service token `JackiOh staging deploy check` (made on 2026-11-02 for a year), whose pair is
 the repository secrets `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`, for deploy-staging.yml's
-live check and the card statistics' checks (`.github/actions/check-stats`, stats-check.yml).
+live check and its card statistics' check (`.github/actions/check-stats`).
 
 To let someone else into staging, add their address to the policy `JackiOh staging: the team` (Zero
 Trust -> Access -> Policies) and to `staging_team_emails` in `infra/terraform.tfvars`, or the next
@@ -332,8 +332,6 @@ JackiOh-Production.
   did not answer with cards within the client's `API_REQUEST_TIMEOUT_SECONDS`: the logs show a
   `slow statement`, a `handler.threw` or the container killed, #5174). Fix it on `main`; for
   production, then run promote production with **redeploy**.
-- **The card statistics do not load between deploys:** stats-check.yml asks both sites every three
-  hours and keeps `CI: the card statistics do not load` open for the night bot while either fails.
 - **An alert:** the server opens `Patch: alert <event> on <site>` (labelled `human`) and emails
   `ALERT_EMAILS` the details (`crates/server/README.md`, Alerts). Read the event in the Worker's logs
   (Workers & Pages -> the Worker -> Logs), and close the issue once it is handled, so the next one emails

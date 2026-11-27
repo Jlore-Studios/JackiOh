@@ -9,11 +9,11 @@
 # boot (the bot pool's refresh, R3049002), so a slow first answer followed by a quick second is the server
 # warming. Two failures in a row mean the page is broken.
 #
-# deploy-staging.yml and promote-production.yml run it once their server reports the deployed commit, and
-# stats-check.yml runs it against both sites on a schedule, because a site can break between deploys as its
-# statistics grow: production did on 2026-11-27, on a commit deployed the day before (#5174). Staging's
-# site is behind Cloudflare Access, which lets a request through with an Access service token's two
-# headers. A refusal from Access fails at once.
+# deploy-staging.yml and promote-production.yml run it once their server reports the deployed commit,
+# while the deploy has the container awake, so the check wakes nothing and adds no container time (no
+# schedule runs it for that reason; staging redeploys whenever main has moved, as often as every two
+# hours). Staging's site is behind Cloudflare Access, which lets a request through with an Access service
+# token's two headers. A refusal from Access fails at once.
 name: check the card statistics load
 description: GET a site's /api/stats/cards?mode=all and fail unless it answers 200 with cards within the client's timeout
 inputs:

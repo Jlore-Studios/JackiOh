@@ -84,7 +84,6 @@ var Workflows = map[string]string{
 	"spec-fold.yml":          "folds the pending §11 paragraphs and rewrites the rulings index once a day",
 	"squishy-commands.yml":   "Squishy's ears and its sweep",
 	"squishy-run.yml":        "Squishy: gate, plan, `work` on its own Claude account, deliver",
-	"stats-check.yml":        "every three hours: an issue while either site's /stats does not load its card statistics",
 	"super.yml":              "the daily super run, on staging: 10,000 fuzz seeds, the full gates, every e2e spec, the db",
 	"sweep.yml":              "sweeps the shadow bans again when the AI's generation moves",
 	"triage.yml":             "labels each new issue and pull request from fixed rules",
