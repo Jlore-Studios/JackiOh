@@ -21909,6 +21909,7 @@
       "run_id": "45928093484",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 625,
       "started_at": "2026-11-27T02:23:54Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -45075,9 +45076,33 @@
         "title": "Patch: deeper card stats, X6, Decisiveness on the Experimental tab's Running and Versions",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "168615aca8a937b4520a12f1e535504d26dcab58",
+        "issue": 5109,
+        "merged_at": "2026-11-27T06:06:35Z",
+        "n": 625,
+        "pr": 5147,
+        "queued_at": "2026-11-27T06:06:35Z",
+        "sha": "49b908bc47893c2a2cf4f9bc8371c42e587ddd9d",
+        "status": "queued",
+        "title": "Patch: an Embiggened version costs its normal price plus a premium, so every discount moves both prices alike",
+        "tries": 0
       }
     ],
-    "count": 624
+    "count": 625
   },
   "statistics": {
     "at": "2026-11-27T06:02:33Z"
