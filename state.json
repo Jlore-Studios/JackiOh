@@ -20393,23 +20393,25 @@
     },
     "5207": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-27T22:30:25Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "A person's open branch, `claude/eloquent-davinci-q0fric` (issue #5186, ruling R5186000), already holds the fix, and part of it is in `.github/actions/check-stats/action.yml`, which the bot may not change. A person must (1) confirm in run 46073848481's log which step failed, (2) add the cache-age fix in Step 2 to that branch, merge its pull request, then promote production with `/promote` on the issue labeled `production merge` once `_staging` carries it. A `redeploy` alone runs production's old check again and fails the same way."
+      },
       "asks": [],
-      "in_lane": true,
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-27T22:16:43Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-27T22:30:13Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "question": "A person's open branch, `claude/eloquent-davinci-q0fric` (issue #5186, ruling R5186000), already holds the fix, and part of it is in `.github/actions/check-stats/action.yml`, which the bot may not change. A person must (1) confirm in run 46073848481's log which step failed, (2) add the cache-age fix in Step 2 to that branch, merge its pull request, then promote production with `/promote` on the issue labeled `production merge` once `_staging` carries it. A `redeploy` alone runs production's old check again and fails the same way.",
       "run_id": "46075640411",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-27T22:16:43Z",
-      "stop_requested": false,
       "taken_asks": []
     },
     "5208": {
