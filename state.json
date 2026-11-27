@@ -21142,11 +21142,11 @@
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "45888536906",
+            "run": "45918516296",
             "tier": "strong"
           }
         ],
-        "sha": "be301a8f4f663666cdaeaa9dad3e6dc5c3ba8ca5",
+        "sha": "bede0539d54f392033596adb3198dbb2b7224a82",
         "tiers": {
           "claude": "strong"
         }
