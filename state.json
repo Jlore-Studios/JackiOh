@@ -45103,6 +45103,10 @@
       "5164": {
         "at": "2026-11-27T04:26:32Z",
         "why": "Confirmed on main: the ladder's only beaten cue is a `::marker` rule (`apps/web/src/assault/assault.css:50`) on rows that are `display: grid` (`:43-44`), so it draws nothing and \u00a716.7's \"those beaten today\u2026 marked\" (`spec/16-infinite-assault.md:115`) goes unmet; and `zh-CN.json` has no entry for the four Commanders at `crates/run/src/assault.json:53-57`, so `t(level.enemy)` (`DayScreen.tsx:102`, `"
+      },
+      "5171": {
+        "at": "2026-11-27T06:27:22Z",
+        "why": "Confirmed on main: four of the five live R4607000 tests play fork arms through `play_deal` (fork_screen.rs:1965, :2000) or a live `resume_save` with `late_fork` (:1875, :2040, :1845), and no assertion reads those arms, because `load_save` only counts them (:783), `identity_check` compares only the trunk hash and fork points (:873-895), and the finished-save test computes both of its tallies from t"
       }
     },
     "auto_approved": [
