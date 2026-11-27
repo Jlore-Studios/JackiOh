@@ -22200,13 +22200,12 @@
     "what": "suggestions (server) on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-27T02:45:35Z",
+    "at": "2026-11-27T02:53:51Z",
     "notes": [
-      "delivered build #5117 on claude-6 (run 45914834065): built",
-      "started review #5150 on claude-6 (run 45930384935)",
-      "started review #5094 on claude-6 (run 45930427985)",
-      "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "delivered review #5094 on claude-6 (run 45930427985): reviewed",
+      "delivered suggest on claude-1 (run 45929446805): interrupted",
+      "started suggest on claude-7 (run 45931165037)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22912,7 +22911,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T02:45:35Z",
+  "loop_tick": "2026-11-27T02:53:51Z",
   "machine_disk": {
     "issue": null,
     "reading": {
