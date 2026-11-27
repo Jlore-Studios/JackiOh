@@ -72,7 +72,7 @@ function counteredSide(player: "p1" | "p2", modifierCount: number): Parameters<t
     })),
     jade: 3,
     luck: 2,
-    woozy: 4,
+    tipsy: 4,
     marketCredits: 7,
   };
 }

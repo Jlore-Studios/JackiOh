@@ -263,7 +263,7 @@ function Card(props: CardProps): ReactElement {
   // The card in play: the unit's view when it is one, else the card's own. A back has no face at all.
   const shown = unit ?? card;
   // R3548001: the owner's-view-only Woozy blur of this card, from the unit's view when it is one.
-  const blur = unit?.woozyBlur ?? card?.woozyBlur ?? null;
+  const blur = unit?.tipsyBlur ?? card?.tipsyBlur ?? null;
   // #3478: the face memoized on the view object, the definition, the live facts and the language.
   const model: FaceModel = useLiveFace(info, shown, {
     ...(props.type === undefined ? {} : { type: props.type }),

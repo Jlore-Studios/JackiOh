@@ -628,9 +628,9 @@ fn r3548004_x_is_still_chosen_out_of_held_mana() {
     assert_eq!(legal_x_values(s.state(), P1, &spell), (1..=5).collect::<Vec<_>>());
 }
 
-// R5181000: Woozy was called Tipsy. The shipped snapshots and the counter's older reports spell the old
-// name, which reads as the new one and is never written; the state keeps the old name's keys, so a game
-// filed before the rename hashes as it was filed.
+// R5181000: Woozy was called Tipsy. The shipped snapshots spell the keyword's old name, which reads as
+// the new one and is never written; the state, the views and the counter's reports keep the old name's
+// keys, so a game filed before the rename hashes as it was filed and a view is what it was.
 mod r5181000_the_old_name_reads_as_woozy {
     use super::*;
 
@@ -646,10 +646,10 @@ mod r5181000_the_old_name_reads_as_woozy {
         let kind: KeywordKind = serde_json::from_value(json!("Tipsy")).expect("the old kind reads");
         assert_eq!(kind, KeywordKind::Woozy);
         assert_eq!(kind.as_str(), "Woozy");
-        let counter: CounterKind =
-            serde_json::from_value(json!("tipsy")).expect("the old counter kind reads");
+        // The counter's kind on `counterChanged` is sent as it was, like the state's and the views' keys.
+        let counter: CounterKind = serde_json::from_value(json!("tipsy")).expect("the counter kind reads");
         assert_eq!(counter, CounterKind::Woozy);
-        assert_eq!(serde_json::to_value(counter).expect("writes"), json!("woozy"));
+        assert_eq!(serde_json::to_value(counter).expect("writes"), json!("tipsy"));
     }
 
     #[test]
@@ -680,5 +680,11 @@ mod r5181000_the_old_name_reads_as_woozy {
         assert_eq!(stored.players[P1].woozy, s.state().players[P1].woozy);
         assert_eq!(hash_state(&stored), hash_state(s.state()));
         assert_eq!(WOOZY_BLUR_STREAM, ":tipsy-blur");
+        // Both seats' views send the counter under the old name too.
+        for (viewer, seat) in [(P1, "you"), (P2, "opponent")] {
+            let view = serde_json::to_value(s.view(viewer)).expect("the view serializes");
+            assert_eq!(view[seat]["tipsy"], json!(2), "{viewer:?}");
+            assert!(view[seat].get("woozy").is_none(), "{viewer:?}");
+        }
     }
 }

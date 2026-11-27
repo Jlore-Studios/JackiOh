@@ -3,4 +3,4 @@
 /**
  * `counterChanged.counter`.
  */
-export type CounterKind = "plague" | "grade" | "brittle" | "burn" | "toxic" | "woozy" | "warhero";
+export type CounterKind = "plague" | "grade" | "brittle" | "burn" | "toxic" | "tipsy" | "warhero";

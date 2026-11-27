@@ -100,7 +100,7 @@ function counteredView(): View {
       ...base.you,
       jade: 3,
       luck: 2,
-      woozy: 4,
+      tipsy: 4,
       marketCredits: 7,
       hero: { ...base.you.hero, burn: 6, toxic: 2 },
       modifiers: [...base.you.modifiers, extra(1)],
@@ -109,7 +109,7 @@ function counteredView(): View {
       ...base.opponent,
       jade: 2,
       luck: 1,
-      woozy: 1,
+      tipsy: 1,
       marketCredits: 2,
       // #4270: the portrait draws Armor only above 0 (`Portrait.tsx`) and `fullBoardView()`'s opponent has none, while the test lists `.hero-armor` for both seats.
       hero: { ...base.opponent.hero, armor: 1, burn: 1, toxic: 3 },

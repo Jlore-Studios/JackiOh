@@ -73,9 +73,10 @@ reserved: RowFlags, fatigueCount: number,
 jade?: number, 
 /**
  * R3548000: this seat's Woozy counter, shown to both seats beside its hero. Absent at none,
- * so a game without one sends the view it always did.
+ * so a game without one sends the view it always did. Sent as `tipsy`, the keyword's old name,
+ * so the view is what it was before the rename (R5181000).
  */
-woozy?: number, 
+tipsy?: number, 
 /**
  * R3548004: while a card giving infinite mana acts on this seat's field, its mana is not spent
  * by paying costs, and the tray shows infinity. Public on both seats; absent otherwise. Only

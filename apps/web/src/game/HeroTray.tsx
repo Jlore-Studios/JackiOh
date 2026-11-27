@@ -107,7 +107,7 @@ export default function HeroTray({
   if ((seat.luck ?? 0) > 0) counters.push({ kind: "luck", value: seat.luck ?? 0 });
   if ((seat.hero.burn ?? 0) > 0) counters.push({ kind: "burn", value: seat.hero.burn ?? 0 });
   if ((seat.hero.toxic ?? 0) > 0) counters.push({ kind: "toxic", value: seat.hero.toxic ?? 0 });
-  if ((seat.woozy ?? 0) > 0) counters.push({ kind: "woozy", value: seat.woozy ?? 0 });
+  if ((seat.tipsy ?? 0) > 0) counters.push({ kind: "woozy", value: seat.tipsy ?? 0 });
 
   const entries: TrayEntry[] = [
     ...modifiers.map((modifier): TrayEntry => ({ kind: "modifier", modifier })),

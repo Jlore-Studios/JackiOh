@@ -15,8 +15,8 @@ afterEach(() => {
 describe("R3548000 the Woozy stein", () => {
   it("R3548000 the stein shows the count on either seat above 0, and nothing at none", () => {
     const view = baseView({
-      you: emptySide("p1", { woozy: 4 }),
-      opponent: emptySide("p2", { woozy: 2 }),
+      you: emptySide("p1", { tipsy: 4 }),
+      opponent: emptySide("p2", { tipsy: 2 }),
     });
     for (const side of ["you", "opponent"] as const) {
       const { unmount } = render(withCatalog(<Hero view={view} side={side} />));
@@ -42,7 +42,7 @@ describe("R3548001 the Woozy blur", () => {
   it("R3548001 a cost blur marks the root", () => {
     const board = renderBoard(
       baseView({
-        you: emptySide("p1", { units: [unit("p1", { woozyBlur: { kind: "cost" } }), null, null, null, null] }),
+        you: emptySide("p1", { units: [unit("p1", { tipsyBlur: { kind: "cost" } }), null, null, null, null] }),
       }),
     );
     expect(board.querySelector('[data-woozy-blur="cost"]')).not.toBeNull();
@@ -51,7 +51,7 @@ describe("R3548001 the Woozy blur", () => {
   it("R3548001 a name blur wraps one word", () => {
     const board = renderBoard(
       baseView({
-        you: emptySide("p1", { units: [unit("p1", { woozyBlur: { kind: "name", word: 1 } }), null, null, null, null] }),
+        you: emptySide("p1", { units: [unit("p1", { tipsyBlur: { kind: "name", word: 1 } }), null, null, null, null] }),
       }),
     );
     const name = board.querySelector(".card-name")?.textContent ?? "";
@@ -66,7 +66,7 @@ describe("R3548001 the Woozy blur", () => {
       baseView({
         you: emptySide("p1", {
           units: [
-            unit("p1", { keywords: [{ kind: "Taunt" }], woozyBlur: { kind: "keyword", keyword: "Taunt" } }),
+            unit("p1", { keywords: [{ kind: "Taunt" }], tipsyBlur: { kind: "keyword", keyword: "Taunt" } }),
             null,
             null,
             null,

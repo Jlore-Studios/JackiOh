@@ -273,7 +273,7 @@ export default function Hero(props: HeroProps): ReactElement {
           jade={seat.jade}
           burn={hero.burn}
           toxic={hero.toxic}
-          woozy={seat.woozy}
+          woozy={seat.tipsy}
           marketCredits={seat.marketCredits}
           menu={menu}
           hand={emotes.hand}

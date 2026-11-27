@@ -219,7 +219,7 @@ describe("#2877 hero plates keep one size however many effects they carry", () =
         riftExtraTurn: true as const,
         jade: 3,
         luck: 2,
-        woozy: 4,
+        tipsy: 4,
       },
       opponent: {
         ...base.opponent,
@@ -229,7 +229,7 @@ describe("#2877 hero plates keep one size however many effects they carry", () =
         riftExtraTurn: true as const,
         jade: 3,
         luck: 2,
-        woozy: 4,
+        tipsy: 4,
       },
     };
   }

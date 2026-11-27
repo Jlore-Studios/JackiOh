@@ -140,8 +140,10 @@ tallies?: Array<TallyView>,
 /**
  * R3548001: what of this Unit the owner's Woozy stamp blurs on their view alone, or nothing.
  * Never on the opponent's view of it.
+ * Sent as `tipsyBlur`, the keyword's old name, so the view is what it was before the rename
+ * (R5181000).
  */
-woozyBlur?: WoozyBlur, 
+tipsyBlur?: WoozyBlur, 
 /**
  * R3554007: the shared damage chain this Unit is in, on both seats. Absent otherwise (D14).
  */
