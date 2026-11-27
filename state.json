@@ -22331,13 +22331,9 @@
     "what": "plan #5166 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-27T05:10:26Z",
+    "at": "2026-11-27T05:18:24Z",
     "notes": [
-      "#5156 waits: 3 approved themselves in the last day already",
-      "delivered review #5165 on claude-6 (run 45943565052): reviewed",
-      "started plan #5166 on claude-6 (run 45944371465)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "#5156 waits: 3 approved themselves in the last day already"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -23043,7 +23039,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T05:10:26Z",
+  "loop_tick": "2026-11-27T05:18:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
