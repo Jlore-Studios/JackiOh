@@ -45312,7 +45312,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 47,
+    "loc": 53,
     "base": {
       "keywords": [],
       "text": "Summon copies of the three most expensive friendly Units that died this game."

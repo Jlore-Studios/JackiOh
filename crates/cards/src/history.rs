@@ -51,6 +51,7 @@ use crate::scripts::core::{
     c080_zao_gao, c081_radiant_saintess, c083_transmogulate, c084_going_long,
     c085_unlicensed_experimentation, c089_corpse_eater, c098_heroic_power,
 };
+use crate::scripts::infinite_assault::c224_rollback_point;
 use crate::scripts::meditative::{
     c001_disruptive_disruptor, c005_death_by_1000_cuts, c007_introspection, c009_joint_filing,
     c010_double_counting, c017_true_craft_a_card, c018_expedition12, c019_1_temporal_rift,
@@ -131,7 +132,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R4424000), #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
 /// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price),
 /// #4666 (R4666000), #4844 (R656's help aims on eight buff Spells' targets), #4828 (R4828000), #5048
-/// (R5048000), #4991 (R4991000) and #5106 (R5106000).
+/// (R5048000), #4991 (R4991000), #5106 (R5106000) and #5158 (R4594005).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 /// R4779000: a row's key is that version, or `"fragment:<stem>"` (`FRAGMENT_KEY`), the stem of the
 /// pending fragment that ships the change, which `resolve_kept_key` reads as the version just before
@@ -1596,6 +1597,14 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c176_preemptive_strike::ID,
         "fragment:starfleet-commander-and-preemptive-strike-still-discover-a",
         c176_preemptive_strike::script_before_launch_read_once,
+    ),
+    // #5158 (R4594005): Rollback Point's Radiant face summoned its copies Radiant, before they came back on
+    // their printed face (R4779000: keyed by the pending fragment, so versions shipped while the branch
+    // waits stay covered).
+    (
+        c224_rollback_point::ID,
+        "fragment:radiant-rollback-point-brings-its-units-back-on-their",
+        c224_rollback_point::script_before_printed_face,
     ),
 ];
 
