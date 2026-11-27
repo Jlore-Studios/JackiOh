@@ -22245,10 +22245,14 @@
     "what": "suggestions (tests) on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-27T05:31:01Z",
+    "at": "2026-11-27T05:38:04Z",
     "notes": [
       "#5156 waits: 3 approved themselves in the last day already",
-      "delivered revise #5144 on agy (run 45941017554): approved"
+      "delivered review #5147 on claude-7 (run 45928093484): approved",
+      "started suggest on claude-7 (run 45947138352)",
+      "started suggest on claude-3 (run 45947191393)",
+      "nothing more to start: nothing is queued",
+      "pruned 4 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22954,7 +22958,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T05:31:01Z",
+  "loop_tick": "2026-11-27T05:38:04Z",
   "machine_disk": {
     "issue": null,
     "reading": {
