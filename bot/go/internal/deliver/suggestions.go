@@ -99,16 +99,20 @@ func (x *Deliverer) Suggestions() {
 			if why != "" {
 				why = ": " + strings.TrimRight(why, ".")
 			}
+			// `per_day` 0 caps none, so the footer names a cap only when there is one.
+			capped := ""
+			if auto.PerDay > 0 {
+				capped = fmt.Sprintf(" (at most %d a day; one past that waits for room)", auto.PerDay)
+			}
 			if approve && auto.WaitHours == 0 {
 				footer += fmt.Sprintf("\n\n**Judge:** would approve it%s, so it is approved by itself as it opens, "+
-					"at `priority:low` (at most %d a day; one past that waits for room). `%s stop` takes it "+
-					"back out of the queue.", why, auto.PerDay, config.Slash)
+					"at `priority:low`%s. `%s stop` takes it back out of the queue.", why, capped, config.Slash)
 			} else if approve {
 				due := x.Ctx.Now().Add(time.Duration(auto.WaitHours) * time.Hour)
 				footer += fmt.Sprintf("\n\n**Judge:** would approve it%s. With no vote, no comment and no 👎 on "+
-					"this issue by %s, it is approved by itself at `priority:low` (at most %d a day); "+
+					"this issue by %s, it is approved by itself at `priority:low`%s; "+
 					"comment `reject`, or anything at all, to decide it yourself.", why,
-					planmod.DecisionClock(x.Ctx, due), auto.PerDay)
+					planmod.DecisionClock(x.Ctx, due), capped)
 			} else {
 				footer += fmt.Sprintf("\n\n**Judge:** leaves it to a person%s.", why)
 			}

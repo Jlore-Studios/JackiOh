@@ -46,7 +46,7 @@
     "auto_approve": {
       "enabled": true,
       "wait_hours": 0,
-      "per_day": 3,
+      "per_day": 0,
       "window": 100
     },
     "priorities": {
