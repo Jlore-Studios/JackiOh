@@ -45584,6 +45584,7 @@
       {
         "at": "2026-11-27T20:35:22Z",
         "number": 5158,
+        "reason": "confirmed. A rules bug on a shipped card. `c224_rollback_point.rs:57` passes the card's own face as each summon's `radiant`, so a Radiant Rollback Point brings its three Units back Radiant, with doubled stats and stronger text. Its text, its header comment, \u00a78.13 row 224 and R4594005 all say \"a fresh copy on its printed face \u2026 with Rush on the Radiant face\". A Fine-Tuned level-10 Commander reaches it, and the fix keeps the old script for replays.",
         "title": "Patch: Radiant Rollback Point brings its Units back on their printed face, with Rush, not Radiant",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
