@@ -20157,15 +20157,8 @@
       "stop_requested": false
     },
     "5190": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46070739375",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-27T21:43:28Z",
-        "until": "2026-11-27T22:13:28Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20177,10 +20170,9 @@
         "reason": "planned on sonnet",
         "trail": "40p card-audio.json5\"}\n- Bash: {\"command\": \"sed -n 140,260p card-audio.json5; sed -n 1,140p sfx.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; git log --oneline -3 -- apps/web/src/audio/sfx.ts; grep -rIl \\\"gzipSync\\\\|zlib\\\\|gzip\\\" apps/web --include=*.ts --include=*.mjs --include=*.jso\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; grep -rn \\\"venomDrip\\\" --include=* -I . --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git -l | head -20; grep -n \\\"venomDrip\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; sed -n 1,60p apps/web/src/net/first-load.test.ts; sed -n 570,600p apps/web/src/net/first-load.test.ts; grep -n \\\"venomDrip\\\\|moltenSnarl\\\" -B3 \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; sed -n 60,130p apps/web/src/audio/sfx.test.ts; sed -n 130,330p apps/web/src/audio/sfx.test.ts | grep -n \\\"describe\\\\|it(\\\\|it.each\\\" | head -40\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; sed -n 296,330p apps/web/src/audio/sfx.test.ts; sed -n 330,560p apps/web/src/audio/sfx.test.ts | grep -n \\\"describe(\\\\| it(\\\\|it.each\\\" ; sed -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; grep -rn \\\"effects)\\\\|\\\\.effects\\\\b\\\\|76\\\\b\\\" apps/web/src/audio/*.test.ts | grep -v \\\"^apps/web/src/audio/sfx\\\" | head -20; grep -n \\\"10.11\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; ls crates/cards/src/scripts; ls crates/cards/src/scripts/core | head -5; ls crates/cards/src/scripts/*/ | wc -l; ls crates/engine/src/effects/;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; python3 -I - <<'E'\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nprint(type(c), list(c)[:5] if isinstance(c,dict) else c[0])\\nc\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; python3 -I - <<'E'\\nimport json,re,glob,collections\\nc=json.load(open('crates/cards/catalog.json'))\\nk=list(c)[4]; print(json.dumps(c[k])[:600]\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; python3 -I - <<'E'\\nimport json,re,glob,collections\\nc=json.load(open('crates/cards/catalog.json'))\\nfile={}\\nfor f in glob.glob('crates/cards/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; grep -rn \\\"unused\\\\|never used\\\\|every effect\\\" apps/web/src/audio/*.test.ts crates/tools/tests/*.rs 2>/dev/null | head; ls docs/polish 2>/dev/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; sed -n 700,760p apps/web/src/audio/sfx.test.ts; grep -n \\\"effects\\\" apps/web/src/audio/voiceData.test.ts | sed -n 1,12p; grep -n \\\"bank\\\\|effec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; grep -n \\\"^const spell\\\\b\\\\|^const burn\\\\b\\\\|^const castOnDraw\\\\|^const heal\\\\b\\\\|^const whoosh\\\\b\\\" apps/web/src/audio/sfx.ts; grep -n \\\"^cons\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; sed -n 495,550p apps/web/src/audio/voice-lines.test.ts; sed -n 670,760p apps/web/src/audio/sfx.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; grep -n \\\"timbre\\\\|amount\\\\|release\\\" apps/web/src/audio/voiceData.ts | head -30; ls apps/web/src/audio/test; sed -n 330,360p e2e/cypress/compo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; grep -rn \\\"mythic\\\" apps/web/src/audio/*.ts | grep -v \\\"test\\\\|sfx.ts\\\\|types.ts\\\" | head; sed -n 117,178p apps/web/src/audio/types.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; sed -n 95,200p apps/web/src/audio/soundTables.ts; grep -n \\\"params\\\" apps/web/src/audio/voiceData.test.ts | head -12; sed -n 150,175p apps/web/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; grep -n \\\"^import\\\" apps/web/src/audio/soundTables.ts; sed -n 274,290p apps/web/src/audio/sfx.ts; sed -n 200,262p apps/web/src/audio/sfx.ts; se\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web; ls node_modules | head -30; ls node_modules/.bin | grep -i \\\"esbuild\\\\|vite\\\\|rolldown\\\"; grep -n '\\\"esbuild\\\"\\\\|\\\"vite\\\"\\\\|\\\"vitest\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; ls node_modules 2>/dev/null | head -3; ls ../ | head; grep -n \\\"B57\\\" apps/web/src/audio/*.test.ts | head -5; grep -n \\\"dist\\\\|build\\\" apps/web\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; sed -n 76,200p apps/web/src/net/first-load.test.ts; grep -n \\\"gzip\\\\|GZIP\\\" apps/web/src/net/first-load.test.ts | sed -n 1,40p; grep -rn \\\"pret\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; sed -n 520,570p apps/web/src/net/first-load.test.ts; grep -n \\\"function entryAndPreloads\\\" -A25 apps/web/src/net/first-load.test.ts | head -40\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; grep -rn \\\"Record<SfxId\\\\|in SfxId\\\\|SFX_IDS\\\" apps e2e --include=*.ts --include=*.tsx --include=*.mjs -l | grep -v node_modules; sed -n 100,13\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web/src/audio; grep -n \\\"SFX_IDS\\\" cues.test.ts signatureBeds.test.ts engine.test.ts setPieceBeds.test.ts signatureCues.test.ts voiceData.t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; python3 -I - <<'E'\\nimport json,collections\\nc=json.load(open('crates/cards/catalog.json'))\\nt=collections.Counter()\\nfor v in c.values():\\n if\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; grep -h \\\"^pub fn\\\" crates/engine/src/effects/reveal.rs crates/engine/src/effects/locks.rs crates/engine/src/effects/copy_text.rs crates/engine\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5190/.bot-plan.md\", \"content\": \"DRAFT NOTE (planner): read apps/web/src/audio/{sfx.ts,types.ts,soundTables.ts,voice-lines.test.ts,sfx.test.ts,sfxGraph\u2026\n- said: ## Goal Give the client a verb-keyed effects bank that the card parts can build Spell, Field Spell, Trap and Field Trap sounds from. Nine new procedural recipes in `apps/web/src/audio/sfx.ts` fill the gaps. About 47 new bank entries in `card-audio.json5` give every verb a wind-up, a release and a t\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-27T21:30:22Z",
       "owner_why": "it plans it",
@@ -20193,9 +20185,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-27T21:27:07Z",
       "requested_by": "jgoetzmann",
-      "run_id": "46070739375",
+      "run_id": "pending:c918e6f9-1795815879",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-27T21:30:22Z",
+      "started_at": "2026-11-27T21:44:57Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -20384,9 +20376,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T21:30:22Z",
+    "at": "2026-11-27T21:44:57Z",
     "url": "",
-    "what": "plan #5190 on claude-8"
+    "what": "build #5190 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-27T21:36:37Z",
