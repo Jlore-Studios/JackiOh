@@ -22159,6 +22159,13 @@
     "5166": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45961058645",
+        "model": "opus",
+        "provider": "claude-6",
+        "since": "2026-11-27T07:55:49Z",
+        "until": "2026-11-27T08:25:49Z"
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-27T07:46:01Z",
