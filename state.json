@@ -45642,6 +45642,7 @@
       {
         "at": "2026-11-27T20:35:42Z",
         "number": 5171,
+        "reason": "a measured CI saving, plus a check that can't fail fixed. Five r4607000 tests play about 104 AI games per run to build save files, and no assertion reads 96 of them. They add 186 s of the 587 s `jackioh` share of `rust (test tools, wasm)`, a group that has run past 10 minutes three times and sits at its shard limit. The same file already took this route twice (#4690's hand-written keepers), the live writer stays covered by its two daily tests, and every test keeps its name and assertions.",
         "title": "Patch: the fork screen's save and resume tests stop playing the 96 rollout games no assertion reads",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
