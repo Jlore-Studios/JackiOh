@@ -44949,7 +44949,12 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {},
+    "auto": {
+      "5154": {
+        "at": "2026-11-27T03:09:45Z",
+        "why": "Confirmed: four merged PRs in four days (#4545, #4962, #4897, #5029; their squash bodies say 'TEMPORARY: trace the step behind every fuzz failure and an I14 branch's events', 'dump fuzz seed 164's I21 step', 'replays fuzz seeds 7360 and 13680 with their failing steps dumped') each built and then deleted the same trace, because `play_game_with_options` drops the failing step's events when it return"
+      }
+    },
     "auto_approved": [
       "2026-11-26T23:19:32Z",
       "2026-11-27T03:08:24Z"
