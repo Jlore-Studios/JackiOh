@@ -368,6 +368,12 @@ describe("R655 parseCardAudio's shape errors", () => {
     expect(parseError(fixture())).toBe("(no error)");
   });
 
+  it("#5190 accepts an element a recipe knows", () => {
+    const table = fixture();
+    table.effects.thud = { sfx: "elementBolt", params: { element: "fire" } };
+    expect(parseError(table)).toBe("(no error)");
+  });
+
   it("R655 names a voice the bank does not hold", () => {
     expectError((t) => {
       t.cards["core-004"] = { play: { voice: "x", text: "Hi." } };
@@ -444,6 +450,9 @@ describe("R655 parseCardAudio's shape errors", () => {
     expectError((t) => {
       t.effects.thud = { sfx: "summon", params: { timbre: "robot" } };
     }, 'effects.thud.params.timbre: unknown timbre "robot" (expected one of human, felinor, ky, cn, fruit, chaos, quickdraw, token, field, book, pancake, ai)');
+    expectError((t) => {
+      t.effects.thud = { sfx: "elementBolt", params: { element: "lava" } };
+    }, 'effects.thud.params.element: unknown element "lava" (expected one of fire, frost, lightning, arcane, shadow, poison, holy, physical)');
   });
 
   it("R655 names a field no part of the file allows", () => {
@@ -455,7 +464,7 @@ describe("R655 parseCardAudio's shape errors", () => {
     }, "effects.thud.volume: unknown field (expected sfx, pitch, gain, params)");
     expectError((t) => {
       t.effects.thud = { sfx: "impact", params: { loud: true } };
-    }, "effects.thud.params.loud: unknown field (expected amount, mine, timbre, mythic, urgent, release)");
+    }, "effects.thud.params.loud: unknown field (expected amount, mine, timbre, element, mythic, urgent, release)");
     expectError((t) => {
       t.voices.hustler = { ...SAY, semitones: 2 };
     }, "voices.hustler.semitones: unknown field (expected backend, say, rate, pbas, pmod, web, gain)");
