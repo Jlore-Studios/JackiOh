@@ -123,7 +123,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `MEDIUM_EXTRA_DECK_CARDS` / `HARD_EXTRA_DECK_CARDS` | 5 / 10: the cards a Medium and a Hard AI seat's deck holds past `DECK_SIZE` | §9.9, R1705000 |
 | `MAX_COPIES` | 1 | §2.6, §9.4 |
 | `MAX_MANA` | 4 | §2.3 |
-| `MANA_CEILING` | 15: the most mana a player holds, current or maximum, temporary mana included, and the most X a card chooses or counts; costs are not capped | §2.3, R5148000 |
+| `MANA_CEILING` | 15: the most mana a player holds, current or maximum, temporary mana included, and the most X an X-cost card chooses or counts; costs are not capped | §2.3, R5148000 |
 | `HERO_HEALTH` | 30 | §2 |
 | `TURN_CAP_PLAYER_TURNS` | 60 | §2.5, R2, R389 |
 | `HAND_CAP` | 10 | §2.4, R4 (decide) |

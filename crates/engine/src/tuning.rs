@@ -13,7 +13,7 @@
 
 use indexmap::IndexMap;
 
-use crate::config::{MANA_CEILING, TUNE_MIN_AMOUNT};
+use crate::config::TUNE_MIN_AMOUNT;
 use crate::state::CardInstance;
 use crate::wire::{Keyword, KeywordKind, Tuning};
 
@@ -62,12 +62,12 @@ pub fn tuned_count_with_min(instance: &CardInstance, key: &str, printed: i32, mi
 
 /// B2.7, B3.4: the X an X-cost card counts on the field and as it resolves, moved by its X steps,
 /// never below 1 (R348), and 0 with no chosen X (a Recruit, a copy), as R65 reads its cost off the field.
-/// R1848003: a card whose X is set (`fixed_x`) counts that X wherever no play chose one.
-/// R5148000: never above `MANA_CEILING`, its X steps included.
+/// R1848003: a card whose X is set (`fixed_x`) counts that X wherever no play chose one. An X-cost
+/// card's is read at most `MANA_CEILING` (`mana::counted_x`, R5148000).
 pub fn x_of(instance: &CardInstance) -> i32 {
     match instance.x.or(instance.fixed_x) {
         None => 0,
-        Some(x) => tuned_count(instance, X_KEY, x).min(MANA_CEILING),
+        Some(x) => tuned_count(instance, X_KEY, x),
     }
 }
 

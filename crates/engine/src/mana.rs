@@ -325,6 +325,18 @@ pub fn is_x_cost(state: &GameState, instance: &CardInstance) -> bool {
     def_of(Some(state), &instance.def_id).cost == CardCost::X
 }
 
+/// R5148000: the X a card counts on the field and as it resolves (`tuning::x_of`, its X steps
+/// included), an X-cost card's at most `MANA_CEILING`. An X that is no price is not mana and is not
+/// capped: the X/X a summoner sets from a count (M+ #20.1 Lil' Kenny's right answers).
+pub fn counted_x(state: &GameState, instance: &CardInstance) -> i32 {
+    let x = crate::tuning::x_of(instance);
+    if is_x_cost(state, instance) {
+        x.min(MANA_CEILING)
+    } else {
+        x
+    }
+}
+
 /// R48: a modifier for a player's *next* turn (#77: "during **your** next turn") is live only once that
 /// player is active on a later turn, not on the turn it was made nor the opponent's between. Expiry
 /// ends it at that turn's cleanup, a separate question.

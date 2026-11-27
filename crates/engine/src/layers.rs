@@ -7,7 +7,7 @@ use crate::catalog::def_of;
 use crate::config::{BACKROW_ZONES, FIENDER_STATS_MODE, RADIANT_FALLBACK_FACTOR, UNIT_ZONES};
 use crate::script::{AuraEntry, AuraHook, HookArgs, StatMod};
 use crate::state::{CardInstance, GameState, ModifierKind, Position};
-use crate::tuning::{tuned_keywords, x_of};
+use crate::tuning::tuned_keywords;
 use crate::wire::{
     AttackHealth, CardDef, CardFace, CardType, Keyword, KeywordKind, PLAYER_IDS, PlayerId, Row, Tag, Zone,
     armor_of, has_keyword,
@@ -58,11 +58,12 @@ pub fn worn_stats_override(def: &CardDef, instance: &CardInstance) -> Option<Att
 }
 
 /// B2.7: a face that prints its stats as multiples of X (Classic+ #69 Buff Billy's "[3X/3X]") is those
-/// multiples of the X the card was played for, tuned (`tuning::x_of`), and 0/0 when it has none. A
-/// summon's `statsOverride` still wins, as it wins over any printed stats.
-fn x_stats_of(face: &CardFace, instance: &CardInstance) -> Option<AttackHealth> {
+/// multiples of the X the card was played for, tuned (`tuning::x_of`), and 0/0 when it has none; an
+/// X-cost card's X is read at most `MANA_CEILING` (`mana::counted_x`, R5148000). A summon's
+/// `statsOverride` still wins, as it wins over any printed stats.
+fn x_stats_of(state: &GameState, face: &CardFace, instance: &CardInstance) -> Option<AttackHealth> {
     let multiples = face.x_stats?;
-    let x = x_of(instance);
+    let x = crate::mana::counted_x(state, instance);
     Some(AttackHealth {
         attack: multiples.attack * x,
         health: multiples.health * x,
@@ -75,7 +76,7 @@ fn x_stats_of(face: &CardFace, instance: &CardInstance) -> Option<AttackHealth> 
 pub fn face_of(state: &GameState, instance: &CardInstance) -> FaceStats {
     let def = def_of(Some(state), &instance.def_id);
     let face = if instance.radiant { &def.radiant } else { &def.base };
-    let stats = worn_stats_override(def, instance).or_else(|| x_stats_of(face, instance));
+    let stats = worn_stats_override(def, instance).or_else(|| x_stats_of(state, face, instance));
     let keywords = tuned_keywords(&printed_keywords_of(state, instance), instance);
     let tuning_attack = instance
         .tuning
