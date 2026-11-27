@@ -20684,6 +20684,7 @@
       "run_id": "46079584932",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 630,
       "started_at": "2026-11-27T22:56:09Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -43635,9 +43636,33 @@
         "title": "Patch: an Embiggened version costs its normal price plus a premium, so every discount moves both prices alike",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "51b68e85d4b6555846eb1c5b7b3b2a67a85adc46",
+        "issue": 5190,
+        "merged_at": "2026-11-27T23:39:48Z",
+        "n": 630,
+        "pr": 5213,
+        "queued_at": "2026-11-27T23:39:48Z",
+        "sha": "6190f42276b26abf99956b93c03d6dbb1bef3635",
+        "status": "queued",
+        "title": "Patch: spell sound effects: new procedural recipes and effects-bank entries for what Spells, Field Spells and Traps do",
+        "tries": 0
       }
     ],
-    "count": 629
+    "count": 630
   },
   "statistics": {
     "at": "2026-11-27T23:31:48Z"
