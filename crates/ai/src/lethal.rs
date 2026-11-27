@@ -416,10 +416,10 @@ fn next_open(open: &[Open], branches: &[Branch], keep_attacks: bool) -> usize {
 /// Stage 2: best-first by `ready_gap`, each expansion simulating its first AI_SEARCH.lethalWidth moves.
 /// R5119000: a child whose dive at gaps no closer than its parent's has tried more than
 /// `AI_SEARCH.lethal_dive_moves` moves is set aside, and while the gap is above 0 the walk keeps its
-/// attackers ready (`next_open`). R4788000: `near` is the walk's allowance. Once it is spent the walk goes on only from a position whose
-/// ready attacks already reach lethal (`ready_gap` at or under 0), on `far`, which also pays for every
-/// proof of a line that won on determinization 0 (`find_lethal_reaching`). With `far` no wider than `near`
-/// the walk stops where `near` does.
+/// attackers ready (`next_open`). R4788000: `near` is the walk's allowance. Once it is spent the walk goes
+/// on only from a position whose ready attacks already reach lethal (`ready_gap` at or under 0), on
+/// `far`, which also pays for every proof of a line that won on determinization 0
+/// (`find_lethal_reaching`). With `far` no wider than `near` the walk stops where `near` does.
 fn best_first(
     dets: &[GameState],
     seat: PlayerId,
