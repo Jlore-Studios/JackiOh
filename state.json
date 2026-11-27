@@ -20885,9 +20885,13 @@
     "what": "review #5213 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-27T22:47:25Z",
+    "at": "2026-11-27T22:53:45Z",
     "notes": [
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
+      "delivered review #5211 on claude-7 (run 46077318113): approved",
+      "delivered build #5190 on claude-8 (run 46072291086): built",
+      "started review #5213 on claude-8 (run 46079584932)",
+      "nothing more to start: nothing is queued",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -21593,7 +21597,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T22:47:25Z",
+  "loop_tick": "2026-11-27T22:53:45Z",
   "machine_disk": {
     "issue": null,
     "reading": {
