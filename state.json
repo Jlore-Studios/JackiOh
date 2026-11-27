@@ -22335,9 +22335,10 @@
     "what": "review #5172 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-27T15:06:17Z",
+    "at": "2026-11-27T15:12:21Z",
     "notes": [
-      "#5156 waits: 3 approved themselves in the last day already"
+      "#5156 waits: 3 approved themselves in the last day already",
+      "#5172: approved and green, so its strikes are cleared"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -23043,7 +23044,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T15:06:17Z",
+  "loop_tick": "2026-11-27T15:12:21Z",
   "machine_disk": {
     "issue": null,
     "reading": {
