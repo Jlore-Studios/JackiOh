@@ -20375,9 +20375,12 @@
     "what": "plan #5161 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-27T21:59:22Z",
+    "at": "2026-11-27T22:05:41Z",
     "notes": [
-      "#5161 is held for `claude-1` until 16:00 (5-hour usage is 61%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+      "#5161: `claude-1` can start again, so its hold is lifted",
+      "started plan #5161 on claude-1 (run 46074567325)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -21083,7 +21086,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T21:59:22Z",
+  "loop_tick": "2026-11-27T22:05:41Z",
   "machine_disk": {
     "issue": null,
     "reading": {
