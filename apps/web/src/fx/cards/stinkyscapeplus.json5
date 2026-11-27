@@ -24,7 +24,7 @@
   "stinkyscapeplus-004-1": { cry: { motif: "vanish", palette: "Beast/felinor" } }, // Profe Yates Prime
   "stinkyscapeplus-005": { cry: { motif: "deal", palette: "Snack" } }, // Dingleberry Droat
   "stinkyscapeplus-006": { trigger: { motif: "send", palette: "Snack" } }, // Wines McCheese
-  "stinkyscapeplus-006-1": "none: token; its own play is its Tipsy, and its fusing a hand trigger no hookResolving marks", // Fine Fermented Grape
+  "stinkyscapeplus-006-1": "none: token; its own play is its Woozy, and its fusing a hand trigger no hookResolving marks", // Fine Fermented Grape
   "stinkyscapeplus-006-2": { cast: { motif: "conjure", palette: "Beast/swarm" }, aura: { look: "toxic", palette: "Beast/swarm", scope: "zone" } }, // Stinky Cheese
   "stinkyscapeplus-007": "none: its chain is standing state, which no event reports", // Churnwalker
   "stinkyscapeplus-008": { activate: { motif: "conjure", palette: "Tech/rocket" } }, // Drone Assembler v3

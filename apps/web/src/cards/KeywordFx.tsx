@@ -475,7 +475,7 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
     </Part>
   ),
 
-  Tipsy: () => (
+  Woozy: () => (
     <Part className="kw-glyph-art kw-stein" anim fit="contain">
       <path d="M62 34 H78 C90 34 90 70 74 70 H62" fill="none" stroke="#0b0d12" strokeWidth="9" strokeLinecap="round" />
       <path d="M62 34 H78 C90 34 90 70 74 70 H62" fill="none" stroke="#d9dde6" strokeWidth="4" strokeLinecap="round" />

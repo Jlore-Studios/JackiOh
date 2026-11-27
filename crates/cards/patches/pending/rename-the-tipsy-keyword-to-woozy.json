@@ -1,0 +1,22 @@
+{
+  "title": "Patch: rename the Tipsy keyword to Woozy",
+  "sources": "issue #5181",
+  "notes": "Issue #5181 (R5181000): the Stinkyscape+ keyword Tipsy X is renamed Woozy X (Chinese 晕乎 for 微醺), the name alone: the counter, its decay, the stamp and the blur stay R3548000's and R3548001's. C+ #65.1 Rotten Grape, S+ #6.1 Fine Fermented Grape and S+ T-AI-1 Hallucinated Kiwi print Woozy. The shipped snapshots keep printing Tipsy, which reads as Woozy, and the stored state keeps the old name's keys and the blur's seed stream, so a game filed before the rename replays to the hash and the blur it was filed with.",
+  "player": {
+    "title": "Tipsy is now Woozy",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "Tipsy is renamed Woozy. It works exactly as before: the counter, how it drops each turn and the blurred words are unchanged.",
+      "Rotten Grape, Fine Fermented Grape and Hallucinated Kiwi now say Woozy."
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "classicplus-065-1",
+    "stinkyscapeplus-006-1",
+    "stinkyscapeplus-t-ai-01"
+  ],
+  "visual": true
+}

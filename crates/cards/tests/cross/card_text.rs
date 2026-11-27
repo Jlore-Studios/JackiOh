@@ -374,7 +374,7 @@ const EXPECTED_ORDER: &[&str] = &[
     "Stack",
     "Flexible",
     "GIGA",
-    "Tipsy",
+    "Woozy",
     "Spell Damage",
     "Lucky",
     "Indestructible",

@@ -2042,7 +2042,7 @@ pub const KEYWORD_LINE_ORDER: &[KeywordKind] = &[
     KeywordKind::Stack,
     KeywordKind::Flexible,
     KeywordKind::Giga,
-    KeywordKind::Tipsy,
+    KeywordKind::Woozy,
     KeywordKind::SpellDamage,
     KeywordKind::Lucky,
     KeywordKind::Indestructible,

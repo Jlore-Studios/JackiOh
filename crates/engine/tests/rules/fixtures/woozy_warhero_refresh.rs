@@ -1,4 +1,4 @@
-//! Test-only cards for Stinkyscape+ E5 (issue #3548, R3548000–R3548004): Tipsy spells and units,
+//! Test-only cards for Stinkyscape+ E5 (issue #3548, R3548000–R3548004): Woozy spells and units,
 //! plain and priced units, an X Spell, the Warhero Token, Activate abilities with and without
 //! Refresh, and Field Spell and Unit cards giving infinite mana, so the engine never imports
 //! `crates/cards`. Ids are `e5-` from 35480, clear of every other fixture file's.
@@ -8,10 +8,10 @@ use jackioh_engine::testkit::*;
 
 use super::harness::both;
 
-/// A (0) Spell with Tipsy 2.
-pub const TIPSY_SPELL: &str = "e5-tipsy-spell";
-/// A (0) 1/1 Unit with Taunt and Tipsy 5.
-pub const TIPSY_UNIT: &str = "e5-tipsy-unit";
+/// A (0) Spell with Woozy 2.
+pub const WOOZY_SPELL: &str = "e5-woozy-spell";
+/// A (0) 1/1 Unit with Taunt and Woozy 5.
+pub const WOOZY_UNIT: &str = "e5-woozy-unit";
 /// A (0) 2/3 Unit with no text.
 pub const PLAIN: &str = "e5-plain";
 /// A (9) 1/1 Unit with no text.
@@ -155,7 +155,7 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
         .into_iter()
         .map(|(id, script)| (id.to_string(), both(script)))
         .collect();
-    for id in [TIPSY_SPELL, TIPSY_UNIT, PLAIN, EXPENSIVE, X_SPELL, WARHERO] {
+    for id in [WOOZY_SPELL, WOOZY_UNIT, PLAIN, EXPENSIVE, X_SPELL, WARHERO] {
         all.insert(id.to_string(), both(Script::default()));
     }
     all
@@ -165,18 +165,18 @@ pub fn defs() -> Vec<CardDef> {
     vec![
         card(
             35480,
-            TIPSY_SPELL,
+            WOOZY_SPELL,
             "Spell",
             None,
-            json!([{ "kind": "Tipsy", "n": 2 }]),
+            json!([{ "kind": "Woozy", "n": 2 }]),
             json!(0),
         ),
         card(
             35481,
-            TIPSY_UNIT,
+            WOOZY_UNIT,
             "Unit",
             Some((1, 1)),
-            json!([{ "kind": "Taunt" }, { "kind": "Tipsy", "n": 5 }]),
+            json!([{ "kind": "Taunt" }, { "kind": "Woozy", "n": 5 }]),
             json!(0),
         ),
         card(35482, PLAIN, "Unit", Some((2, 3)), json!([]), json!(0)),

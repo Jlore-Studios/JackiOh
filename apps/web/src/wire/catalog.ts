@@ -202,8 +202,8 @@ export type Keyword =
   | { kind: "Frenzy" }
   /** #3535: a Unit its attackers slip past. */
   | { kind: "Evasive" }
-  /** R373, R3548001: a Tipsy N stamp: N is the count that drops by 1 at its owner's Start of turn; its view blurs. */
-  | { kind: "Tipsy"; n: number };
+  /** R373, R3548001: a Woozy N stamp: N is the count that drops by 1 at its owner's Start of turn; its view blurs. */
+  | { kind: "Woozy"; n: number };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -249,7 +249,7 @@ export const KEYWORD_KINDS = [
   "Flexible",
   "Frenzy",
   "Evasive",
-  "Tipsy",
+  "Woozy",
 ] as const;
 
 /**

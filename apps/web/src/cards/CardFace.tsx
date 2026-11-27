@@ -143,7 +143,7 @@ import {
 import { breaksFrame, glareFor, hasDepth, useDepthMotion } from "./depth.ts";
 import { nameTier, overLimit, textTier, useFitText } from "./fit.ts";
 import { Icon } from "./icons.tsx";
-import { TipsyName } from "../game/tipsy.tsx";
+import { WoozyName } from "../game/woozy.tsx";
 import { isGlitch } from "./glitch.ts";
 import { GlitchBlob } from "./GlitchBlob.tsx";
 import { artMotionOf, boardLookOf, boardNameOf, showsFullArt, tierOfLook, useCardLook } from "./fullArt.ts";
@@ -683,7 +683,7 @@ function CardFace({
         </span>
 
         {bare ? (
-          <span className="cf-hand-name"><TipsyName name={face.name} /></span>
+          <span className="cf-hand-name"><WoozyName name={face.name} /></span>
         ) : showStaticName ? (
           <span
             className="card-name"
@@ -691,12 +691,12 @@ function CardFace({
             data-pixel-name={pixelName !== null ? "true" : undefined}
             style={pixelName !== null ? ({ "--cf-pixel-name": `url("${pixelName}")` } as CSSProperties) : undefined}
           >
-            <TipsyName name={face.name} />
+            <WoozyName name={face.name} />
           </span>
         ) : (
           // R3339000: transparent until hover or focus, and in the accessibility tree all the while: the name is read as it was.
           <span className="card-name card-name-hover" ref={nameRef}>
-            <TipsyName name={face.name} />
+            <WoozyName name={face.name} />
           </span>
         )}
 

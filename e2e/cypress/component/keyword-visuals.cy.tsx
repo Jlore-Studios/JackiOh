@@ -46,7 +46,7 @@ function keywordOf(kind: KeywordKind): Keyword {
     case "Spell Damage":
     case "Burn":
     case "Toxic":
-    case "Tipsy":
+    case "Woozy":
       return { kind, n: 2 };
     default:
       return { kind } as Keyword;

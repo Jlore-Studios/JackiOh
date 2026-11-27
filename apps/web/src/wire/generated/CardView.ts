@@ -9,8 +9,8 @@ import type { Keyword } from "./Keyword";
 import type { PreviewValue } from "./PreviewValue";
 import type { QuestView } from "./QuestView";
 import type { Tag } from "./Tag";
-import type { TipsyBlur } from "./TipsyBlur";
 import type { Tuning } from "./Tuning";
+import type { WoozyBlur } from "./WoozyBlur";
 
 export type CardView = { instanceId: string, defId: string, radiant: boolean, 
 /**
@@ -197,7 +197,7 @@ copies?: CopiedTextView,
  */
 fixedX?: number, 
 /**
- * R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
+ * R3548001: what of this card the owner's Woozy stamp blurs on their view alone, or nothing.
  * Never on the opponent's view of it.
  */
-tipsyBlur?: TipsyBlur, };
+woozyBlur?: WoozyBlur, };

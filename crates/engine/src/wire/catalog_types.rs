@@ -766,8 +766,10 @@ pub enum Keyword {
     Frenzy,
     /// R3535002: declared for SP3 E3. R3543002: "Can't be attacked" as a keyword, implying Can't Defend.
     Evasive,
-    /// R3535002: declared for SP3 E5; no rule yet.
-    Tipsy {
+    /// R3535002: declared for SP3 E5; R3548000: the Woozy counter. It was called Tipsy, and a shipped
+    /// snapshot's old name still reads as it (R5181000).
+    #[serde(alias = "Tipsy")]
+    Woozy {
         n: i32,
     },
 }
@@ -836,8 +838,9 @@ string_union! {
         Frenzy = "Frenzy",
         /// R3535002: declared for SP3 E3. R3543002: "Can't be attacked" as a keyword, implying Can't Defend.
         Evasive = "Evasive",
-        /// R3535002: declared for SP3 E5; no rule yet.
-        Tipsy = "Tipsy",
+        /// R3535002: declared for SP3 E5; the old name reads as it, never written (R5181000).
+        #[serde(alias = "Tipsy")]
+        Woozy = "Woozy",
     }
 }
 
@@ -900,7 +903,7 @@ impl Keyword {
             Keyword::Flexible => KeywordKind::Flexible,
             Keyword::Frenzy => KeywordKind::Frenzy,
             Keyword::Evasive => KeywordKind::Evasive,
-            Keyword::Tipsy { .. } => KeywordKind::Tipsy,
+            Keyword::Woozy { .. } => KeywordKind::Woozy,
         }
     }
 
@@ -916,7 +919,7 @@ impl Keyword {
             | Keyword::Brittle { n }
             | Keyword::Burn { n }
             | Keyword::Toxic { n }
-            | Keyword::Tipsy { n }
+            | Keyword::Woozy { n }
             | Keyword::SpellDamage { n } => Some(n),
             Keyword::Temporary { n } => n,
             _ => None,
@@ -971,7 +974,7 @@ impl Keyword {
             KeywordKind::Flexible => Keyword::Flexible,
             KeywordKind::Frenzy => Keyword::Frenzy,
             KeywordKind::Evasive => Keyword::Evasive,
-            KeywordKind::Tipsy => Keyword::Tipsy { n },
+            KeywordKind::Woozy => Keyword::Woozy { n },
         }
     }
 }
@@ -2104,10 +2107,10 @@ mod tests {
             Keyword::Flexible,
             Keyword::Frenzy,
             Keyword::Evasive,
-            Keyword::Tipsy { n: 1 },
+            Keyword::Woozy { n: 1 },
         ];
         let names = [
-            "Evolve", "Burn", "Toxic", "GIGA", "Flexible", "Frenzy", "Evasive", "Tipsy",
+            "Evolve", "Burn", "Toxic", "GIGA", "Flexible", "Frenzy", "Evasive", "Woozy",
         ];
         for (keyword, name) in kinds.iter().zip(names) {
             assert_eq!(keyword.kind().as_str(), name);
@@ -2118,7 +2121,7 @@ mod tests {
         }
         assert_eq!(Keyword::Burn { n: 2 }.n(), Some(2));
         assert_eq!(Keyword::Toxic { n: 3 }.n(), Some(3));
-        assert_eq!(Keyword::Tipsy { n: 1 }.n(), Some(1));
+        assert_eq!(Keyword::Woozy { n: 1 }.n(), Some(1));
         assert_eq!(Keyword::Evolve.n(), None);
         assert_eq!(Keyword::Giga.n(), None);
         for tag in [

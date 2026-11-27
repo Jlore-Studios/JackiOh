@@ -1,7 +1,7 @@
 // A hero portrait (issue §1, R641): the portrait's card drawn in `CardArt`'s `oval` shape
 // (`PortraitArt`, R1332), squashing and glinting as its menu or inspect view opens (R1331).
 // Only health and Armor badge here now (#4251): the Jade Counter and the Credits ride the oval's
-// top corners (`Hero.tsx`), R987's Luck and the Burn, Toxic and Tipsy counters the tray beside it.
+// top corners (`Hero.tsx`), R987's Luck and the Burn, Toxic and Woozy counters the tray beside it.
 // Presentation only: it lives inside the `hero-<side>` element, which keeps the testid, the
 // ClickTarget and every glow, highlight and damage shake.
 

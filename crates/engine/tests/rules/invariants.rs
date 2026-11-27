@@ -1277,24 +1277,24 @@ fn i16_a_hand_card_holding_giga_a_half_a_damage_chain_or_evolved_is_one_leftover
     }
 }
 
-/// R3548001: a card drawn while Tipsy is up is stamped before it reaches the hand and may carry the stamp
+/// R3548001: a card drawn while Woozy is up is stamped before it reaches the hand and may carry the stamp
 /// into a library, where nothing reads it; R78's reset takes it as the card leaves the field or reaches a
 /// graveyard or an exile pile.
 #[test]
-fn i16_a_hand_or_library_card_may_hold_a_tipsy_stamp_but_a_graveyard_or_exile_card_may_not() {
-    let stamp = TipsyStamp {
+fn i16_a_hand_or_library_card_may_hold_a_woozy_stamp_but_a_graveyard_or_exile_card_may_not() {
+    let stamp = WoozyStamp {
         player: P1,
         level: 2,
         turn: 1,
     };
-    let mut state = playing("i16-tipsy");
-    state.players[P1].hand[0].tipsy = Some(stamp);
-    state.players[P2].library[0].tipsy = Some(stamp);
+    let mut state = playing("i16-woozy");
+    state.players[P1].hand[0].woozy = Some(stamp);
+    state.players[P2].library[0].woozy = Some(stamp);
     assert_eq!(i16(&state), Vec::<String>::new());
     for zone in [Zone::Graveyard { player: P1 }, Zone::Exile { player: P1 }] {
-        let mut state = playing("i16-tipsy-gone");
+        let mut state = playing("i16-woozy-gone");
         let mut gone = new_instance(&mut state, "fx-2", P1, zone.clone());
-        gone.tipsy = Some(stamp);
+        gone.woozy = Some(stamp);
         let id = gone.id.clone();
         match zone {
             Zone::Graveyard { .. } => state.players[P1].graveyard.push(gone),

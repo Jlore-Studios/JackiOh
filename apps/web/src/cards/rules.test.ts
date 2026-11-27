@@ -325,7 +325,7 @@ const VERBS_6_3: readonly VerbTermId[] = [
 /**
  * The marks as Card.tsx drew them, kept unchanged, among them R346's PI, R636's WF, R637's TE, R1220's
  * UT, R1086's MG, #783's RG FL CK CR FB, R1838000's TD, R1852000's SP SS and R2657000's CD; R3572000 adds
- * the eight of #3535 (GG FX FZ EA TP, and the unprinted EV BU TX).
+ * the eight of #3535 (GG FX FZ EA WZ, and the unprinted EV BU TX).
  */
 const MARKS: Readonly<Record<KeywordKind, string>> = {
   Taunt: "TA",
@@ -371,7 +371,7 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Flexible: "FX",
   Frenzy: "FZ",
   Evasive: "EA",
-  Tipsy: "TP",
+  Woozy: "WZ",
 };
 
 type Term = { text: string; term: GlossaryTermId };

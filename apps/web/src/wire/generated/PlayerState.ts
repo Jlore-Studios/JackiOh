@@ -15,9 +15,9 @@ import type { RecursionLog } from "./RecursionLog";
 import type { RowFlags } from "./RowFlags";
 import type { SetName } from "./SetName";
 import type { StarscapeMap } from "./StarscapeMap";
-import type { TipsyCounter } from "./TipsyCounter";
 import type { TurnLog } from "./TurnLog";
 import type { VoteTally } from "./VoteTally";
+import type { WoozyCounter } from "./WoozyCounter";
 
 export type PlayerState = { hero: HeroState, mana: ManaState, hand: Array<CardInstance>, library: Array<CardInstance>, graveyard: Array<CardInstance>, exile: Array<CardInstance>, 
 /**
@@ -232,10 +232,11 @@ heroBurn?: number,
  */
 heroToxic?: number, 
 /**
- * R3548000: this player's Tipsy counter, public on both seats. Absent at none, so a game
- * without one hashes as it did before this field existed.
+ * R3548000: this player's Woozy counter, public on both seats. Absent at none, so a game
+ * without one hashes as it did before this field existed. Stored under the keyword's old name,
+ * so a game filed before the rename hashes as it was filed (R5181000).
  */
-tipsy?: TipsyCounter, 
+tipsy?: WoozyCounter, 
 /**
  * R3560000: the once-a-game firsts this player has used, by key (S+ #120, #121). Absent until
  * the first, so a game without one hashes as before.

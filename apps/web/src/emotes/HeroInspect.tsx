@@ -36,7 +36,7 @@ export const HERO_INSPECT_LUCK = "hero-inspect-luck";
 export const HERO_INSPECT_JADE = "hero-inspect-jade";
 export const HERO_INSPECT_BURN = "hero-inspect-burn";
 export const HERO_INSPECT_TOXIC = "hero-inspect-toxic";
-export const HERO_INSPECT_TIPSY = "hero-inspect-tipsy";
+export const HERO_INSPECT_WOOZY = "hero-inspect-woozy";
 export const HERO_INSPECT_CREDITS = "hero-inspect-credits";
 
 export type HeroInspectProps = {
@@ -51,7 +51,7 @@ export type HeroInspectProps = {
   jade?: number;
   burn?: number;
   toxic?: number;
-  tipsy?: number;
+  woozy?: number;
   marketCredits?: number;
   /** Which menu the view holds: your emotes, or the opponent's mute item (R643). */
   menu: "emotes" | "mute";
@@ -73,7 +73,7 @@ export function HeroInspect({
   jade,
   burn,
   toxic,
-  tipsy,
+  woozy,
   marketCredits,
   menu,
   hand,
@@ -150,10 +150,10 @@ export function HeroInspect({
               <dd>{toxic}</dd>
             </div>
           )}
-          {(tipsy ?? 0) > 0 && (
-            <div className="hero-inspect-stat" data-testid={HERO_INSPECT_TIPSY} data-tipsy={tipsy}>
-              <dt>{t("Tipsy")}</dt>
-              <dd>{tipsy}</dd>
+          {(woozy ?? 0) > 0 && (
+            <div className="hero-inspect-stat" data-testid={HERO_INSPECT_WOOZY} data-woozy={woozy}>
+              <dt>{t("Woozy")}</dt>
+              <dd>{woozy}</dd>
             </div>
           )}
           {marketCredits !== undefined && (

@@ -602,7 +602,7 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-t-korrelite", KEYWORD),
         ("stinkyscape-t-axnit", KEYWORD),
         ("traininggrounds-010", KEYWORD),
-        // R3535001: the held Stinkyscape+ set's numbered-keyword counts (S+ #6.1's Tipsy,
+        // R3535001: the held Stinkyscape+ set's numbered-keyword counts (S+ #6.1's Woozy,
         // #20's Lucky, #55's Armor) and #6.2's Temporary 2 (R3566004).
         ("stinkyscapeplus-006-1", KEYWORD),
         ("stinkyscapeplus-006-2", KEYWORD),

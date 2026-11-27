@@ -515,11 +515,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub giga: Option<bool>,
-    /// R3548001: the Tipsy counter stamped on this card as it arrived, if one was up. Taken off by
-    /// R78's reset with the card leaving the field; only its owner's view reads it.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// R3548001: the Woozy counter stamped on this card as it arrived, if one was up. Taken off by
+    /// R78's reset with the card leaving the field; only its owner's view reads it. Stored under the
+    /// keyword's old name, so a game filed before the rename hashes as it was filed (R5181000).
+    #[serde(rename = "tipsy", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
-    pub tipsy: Option<TipsyStamp>,
+    pub woozy: Option<WoozyStamp>,
     /// R3554003: the half of a slashed board this card was cast on (a Spell in the resolving zone)
     /// or stands on. Taken off by R78's reset with the card leaving the field. Absent on every other
     /// card, so a game nothing slashes serializes and hashes as before (D14).
@@ -1467,7 +1468,7 @@ pub struct StarscapeMap {
     pub travelled_on: i32,
 }
 
-/// R3548000: a player's Tipsy counter (`tipsy.rs`): the count, and the turn it first rose on,
+/// R3548000: a player's Woozy counter (`woozy.rs`): the count, and the turn it first rose on,
 /// which a stamp newer than a clearing reads. Absent at none, so a game without one hashes as before.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(
@@ -1476,12 +1477,12 @@ pub struct StarscapeMap {
     ts(export, export_to = "../../../apps/web/src/wire/generated/")
 )]
 #[serde(rename_all = "camelCase")]
-pub struct TipsyCounter {
+pub struct WoozyCounter {
     pub count: i32,
     pub since: i32,
 }
 
-/// R3548001: what a card carries of the Tipsy counter that was up as it arrived: whose, how high and
+/// R3548001: what a card carries of the Woozy counter that was up as it arrived: whose, how high and
 /// on which turn. Written as the card is drawn, played or summoned while the counter is up; R78's
 /// reset takes it off as the card leaves the field.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -1491,7 +1492,7 @@ pub struct TipsyCounter {
     ts(export, export_to = "../../../apps/web/src/wire/generated/")
 )]
 #[serde(rename_all = "camelCase")]
-pub struct TipsyStamp {
+pub struct WoozyStamp {
     pub player: PlayerId,
     pub level: i32,
     pub turn: i32,
@@ -1751,11 +1752,12 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hero_toxic: Option<i32>,
-    /// R3548000: this player's Tipsy counter, public on both seats. Absent at none, so a game
-    /// without one hashes as it did before this field existed.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// R3548000: this player's Woozy counter, public on both seats. Absent at none, so a game
+    /// without one hashes as it did before this field existed. Stored under the keyword's old name,
+    /// so a game filed before the rename hashes as it was filed (R5181000).
+    #[serde(rename = "tipsy", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
-    pub tipsy: Option<TipsyCounter>,
+    pub woozy: Option<WoozyCounter>,
     /// R3560000: the once-a-game firsts this player has used, by key (S+ #120, #121). Absent until
     /// the first, so a game without one hashes as before.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2549,7 +2551,7 @@ pub fn create_player_state() -> PlayerState {
         evolutions: None,
         hero_burn: None,
         hero_toxic: None,
-        tipsy: None,
+        woozy: None,
         once_a_game: None,
     }
 }
@@ -3120,7 +3122,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         evolved: None,
         enters_evolved: None,
         giga: None,
-        tipsy: None,
+        woozy: None,
         half: None,
         shared_chain: None,
         split_chain: None,

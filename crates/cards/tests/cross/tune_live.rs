@@ -39,7 +39,7 @@ fn keyword_acts(kind: KeywordKind) -> Acts {
         | KeywordKind::Equip
         | KeywordKind::Stack
         | KeywordKind::Giga
-        | KeywordKind::Tipsy
+        | KeywordKind::Woozy
         | KeywordKind::Flexible => Acts::AtPlay,
         KeywordKind::Rush | KeywordKind::Charge => Acts::EntryTurn,
         KeywordKind::Flashback => Acts::FromGraveyard,

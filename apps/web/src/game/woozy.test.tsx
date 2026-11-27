@@ -1,4 +1,4 @@
-// Stinkyscape+ E5 (issue #3548, R3548000–R3548004): the Tipsy stein, the Tipsy blur and the
+// Stinkyscape+ E5 (issue #3548, R3548000–R3548004): the Woozy stein, the Woozy blur and the
 // infinite mana tray, drawn from the view and nothing else (CLAUDE.md rule 7).
 
 import { cleanup, render, screen } from "@testing-library/react";
@@ -12,11 +12,11 @@ afterEach(() => {
   cleanup();
 });
 
-describe("R3548000 the Tipsy stein", () => {
+describe("R3548000 the Woozy stein", () => {
   it("R3548000 the stein shows the count on either seat above 0, and nothing at none", () => {
     const view = baseView({
-      you: emptySide("p1", { tipsy: 4 }),
-      opponent: emptySide("p2", { tipsy: 2 }),
+      you: emptySide("p1", { woozy: 4 }),
+      opponent: emptySide("p2", { woozy: 2 }),
     });
     for (const side of ["you", "opponent"] as const) {
       const { unmount } = render(withCatalog(<Hero view={view} side={side} />));
@@ -24,40 +24,40 @@ describe("R3548000 the Tipsy stein", () => {
       // portrait under the health badge.
       const tray = document.querySelector(`[data-testid="hero-counters-${side}"]`);
       expect(tray).not.toBeNull();
-      const badge = tray?.querySelector(".hero-tipsy");
-      expect(badge?.getAttribute("data-tipsy")).toBe(side === "you" ? "4" : "2");
-      expect(badge?.getAttribute("title")).toBe("Tipsy counter");
-      expect(badge?.textContent).toBe(side === "you" ? "Tipsy 4" : "Tipsy 2");
-      expect(badge?.getAttribute("aria-label")).toBe(side === "you" ? "Tipsy 4" : "Tipsy 2");
+      const badge = tray?.querySelector(".hero-woozy");
+      expect(badge?.getAttribute("data-woozy")).toBe(side === "you" ? "4" : "2");
+      expect(badge?.getAttribute("title")).toBe("Woozy counter");
+      expect(badge?.textContent).toBe(side === "you" ? "Woozy 4" : "Woozy 2");
+      expect(badge?.getAttribute("aria-label")).toBe(side === "you" ? "Woozy 4" : "Woozy 2");
       expect(badge?.querySelector("img.cf-icon")).not.toBeNull();
       expect(badge?.closest('[data-testid^="tray-list-"]')).toBeNull();
       unmount();
     }
     render(withCatalog(<Hero view={baseView()} side="you" />));
-    expect(document.querySelector(".hero-tipsy")).toBeNull();
+    expect(document.querySelector(".hero-woozy")).toBeNull();
   });
 });
 
-describe("R3548001 the Tipsy blur", () => {
+describe("R3548001 the Woozy blur", () => {
   it("R3548001 a cost blur marks the root", () => {
     const board = renderBoard(
       baseView({
-        you: emptySide("p1", { units: [unit("p1", { tipsyBlur: { kind: "cost" } }), null, null, null, null] }),
+        you: emptySide("p1", { units: [unit("p1", { woozyBlur: { kind: "cost" } }), null, null, null, null] }),
       }),
     );
-    expect(board.querySelector('[data-tipsy-blur="cost"]')).not.toBeNull();
+    expect(board.querySelector('[data-woozy-blur="cost"]')).not.toBeNull();
   });
 
   it("R3548001 a name blur wraps one word", () => {
     const board = renderBoard(
       baseView({
-        you: emptySide("p1", { units: [unit("p1", { tipsyBlur: { kind: "name", word: 1 } }), null, null, null, null] }),
+        you: emptySide("p1", { units: [unit("p1", { woozyBlur: { kind: "name", word: 1 } }), null, null, null, null] }),
       }),
     );
     const name = board.querySelector(".card-name")?.textContent ?? "";
     const words = name.split(" ").filter((word) => word.length > 0);
     expect(words.length).toBeGreaterThan(0);
-    const blurred = board.querySelector(".card-name .tipsy-blur");
+    const blurred = board.querySelector(".card-name .woozy-blur");
     expect(blurred?.textContent).toBe(words[1 % words.length]);
   });
 
@@ -66,7 +66,7 @@ describe("R3548001 the Tipsy blur", () => {
       baseView({
         you: emptySide("p1", {
           units: [
-            unit("p1", { keywords: [{ kind: "Taunt" }], tipsyBlur: { kind: "keyword", keyword: "Taunt" } }),
+            unit("p1", { keywords: [{ kind: "Taunt" }], woozyBlur: { kind: "keyword", keyword: "Taunt" } }),
             null,
             null,
             null,
@@ -76,16 +76,16 @@ describe("R3548001 the Tipsy blur", () => {
       }),
     );
     const chip = board.querySelector('[data-keyword="Taunt"]');
-    expect(chip?.getAttribute("data-tipsy-blur")).toBe("true");
+    expect(chip?.getAttribute("data-woozy-blur")).toBe("true");
   });
 
   it("R3548001 no blur changes nothing", () => {
     const board = renderBoard(
       baseView({ you: emptySide("p1", { units: [unit("p1"), null, null, null, null] }) }),
     );
-    expect(board.querySelector("[data-tipsy-blur]")).toBeNull();
-    expect(board.querySelector(".tipsy-blur")).toBeNull();
-    expect(screen.queryByTitle("Tipsy counter")).toBeNull();
+    expect(board.querySelector("[data-woozy-blur]")).toBeNull();
+    expect(board.querySelector(".woozy-blur")).toBeNull();
+    expect(screen.queryByTitle("Woozy counter")).toBeNull();
   });
 });
 

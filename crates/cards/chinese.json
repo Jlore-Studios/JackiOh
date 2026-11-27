@@ -1531,8 +1531,8 @@
   },
   "classicplus-065-1": {
     "name": "烂葡萄",
-    "base": "微醺1\n失去{loss}点生命值。",
-    "radiant": "微醺1\n失去{loss}点生命值。"
+    "base": "晕乎1\n失去{loss}点生命值。",
+    "radiant": "晕乎1\n失去{loss}点生命值。"
   },
   "classicplus-065-2": {
     "name": "普通葡萄",
@@ -4089,8 +4089,8 @@
   },
   "stinkyscapeplus-006-1": {
     "name": "上等发酵葡萄",
-    "base": "微醺2\n回合结束时：将另一张不同的葡萄融合进这张牌。",
-    "radiant": "微醺2\n回合结束时：将另一张不同的光辉葡萄融合进这张牌。"
+    "base": "晕乎2\n回合结束时：将另一张不同的葡萄融合进这张牌。",
+    "radiant": "晕乎2\n回合结束时：将另一张不同的光辉葡萄融合进这张牌。"
   },
   "stinkyscapeplus-006-2": {
     "name": "臭奶酪",
@@ -5062,7 +5062,7 @@
   },
   "stinkyscapeplus-t-ai-01": {
     "name": "幻觉奇异果",
-    "base": "微醺1\n抽一张牌。",
+    "base": "晕乎1\n抽一张牌。",
     "radiant": "抽2张牌。"
   },
   "stinkyscapeplus-t-ai-02": {

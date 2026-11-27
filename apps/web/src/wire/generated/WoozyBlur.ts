@@ -2,8 +2,8 @@
 import type { KeywordKind } from "./KeywordKind";
 
 /**
- * R3548001: what of a Tipsy-stamped card its owner's view blurs: one word of its name, its
+ * R3548001: what of a Woozy-stamped card its owner's view blurs: one word of its name, its
  * cost, its attack, its health, or one keyword kind it carries. The client renders the blur and
  * never changes a rule (CLAUDE.md rule 7).
  */
-export type TipsyBlur = { "kind": "name", word: number, } | { "kind": "cost" } | { "kind": "attack" } | { "kind": "health" } | { "kind": "keyword", keyword: KeywordKind, };
+export type WoozyBlur = { "kind": "name", word: number, } | { "kind": "cost" } | { "kind": "attack" } | { "kind": "health" } | { "kind": "keyword", keyword: KeywordKind, };

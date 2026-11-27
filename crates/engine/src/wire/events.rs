@@ -39,8 +39,9 @@ string_union! {
         Burn = "burn",
         /// R3540000: a Unit's or a hero's Toxic.
         Toxic = "toxic",
-        /// R3548000: a player's Tipsy counter.
-        Tipsy = "tipsy",
+        /// R3548000: a player's Woozy counter. Its old name reads as it, never written (R5181000).
+        #[serde(alias = "tipsy")]
+        Woozy = "woozy",
         /// R3548002: the game-wide worth of every Warhero Token.
         Warhero = "warhero",
     }

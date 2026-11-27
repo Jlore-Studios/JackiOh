@@ -9,7 +9,7 @@
 * **Selective Breeding**  
   * Gains: **Evolve** all cards in your deck  
 * **Rotten Grape**  
-  * Gains: **Tipsy 1**  
+  * Gains: **Woozy 1**  
 * **Money Machine**  
   * New text  
     * **Cry**: Print either **Coins** or **Warhero Tokens**   
@@ -43,14 +43,14 @@
   * E.g., if you **Refresh** an **Activate 4** you would get another **4 Activates**  
   * Word in the way that makes the most sense  
   * Existing “Refresh mana” instances now become “Replenish mana” to avoid confusion  
-* **Tipsy X**  
+* **Woozy X**  
   * A for fun drawback condition that takes the form of a player counter like Jade or Credits  
     * Should be in a stein shape  
   * While active, new cards played, summoned, or ones you draw may occasionally have a number or keyword or word in their name blurred on the client side  
   * Chance scales with the X  
   * Decays by 1 at the start of your turn  
   * When it reaches 0, everything clears. Doesn’t clear from going from 2-\>1 though, just the odds of new things blurring goes down  
-  * Counter increases by X when playing a card with Tipsy X  
+  * Counter increases by X when playing a card with Woozy X  
 * **GIGA**  
   * **GIGA** applies to permanents. They make them 2x2 (visually and actually) taking up two backrow and two unit lanes. It can be applied to traps field spells and units. It is technically part of both lanes basically making it twice as susceptible to cleave and can be lane eated in anything else.  
   * You have a lot of freedom to design this but the main thing is that they are supposed to be BIG.   
@@ -155,10 +155,10 @@ Deal 2 damage to a Unit.
 **Start of Turn:** Add a Radiant Fine Fermented Grapes, Stinky Cheese, or The Coin to your hand at random.
 
 **(1) Fine Fermented Grape, Spell, Fruit, Token, Epic, Stinkyscape+, \#6.1**  
-**Tipsy 2**  
+**Woozy 2**  
 **End of Turn**: Fuse a different Grape into this.  
 \~\~\~  
-**Tipsy 2**  
+**Woozy 2**  
 **End of Turn**: Fuse a different Radiant Grape into this.
 
 **(1) Stinky Cheese, Field Spell, Swarm, Token, Epic, Stinkyscape+, \#6.2**  

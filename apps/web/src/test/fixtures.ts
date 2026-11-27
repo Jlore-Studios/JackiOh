@@ -165,7 +165,7 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Flexible" },
   { kind: "Frenzy" },
   { kind: "Evasive" },
-  { kind: "Tipsy", n: 2 },
+  { kind: "Woozy", n: 2 },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {

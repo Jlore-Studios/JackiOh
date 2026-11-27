@@ -1,9 +1,9 @@
 //! SPEC §8.12 S+ #6.1 Fine Fermented Grape (1) Spell, Fruit, Token, a token of the Stinkyscape+ set
 //! (R1420; R3558005), made by #6 Wines McCheese.
-//!   Base:    "Tipsy 2 / End of turn: Fuse a different Grape into this."
-//!   Radiant: "Tipsy 2 / End of turn: Fuse a different Radiant Grape into this."
+//!   Base:    "Woozy 2 / End of turn: Fuse a different Grape into this."
+//!   Radiant: "Woozy 2 / End of turn: Fuse a different Radiant Grape into this."
 //!
-//! Engine: Tipsy 2 is the catalog's keyword (R3548000). The End of turn is a hand trigger (it is a
+//! Engine: Woozy 2 is the catalog's keyword (R3548000). The End of turn is a hand trigger (it is a
 //! Spell, so a hand is where it waits): at its controller's turn end, E8's `fuseRandomInto` fuses one
 //! random Grape — a card whose name holds "Grape", the `nameContains` filter (R3558005) — into it,
 //! never this card nor what is already in it (B4.1), so each End of turn adds a different one until

@@ -2603,8 +2603,8 @@ classicplus-065-1: # Rotten Grape
     cast: Ew. That grape went bad.
   zh:
     name: 烂葡萄
-    base: "微醺1\n失去{loss}点生命值。"
-    radiant: "微醺1\n失去{loss}点生命值。"
+    base: "晕乎1\n失去{loss}点生命值。"
+    radiant: "晕乎1\n失去{loss}点生命值。"
 classicplus-065-2: # Normal Grape
   flavour: Just a grape. Still a good grape.
   voice:
@@ -7081,8 +7081,8 @@ stinkyscapeplus-006-1: # Fine Fermented Grape
     cast: Cheers. Now hold the wall.
   zh:
     name: 上等发酵葡萄
-    base: "微醺2\n回合结束时：将另一张不同的葡萄融合进这张牌。"
-    radiant: "微醺2\n回合结束时：将另一张不同的光辉葡萄融合进这张牌。"
+    base: "晕乎2\n回合结束时：将另一张不同的葡萄融合进这张牌。"
+    radiant: "晕乎2\n回合结束时：将另一张不同的光辉葡萄融合进这张牌。"
 stinkyscapeplus-006-2: # Stinky Cheese
   flavour: The smell arrives long before the cheese does. The cheese just follows the smell.
   voice:
@@ -8840,7 +8840,7 @@ stinkyscapeplus-t-ai-01: # Hallucinated Kiwi
     cast: I was definitely a kiwi.
   zh:
     name: 幻觉奇异果
-    base: "微醺1\n抽一张牌。"
+    base: "晕乎1\n抽一张牌。"
     radiant: 抽2张牌。
 stinkyscapeplus-t-ai-02: # Data-Poisoned Plum
   flavour: Looks ripe, tastes like a training set gone off.

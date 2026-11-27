@@ -342,7 +342,7 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     onField: true,
   },
   // R3572000: the Stinkyscape+ kinds (#3535). GIGA, Frenzy and Evasive act on the field; the rest act before it
-  // (Flexible, Tipsy: where and how a card is played) or are no printed keyword at all (R3535002's Evolve, R3540000's
+  // (Flexible, Woozy: where and how a card is played) or are no printed keyword at all (R3535002's Evolve, R3540000's
   // Burn and Toxic counters), so they keep their chip in the hover and inspect lists and draw nothing on the board.
   GIGA: {
     layer: "glyph",
@@ -376,11 +376,11 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     numbered: false,
     onField: true,
   },
-  Tipsy: {
+  Woozy: {
     layer: "glyph",
     priority: 41,
     shape: "a frothing beer stein",
-    motion: { keyframes: "kw-tipsy-sway", when: "always" },
+    motion: { keyframes: "kw-woozy-sway", when: "always" },
     numbered: false,
     onField: false,
   },

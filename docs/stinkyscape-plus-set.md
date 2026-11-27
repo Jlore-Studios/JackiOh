@@ -45,7 +45,7 @@
   list). On top of those come the tokens the list names without defining them (SP1), and 7 AI cards
   for the Marketplace (SP7).
 - **New mechanics**: Evolve and Evolves, Refresh for Activates (with the old "Refresh mana" renamed
-  Replenish), Tipsy X, GIGA, the Warhero Token, Flexible, Frenzy, Evasive, Burn and Toxic. There is
+  Replenish), Woozy X, GIGA, the Warhero Token, Flexible, Frenzy, Evasive, Burn and Toxic. There is
   also a long tail of verbs only one or two cards use (SP3, E6 to E8). One system change reaches every
   set: random cards are unique within an effect (E9).
 - **Patches to shipped cards** (SP4): Jay Fungus, Selective Breeding, Rotten Grape, Money Machine,
@@ -181,17 +181,17 @@ before any card uses it. The text quoted is the designer's. Defaults follow.
   hand GIGA", "Draw … and make them GIGA"). "Embiggen: GIGA" means the card becomes GIGA when embiggened.
 - The client draws it across the four zones (E4 owns the board's layout for it).
 
-### E5. Tipsy, the Warhero Token, Refresh for Activates and infinite mana
+### E5. Woozy, the Warhero Token, Refresh for Activates and infinite mana
 
-- **Tipsy X**: a player counter like Jade or Credits, shown as a stein. Playing a card with Tipsy X adds X
+- **Woozy X**: a player counter like Jade or Credits, shown as a stein. Playing a card with Woozy X adds X
   to it. It decays by 1 at the start of its owner's turn. While it is above 0, a card the player newly
   plays, summons or draws may have one number, keyword or word of its name blurred, with a chance that
   grows with the counter. At 0 every blur clears. Going from 2 to 1 clears nothing; it only lowers the
-  odds for new cards (the designer). **Default:** only the Tipsy player's own view blurs. Which word blurs
+  odds for new cards (the designer). **Default:** only the Woozy player's own view blurs. Which word blurs
   is decided by the engine in `view_for` from a hash of the game's seed and the card's instance, so it
   draws nothing from the game's `Rng` and a reload or a replay shows the same blur. The client renders
-  the blur and never changes a rule (CLAUDE.md rule 7). The chance per card is `TIPSY_BLUR_CHANCE_PER_STACK`,
-  capped by `TIPSY_BLUR_CHANCE_CAP` (config.rs).
+  the blur and never changes a rule (CLAUDE.md rule 7). The chance per card is `WOOZY_BLUR_CHANCE_PER_STACK`,
+  capped by `WOOZY_BLUR_CHANCE_CAP` (config.rs).
 - **Warhero Token** (a Stinkyscape Resource, Rare, (0), "Yeah, I'm a war hero."): every Warhero Token is
   worth one game-wide value in Credits. It starts at 0. Once any Warhero Token has been printed in the
   game, the value grows by a random 0 to 10 at the end of every turn (`WARHERO_GROWTH_MIN`/`MAX`). A
@@ -307,7 +307,7 @@ All go live with the set, in fullsend 1's one pull request, claimed by its fragm
 | --- | --- |
 | Jay Fungus | Gains the Swarm tag. Base gains "**Evolve**: Poisonous. **Evolves** when your hand has at least (3) cards that cost (0)". Radiant gains the same at at least (1) card (**default**: the list's second "Normal gains" line is the Radiant face) |
 | Selective Breeding | Gains "**Evolve** all cards in your deck" (E1) |
-| Rotten Grape | Gains **Tipsy 1** (E5) |
+| Rotten Grape | Gains **Woozy 1** (E5) |
 | Money Machine | New text: "**Cry**: Print either **Coins** or **Warhero Tokens**. **End of Turn**: Shuffle the printed choice into both decks. Flip yours. If heads, put it in your hand instead." The Radiant face gains **Lucky 1** and prints Radiant versions. When the Cry doesn't go off (the AI, the timeout), it defaults to The Coin |
 | xxFreshJack | BUSTED cards include cards from past patches too, judged by winrate, through one general function that needs no upkeep each patch (S17) |
 | Heroic Power | Every existing power costs (1) less. New power **(10) End Times**: "Discover a Terminus card. End of Turn: Reduce the cost of the next use of this by (1)" (Radiant: by (2)) |
@@ -468,7 +468,7 @@ fullsend 3 #3575.
 | E2 | `E2, Burn and Toxic` | SP3 E2 | E1 | hard |
 | E3 | `E3, Flexible, Evasive and Frenzy` | SP3 E3, with the shipped-card migration | E2 | hard |
 | E4 | `E4, GIGA` | SP3 E4 | E3 | hard |
-| E5 | `E5, Tipsy, the Warhero Token, Refresh for Activates and Replenish` | SP3 E5 | E4 | hard |
+| E5 | `E5, Woozy, the Warhero Token, Refresh for Activates and Replenish` | SP3 E5 | E4 | hard |
 | E6 | `E6, combat and reaction verbs` | SP3 E6 | E5 | hard |
 | E7 | `E7, board geometry and damage routing` | SP3 E7 | E6 | hard |
 | E8 | `E8, hand, deck and fuse verbs` | SP3 E8 | E7 | hard |

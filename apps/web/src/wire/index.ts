@@ -88,7 +88,7 @@ export type { StarscapeNodeView } from "./generated/StarscapeNodeView.ts";
 export type { StarscapeView } from "./generated/StarscapeView.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TallyView } from "./generated/TallyView.ts";
-export type { TipsyBlur } from "./generated/TipsyBlur.ts";
+export type { WoozyBlur } from "./generated/WoozyBlur.ts";
 export type { TrampleOverflow } from "./generated/TrampleOverflow.ts";
 export type { Tuning } from "./generated/Tuning.ts";
 export type { UnitView } from "./generated/UnitView.ts";

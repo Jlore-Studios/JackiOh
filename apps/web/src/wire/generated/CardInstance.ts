@@ -15,10 +15,10 @@ import type { SetAs } from "./SetAs";
 import type { Slumber } from "./Slumber";
 import type { StarshipMemory } from "./StarshipMemory";
 import type { Tag } from "./Tag";
-import type { TipsyStamp } from "./TipsyStamp";
 import type { Tuning } from "./Tuning";
 import type { TurnAttack } from "./TurnAttack";
 import type { TurnBuff } from "./TurnBuff";
+import type { WoozyStamp } from "./WoozyStamp";
 import type { Zone } from "./Zone";
 
 export type CardInstance = { id: string, defId: string, owner: PlayerId, controller: PlayerId, radiant: boolean, zone: Zone, position?: Position, summonedTurn?: number, damage: number, buffs: AttackHealth, grantedKeywords: Array<Keyword>, vanilla: boolean, costMod: number, costOverride?: number, x?: number, embiggened?: boolean, 
@@ -243,10 +243,11 @@ entersEvolved?: true,
  */
 giga?: true, 
 /**
- * R3548001: the Tipsy counter stamped on this card as it arrived, if one was up. Taken off by
- * R78's reset with the card leaving the field; only its owner's view reads it.
+ * R3548001: the Woozy counter stamped on this card as it arrived, if one was up. Taken off by
+ * R78's reset with the card leaving the field; only its owner's view reads it. Stored under the
+ * keyword's old name, so a game filed before the rename hashes as it was filed (R5181000).
  */
-tipsy?: TipsyStamp, 
+tipsy?: WoozyStamp, 
 /**
  * R3554003: the half of a slashed board this card was cast on (a Spell in the resolving zone)
  * or stands on. Taken off by R78's reset with the card leaving the field. Absent on every other
