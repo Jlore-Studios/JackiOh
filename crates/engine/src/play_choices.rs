@@ -767,9 +767,6 @@ pub fn why_x_refused(
     if value < MIN_CHOSEN_X {
         return Err(EngineError::new(format!("X must be at least {MIN_CHOSEN_X}")));
     }
-    if value > MANA_CEILING {
-        return Err(EngineError::new(format!("X is at most {MANA_CEILING}")));
-    }
     if value > most {
         return Err(EngineError::new(if most < mana {
             "X is above your mana after paying"
@@ -777,21 +774,23 @@ pub fn why_x_refused(
             "X is above your current mana"
         }));
     }
+    // R5148000: within the mana to spend, still never above the ceiling.
+    if value > MANA_CEILING {
+        return Err(EngineError::new(format!("X is at most {MANA_CEILING}")));
+    }
     Ok(())
 }
 
 /// The most X a play of this card may choose: the mana the player can spend for an X-cost card (R1223),
-/// and for a copier with an X-cost text what is left of it once its own price is paid (B5 E14, R545),
-/// never above `MANA_CEILING` (R5148000).
+/// and for a copier with an X-cost text what is left of it once its own price is paid (B5 E14, R545).
+/// `why_x_refused` holds it to `MANA_CEILING` besides (R5148000).
 fn most_x(state: &GameState, player: PlayerId, card: &CardInstance) -> i32 {
     // R1223: an X may be chosen out of borrowed mana too.
     let mana = crate::credit::spendable_mana(state, player);
-    let most = if crate::subsystems::copied_text::copies_text(card) {
-        mana - crate::mana::play_cost(state, card)
-    } else {
-        mana
-    };
-    most.min(MANA_CEILING)
+    if !crate::subsystems::copied_text::copies_text(card) {
+        return mana;
+    }
+    mana - crate::mana::play_cost(state, card)
 }
 
 /// §2.3, R348: every X `why_x_refused` passes, lowest first.

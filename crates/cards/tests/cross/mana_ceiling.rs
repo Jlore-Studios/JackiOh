@@ -12,11 +12,11 @@ use jackioh_engine::tuning::x_of;
 use PlayerId::{P1, P2};
 
 const FILLER: &str = "core-005";
-const MENACE: &str = "core-019"; // a (3) Unit
+const MENACE: &str = "core-019"; // Menace: the Unit given away
 const DIVIDEND: &str = "core-024"; // Efficiency Dividend: X; deal X damage, heal 3X or X mana next turn
-const VOID: &str = "core-100"; // Ceaseless Void: (100) less a counted card each, a Unit
+const VOID: &str = "core-100"; // Ceaseless Void: a Unit that costs more than the ceiling
 const ME_NO_LIKEY: &str = "meditative-006"; // give a Unit away; gain its cost (Radiant twice it)
-const LIL_KENNY: &str = "meditativeplus-020-1"; // a (1) X/X token, X its summoner's count
+const LIL_KENNY: &str = "meditativeplus-020-1"; // Lil' Kenny: an X/X token, X its summoner's count
 const JLARNA: &str = "meditative-089"; // Credit line 4
 const REACTOR: &str = "stinkyscapeplus-056"; // Impact Reactor: infinite mana once awake
 

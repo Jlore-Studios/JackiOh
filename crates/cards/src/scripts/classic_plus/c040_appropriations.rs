@@ -734,10 +734,7 @@ mod tests {
                 "p1": { "hand": [APPROPRIATIONS, VANILLA, ECLIPSE], "field": [TIMMY], "mana": MANA_CEILING },
                 "p2": { "hand": [VANILLA], "field": [TIMMY] },
             }));
-            s.expect_refused_with(
-                |s| s.play(APPROPRIATIONS, json!({ "x": MANA_CEILING + 1, "modes": ["Culture"] })),
-                "X is at most 15",
-            );
+            s.expect_refused(|s| s.play(APPROPRIATIONS, json!({ "x": MANA_CEILING + 1, "modes": ["Culture"] })));
         }
 
         #[test]
