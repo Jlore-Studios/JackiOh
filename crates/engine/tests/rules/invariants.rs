@@ -4537,6 +4537,67 @@ mod i21 {
         );
     }
 
+    /// R5166000: the immune stand-in entering p2's graveyard.
+    fn to_graveyard(id: &str) -> GameEvent {
+        json_as(json!({ "type": "enteredGraveyard", "instanceId": id, "defId": IMMUNE, "owner": "p2" }))
+    }
+
+    /// R5166000: p2's play of a Unit, announced (§10.5 step 3) once its Tribute is paid (step 2).
+    fn announced() -> GameEvent {
+        json_as(json!({
+            "type": "cardAnnounced",
+            "player": "p2",
+            "instanceId": "i21-titan",
+            "defId": PLAIN,
+            "cardType": "Unit",
+            "costPaid": 2,
+            "targets": [],
+            "row": "units",
+            "lane": 5,
+        }))
+    }
+
+    #[test]
+    fn r5166000_a_tribute_paid_before_a_play_is_announced_is_the_play_s_and_i21_allows_it() {
+        let (state, id) = immune_board("r5166000");
+        let gone = moved(&state, &id, OffFieldZone::Graveyard);
+        // Fuzz seed 14921: the autopilot's play paid its Tribute after a Spell's standing trigger in the
+        // deck resolved, with no marker of its own (§10.5 steps 2 and 3).
+        assert_eq!(
+            i21(
+                &state,
+                &[marker(SPELL), died(&id, None, 4), to_graveyard(&id), announced()],
+                &gone
+            ),
+            Vec::<String>::new()
+        );
+        // With no announcement after it, or another run's marker between, the death is the Spell's destroy.
+        only(
+            &i21(
+                &state,
+                &[marker(SPELL), died(&id, None, 4), to_graveyard(&id)],
+                &gone,
+            ),
+            &id,
+            &["I21", "destroyed"],
+        );
+        only(
+            &i21(
+                &state,
+                &[
+                    marker(SPELL),
+                    died(&id, None, 4),
+                    to_graveyard(&id),
+                    marker(SPELL),
+                    announced(),
+                ],
+                &gone,
+            ),
+            &id,
+            &["I21", "destroyed"],
+        );
+    }
+
     /// R4783000: `state` in p1's turn's start stage (a prompt paused it, R62), with an Allure of p1's
     /// waiting on `id` (R963, Meditative #39.5 Jade Beauty's).
     fn allured(mut state: GameState, id: &str) -> GameState {
@@ -5776,6 +5837,115 @@ mod i23 {
                 assert_eq!(found, Vec::<String>::new(), "{def_id}");
             }
         }
+    }
+
+    /// R5166001 (handicapped fuzz seed 5834): a card Immutable by a grant alone (Stinkyscape+ #165
+    /// Shadiris) that an attack kills and Reborn returns comes back with no grant (R78), so a Transform of
+    /// it afterwards (S+ #33 True Conservative's, into a past version) is lawful, and so is one of a hand
+    /// card granted Immutable that the step discards and Reborn returns. A card Immutable by its own
+    /// printed keyword, returned the same way, is still judged; so is the grant's card with no return
+    /// before the Transform, and a hand card granted Immutable that the step summons straight from the
+    /// hand, which keeps its grant (no reset).
+    #[test]
+    fn r5166001_a_transform_of_a_card_summoned_anew_without_its_granted_immutable_is_lawful() {
+        use jackioh_engine::zones::{MoveToZoneOptions, OffFieldZone, move_to_zone};
+        let mut state = playing("r5166001");
+        let lent = put(&mut state, PLAIN, slot(P2, Row::Units, 1), json!({})).id;
+        let printed = put(&mut state, KEYWORD, slot(P2, Row::Units, 2), json!({})).id;
+        let held = in_hand(&mut state, PLAIN, P2);
+        let before = granted(
+            &granted(&state, &lent, Keyword::Immutable),
+            &held,
+            Keyword::Immutable,
+        );
+        // The step's end: the card transformed into a new instance, its old one gone to the graveyard.
+        let gone = |id: &str| {
+            let mut after = before.clone();
+            let mut card = find_instance(&after, id).expect("the Unit").clone();
+            move_to_zone(
+                &mut after,
+                &mut card,
+                OffFieldZone::Graveyard,
+                MoveToZoneOptions::default(),
+            );
+            after
+        };
+        let destroyed = |id: &str, def_id: &str| -> GameEvent {
+            json_as(json!({
+                "type": "destroyed",
+                "instanceId": id,
+                "defId": def_id,
+                "owner": "p2",
+                "controller": "p2",
+                "attack": 4,
+                "maxHealth": 4,
+                "killerId": "i23-attacker",
+            }))
+        };
+        let discarded = |id: &str, def_id: &str| -> GameEvent {
+            json_as(json!({
+                "type": "enteredGraveyard",
+                "instanceId": id,
+                "defId": def_id,
+                "owner": "p2",
+            }))
+        };
+        let summoned = |id: &str, def_id: &str, via: Option<&str>| -> GameEvent {
+            let mut event = json!({
+                "type": "summoned",
+                "player": "p2",
+                "instanceId": id,
+                "defId": def_id,
+                "row": "units",
+                "lane": 3,
+            });
+            if let Some(via) = via {
+                event["via"] = json!(via);
+            }
+            json_as(event)
+        };
+        let rows: [(&str, &str, Vec<GameEvent>, bool); 4] = [
+            (
+                &lent,
+                PLAIN,
+                vec![destroyed(&lent, PLAIN), summoned(&lent, PLAIN, Some("Reborn"))],
+                false,
+            ),
+            (
+                &printed,
+                KEYWORD,
+                vec![
+                    destroyed(&printed, KEYWORD),
+                    summoned(&printed, KEYWORD, Some("Reborn")),
+                ],
+                true,
+            ),
+            (&held, PLAIN, vec![summoned(&held, PLAIN, None)], true),
+            (
+                &held,
+                PLAIN,
+                vec![discarded(&held, PLAIN), summoned(&held, PLAIN, Some("Reborn"))],
+                false,
+            ),
+        ];
+        for (id, def_id, mut events, judged) in rows {
+            events.push(transformed(id, def_id, PLAIN, "i23-older", None));
+            let found = i23(&before, &events, &gone(id));
+            if judged {
+                only(&found, id, &["I23", "transformed"]);
+            } else {
+                assert_eq!(found, Vec::<String>::new(), "{id} {events:?}");
+            }
+        }
+        only(
+            &i23(
+                &before,
+                &[transformed(&lent, PLAIN, PLAIN, "i23-older", None)],
+                &gone(&lent),
+            ),
+            &lent,
+            &["I23", "transformed"],
+        );
     }
 
     #[test]

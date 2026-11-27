@@ -1747,7 +1747,9 @@ fn pulled_into_the_hole(
 ///   arrived in the step (R4599004), or after a board restore or replacement (R4599010, R4599014);
 /// - the one `controlChanged` or killerless `destroyed` of a Unit its Allure takes in the turn's start
 ///   stage once its mark came off (R4783000, `allure_resolved`): the engine runs it with no marker, after
-///   whatever Spell the stage ran last.
+///   whatever Spell the stage ran last;
+/// - R5166000: a killerless `destroyed` a play's announcement follows, past the tributed set's own events:
+///   its Tribute (`paid_as_a_tribute`).
 ///
 /// - R4604004: a Burn tick a Divine Shield takes (`ticks_on`: its `divineShieldLost`, then the Burn's
 ///   removal), and an `exiled` once a card laying an exile aura arrives by a `transformed` (S+ #104
@@ -2058,6 +2060,7 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                     collects_a_casters_marks(&nested)
                         || killed_by_a_tick(&events[..at], id)
                         || *max_health <= mark.damage + taken.get(id).copied().unwrap_or(0)
+                        || paid_as_a_tribute(&events[at + 1..])
                 }
                 // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
                 // R4623000: the state check evolves it by its own standing condition (R3536001).
@@ -2088,6 +2091,22 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
         released.extend(unimmune);
     }
     found
+}
+
+/// I21, R5166000: whether a killerless `destroyed` followed by `rest` is a play's Tribute (§6.3), which
+/// §10.5 step 2 pays before step 3 announces the play: the first event of `rest` that is not the tributed
+/// set's own `destroyed` or `enteredGraveyard` is a `cardAnnounced`. The autopilot's next play pays it
+/// with the marker of the last trigger that resolved before it, a Spell's standing one among them (M+ #17
+/// Dogpile's in the deck), and no marker of its own.
+fn paid_as_a_tribute(rest: &[GameEvent]) -> bool {
+    rest.iter()
+        .find(|event| {
+            !matches!(
+                event,
+                GameEvent::Destroyed { .. } | GameEvent::EnteredGraveyard { .. }
+            )
+        })
+        .is_some_and(|event| matches!(event, GameEvent::CardAnnounced { .. }))
 }
 
 /// I21, R4783000: whether `mark`'s Unit was taken by its Allure (R963) in the step: the step began with an
@@ -2238,6 +2257,9 @@ struct ImmutableMark {
     /// Whether its own keywords (`layers::card_keywords` and its conditional ones) make it Immutable, so
     /// it is still judged once the step takes it out of the zones I23 reads, or out of every pile.
     own: bool,
+    /// R5166001: whether its own keywords still make it Immutable once R78's reset has cleared what the
+    /// field gave it (its granted keywords): what holds it after the step summons or flickers it anew.
+    reset_own: bool,
     text: TextRecord,
 }
 
@@ -2293,10 +2315,15 @@ fn immutable_step(state: &GameState) -> ImmutableStep {
             }
             let mut own = crate::layers::card_keywords(state, placed.card);
             own.extend(crate::layers::conditional_keywords_of(state, placed.card));
+            let mut fresh = placed.card.clone();
+            crate::zones::reset_instance(&mut fresh);
+            let mut kept = crate::layers::card_keywords(state, &fresh);
+            kept.extend(crate::layers::conditional_keywords_of(state, &fresh));
             let mark = ImmutableMark {
                 label: name_of(placed.card),
                 zone,
                 own: immutable_by_keywords(state, placed.card, &own),
+                reset_own: immutable_by_keywords(state, &fresh, &kept),
                 text: TextRecord::of(placed.card),
             };
             Some((placed.card.id.clone(), mark))
@@ -2331,6 +2358,11 @@ fn immutable_step(state: &GameState) -> ImmutableStep {
 /// read. A card is judged when it is Immutable after the step with the text it began with put back on
 /// (so a grant or an aura that lapses in the step lets it go, R4353000), or, gone from the field, a hand
 /// and a library, when its own keywords held it. Draws nothing.
+///
+/// R5166001: once the step summons or flickers a card anew past R78's reset (it began on the field, or
+/// left it or reached an exile or a graveyard in the step), an event changing its text is judged by what
+/// the reset kept (a granted Immutable is gone). One summoned straight from a hand or a library keeps
+/// what it was granted there, and is still judged by it.
 fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &GameState) -> Vec<String> {
     let mut found: Vec<String> = Vec::new();
     if step.marks.is_empty() {
@@ -2359,6 +2391,10 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
     // R4783002: the cards the step sent to an exile or a graveyard, where Immutable stops nothing (§6.3),
     // and has not brought back to the field.
     let mut unjudged: IndexSet<&str> = IndexSet::new();
+    // R5166001: the cards the step has put through R78's reset (`zones::reset_instance`): one that left
+    // the field or reached an exile or a graveyard. A card summoned from a hand or a library with neither
+    // keeps what it was granted there (`KEPT_IN_HAND_OR_LIBRARY`).
+    let mut wiped: IndexSet<&str> = IndexSet::new();
     for event in events {
         let (id, lawful) = match event {
             // R4609001: a Replace off the field, in a hand or a library, or (R4783002) in an exile or a
@@ -2394,12 +2430,16 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
             } => (result_instance_id, false),
             // R4609002, R78: left the field and back, or back through Reborn.
             GameEvent::Flickered { instance_id, .. } | GameEvent::Summoned { instance_id, .. } => {
+                if matches!(event, GameEvent::Flickered { .. }) {
+                    wiped.insert(instance_id);
+                }
                 reset.insert(instance_id);
                 unjudged.swap_remove(instance_id.as_str());
                 continue;
             }
             // R4783002: into a zone I23 does not judge.
             GameEvent::Exiled { instance_id, .. } | GameEvent::EnteredGraveyard { instance_id, .. } => {
+                wiped.insert(instance_id);
                 unjudged.insert(instance_id);
                 continue;
             }
@@ -2409,7 +2449,11 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
             continue;
         };
         let id = id.as_str();
-        if lawful || released.contains(id) || !judged.contains(id) {
+        // R5166001: a card the step summoned or flickered anew past R78's reset (it began on the field, or
+        // the step wiped it since) is judged by what the reset kept.
+        let reset_away =
+            reset.contains(id) && (mark.zone == ZoneName::Field || wiped.contains(id)) && !mark.reset_own;
+        if lawful || reset_away || released.contains(id) || !judged.contains(id) {
             continue;
         }
         found.push(format!(
