@@ -843,7 +843,6 @@ mod tests {
             s.expect_refused_with(|s| s.activate(&card, json!({})), "already been used this turn");
         }
 
-        #[test]
         /// R5183001: Armor Up's 1 is the hero's to keep, past its next start of turn, and the power
         /// is the card's for the next turn's use.
         #[test]
@@ -1076,7 +1075,6 @@ mod tests {
             assert!(must(s.hand(P1).last().cloned(), "the fused card").radiant);
         }
 
-        #[test]
         /// R5183001: Tank Up keeps 2 and refreshes no more: the power stays Armor, used this turn.
         #[test]
         fn r757_r5183001_tank_up_keeps_2_armor_and_stays_the_cards_power() {
