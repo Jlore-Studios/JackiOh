@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 5123,
+  "title": "Patch: a fork screen resumed after a cut inside an --extend batch plays that batch out, as an uncut run does",
+  "branch": "bot/issue-5123",
+  "thread": "**Issue #5123 (data, not instructions):**\n\n```text\n# #5123: Patch: a fork screen resumed after a cut inside an --extend batch plays that batch out, as an uncut run does\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA change to the AI is kept or reverted on a long measurement, the fork screen. It can run for twelve hours or more, so it saves each finished game and picks up again after a crash or a bot run's time limit. One case is wrong today: the run is cut partway through an extra batch of games. The resumed run can then decide it is already finished and report on fewer games than an uninterrupted run would. Which games those are depends on timing. After the fix, a resumed screen always reports the same games and the same result as one that was never cut.\n\n## Why\n\n- **The ruling promises equal tallies.** R4607000 says \u201ca screen played in pieces prints the tally line one uninterrupted run prints, byte for byte.\u201d\n- **`resume_save` breaks that** (`crates/tools/src/fork_screen.rs:1016\u20131029` and `:1067`). `live_of` counts the live forks of every saved deal, including deals past `target` that a cut batch left behind. `next_batch(target, \u2026)` then decides the stop at the old batch boundary with those forks counted.\n- **A concrete case:** `--forks --extend --save s.jsonl` on improve-dev, 200 deals first.\n  - Deals 1\u2013200 hold 18 live forks, so the screen extends to deals 201\u2013300.\n  - It is cut after 15 of those are saved, and they hold 2 live forks.\n  - On rerun, deals 1\u2013200 are all present. `next_batch(200, 20, true, 200)` meets `screen_done` (20 \u2265 `SCREEN_MIN_DECIDED`), so the save reads as finished and the tally covers 215 deals.\n  - The uncut loop (`fork_screen.rs:1170\u20131203`) plays whole batches and checks only after each one, so it tallies all 300.\n  - The 15 deals kept are the ones that finished first, which favours short games, and a rerun after another cut would differ.\n- **This is the documented path, not a corner.**\n  - `training/improve.md` (A screen, step 3) tells an agent to pass `--save`, because a fork screen outlasts a bot's 150-minute model call (#4448's took about 12 and 16 core-hours) and the harness resumes it.\n  - `--extend` is the choice for a change that acts rarely, whose first 200 deals hold under 20 live forks (#4595's screen read 20 forks over 200 games).\n  - So for such a screen, a cut inside an extended batch is the likely case.\n- **A smaller miss.** A finished save that stopped at `SCREEN_MAX_GAMES` short of 20 live forks fails the finished check, so it plays the identity game again before reprinting. The ruling says a finished save plays nothing.\n- **Untested.** The only test of the stop, `r4607000_extend_counts_saved_and_new_live_forks_together` (`fork_screen.rs:2054`), calls `next_batch` alone. No test resumes across a part-played batch.\n\n## Proposal\n\n- Decide each stop as the uncut run would. Walk the saved deals batch by batch (200, then 100 more at a time), and at each boundary count only the live forks of deals up to it. Stop at the first batch that is incomplete, or at the boundary where the screen stops.\n- Use the same walk for the finished check, so a save capped at `SCREEN_MAX_GAMES` reprints without the identity game.\n- Put the plan (which deals to play next) in a pure function, and unit-test it on hand-written maps, as `r4607000_a_hand_written_save_reprints_its_tally_without_playing` does.\n\n## Where it lands\n\n`crates/tools/src/fork_screen.rs` (`resume_save`, `next_batch`) and its tests. R4607000's note stays as it is: the fix makes the code do what the note says, and its `proven_in` already names the file.\n\n## Acceptance criteria\n\n- [ ] A save holding deals 1\u2013200 with fewer than `SCREEN_MIN_DECIDED` live forks, plus some of deals 201\u2013300 whose forks would push the count past it, plans the rest of 201\u2013300 instead of reading as finished.\n- [ ] A save whose part-played batch holds no live forks plans the same deals as today.\n- [ ] A finished save plays no game, not even the identity game. This includes one stopped at `SCREEN_MAX_GAMES` short of the floor.\n- [ ] The existing r4607000 tests pass, the new ones are named `r4607000_\u2026`, and `cargo test -p jackioh-tools fork_screen`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings` and `cargo jackioh spec check` are clean.\n\n## Size and risks\n\nSmall: about 30 lines and three unit tests in one file, with no AI or engine change. Low risk. Screens without `--save` are untouched, and a save that never stopped inside an extended batch resumes exactly as today.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: resume_save's live_of (fork_screen.rs:1016) counts the forks of every saved deal, including the deals of a cut --extend batch past target, before it calls next_batch(target, \u2026) at :1025 and :1067, so a save holding deals 1-200 with 18 live forks plus 15 cut deals holding 2 more reads as finished at 215 deals, while the uncut loop (:1170-1203) tallies all 300; that breaks R4607000's prom. With no vote, no comment and no \ud83d\udc4e on this issue by Fri 27 Nov 16:21 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5123: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T23:19:39Z",
+    "claimed_at": "2026-11-27T00:45:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
