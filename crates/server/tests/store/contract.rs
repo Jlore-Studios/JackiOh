@@ -5903,6 +5903,47 @@ mod game_records {
     /// #5129: the patches `the_every_patch_read_goes_over_the_card_totals_once` folds a record on.
     const SCAN_PATCHES: [&str; 5] = ["v0.1.1", "v0.2.0", "v0.2.3", "v0.3.0", "v0.3.1"];
 
+    /// R5174000: a filing that folds no play version keeps a list of patches' totals, its run and the versions
+    /// it keeps beside it, and a read of those patches' rows alone keeps what filing the whole read keeps. The
+    /// run here is the middle two of four versions, and the fifth patch is kept beside it as a build's own.
+    async fn r5174000_a_read_of_the_kept_run_keeps_what_filing_the_whole_read_keeps(harness: &StoreHarness) {
+        let records: Vec<GameRecord> = SCAN_PATCHES
+            .iter()
+            .enumerate()
+            .map(|(n, patch)| game_record(&format!("m-run-{n}"), json!({ "patch": patch })))
+            .collect();
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        let whole = folded(&records).select(GAME_SOURCES, None, None, false);
+        let cards = CardRows::Filed(CardFiling {
+            versions: SCAN_PATCHES[..4].iter().map(|patch| patch.to_string()).collect(),
+            kept_from: 1,
+            kept_to: 2,
+            also_kept: vec![SCAN_PATCHES[4].to_string()],
+            folded: IndexMap::new(),
+        });
+        assert_eq!(
+            cards.patches(),
+            Some(["v0.2.0", "v0.2.3", "v0.3.1"].map(str::to_string).to_vec())
+        );
+        let query = StatsTotalsQuery {
+            cards: cards.clone(),
+            drills: false,
+            ..every_total()
+        };
+        let read = q!(harness, t => t.stats_totals_load(&query));
+        let patches: IndexSet<&str> = read.cards.keys().map(|key| key.patch.as_str()).collect();
+        assert_eq!(
+            patches,
+            IndexSet::from(["v0.2.0", "v0.2.3", "v0.3.1"]),
+            "{}",
+            harness.name
+        );
+        assert_eq!(read, file_card_totals(whole, &cards), "{}", harness.name);
+    }
+
     /// #5129: the read of every patch's totals (`kept_snapshot`'s, R3067000) goes over `card_totals` once,
     /// however many patches the table holds. #4964 read it a patch at a time, after a `select distinct patch`.
     /// Staging upserts each patch's rows as its records fold, so they lie scattered through the table, and each
@@ -5968,6 +6009,7 @@ mod game_records {
         r4672003_folds_the_choices_and_loads_them_as_the_records_give,
         r4673001_keeps_each_faces_drills_and_loads_them_as_the_records_give,
         r4965000_a_filed_read_keeps_what_filing_the_whole_read_keeps,
+        r5174000_a_read_of_the_kept_run_keeps_what_filing_the_whole_read_keeps,
         the_every_patch_read_goes_over_the_card_totals_once,
     );
 }
