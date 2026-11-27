@@ -21741,6 +21741,7 @@
     "5144": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "cleared": {
         "approver": {
           "family": "gemini",
@@ -21756,23 +21757,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-26T23:21:03Z",
+      "feedback_since": "2026-11-27T03:36:04Z",
       "forced": false,
       "interruptions": 0,
       "issue": 5122,
       "kind": "revise",
+      "last_findings": [],
       "live": "resolving",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
+      "question": "",
       "queued_at": "2026-11-27T03:35:51Z",
+      "round_tier": "medium",
       "run_id": "45935123743",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-27T03:36:04Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "gemini"
