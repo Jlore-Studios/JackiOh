@@ -20851,28 +20851,26 @@
           "by": "`claude` (strong)",
           "conflicts": [
             "apps/web/src/routes/stats.test.tsx",
-            "apps/web/src/stats/CreatedPanel.tsx",
             "apps/web/src/stats/RunningPanel.tsx",
-            "crates/engine/src/wire/stats/play_versions.rs",
+            "apps/web/src/stats/versions.test.tsx",
             "crates/server/README.md",
-            "crates/server/src/api/stats.rs",
             "spec/09-architecture/9.11-card-statistics.md",
             "spec/rulings/R4678001.md",
             "spec/rulings/R4680000.md"
           ],
-          "from": "d37004752d515466fbed63e5952545527f7469c4",
-          "main": "7e30376ee542082d6bf01a396ad70c3e5685c67c"
+          "from": "9c8050c9565b9c1e920817d59a407103c09a6789",
+          "main": "a7e195165a5fbcea973da696e6bcf962643ed9c6"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-1",
-            "run": "45897607509",
+            "run": "45907574249",
             "tier": "strong"
           }
         ],
-        "sha": "9c8050c9565b9c1e920817d59a407103c09a6789",
+        "sha": "42c16c611666a9abb54ece2e685845aa6e6ada21",
         "tiers": {
           "claude": "strong"
         }
