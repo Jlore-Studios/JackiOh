@@ -21725,6 +21725,13 @@
     "5123": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-27T00:58:10Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 5 and rules 1-4 do not hold: the change is about 30 lines and three tests in crates/tools/src/fork_screen.rs, with no engine, AI, cross-crate or migration change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
