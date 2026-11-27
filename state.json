@@ -20144,6 +20144,14 @@
       "queued_at": "2026-11-27T21:27:07Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
+    },
+    "5202": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-27T20:07:25Z",
+      "issue": 5178,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
