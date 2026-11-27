@@ -22194,16 +22194,16 @@
     "what": "build #5154 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-27T03:17:53Z",
+    "at": "2026-11-27T03:26:23Z",
     "notes": [
       "#5156 waits: 3 approved themselves in the last day already",
-      "#5150: approved and green, so its strikes are cleared",
-      "delivered plan #5152 on claude-6 (run 45932677177): planned",
-      "delivered suggest on claude-3 (run 45929587096): suggested",
-      "started build #5152 on claude-6 (run 45933562107)",
+      "delivered plan #5154 on claude-6 (run 45932733964): planned",
+      "delivered suggest on claude-7 (run 45931165037): suggested",
+      "started build #5154 on claude-6 (run 45934352297)",
       "nothing more to start: nothing is queued",
-      "#5158: typed it Task",
-      "#5157: typed it Task"
+      "pruned 1 plan file(s) older than 7 days",
+      "#5160: typed it Task",
+      "#5159: typed it Feature"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22909,7 +22909,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T03:17:53Z",
+  "loop_tick": "2026-11-27T03:26:23Z",
   "machine_disk": {
     "issue": null,
     "reading": {
