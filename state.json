@@ -19938,6 +19938,13 @@
     "5171": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-27T20:55:07Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Tests-only change in one module (crates/tools/src/fork_screen.rs) plus a comment in scripts/ci-shards.toml; no engine, AI, cross-crate, migration or 40-file change, so none of the five hard lines holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
