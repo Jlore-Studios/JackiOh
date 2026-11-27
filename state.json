@@ -20500,6 +20500,8 @@
       }
     },
     "5211": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-27T21:07:27Z",
@@ -20513,8 +20515,11 @@
         "trail": "- Bash: {\"command\": \"head -c 3000 .bot-notes.md | head -50; echo ----; ls; tail -30 .bot-journal.md\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5158/crates/cards/src/scripts/infinite_assault/c224_rollback_point.rs\"}\n- Bash: {\"command\": \"cd crates/cards/src; grep -n \\\"script_before_launch_read_once\\\" -r . | head; grep -n \\\"KEPT_SCRIPTS\\\" -r . | head; grep -n \\\"before_help_aim\\\" -B3 -A25 scripts/core/c012_fortify.rs | hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; sed -n 1,40p crates/cards/src/history.rs | head -60; sed -n 120,150p crates/cards/src/history.rs; sed -n 1570,1602p crates/cards/src/history.rs\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; grep -rn \\\"infinite_assault\\\" crates/cards/build.rs crates/cards/src/lib.rs crates/cards/src/history.rs | head -20; grep -rn \\\"fn under_kept\\\" \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; grep -n \\\"infinite_assault\\\\|infiniteassault\\\\|infinite-assault\\\" crates/cards/build.rs | head -20; ls crates/cards/src/scripts | head -30; ls \u2026\n- tool error: Exit code 2 classic classic_plus core infinite_assault meditative meditative_plus stinkyscape stinkyscape_plus training_grounds ls: cannot access 'crates/cards/patches/pending/': No such file or dire\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; ls crates/cards/patches | head; ls crates/cards/src/scripts/infinite_assault | head -5; ls crates/cards/src/scripts/*.rs 2>/dev/null; grep -rn \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; python3 - <<'EOF'\\np='crates/cards/src/scripts/infinite_assault/c224_rollback_point.rs'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"//! expensive firs\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; timeout 590 cargo test -p jackioh-cards c224_rollback_point 2>&1 | tail -30\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; timeout 590 cargo jackioh patches \\\"Patch: Radiant Rollback Point brings its Units back on their printed face, with Rush, not Radiant\\\" --sourc\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; cat crates/cards/patches/pending/*.json\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; python3 - <<'EOF'\\np='crates/cards/patches/pending/radiant-rollback-point-brings-its-units-back-on-their.json'\\ns=open(p).read()\\ns=s.replace('\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; sed -n 45300,45330p crates/cards/catalog.json | grep -n loc; grep -n \\\"row 224\\\\|^| 224 \\\" spec/08-catalog/8.13-infinite-assault.md | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; sed -i '45315s/\\\"loc\\\": 47,/\\\"loc\\\": 53,/' crates/cards/catalog.json; sed -n 45315p crates/cards/catalog.json\\npython3 - <<'EOF'\\np='spec/08-ca\u2026\n- said: Now the checks.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; (cargo fmt --check 2>&1 | tail -5; echo fmt=$?; cargo jackioh catalog check 2>&1 | tail -4; cargo jackioh patches check 2>&1 | tail -6; cargo j\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; cargo jackioh classify --base origin/main --claims 2>&1 | tail -5; echo rc=${PIPESTATUS[0]}; cargo jackioh catalog check >/dev/null 2>&1; echo \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; echo \\\"- fragment, loc 53, spec line done; fmt/catalog/patches/spec/classify green. Remaining: clippy, full cards tests, loc test, fuzz\\\" >> .b\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; (timeout 590 cargo test -p jackioh-cards 2>&1 | grep -E \\\"test result|FAILED|failed|panicked\\\" | head -20)\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; (timeout 590 cargo test -p jackioh-tools --bin jackioh every_catalog_entry_carries_a_loc 2>&1 | grep -E \\\"test |test result|error\\\" | head); (t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; timeout 300 cargo jackioh fuzz --seeds 200 --cards infiniteassault-224 > /tmp/fuzz.out 2>&1; echo rc=$?; grep -iE \\\"fail|diverg|ok\\\" /tmp/fuzz.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5158; echo \\\"- ALL DONE: clippy, cards tests (11162 + 1297), loc test, fuzz 200 seeds green. Only the final report is left.\\\" >> .bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Radiant Rollback Point brings its Units back on their printed face, with Rush, not Radiant\"} --> ## What changed Radiant Rollback Point now summons each of its three copies on its printed face and gives them Rush. Before, the Radiant face summoned them \u2026"
       },
       "issue": 5158,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-27T22:32:55Z",
         "from_run": "46068214703",
         "gates": [
           {
@@ -20606,7 +20611,11 @@
         "source": "build",
         "until": "2026-11-27T23:01:59Z"
       },
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-27T22:31:59Z",
+      "run_id": "pending:5bef3f42-1795818756",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -20625,6 +20634,9 @@
         "provider": "claude-7",
         "run": "46068214703"
       },
+      "started_at": "2026-11-27T22:32:55Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -20638,9 +20650,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T22:16:43Z",
+    "at": "2026-11-27T22:32:55Z",
     "url": "",
-    "what": "plan #5207 on claude-3"
+    "what": "review #5211 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-27T22:23:21Z",
