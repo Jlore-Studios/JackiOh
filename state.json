@@ -20522,7 +20522,7 @@
       }
     },
     "5211": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -20544,12 +20544,12 @@
       "interruptions": 0,
       "issue": 5158,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-27T23:40:21Z",
-      "run_id": "46077318113",
+      "run_id": "pending:a735314f-1795822815",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -20570,7 +20570,7 @@
         "run": "46068214703"
       },
       "source": "conflict",
-      "started_at": "2026-11-27T22:32:55Z",
+      "started_at": "2026-11-27T23:40:36Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -20785,9 +20785,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T23:26:59Z",
+    "at": "2026-11-27T23:40:36Z",
     "url": "",
-    "what": "plan #5164 on agy"
+    "what": "revise #5211 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-27T23:33:20Z",
