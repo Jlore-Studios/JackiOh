@@ -45020,6 +45020,10 @@
       "5156": {
         "at": "2026-11-27T03:10:29Z",
         "why": "Confirmed on main: the AI files both shipyard prices under the card's exact def_id (evaluate.rs:374-376, :473-478), a fuse rewrites that id (fuse.rs:2141), the yard fuses at the AI's turn start (turn.rs:398, which end_turn reaches at :840), and reply_score scores lines on that post-reply state with the root's prices (reply.rs:1026-1027), so a played shipyard reads 0 for both, contrary to R3575400'"
+      },
+      "5158": {
+        "at": "2026-11-27T03:19:30Z",
+        "why": "Confirmed: `c224_rollback_point.rs:57` passes the card's own face as the summon's `radiant`, and `summon_fresh_into` (`crates/engine/src/effects/summon.rs:566`) makes each copy Radiant, but the card's text, its header, \u00a78.13 row 224 and R4594005 all say the copies come back on their printed face with only Rush added (compare row 230, whose Radiant text does say 'Radiant copies'); the Commander's c"
       }
     },
     "auto_approved": [
