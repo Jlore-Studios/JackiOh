@@ -881,6 +881,34 @@ pub fn swing_report<'a>(
     }
 }
 
+/// R5036000: a row Decisiveness is read for that is no card's own (a play version's, R4675001): its turns,
+/// and whether they are the Created copies' of a card a rule makes, read as `swing_report` reads such a
+/// card (R4552002): against the other rows' term spreads and field, counting toward neither.
+#[derive(Clone, Copy, Debug)]
+pub struct DecisivenessRow<'a> {
+    pub tally: &'a SwingTally,
+    pub made: bool,
+}
+
+/// R5036000: each row's Decisiveness in order, and the field read over the rows a rule does not make, as
+/// `swing_report` reads its deck cards' (R4552001).
+pub fn decisiveness_rows(
+    rows: &[DecisivenessRow<'_>],
+    baseline: &SwingBaseline,
+) -> (DecisivenessField, Vec<Option<f64>>) {
+    let spreads = term_spreads(rows.iter().filter(|row| !row.made).map(|row| row.tally), baseline);
+    let terms: Vec<(bool, Terms)> = rows
+        .iter()
+        .map(|row| (row.made, terms_of(row.tally, baseline, &spreads, row.made)))
+        .collect();
+    let field = decisiveness_field(terms.iter().filter(|(made, _)| !made).map(|(_, terms)| terms));
+    let read = terms
+        .iter()
+        .map(|(_, terms)| decisiveness_of(terms, &field))
+        .collect();
+    (field, read)
+}
+
 /// R4552001: Decisiveness as the page shows it, "±14.2%", or "—".
 pub fn format_decisiveness(value: Option<f64>) -> String {
     value.map_or_else(

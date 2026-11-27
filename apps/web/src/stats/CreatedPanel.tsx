@@ -47,8 +47,8 @@ export function createdSortOf(col: string, dir: "asc" | "desc"): CreatedSort {
 }
 
 /**
- * What a row sorts by: a Created card's, and R4678001 a Running row's, which has no Decisiveness. R5033000: a
- * Running row also holds `firstShipped`, the position the server sent for its first version; a Created row has none.
+ * What a row sorts by: a Created card's, and R4678001 a Running row's, its Decisiveness among them (R5036000). R5033000:
+ * a Running row also holds `firstShipped`, the position the server sent for its first version; a Created row has none.
  * R5037000: a Running row has a Win rate and a Play rate, which a Created card lacks and a server deployed before
  * them leaves out.
  */

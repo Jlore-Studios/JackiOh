@@ -1991,6 +1991,8 @@ export type PublicPlayVersion = {
   adjustedWinRate: number | null;
   adjustedLow: number | null;
   adjustedHigh: number | null;
+  /** R5036000: its Decisiveness over its span, null below the floor or with no turns; absent from an older server. */
+  decisiveness?: number | null;
   tier: CardTier | null;
   hasEnoughGames: boolean;
   /**
@@ -2011,6 +2013,8 @@ export type PublicStatsVersionsResponse = {
   mode: "all" | "bo1" | "bo3" | "random" | "constructed";
   bandLow: number;
   bandHigh: number;
+  /** R5036000: the typical play version's Decisiveness, a fraction; absent from an older server. */
+  decisiveness?: number;
   minSample: number;
   versions: PublicPlayVersion[];
 };

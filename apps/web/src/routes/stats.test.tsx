@@ -3917,20 +3917,20 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     expect(screen.queryByTestId(statsTestid.experimentalLine)).toBeNull();
   });
 
-  it("R4678001 R5037000 Running lists each card the Cards tab lists on its live play version: Card, Name, Games, Tier, Adjusted, Win rate, Play rate and Since with the patches it reaches", async () => {
+  it("R4678001 R5037000 Running lists each card the Cards tab lists on its live play version: Card, Name, Games, Tier, Adjusted, Decisiveness, Win rate, Play rate and Since with the patches it reaches", async () => {
     at("/stats?tab=experimental");
     serveRunning();
     render(<StatsRoute />);
     const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
-    expect(headers(table)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Win rate", "Play rate", "Since", "Iteration"]);
+    expect(headers(table)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Decisiveness", "Win rate", "Play rate", "Since", "Iteration"]);
     // Adjusted best first, the row below the floor last with no tier or rate; no closed version and no unlisted card.
     // This server sends no Win rate or Play rate (R5037000): "—" in both.
     expect(rowsOf(table)).toEqual({
       ids: ["core-001", "core-003", "core-002"],
       cells: [
-        ["1", "Spark Pup", "140", "B", "51.2%", "—", "—", "v0.1.5 across 3 patches", "v1b"],
-        ["2", "Aqua Warden", "60", "F", "45.5%", "—", "—", "v0.2.0 across 1 patch", "v2"],
-        ["4", "Lava Hound", "12", "—", "—", "—", "—", "v0.0.1 across 7 patches", "v1"],
+        ["1", "Spark Pup", "140", "B", "51.2%", "—", "—", "—", "v0.1.5 across 3 patches", "v1b"],
+        ["2", "Aqua Warden", "60", "F", "45.5%", "—", "—", "—", "v0.2.0 across 1 patch", "v2"],
+        ["4", "Lava Hound", "12", "—", "—", "—", "—", "—", "v0.0.1 across 7 patches", "v1"],
       ],
     });
     // The cost badge wears the card's rarity, as a deck row's does.
@@ -3940,7 +3940,7 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
 
     // Games is behind the Columns toggle, as Play rate is (R5037000).
     fireEvent.click(screen.getByTestId(statsTestid.columnGames));
-    expect(headers(table)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Win rate", "Play rate", "Since", "Iteration"]);
+    expect(headers(table)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Decisiveness", "Win rate", "Play rate", "Since", "Iteration"]);
     cleanup();
 
     // A server deployed before the patches were counted: the version alone.
@@ -4021,13 +4021,13 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     expect(address().get("tab")).toBe("experimental");
   });
 
-  it("R4678001 R5037000 Running sorts by the page's one sort: Name, Games, Tier, Adjusted, Win rate and Play rate, set by the select, the direction and the headers, a sort it lacks (Decisiveness) read as Adjusted", async () => {
+  it("R4678001 R5037000 Running sorts by the page's one sort: Name, Games, Tier, Adjusted, Decisiveness, Win rate and Play rate, set by the select, the direction and the headers, and a Cards sort carries back to it as itself", async () => {
     at("/stats?tab=experimental");
     serveRunning();
     render(<StatsRoute />);
     const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
     const select = screen.getByTestId(statsTestid.sortSelect);
-    expect(within(select).getAllByRole("option").map((option) => option.getAttribute("value"))).toEqual(["name", "games", "tier", "adjustedWinRate", "winRate", "playRate", "date"]);
+    expect(within(select).getAllByRole("option").map((option) => option.getAttribute("value"))).toEqual(["name", "games", "tier", "adjustedWinRate", "decisiveness", "winRate", "playRate", "date"]);
     expect(select).toHaveValue("adjustedWinRate");
 
     fireEvent.change(select, { target: { value: "name" } });
@@ -4042,16 +4042,16 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     expect(rowsOf(table).ids).toEqual(["core-003", "core-001", "core-002"]);
     await waitFor(() => expect(address().get("dir")).toBe("asc"), SLOW);
 
-    // The Cards tab follows it, and a Cards sort Running lacks reads as Adjusted there, in its direction.
+    // The Cards tab follows it, and a Cards sort comes back to Running as itself: since R5036000 and R5037000 Running
+    // offers every sort the Cards tab does, so none reads as Adjusted.
     fireEvent.click(screen.getByTestId(statsTestid.tabCards));
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("tier");
     fireEvent.change(screen.getByTestId(statsTestid.sortSelect), { target: { value: "decisiveness" } });
     fireEvent.click(screen.getByTestId(statsTestid.tabExperimental));
     const again = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
-    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("adjustedWinRate");
-    expect(within(again).getByRole("columnheader", { name: /^Adjusted/ })).toHaveAttribute("aria-sort", "descending");
-    expect(rowsOf(again).ids).toEqual(["core-001", "core-003", "core-002"]);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("decisiveness");
+    expect(within(again).getByRole("columnheader", { name: /^Decisiveness/ })).toHaveAttribute("aria-sort", "descending");
   });
 
   it("R5033000 Date sorts Running newest first, then oldest first, by the select and by the Since header", async () => {
@@ -4190,21 +4190,21 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     serveRunning(() => json(RATES));
     render(<StatsRoute />);
     const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
-    expect(headers(table)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Win rate", "Play rate", "Since", "Iteration"]);
+    expect(headers(table)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Decisiveness", "Win rate", "Play rate", "Since", "Iteration"]);
     // The server's figures as the Cards tab prints them, whole percents: Lava Hound's 55% is below the floor and so
     // unread, its Play rate not (as on the Cards tab); Aqua Warden was never seen, so no Play rate and not 0%.
     expect(rowsOf(table)).toEqual({
       ids: ["core-001", "core-003", "core-002"],
       cells: [
-        ["1", "Spark Pup", "140", "B", "51.2%", "51%", "62%", "v0.1.5 across 3 patches", "v1b"],
-        ["2", "Aqua Warden", "60", "F", "45.5%", "46%", "—", "v0.2.0 across 1 patch", "v2"],
-        ["4", "Lava Hound", "12", "—", "—", "not enough games", "40%", "v0.0.1 across 7 patches", "v1"],
+        ["1", "Spark Pup", "140", "B", "51.2%", "—", "51%", "62%", "v0.1.5 across 3 patches", "v1b"],
+        ["2", "Aqua Warden", "60", "F", "45.5%", "—", "46%", "—", "v0.2.0 across 1 patch", "v2"],
+        ["4", "Lava Hound", "12", "—", "—", "—", "not enough games", "40%", "v0.0.1 across 7 patches", "v1"],
       ],
     });
     expect(within(table).getAllByTestId(statsTestid.winRateCell)).toHaveLength(3);
     expect(within(table).getAllByTestId(statsTestid.playRateCell)).toHaveLength(3);
 
-    // The Grid: Win rate between Adjusted and Games, no Play rate, as the Cards tab's grid.
+    // The Grid: Win rate between Adjusted (and R5036000's Decisiveness) and Games, no Play rate, as the Cards tab's grid.
     fireEvent.click(screen.getByTestId(statsTestid.viewGrid));
     const grid = await screen.findByTestId(statsTestid.runningGrid, undefined, SLOW);
     type Figures = { terms: string[]; values: string[] };
@@ -4215,10 +4215,10 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     const items = [...grid.querySelectorAll("li")].map(figures);
     expect(items).toHaveLength(3);
     const [pup, warden, hound] = items as [Figures, Figures, Figures];
-    expect(pup.terms).toEqual(["Tier", "Adjusted", "Win rate", "Games", "Since", "Iteration"]);
-    expect(pup.values.slice(1, 4)).toEqual(["51.2%", "51%", "140"]);
-    expect(warden.values[2]).toBe("46%");
-    expect(hound.values[2]).toBe("not enough games");
+    expect(pup.terms).toEqual(["Tier", "Adjusted", "Decisiveness", "Win rate", "Games", "Since", "Iteration"]);
+    expect(pup.values.slice(1, 5)).toEqual(["51.2%", "—", "51%", "140"]);
+    expect(warden.values[3]).toBe("46%");
+    expect(hound.values[3]).toBe("not enough games");
   });
 
   it("R5037000 the Columns toggle offers Play rate on Running and Versions beside Games, and hides it with the column", async () => {
@@ -4231,9 +4231,9 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     expect(screen.getByTestId(statsTestid.columnPlayRate)).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByTestId(statsTestid.columnPlayRate));
     expect(screen.getByTestId(statsTestid.columnPlayRate)).toHaveAttribute("aria-pressed", "false");
-    expect(headers(table)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Win rate", "Since", "Iteration"]);
+    expect(headers(table)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Decisiveness", "Win rate", "Since", "Iteration"]);
     expect(within(table).queryByTestId(statsTestid.playRateCell)).toBeNull();
-    expect(rowsOf(table).cells[0]).toEqual(["1", "Spark Pup", "140", "B", "51.2%", "51%", "v0.1.5 across 3 patches", "v1b"]);
+    expect(rowsOf(table).cells[0]).toEqual(["1", "Spark Pup", "140", "B", "51.2%", "—", "51%", "v0.1.5 across 3 patches", "v1b"]);
 
     // Versions offers the same toggle, left as it was set, and takes its column back.
     fireEvent.click(screen.getByTestId(statsTestid.experimentalVersions));
@@ -4243,12 +4243,12 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
       "Play rate",
     ]);
     expect(screen.getByTestId(statsTestid.columnPlayRate)).toHaveAttribute("aria-pressed", "false");
-    expect(headers(versions)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Win rate", "Since", "Iteration"]);
+    expect(headers(versions)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Decisiveness", "Win rate", "Since", "Iteration"]);
     fireEvent.click(screen.getByTestId(statsTestid.columnPlayRate));
-    expect(headers(versions)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Win rate", "Play rate", "Since", "Iteration"]);
+    expect(headers(versions)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Decisiveness", "Win rate", "Play rate", "Since", "Iteration"]);
     expect(within(versions).getAllByTestId(statsTestid.playRateCell).map((cell) => cell.textContent)).toEqual(["62%", "—", "40%"]);
     fireEvent.click(screen.getByTestId(statsTestid.columnGames));
-    expect(headers(versions)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Win rate", "Play rate", "Since", "Iteration"]);
+    expect(headers(versions)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Decisiveness", "Win rate", "Play rate", "Since", "Iteration"]);
 
     // The Hall of Fame's options keep only the ranges.
     fireEvent.click(screen.getByTestId(statsTestid.experimentalHall));
@@ -4424,7 +4424,7 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
     await waitFor(() => expect(rowsOf(table).ids).toHaveLength(3), SLOW);
     // R5035000: the cut row keeps its play version's iteration.
-    expect(rowsOf(table).cells[0]).toEqual(["1", "Spark Pup", "40", "B", "51.2%", "—", "—", "v0.2.0 across 1 patch", "v1b"]);
+    expect(rowsOf(table).cells[0]).toEqual(["1", "Spark Pup", "40", "B", "51.2%", "—", "—", "—", "v0.2.0 across 1 patch", "v1b"]);
 
     fireEvent.click(screen.getByTestId(statsTestid.experimentalHistorical));
     await waitFor(
@@ -4437,6 +4437,7 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
           "51.2%",
           "—",
           "—",
+          "—",
           "v0.1.5 across 3 patches",
           "v1b",
         ]),
@@ -4444,6 +4445,65 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     );
     expect(requested("/api/stats/versions").map((url) => url.search)).toEqual(["?mode=all&scope=major", "?mode=all"]);
     await waitFor(() => expect(address().get("experimental")).toBe("historical"), SLOW);
+  });
+
+  /** R5036000: each play version's Decisiveness, by id; the others have none. */
+  const BY_ID: Record<string, number> = { "core-001~v0.1.5": 0.142, "core-003~v0.2.0": 0.087, "core-099~v0.0.1": 0.1 };
+  const DECISIVE = {
+    ...VERSIONS,
+    decisiveness: 0.121,
+    versions: VERSIONS.versions.map((row) => ({ ...row, decisiveness: BY_ID[row.id] ?? null })),
+  };
+  const decisivenessTip = (typical: string): string =>
+    `Decisiveness: how far playing a card typically moves your chance of winning, one way or the other; ± is the swing itself, not a margin of error. A typical card: ${typical}. Versions played before games recorded their turns have none.`;
+  const decisivenessCells = (root: HTMLElement): string[] =>
+    within(root)
+      .getAllByTestId(statsTestid.decisivenessCell)
+      .map((cell) => cell.textContent ?? "");
+
+  it("R5036000 the running views and Versions show each play version's Decisiveness after Adjusted with its tooltip, sort by it both ways, and read — from an older server", async () => {
+    at("/stats?tab=experimental&experimental=historical");
+    serveRunning(() => json(DECISIVE));
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(headers(table)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Decisiveness", "Win rate", "Play rate", "Since", "Iteration"]);
+    const header = within(table).getByRole("columnheader", { name: /^Decisiveness/ });
+    expect(header).toHaveAttribute("title", decisivenessTip("±12.1%"));
+    // Lava Hound is below the floor.
+    expect(decisivenessCells(table)).toEqual(["±14.2%", "±8.7%", "not enough games"]);
+
+    // Highest first, then flipped; a row with none stays last either way. The select offers it after Adjusted.
+    fireEvent.click(header);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("decisiveness");
+    expect(rowsOf(table).ids).toEqual(["core-001", "core-003", "core-002"]);
+    fireEvent.click(within(table).getByRole("columnheader", { name: /^Decisiveness/ }));
+    expect(rowsOf(table).ids).toEqual(["core-003", "core-001", "core-002"]);
+    await waitFor(() => expect(address().get("dir")).toBe("asc"), SLOW);
+    expect(address().get("sort")).toBe("decisiveness");
+
+    // The Grid shows it after Adjusted, in the same order.
+    fireEvent.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.runningGrid, undefined, SLOW);
+    const first = grid.querySelector<HTMLElement>("li")!;
+    expect([...first.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["Tier", "Adjusted", "Decisiveness", "Win rate", "Games", "Since", "Iteration"]);
+    expect(decisivenessCells(grid)).toEqual(["±8.7%", "±14.2%", "not enough games"]);
+
+    // Versions shows it too: Spark Pup's first version has its games but no turns, as every version before them.
+    fireEvent.click(screen.getByTestId(statsTestid.viewTable));
+    fireEvent.click(screen.getByTestId(statsTestid.experimentalVersions));
+    const versions = await screen.findByTestId(statsTestid.versionsTable, undefined, SLOW);
+    expect(headers(versions)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted", "Decisiveness ↑", "Win rate", "Play rate", "Since", "Iteration"]);
+    const old = versions.querySelector<HTMLElement>('tr[data-version-id="core-001~v0.1.0"]')!;
+    expect(within(old).getByTestId(statsTestid.decisivenessCell)).toHaveTextContent(/^not enough games$/);
+    cleanup();
+
+    // A server deployed before it: Major patch running reads "—" in every row, and the tooltip no typical value.
+    at("/stats?tab=experimental");
+    serveRunning();
+    render(<StatsRoute />);
+    const older = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(decisivenessCells(older)).toEqual(["—", "—", "—"]);
+    expect(within(older).getByRole("columnheader", { name: /^Decisiveness/ })).toHaveAttribute("title", decisivenessTip("—"));
   });
 });
 
