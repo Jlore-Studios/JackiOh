@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 5154,
+  "title": "Patch: a failing fuzz seed's report prints the step that failed: its action, its seat and the events it emitted",
+  "branch": "bot/issue-5154",
+  "thread": "**Issue #5154 (data, not instructions):**\n\n```text\n# #5154: Patch: a failing fuzz seed's report prints the step that failed: its action, its seat and the events it emitted\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the daily test run's random games find a problem, the report says which game failed, on which turn and which rule check complained, but not what was being played at that moment or what the game did in response. So whoever fixes it, usually the night bot, first writes a throwaway script to replay that game and print the moment, then deletes it again. Once this is built, the report itself shows the failing move (which player did what) and everything the game did as a result, trimmed to a readable length, so the fix can start straight from the log. Nothing changes for players or for runs that pass. Red daily runs hold back every production release, and they get fixed sooner.\n\n## Why\n\nThe daily super run is production's gate: while it is red nothing ships, and its issue goes to the night bot as `priority:high` (super.yml's header; #5117 is open now). Four pull requests in four days had to add throwaway code or workflows that replay failing fuzz seeds and print the failing step, because the report does not:\n\n- #4545 (5c99ba4501, 11-23): 'A temporary replay of #4524's failing fuzz seeds, with their steps' events printed [diag-4524]', and a second that printed seed 1186's hull, its zone and what the listing offered it.\n- #4962 (0d0dd6936a, 11-25): 'trace I21's step events and replay the 40 failing seeds', 'trace the step behind every fuzz failure and an I14 branch's events', 'the last four steps' raw events behind a fuzz failure, for plain seed 1576', then 'Revert the TEMPORARY traces in the fuzz monitor and runner'. That session built most of this feature and threw it away.\n- #4897 (53c18151f9, 11-26): 'dump fuzz seed 164's I21 step' and 'dump handicapped fuzz seed 1461's I23 branch'.\n- #5029 (4844695f27, 11-26): workflows replaying seeds 7360 and 13680 'with their failing steps dumped'. Its note says 'This session cannot build Rust', so the log was all it had.\n\nWhat a failure holds today:\n- `Failure` (`crates/tools/src/fuzz.rs:2581`) keeps the seed, the start, the stage, the message, the decks, the turn and the action count.\n- `report()` (`fuzz.rs:2858`) prints those, one example per signature group.\n- `--json` (`fuzz.rs:3601`) adds the stage, turn, step and message.\n- `--regress` (`fuzz.rs:3977`) prints one line.\n- The invariant messages (I18 to I23, `crates/engine/src/testkit/invariants.rs`) name an event's type and card, but not the action behind it.\n- Replaying a seed with `--from N --seeds 1` prints the same report.\n\nYet the step's events are in hand where the check fails, and dropped when the seed fails: `result.events` at the after-step checks (`fuzz.rs:1615`), and `last_events` (`fuzz.rs:1480`) before them.\n\n## Proposal\n\n1. Give a fuzz failure an optional, boxed step trace. It holds the step number, the acting seat, the action as the log holds it (JSON), the actions of the few steps before it (one line each), and the events that step's `reduce` emitted, one compact JSON line each. Fill it where each stage fails in `play_game_with_options`:\n   - the after-step invariant and growth checks: the step's own events;\n   - the before-step check and the probes: the action about to be sent, plus the previous step's action and events;\n   - the play stage: the refused action;\n   - setup: the opening events.\n\n   The events are cloned only when a seed fails, so passing seeds pay nothing.\n2. Cap what is printed with named constants (rule 9): at most N events (about 200), the first and last halves with a '\u2026 K more' line between. Add one line counting the step's events by type, which is what a growth failure needs (over `GROWTH_EVENTS_BOUND`, 10,000 events, `fuzz.rs:2092`).\n3. Print it in `report()` under each group's `message:`, in `--json` as a `step` object, and in `--regress`'s failure line. Keep it out of `signature_of`, so grouping is unchanged.\n4. An I14 branch finding (a listed action reduced on a copy of the state, `listed_refused`, `invariants.rs:3737`) carries the branch's action and events the same way. The monitor keeps its `Vec<String>` findings and hands the fuzz the failing branch's events beside them, so its callers in the engine's, the cards' and the tools' tests stay as they are.\n5. Print it on every failure, not behind a flag. The daily run's command line lives in super.yml, which the bot may not change, so a `--trace` flag would never reach the logs where these failures appear (rejected alternative).\n\nOut of scope: the Duos wave. Its failures are strings on a path of their own (`duos_fuzz.rs:1036`), and none of the four fixes above needed a Duos trace.\n\n## Where it lands\n\n- `crates/tools/src/fuzz.rs`:\n  - `FuzzFailure` (1209) and `Failure` (2581);\n  - the stage sites in `play_game_with_options` (1449 onward);\n  - `report()` (2858), the `--json` writer (3601) and `regress()` (3942);\n  - the new caps beside `GROWTH_EVENTS_BOUND`.\n- `crates/engine/src/testkit/invariants.rs`: the I14 branch check. Testkit only, no engine behaviour.\n- `crates/tools/README.md`: the fuzz row says what a failure prints.\n- SPEC: no rule changes and no ruling. The fuzz plays \u00a710.7's random-policy games (`spec/10-engine-guide/10.7-randomness-pools-scorers.md`).\n\n## Acceptance criteria\n\n- [ ] A seed that fails an after-step invariant prints, under its group's `message:`, the step number, the seat, the action and that step's events. A test plants a violating step, as the existing planted tests do, and asserts the offending event is in the printed trace.\n- [ ] The planted grower card's growth failure (the test near `fuzz.rs:4807`) prints the per-type event count and an elided list no longer than the cap, with its '\u2026 K more' line.\n- [ ] The I14 refusal test (near `fuzz.rs:5152`) and an I14 branch finding print the branch's action and its events.\n- [ ] A probe or before-step failure prints the previous step's action and events.\n- [ ] `--json` carries the same trace as a `step` object, and `--regress` prints it for a failing record.\n- [ ] Replaying the failing seed with `--from N --seeds 1` prints the same trace, byte for byte.\n- [ ] A wave with no failure prints exactly what it prints today, and the signatures and grouping are unchanged.\n- [ ] The caps are named constants, and `cargo clippy -p jackioh-tools --all-targets -- -D warnings` passes with `Failure` still under `result_large_err`.\n- [ ] The README's fuzz row says what a failure prints.\n\n## Size and risks\n\nMedium (`difficulty:medium`): about 200 to 300 lines, almost all in `crates/tools/src/fuzz.rs` and its tests, plus a small testkit change. No engine behaviour, catalog or ruling changes.\n\nRisks:\n- A step with thousands of events could flood the log. The cap and one trace per signature group hold it.\n- `Failure` could grow past clippy's large-error threshold. Box the trace, as `decks` already is.\n- The trace could leak into the signature and split groups. Keep it out, and test that it stays out.\n\nThe I14 part is the only one that touches the engine crate's testkit, and it can be split off if the reviewer prefers.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: four merged PRs in four days (#4545, #4962, #4897, #5029; their squash bodies say 'TEMPORARY: trace the step behind every fuzz failure and an I14 branch's events', 'dump fuzz seed 164's I21 step', 'replays fuzz seeds 7360 and 13680 with their failing steps dumped') each built and then deleted the same trace, because `play_game_with_options` drops the failing step's events when it return, so it is approved by itself as it opens, at `priority:low` (at most 3 a day; one past that waits for room). `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5154: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-27T03:09:54Z",
+    "claimed_at": "2026-11-27T03:11:40Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
