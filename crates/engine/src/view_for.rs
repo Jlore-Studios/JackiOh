@@ -2579,8 +2579,10 @@ fn redact_event(
         | GameEventType::GameOver
         // R961: the Jade Counter is public, a player and a number.
         | GameEventType::JadeChanged
-        // R3857000: a hero's Armor is public, a player and two numbers.
+        // R3857000: a hero's Armor is public, a player and two numbers; R5183000: its wear, a player and
+        // a number.
         | GameEventType::ArmorGained
+        | GameEventType::ArmorWorn
         // R3925000: a seat, public.
         | GameEventType::LoopCapped
         // R860, R864: a kept secret names only its player and id, and a reveal and a prediction
@@ -2954,12 +2956,13 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     // it would had no hook been marked, each marker among them beside them, and the markers just before
     // its first event with it (a hook's marker comes before its first effect). R3857000: an `armorGained`
     // report likewise takes none, so the window holds what it held before the report existed, and so
-    // does a pool's `damageNullified` (R5045000).
+    // do a pool's `damageNullified` (R5045000) and an Armor's `armorWorn` (R5183000).
     let marker = |at: &usize| {
         matches!(
             all[*at],
             GameEvent::HookResolving { .. }
                 | GameEvent::ArmorGained { .. }
+                | GameEvent::ArmorWorn { .. }
                 | GameEvent::DamageNullified { .. }
         )
     };

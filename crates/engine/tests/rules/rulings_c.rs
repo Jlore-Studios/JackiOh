@@ -3031,13 +3031,17 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         assert_eq!(stopped.0, 0);
         assert_eq!(
             stopped.1,
-            vec![GameEvent::DamageAbsorbed {
-                source_id: None,
-                target_id: "hero-p2".to_string(),
-                absorbed: 6,
-                combat: false,
-                via: None,
-            }]
+            vec![
+                GameEvent::DamageAbsorbed {
+                    source_id: None,
+                    target_id: "hero-p2".to_string(),
+                    absorbed: 6,
+                    combat: false,
+                    via: None,
+                },
+                // R5183000: and the hit it took whole wears 1 off it.
+                GameEvent::ArmorWorn { player: P2, armor: 5 },
+            ]
         );
 
         // The opposite case: step 3's Anti-oneshot cap is a *ceiling*, so two such cards give the smaller.
@@ -3079,7 +3083,7 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
     }
 
     #[test]
-    fn r125_r1362_sends_fatigue_through_the_whole_damage_pipeline_so_armor_absorbs_the_early_draws() {
+    fn r125_r1362_r5183000_sends_fatigue_through_the_whole_damage_pipeline_so_armor_absorbs_and_wears() {
         // The control: with no Armor, the Nth empty draw takes the full N (§2.4, R3).
         let mut bare = game("r125-no-armor");
         bare.players.p1.library = vec![];
@@ -3094,43 +3098,47 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         }
         assert_eq!(bare.players.p1.fatigue_count, 4);
 
-        // Behind Going Long's Armor 3, fatigue is ordinary damage, so draws 1 to 3 are absorbed whole: no
-        // damage instance (R63), but reported (R240, R1362) by `damageAbsorbed` with the whole hit.
+        // Behind Armor 3 on the hero, fatigue is ordinary damage, so it meets the Armor, and each draw
+        // wears 1 off it (R5183000): draws 1 and 2 are absorbed whole, no damage instance (R63) but
+        // reported (R240, R1362) by `damageAbsorbed` with the whole hit, and the Armor is down to 1.
         let mut armored = game("r125-armour");
         armored.players.p1.library = vec![];
         armored.players.p1.hero.armor = 3;
         let mut sink = Bench::new(&armored);
         let full = HERO_HEALTH;
 
-        for n in [1, 2, 3] {
+        for (n, left) in [(1, 2), (2, 1)] {
             assert!(matches!(
                 sink.run(&mut armored, |engine| draw::draw_one(engine, P1, None)),
                 DrawOutcome::Fatigue
             ));
             assert_eq!(armored.players.p1.fatigue_count, n);
             assert_eq!(armored.players.p1.hero.health, full);
+            assert_eq!(armored.players.p1.hero.armor, left);
         }
         assert!(hits(&sink.events).is_empty());
-        assert_eq!(absorbed_whole(&sink.events), vec![1, 2, 3]);
+        assert_eq!(absorbed_whole(&sink.events), vec![1, 2]);
 
+        // The 3rd meets the last point and lands 2; the 4th meets none and lands whole.
         assert!(matches!(
             sink.run(&mut armored, |engine| draw::draw_one(engine, P1, None)),
             DrawOutcome::Fatigue
         ));
-        assert_eq!(armored.players.p1.hero.health, full - 1);
+        assert_eq!(armored.players.p1.hero.health, full - 2);
+        assert_eq!(armored.players.p1.hero.armor, 0);
         assert!(matches!(
             sink.run(&mut armored, |engine| draw::draw_one(engine, P1, None)),
             DrawOutcome::Fatigue
         ));
-        assert_eq!(armored.players.p1.hero.health, full - 1 - 2);
+        assert_eq!(armored.players.p1.hero.health, full - 2 - 4);
         assert_eq!(
             hits(&sink.events),
-            [1, 2]
+            [2, 4]
                 .iter()
                 .map(|amount| Hit::new("", "hero-p1", *amount))
                 .collect::<Vec<_>>()
         );
-        assert_eq!(absorbed_whole(&sink.events), vec![1, 2, 3]);
+        assert_eq!(absorbed_whole(&sink.events), vec![1, 2]);
 
         // Step 3's cap rides along: a fatigue above the cap is clamped to it.
         let mut capped = game("r125-capped");

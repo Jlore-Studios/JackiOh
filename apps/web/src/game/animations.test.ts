@@ -114,6 +114,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   damageNullified: 400,
   // R3857000: a hero's kept Armor gain ticks its Armor badge.
   armorGained: 300,
+  // R5183000: a wear of a hero's Armor ticks its Armor badge.
+  armorWorn: 300,
   // Meditative #39.2, R961.
   jadeChanged: 200,
   secretChosen: 300,
@@ -258,6 +260,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
   damageNullified: { type: "damageNullified", instanceId: "u7", sourceId: "u1", targetId: "u6", amount: 2, combat: true },
   armorGained: { type: "armorGained", player: "p2", amount: 2, armor: 2 },
+  armorWorn: { type: "armorWorn", player: "p2", armor: 1 },
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
@@ -376,6 +379,7 @@ const SAMPLE_TARGETS: Record<GameEventType, string> = {
   damageAbsorbed: testid.card("u6"),
   damageNullified: testid.card("u7"),
   armorGained: testid.hero("opponent"),
+  armorWorn: testid.hero("opponent"),
   jadeChanged: testid.hero("you"),
   secretChosen: testid.hero("you"),
   secretRevealed: testid.hero("you"),
@@ -473,9 +477,9 @@ describe("ANIMATIONS covers every event type", () => {
 
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
-    // pair of eyes on it, so it moves only when a type is deliberately added there (#5045's
-    // `damageNullified`, R5045000, the latest).
-    expect(rows).toHaveLength(98);
+    // pair of eyes on it, so it moves only when a type is deliberately added there (#5183's
+    // `armorWorn`, R5183000, the latest).
+    expect(rows).toHaveLength(99);
   });
 
   it("gives every row an animation name and a testid template", () => {
@@ -601,6 +605,18 @@ describe("R3857000 a hero's kept Armor gain", () => {
     expect(targetFor(SAMPLES.armorGained, fullBoardView())).toBe(testid.hero("opponent"));
     expect(targetFor({ ...SAMPLES.armorGained, player: "p1" }, fullBoardView())).toBe(testid.hero("you"));
     expect(animationsCss).toContain('[data-animating="armorGained"] .hero-armor');
+  });
+});
+
+describe("R5183000 a wear of a hero's Armor", () => {
+  it("R5183000 armorWorn ticks the named hero's badge for 300 ms with no effect of its own", () => {
+    const row = ANIMATIONS.armorWorn;
+    expect(row.animation).toBe("jk-badge-tick");
+    expect(row.durationMs).toBe(300);
+    expect(row.fx).toBeUndefined();
+    expect(targetFor(SAMPLES.armorWorn, fullBoardView())).toBe(testid.hero("opponent"));
+    expect(targetFor({ ...SAMPLES.armorWorn, player: "p1" }, fullBoardView())).toBe(testid.hero("you"));
+    expect(animationsCss).toContain('[data-animating="armorWorn"] .hero-armor');
   });
 });
 

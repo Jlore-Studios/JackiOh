@@ -2,7 +2,7 @@
 //! Stinkyscape+ set (R1420, R3535000; R3569004).
 //!   Base:    "Players take turns casting Jogg's box until the game ends."
 //!   Radiant: "Your hero gains Armor {count}, then players take turns casting Jogg's box until the game
-//!            ends."
+//!            ends." (8 since #5183, R5183004; 5 before)
 //!
 //! Engine: a `forRestOfGame` for each player, at the start of each of their own turns (R458), casts
 //! a fresh Classic+ #47 Jogg's Box as that player: every choice of the cast is random (R452), so nothing
@@ -137,10 +137,10 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3569004_radiant_enigmata_gives_armor_first() {
+        fn r3569004_r5183004_radiant_enigmata_gives_armor_8_first() {
             let mut s = game("enigmata-radiant", true);
             s.play(ID, json!({}));
-            assert_eq!(s.state().players[P1].hero.armor, 5);
+            assert_eq!(s.state().players[P1].hero.armor, 8);
             assert_eq!(s.state().players[P2].hero.armor, 0, "only the caster's hero");
             assert!(boxes(&s).is_empty());
             s.end_turn();

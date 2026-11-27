@@ -503,7 +503,10 @@ after it. It is withheld from the trigger loop, public, takes no room in R168's 
 of the golden texts (R3857000). Since #5045 `GameEvent::DamageNullified { instance_id, source_id,
 target_id, amount, combat }` reports what each damage pool soaked of a hit (`damage::spend_pool`),
 `instance_id` the pool's card; withheld from the trigger loop, redacted as `damage` is, taking no room
-in R168's floor and left out of the golden texts (R5045000). Since #3925 `GameEvent::LoopCapped { player }` reports that an
+in R168's floor and left out of the golden texts (R5045000). Since #5183 `GameEvent::ArmorWorn { player,
+armor }` reports that a hit wore 1 off the Armor on a hero itself (`damage::wear_hero_armor`), `armor`
+being `hero_armor_of` after it; withheld, public, taking no room in R168's floor and left out of the
+golden texts (R5183000). Since #3925 `GameEvent::LoopCapped { player }` reports that an
 interaction reached `RESOLUTION_EVENT_CAP` events and its loop stopped (`loop_cap.rs`, whose count rides
 `Frontier.interaction_from` and dies with the action); public, and emitted only by a capped interaction,
 so no game that never reaches the cap hashes differently (R3925000). Since #4423 `destroyed` carries an

@@ -171,6 +171,8 @@ mod r315_fatigue {
             json!([
                 { "type": "fatigue", "player": "p1", "count": 1, "amount": 1 },
                 { "type": "damageAbsorbed", "sourceId": null, "targetId": "hero-p1", "absorbed": 1, "combat": false },
+                // R5183000: then the wear of the Armor that took it.
+                { "type": "armorWorn", "player": "p1", "armor": 2 },
             ])
         );
     }
