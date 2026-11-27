@@ -45027,14 +45027,10 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {
-      "5152": {
-        "at": "2026-11-27T03:02:14Z",
-        "why": "Confirmed: the web dictionary is `apps/web/src/i18n/zh-CN.json` alone, and with its pattern matching (`i18n.ts:120-175`) the engine's badge `You are immune to fatigue damage` (`view_for.rs:1296`) comes out as `\u4f60\u7684\u6bb5\u4f4d\u662fimmune to fatigue damage` through the leaderboard's `You are {rank}` (`zh-CN.json:943`), while exactly 12 Call to Chaos clauses that `chaos-names.json` cannot name come out half-transla"
-      }
-    },
+    "auto": {},
     "auto_approved": [
-      "2026-11-26T23:19:32Z"
+      "2026-11-26T23:19:32Z",
+      "2026-11-27T03:08:24Z"
     ],
     "decided": [
       {
