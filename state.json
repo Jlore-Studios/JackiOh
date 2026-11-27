@@ -21073,7 +21073,7 @@
       }
     },
     "5094": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -21096,22 +21096,23 @@
       "forced": false,
       "interruptions": 0,
       "issue": 5036,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner": "claude-3",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-26T22:12:51Z",
       "round_tier": "strong",
-      "run_id": "45918516296",
+      "run_id": "pending:0264badd-1795747650",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 620,
-      "started_at": "2026-11-27T00:44:41Z",
+      "started_at": "2026-11-27T02:47:45Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 4,
@@ -22194,9 +22195,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T02:47:17Z",
+    "at": "2026-11-27T02:47:45Z",
     "url": "",
-    "what": "review #5150 on claude-6"
+    "what": "spot-check #5094 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-27T02:36:29Z",
@@ -45035,7 +45036,15 @@
         "n": 620,
         "pr": 5094,
         "queued_at": "2026-11-27T02:41:55Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:0264badd-1795747650",
         "sha": "9cafcdb7a9f6d4bc19202ec76644cf65551bc479",
+        "started_at": "2026-11-27T02:47:45Z",
         "status": "queued",
         "title": "Patch: deeper card stats, X6, Decisiveness on the Experimental tab's Running and Versions",
         "tries": 0
