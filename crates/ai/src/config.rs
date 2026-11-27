@@ -312,7 +312,11 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     lethal_quick_nodes: 40,
     lethal_width: 60,
     // R5119000: on, with `lethal_dive_moves`. Both off are the walk before it, node for node. Mirror 26's
-    // turn-12 lethal rests on this switch, hard-vs-easy 12's turn 21 on its read through a prompt.
+    // turn-12 lethal rests on this switch, hard-vs-easy 12's turn 21 on its read through a prompt. Fork
+    // screen on improve-dev (both on, candidate 8d8f30c316) against the control at f6ef0c1c88: 200 trunk
+    // games, 10 forks, 3 live, edge +0.028 (-0.236 to +0.292), no faults, inconclusive (R4319000): kept,
+    // and its scene tests (lethal.rs's and wide_lethal.rs's r5119000_ tests) settle it (training/improve.md,
+    // A screen).
     lethal_keep_attacks: true,
     // R5119000: 75 moves, set after a first sweep counted in nodes (40, 60, 75 and 100 on both logged
     // sets: 40 lost a lethal, 60 to 100 held). Counted in moves, with `lethal_keep_attacks` on, and
