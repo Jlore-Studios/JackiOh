@@ -45029,6 +45029,10 @@
       "5158": {
         "at": "2026-11-27T03:19:30Z",
         "why": "Confirmed: `c224_rollback_point.rs:57` passes the card's own face as the summon's `radiant`, and `summon_fresh_into` (`crates/engine/src/effects/summon.rs:566`) makes each copy Radiant, but the card's text, its header, \u00a78.13 row 224 and R4594005 all say the copies come back on their printed face with only Rush added (compare row 230, whose Radiant text does say 'Radiant copies'); the Commander's c"
+      },
+      "5160": {
+        "at": "2026-11-27T03:27:43Z",
+        "why": "Confirmed: #4868 refuses a NUL in the body (`crates/server/src/api/http.rs:627`) and the query (`:797`), but `match_path` inserts `decode_segment(actual)` unchecked (`:748`). `DELETE /api/practice/seeds/:seed` and `DELETE /api/rooms/:code` then bind it as `$1::text` (`economy/store.rs:2601`, `db/pg.rs:3712`), and `From<StoreError>` makes the Postgres refusal a 500 (`http.rs:235`), which feeds `Rou"
       }
     },
     "auto_approved": [
