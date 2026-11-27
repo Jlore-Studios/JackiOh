@@ -3748,6 +3748,29 @@ pub fn listed_refused(
     legal: &[ActionBody],
     reducer: impl Fn(&GameState, &Action) -> ReduceResult,
 ) -> Vec<String> {
+    listed_findings(state, player, legal, reducer)
+        .into_iter()
+        .map(|finding| finding.message)
+        .collect()
+}
+
+/// One I14 finding with the branch behind it (#5154): the message `listed_refused` returns, the action
+/// I14 sent (its seat and nonce included) and the events the branch's `reduce` emitted (none when it
+/// refused or panicked), for a fuzz failure's step trace.
+#[derive(Clone, Debug)]
+pub struct ListedFinding {
+    pub message: String,
+    pub action: Action,
+    pub events: Vec<GameEvent>,
+}
+
+/// `listed_refused` with each finding's branch beside its message (#5154).
+pub fn listed_findings(
+    state: &GameState,
+    player: PlayerId,
+    legal: &[ActionBody],
+    reducer: impl Fn(&GameState, &Action) -> ReduceResult,
+) -> Vec<ListedFinding> {
     let mut probed = state.clone();
     probed.applied = Vec::new();
     // I19: the Dormant cards every branch begins with (#4454); I21: its Units Immune to Spells (#4508);
@@ -3755,18 +3778,22 @@ pub fn listed_refused(
     let slumber = slumber_step(&probed);
     let immune = immune_step(&probed);
     let immutable = immutable_step(&probed);
-    let mut found: Vec<String> = Vec::new();
+    let mut found: Vec<ListedFinding> = Vec::new();
     for body in sampled(legal, state.rng_cursor) {
         let action = Action::new(body.clone(), player, I14_NONCE);
         let sent = serde_json::to_string(body).unwrap_or_default();
         match catch_unwind(AssertUnwindSafe(|| reducer(&probed, &action))) {
             Ok(result) => {
                 if let Some(error) = result.error {
-                    found.push(format!(
-                        "I14 listed action refused: {player} sent {sent} on turn {} (seed {}), though legalActions \
-                         lists it, and reduce refused it: {error} (§10.2)",
-                        state.turn, state.seed
-                    ));
+                    found.push(ListedFinding {
+                        message: format!(
+                            "I14 listed action refused: {player} sent {sent} on turn {} (seed {}), though legalActions \
+                             lists it, and reduce refused it: {error} (§10.2)",
+                            state.turn, state.seed
+                        ),
+                        action: action.clone(),
+                        events: result.events.clone(),
+                    });
                 } else {
                     let branch = branch_state_findings(&result.events, &result.state)
                         .into_iter()
@@ -3774,20 +3801,28 @@ pub fn listed_refused(
                         .chain(immune_reach_findings(&immune, &result.events, &result.state))
                         .chain(immutable_text_findings(&immutable, &result.events, &result.state));
                     for finding in branch {
-                        found.push(format!(
-                            "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding}",
-                            state.turn, state.seed
-                        ));
+                        found.push(ListedFinding {
+                            message: format!(
+                                "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding}",
+                                state.turn, state.seed
+                            ),
+                            action: action.clone(),
+                            events: result.events.clone(),
+                        });
                     }
                 }
             }
-            Err(payload) => found.push(format!(
-                "I14 listed action panicked: {player} sent {sent} on turn {} (seed {}), though legalActions \
-                 lists it, and reduce threw: {} (§10.2)",
-                state.turn,
-                state.seed,
-                panic_text(&*payload)
-            )),
+            Err(payload) => found.push(ListedFinding {
+                message: format!(
+                    "I14 listed action panicked: {player} sent {sent} on turn {} (seed {}), though legalActions \
+                     lists it, and reduce threw: {} (§10.2)",
+                    state.turn,
+                    state.seed,
+                    panic_text(&*payload)
+                ),
+                action: action.clone(),
+                events: Vec::new(),
+            }),
         }
     }
     found
@@ -5918,10 +5953,22 @@ impl InvariantMonitor {
         state: &GameState,
         reducer: impl Fn(&GameState, &Action) -> ReduceResult,
     ) -> Vec<String> {
-        let mut found: Vec<String> = Vec::new();
+        self.listed_findings(state, reducer)
+            .into_iter()
+            .map(|finding| finding.message)
+            .collect()
+    }
+
+    /// `listed` with each finding's branch action and events beside its message (#5154).
+    pub fn listed_findings(
+        &self,
+        state: &GameState,
+        reducer: impl Fn(&GameState, &Action) -> ReduceResult,
+    ) -> Vec<ListedFinding> {
+        let mut found: Vec<ListedFinding> = Vec::new();
         for seat in PLAYER_IDS {
             let legal = crate::reduce::legal_actions(state, seat);
-            found.extend(listed_refused(state, seat, &legal, &reducer));
+            found.extend(listed_findings(state, seat, &legal, &reducer));
         }
         found
     }
