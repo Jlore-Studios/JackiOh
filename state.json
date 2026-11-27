@@ -21875,8 +21875,10 @@
     "what": "build #5123 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-27T01:12:54Z",
-    "notes": [],
+    "at": "2026-11-27T01:19:02Z",
+    "notes": [
+      "runner gate: started 1 of 1 waiting run(s) (run 45921882585 on main)"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -22581,7 +22583,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T01:12:54Z",
+  "loop_tick": "2026-11-27T01:19:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
