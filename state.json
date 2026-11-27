@@ -22140,6 +22140,9 @@
         }
       }
     },
+    "5171": {
+      "suggestion": true
+    },
     "5172": {
       "action": "review",
       "asks": [],
@@ -45622,6 +45625,13 @@
         "at": "2026-11-27T20:35:40Z",
         "number": 5164,
         "title": "Patch: the Infinite Assault's ladder marks the levels beaten today, and its four untranslated Commanders read in Chinese",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-27T20:35:42Z",
+        "number": 5171,
+        "title": "Patch: the fork screen's save and resume tests stop playing the 96 rollout games no assertion reads",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
       }
