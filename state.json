@@ -19850,6 +19850,13 @@
     "5161": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-27T22:13:32Z",
+        "difficulty": "medium",
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: one web handler in apps/web/src/assault/fight/FightScreen.tsx and its tests, no engine, AI, cross-crate, migration or 40-file change."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
