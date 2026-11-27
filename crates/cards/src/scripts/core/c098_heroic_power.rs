@@ -3,6 +3,9 @@
 //! Mythic. Base: "Indestructible. Cry: Discover one of 14 powers, each 'Activate: Spend (X)'" (each
 //! power's words are its catalog line).
 //! Radiant: every power's Radiant words, Armor Up named Tank Up (R757).
+//! Before #5183: Armor Up's 2 until your next turn and Tank Up's kept 4 that refreshed the power, which
+//! every kept script below runs (`with_armor_kept_5183`, R5183001); since, both faces give Armor the
+//! hero keeps, 1 and 2, and Tank Up refreshes no more.
 //! Through v0.6.14: End Times banked its cuts in the card's memory (`script_v0_6_14`, kept, R4828000).
 //! Through v0.5.13g: thirteen powers at (1) more each (`script_v0_5_13g`, kept, R767000); through
 //! v0.5.11r: "Start of game: Gain one of 13 random powers" (`script_v0_5_11o`, kept, R767000).
@@ -60,12 +63,38 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R5183001: the scripts before #5183, kept for their replays: Armor Up's 2 until your next turn, and
+/// Tank Up's kept 4 that refreshed the power.
+pub fn script_kept_5183() -> CardScripts {
+    CardScripts {
+        base: with_armor_kept_5183(heroic_power(false, true, subsystems::PowerEdition::EndTimes), false),
+        radiant: with_armor_kept_5183(heroic_power(true, true, subsystems::PowerEdition::EndTimes), true),
+    }
+}
+
+/// R5183001: `script`'s Armor power as it ran before #5183 (`armor_up_kept_5183`), its words then, for
+/// every kept script: each folds games played before Armor Up changed.
+fn with_armor_kept_5183(mut script: Script, radiant: bool) -> Script {
+    let armor = subsystems::HeroPowerName::Armor.as_str();
+    let title = subsystems::power_by_name(armor).map_or("", |power| subsystems::power_title_of(power, radiant));
+    let words = if radiant {
+        subsystems::TANK_UP_LABEL_KEPT_5183
+    } else {
+        subsystems::ARMOR_UP_LABEL_KEPT_5183
+    };
+    for decl in script.activations.iter_mut().filter(|decl| decl.id == armor) {
+        decl.run = hook(move |ctx| subsystems::armor_up_kept_5183(ctx, radiant));
+        decl.label = format!("{title}: {words}");
+    }
+    script
+}
+
 /// R767000: through v0.5.13g the card offered thirteen powers at the thirteen's old prices;
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_13g() -> CardScripts {
     CardScripts {
-        base: heroic_power(false, true, subsystems::PowerEdition::Thirteen),
-        radiant: heroic_power(true, true, subsystems::PowerEdition::Thirteen),
+        base: with_armor_kept_5183(heroic_power(false, true, subsystems::PowerEdition::Thirteen), false),
+        radiant: with_armor_kept_5183(heroic_power(true, true, subsystems::PowerEdition::Thirteen), true),
     }
 }
 
@@ -73,8 +102,8 @@ pub fn script_v0_5_13g() -> CardScripts {
 /// copy in either hand or library rolled its power at the start of the game (R43).
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
-        base: heroic_power(false, false, subsystems::PowerEdition::Thirteen),
-        radiant: heroic_power(true, false, subsystems::PowerEdition::Thirteen),
+        base: with_armor_kept_5183(heroic_power(false, false, subsystems::PowerEdition::Thirteen), false),
+        radiant: with_armor_kept_5183(heroic_power(true, false, subsystems::PowerEdition::Thirteen), true),
     }
 }
 
@@ -82,8 +111,8 @@ pub fn script_v0_5_11o() -> CardScripts {
 /// cleared while the cut stayed in its tuning; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_14() -> CardScripts {
     CardScripts {
-        base: heroic_power_v0_6_14(false),
-        radiant: heroic_power_v0_6_14(true),
+        base: with_armor_kept_5183(heroic_power_v0_6_14(false), false),
+        radiant: with_armor_kept_5183(heroic_power_v0_6_14(true), true),
     }
 }
 

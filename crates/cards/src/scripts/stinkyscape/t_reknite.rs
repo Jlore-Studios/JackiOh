@@ -1,12 +1,13 @@
 //! SPEC §7 Stinkyscape T-reknite Reknite, a Resource token of the Stinkyscape set (§7's token table).
-//!   Base:    "Your hero has +{armor} Armor until the start of your next turn." (1)
+//!   Base:    "Your hero gains {armor} Armor." (1)
 //!   Radiant: the same (2).
 //!
 //! A Resource (R1840000), tagged Resource and Token (§5's tags, issue #2521): gained into its owner's
-//! hand, played from there at (0) for its Credits (R2250000, R2250001). Its resolution is M+ #12
-//! Living Armor Potion's Armor: Core #98 Armor Up's `heroArmor` player modifier (R757), gone at the
-//! start of its caster's next turn, so it lasts through the opponent's turn. The number is the
-//! declared `armor`, read as it resolves (R386).
+//! hand, played from there at (0) for its Credits (R2250000, R2250001). Its resolution is Armor the
+//! hero keeps (`gain_hero_armor`, R3857000), which each hit it meets wears (R5183000), since #5183
+//! (R5183002). Before it, M+ #12 Living Armor Potion's Armor: Core #98 Armor Up's `heroArmor` player
+//! modifier (R757), gone at the start of its caster's next turn (`script_kept_5183`, kept, R767000).
+//! The number is the declared `armor`, read as it resolves (R386).
 
 use jackioh_engine::effects::add_player_modifier;
 use jackioh_engine::prelude::*;
@@ -16,7 +17,24 @@ pub const ID: &str = "stinkyscape-t-reknite";
 fn face() -> Script {
     Script {
         cry: Some(hook(|ctx| {
-            // Exactly Core #98 Armor Up's modifier (R757): gone when the next own turn begins.
+            vec![gain_hero_armor(json_as(json!({ "amount": param(&*ctx, "armor") })))]
+        })),
+        ..Script::default()
+    }
+}
+
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: face(),
+        radiant: face(),
+    }
+}
+
+/// R767000, R5183002: the face before #5183, kept for its replays: Core #98 Armor Up's `heroArmor`
+/// modifier (R757), gone when its caster's next turn begins.
+fn face_kept_5183() -> Script {
+    Script {
+        cry: Some(hook(|ctx| {
             let opponent = opponent_of(ctx.controller);
             vec![add_player_modifier(json_as(json!({
                 "mod": {
@@ -30,10 +48,11 @@ fn face() -> Script {
     }
 }
 
-pub fn script() -> CardScripts {
+/// R767000, R5183002: `KEPT_SCRIPTS` folds the games before #5183 under it.
+pub fn script_kept_5183() -> CardScripts {
     CardScripts {
-        base: face(),
-        radiant: face(),
+        base: face_kept_5183(),
+        radiant: face_kept_5183(),
     }
 }
 
@@ -66,15 +85,18 @@ mod tests {
         hero_armor_of(s.state(), P1)
     }
 
+    /// R5183002: Reknite's Armor is the hero's to keep (which a hit wears, R5183000): it stays through
+    /// the opponent's turn and past its caster's next start of turn.
     #[test]
-    fn armor_through_the_opponents_turn() {
+    fn r5183002_its_armor_is_the_heros_to_keep() {
         let mut s = played(false);
         s.expect_mana(P1, 4);
         assert_eq!(armor(&s), 1, "+1 Armor at once, for (0)");
+        assert_eq!(s.state().players.p1.hero.armor, 1, "the hero's own Armor, no modifier");
         s.end_turn();
         assert_eq!(armor(&s), 1, "kept through the opponent's turn");
         s.end_turn();
-        assert_eq!(armor(&s), 0, "gone at its caster's next start of turn");
+        assert_eq!(armor(&s), 1, "and still there at its caster's next turn");
     }
 
     #[test]
@@ -87,12 +109,26 @@ mod tests {
     }
 
     #[test]
-    fn radiant_plus_2() {
+    fn r5183002_radiant_keeps_2() {
         let mut s = played(true);
         assert_eq!(armor(&s), 2);
         s.end_turn();
-        assert_eq!(armor(&s), 2);
         s.end_turn();
-        assert_eq!(armor(&s), 0);
+        assert_eq!(armor(&s), 2);
+    }
+
+    /// R767000, R5183002: the kept face's Armor lasts through the opponent's turn and is gone at its
+    /// caster's next.
+    #[test]
+    fn r5183002_the_kept_face_is_gone_at_the_casters_next_turn() {
+        crate::under_kept(ID, super::script_kept_5183(), || {
+            let mut s = played(false);
+            assert_eq!(armor(&s), 1);
+            assert_eq!(s.state().players.p1.hero.armor, 0, "a modifier, not the hero's own");
+            s.end_turn();
+            assert_eq!(armor(&s), 1, "kept through the opponent's turn");
+            s.end_turn();
+            assert_eq!(armor(&s), 0, "gone at its caster's next start of turn");
+        });
     }
 }

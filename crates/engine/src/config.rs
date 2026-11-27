@@ -1423,9 +1423,15 @@ pub const LIFE_TAP_DAMAGE: i32 = 2;
 pub const STEADY_SHOT_RAISE: i32 = 2;
 /// R756: Ping's damage.
 pub const PING_DAMAGE: i32 = 1;
-/// R757: Armor Up's Armor until your next turn, and the Armor Tank Up (its Radiant face) keeps.
-pub const ARMOR_UP_ARMOR: i32 = 2;
-pub const TANK_UP_ARMOR: i32 = 4;
+/// R757, R5183001: the Armor Armor Up gives its hero to keep, and Tank Up (its Radiant face); 2 until
+/// your next turn and a kept 4 that refreshed the power through #5183 (`armor_up_kept_5183` reads
+/// the card's own numbers).
+pub const ARMOR_UP_ARMOR: i32 = 1;
+pub const TANK_UP_ARMOR: i32 = 2;
+/// R5183001: Armor Up's 2 until your next turn and Tank Up's kept 4 through #5183, the defaults of
+/// `armor_up_kept_5183`, which Heroic Power's kept scripts run.
+pub const ARMOR_UP_ARMOR_KEPT_5183: i32 = 2;
+pub const TANK_UP_ARMOR_KEPT_5183: i32 = 4;
 /// R758: Die Insect's damage, and its Radiant face's Lucky.
 pub const DIE_INSECT_DAMAGE: i32 = 8;
 pub const DIE_INSECT_LUCKY: i32 = 1;

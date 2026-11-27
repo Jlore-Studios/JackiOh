@@ -3031,13 +3031,17 @@ mod spec_11_r124_r125_hero_armor_m3_gate {
         assert_eq!(stopped.0, 0);
         assert_eq!(
             stopped.1,
-            vec![GameEvent::DamageAbsorbed {
-                source_id: None,
-                target_id: "hero-p2".to_string(),
-                absorbed: 6,
-                combat: false,
-                via: None,
-            }]
+            vec![
+                GameEvent::DamageAbsorbed {
+                    source_id: None,
+                    target_id: "hero-p2".to_string(),
+                    absorbed: 6,
+                    combat: false,
+                    via: None,
+                },
+                // R5183000: and the hit it took whole wears 1 off it.
+                GameEvent::ArmorWorn { player: P2, armor: 5 },
+            ]
         );
 
         // The opposite case: step 3's Anti-oneshot cap is a *ceiling*, so two such cards give the smaller.

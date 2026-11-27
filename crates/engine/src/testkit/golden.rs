@@ -112,8 +112,8 @@ pub fn hashed_state_text(state: &GameState) -> String {
 
 /// The canonical text of both seats' views, p1 first, without a Created card's `createdBy`
 /// (R1956001), a prompt's asking card (`sourceDefId`, `sourceRadiant`, R2646000), the `hookResolving`
-/// markers (R2783000), the `armorGained` reports (R3857000) and a pool's `damageNullified` (R5045000),
-/// an event's `via` (R2783001), a
+/// markers (R2783000), the `armorGained` reports (R3857000), a pool's `damageNullified` (R5045000) and
+/// an Armor's `armorWorn` (R5183000), an event's `via` (R2783001), a
 /// `destroyed`'s `animated` (R4395001), the other seat's count of a card picker's options (`optionCount`, R2739000), the card an ability is
 /// printed on (`printedOn`, R3291000), the zones of
 /// the viewer's hidden targets (`hiddenTargets`, R3777001, read off `legal_actions`, which `legal_text`
@@ -142,12 +142,12 @@ pub fn view_texts(state: &GameState) -> [String; 2] {
     })
 }
 
-/// R2783000, R3857000, R5045000: whether an event's JSON is one the golden texts leave out: a
-/// `hookResolving` marker, an `armorGained` report or a pool's `damageNullified`.
+/// R2783000, R3857000, R5045000, R5183000: whether an event's JSON is one the golden texts leave out:
+/// a `hookResolving` marker, an `armorGained` report, a pool's `damageNullified` or an `armorWorn`.
 fn is_marker(event: &Value) -> bool {
     matches!(
         event["type"].as_str(),
-        Some("hookResolving" | "armorGained" | "damageNullified")
+        Some("hookResolving" | "armorGained" | "damageNullified" | "armorWorn")
     )
 }
 
@@ -193,8 +193,8 @@ fn strip_key(value: &mut Value, key: &str) {
 /// The canonical text of a step's events, without the `creator` an `addedToHand`, a `shuffledIn` or
 /// a `transformed` names (R2089000): the game record's bookkeeping, which no rule reads and no view
 /// forwards, as `view_texts` leaves out `createdBy`, so a trace recorded before it replays as it did.
-/// Nor the `hookResolving` markers (R2783000), the `armorGained` reports (R3857000) and a pool's
-/// `damageNullified` (R5045000) or an event's
+/// Nor the `hookResolving` markers (R2783000), the `armorGained` reports (R3857000), a pool's
+/// `damageNullified` (R5045000) and an `armorWorn` (R5183000) or an event's
 /// `via` (R2783001) and a `destroyed`'s `animated` (R4395001), which are presentation only, so a trace recorded on this build replays on the
 /// build before it too (R1956001's way). Nor a `destroyed`'s `diedAs` (R4423000): the rules read it, but
 /// what it changes in play the state text shows.

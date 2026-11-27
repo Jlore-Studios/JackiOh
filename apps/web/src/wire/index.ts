@@ -194,6 +194,8 @@ export const GAME_EVENT_TYPES = [
   "damageNullified",
   // Issue #3857: a hero kept Armor (R3857000).
   "armorGained",
+  // Issue #5183: a hit wore a hero's Armor down by 1 (R5183000).
+  "armorWorn",
   // Issue #3925: a resolution loop reached the loop cap (R3925000).
   "loopCapped",
   "jadeChanged",

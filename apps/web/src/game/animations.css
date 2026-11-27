@@ -1144,10 +1144,11 @@
   animation-duration: calc(200ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
-/* --- armorGained: the hero's Armor badge ticks (300 ms, R3857000) --------------------- */
+/* --- armorGained, armorWorn: the hero's Armor badge ticks (300 ms, R3857000, R5183000) - */
 
 /* The hero carries the attribute; only its Armor badge ticks, since that is the number that changed. */
-[data-animating="armorGained"] .hero-armor {
+[data-animating="armorGained"] .hero-armor,
+[data-animating="armorWorn"] .hero-armor {
   animation-name: jk-badge-tick;
   animation-duration: calc(300ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }

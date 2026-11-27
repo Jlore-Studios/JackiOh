@@ -1009,6 +1009,29 @@ fn r3857000_an_armor_gain_names_the_heros_side() {
     );
 }
 
+/// R5183000: a wear of a hero's Armor names the hero by its side and the Armor left, in both languages.
+#[test]
+fn r5183000_an_armor_wear_names_the_heros_side_and_what_is_left() {
+    let view = bare(json!([
+        { "type": "armorWorn", "player": "p1", "armor": 2 },
+        { "type": "armorWorn", "player": "p2", "armor": 0 },
+    ]));
+    assert_eq!(
+        english(&view),
+        [
+            "Your hero's Armor wore down to 2".to_string(),
+            "The opponent's hero's Armor wore down to 0".to_string(),
+        ]
+    );
+    assert_eq!(
+        said(&view, Locale::ZhCn),
+        [
+            "你的英雄的护甲磨损至2点".to_string(),
+            "对手的英雄的护甲磨损至0点".to_string()
+        ]
+    );
+}
+
 /// R3925000: the loop cap's line names the side whose interaction it stopped, in both languages.
 #[test]
 fn r3925000_a_capped_loop_names_its_side() {

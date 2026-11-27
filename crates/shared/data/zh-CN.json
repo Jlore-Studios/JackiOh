@@ -246,6 +246,7 @@
   "{pool} nullified {amount} damage to {target} in combat": "{pool}抵消了{target}在战斗中受到的{amount}点伤害",
   "{pool} nullified {amount} damage to {target}": "{pool}抵消了{target}受到的{amount}点伤害",
   "{whose} hero gained {amount} Armor": "{whose}英雄获得了{amount}点护甲",
+  "{whose} hero's Armor wore down to {armor}": "{whose}英雄的护甲磨损至{armor}点",
   "{seat} kept a secret": "{seat}保守了一个秘密",
   "{whose} secret was {choice}": "{whose}秘密是{choice}",
   "{seat} guessed {guess}: {outcome}": "{seat}猜了{guess}：{outcome}",

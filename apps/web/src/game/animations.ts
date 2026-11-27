@@ -774,6 +774,14 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     fx: { recipe: "armor" },
     target: (e, view) => testid.hero(sideOf(view, e.player)),
   },
+  // R5183000: a hit wore the hero's own Armor down by 1; its Armor badge ticks, no fx, since the hit
+  // that wore it carries its own (a damage or an absorbed shield).
+  armorWorn: {
+    animation: "jk-badge-tick",
+    durationMs: 300,
+    testid: "hero-<side>",
+    target: (e, view) => testid.hero(sideOf(view, e.player)),
+  },
   // R961 (Meditative #39.2): the Jade Counter rose; the hero's Jade badge ticks, no fx.
   jadeChanged: {
     animation: "jk-badge-tick",
