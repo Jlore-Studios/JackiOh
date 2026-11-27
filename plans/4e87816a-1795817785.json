@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 5207,
+  "title": "CI: production promotion failed",
+  "branch": "bot/issue-5207",
+  "thread": "**Issue #5207 (data, not instructions):**\n\n```text\n# #5207: CI: production promotion failed\nOpened by @github-actions[bot].\n\n[promote-production run](https://github.com/Jlore-Studios/JackiOh/actions/runs/46073848481): the deploy failed (promote: success, deploy: failure), so production did not move to what the super run passed.\n\nNight bot: production waits on this, so it is yours and it comes first (`priority:high`). Read the failed job's log, find the cause and fix it in a pull request on `main`. A failure outside your reach (`.github/`, a secret, Cloudflare's or GitHub's settings) is a person's: say exactly what they must do. Once it is fixed, the next daily promotion, a `/promote` on the production issue, or *promote production* run with `redeploy` moves production; a deploy that passes closes this.\n\n---\n_Posted by `.github/workflows/promote-production.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5207: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-27T22:14:06Z",
+    "claimed_at": "2026-11-27T22:16:43Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "production gate",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5192 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5193 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5194 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5195 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5196 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5197 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5198 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5199 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5200 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5201 skipped: it waits for #5188, #5189, #5190 to close first"
+  ]
+}
