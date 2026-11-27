@@ -20770,6 +20770,24 @@
           "claude": "strong"
         }
       }
+    },
+    "5217": {
+      "difficulty_by": {
+        "at": "2026-11-27T23:47:55Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "the after-merge spot-check's follow-up of #5213, a medium change"
+      },
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-27T23:47:55Z",
+      "requested_by": "jgoetzmann-bot",
+      "spot_check_of": 5213,
+      "stop_requested": false
     }
   },
   "labels_synced": "e752b3263433d01e",
