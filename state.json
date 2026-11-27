@@ -22191,6 +22191,9 @@
         "sha": "5fedb1c1f70d053d8698ee34eaaed38ac1d58631",
         "tiers": {}
       }
+    },
+    "5152": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -45496,6 +45499,13 @@
         "at": "2026-11-26T23:19:36Z",
         "number": 5123,
         "title": "Patch: a fork screen resumed after a cut inside an --extend batch plays that batch out, as an uncut run does",
+        "verdict": "auto-approved",
+        "why": "approved by itself: no one voted on it"
+      },
+      {
+        "at": "2026-11-27T03:08:27Z",
+        "number": 5152,
+        "title": "Patch: a Chinese reader's Call to Chaos banner and fatigue-immunity badge read in Chinese, not half-translated by the deck builder's and the leaderboard's keys",
         "verdict": "auto-approved",
         "why": "approved by itself: no one voted on it"
       }
