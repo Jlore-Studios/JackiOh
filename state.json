@@ -46410,6 +46410,9 @@
       "2026-11-27T03:50:19Z,claude-1,stream,call,45935263233,97,2026-11-27T07:40:00Z,,,allowed_warning,100,,",
       "2026-11-27T03:50:34Z,claude-1,stream,call,45935263233,98,2026-11-27T07:40:00Z,,,allowed_warning,100,,",
       "2026-11-27T03:50:49Z,claude-1,stream,call,45935263233,100,2026-11-27T07:40:00Z,,,rejected,100,,"
+    ],
+    "runs": [
+      "2026-11-27T03:50:49Z,45935263233,claude-1,opus,suggest,,,interrupted,5-hour cap,10,0,0,0,14.2848,41,100,,,,,none,,1"
     ]
   },
   "version": 1
