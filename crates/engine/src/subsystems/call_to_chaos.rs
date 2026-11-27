@@ -386,10 +386,6 @@ pub const CHAOS_EFFECTS: &[ChaosEffectDef] = &[
     },
 ];
 
-pub fn chaos_effect_by_name(name: &str) -> Option<&'static ChaosEffectDef> {
-    CHAOS_EFFECTS.iter().find(|effect| effect.name == name)
-}
-
 /// R28, R423: the base form rolls one entry; the Radiant form rolls
 /// `CALL_TO_CHAOS_RADIANT_EFFECTS` *different* ones, resolved in list order (R87). `table` is the
 /// edition's list, so one roll serves Core #95 and Classic+ #73.
@@ -420,20 +416,37 @@ pub fn roll_chaos_effects(
 
 /// R436: tell both players the printed labels of what was rolled or picked, in resolve order, before
 /// any of it resolves. The card follows R97 (`viewFor.redactEvent`); what it rolled is public.
-pub(crate) fn announce_chaos(kind: &'static str, labels: Vec<String>) -> Effect {
+/// R4707000: `roll` is the rolled entries' places in the table and the table's size, for the game record;
+/// `None` for a list done whole, which drew nothing.
+pub(crate) fn announce_chaos(
+    kind: &'static str,
+    labels: Vec<String>,
+    roll: Option<(Vec<i32>, i32)>,
+) -> Effect {
     Effect::new(kind, move |ctx| {
         let (instance_id, def_id) = match ctx.live_self() {
             Some(card) => (card.id.clone(), card.def_id.clone()),
             None => (String::new(), ctx.def_id.clone().unwrap_or_default()),
         };
         let player = ctx.controller;
+        let (indices, table_size) = match &roll {
+            Some((indices, size)) => (Some(indices.clone()), Some(*size)),
+            None => (None, None),
+        };
         ctx.sink.events.push(GameEvent::ChaosRolled {
             player,
             instance_id,
             def_id,
             effects: labels.clone(),
+            indices,
+            table_size,
         });
     })
+}
+
+/// R4707000: an `i32` place or size for the record, which a table never outgrows.
+fn place(at: usize) -> i32 {
+    i32::try_from(at).unwrap_or(i32::MAX)
 }
 
 /// `callToChaos(args)`'s argument: `radiant` defaults to the context's face, `table` to Core #95's.
@@ -461,9 +474,16 @@ pub fn call_to_chaos(args: CallToChaosArgs) -> Effect {
                 .filter_map(|name| table.iter().find(|effect| effect.name == name.as_str()).copied())
                 .collect(),
         };
+        // R4707000: each rolled entry's place in the table, for the game record.
+        let indices: Vec<i32> = rolled
+            .iter()
+            .filter_map(|chosen| table.iter().position(|effect| effect.name == chosen.name))
+            .map(place)
+            .collect();
         let mut effects = vec![announce_chaos(
             "callToChaos:announce",
             rolled.iter().map(|effect| effect.label.to_string()).collect(),
+            Some((indices, place(table.len()))),
         )];
         effects.extend(rolled.iter().map(|chosen| (chosen.build)()));
         let names: Vec<&str> = rolled.iter().map(|chosen| chosen.name).collect();

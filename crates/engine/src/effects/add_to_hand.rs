@@ -152,7 +152,8 @@ fn put_in_hand_with(ctx: &mut EffectContext<'_>, mut card: CardInstance, riders:
         && find_instance(&*ctx.state, &card.id).is_some_and(|live| crate::mana::is_x_cost(&*ctx.state, live))
         && let Some(live) = find_instance_mut(&mut *ctx.state, &card.id)
     {
-        live.fixed_x = Some(fixed.max(0));
+        // R5148000: a set X is at most `MANA_CEILING`.
+        live.fixed_x = Some(fixed.clamp(0, crate::config::MANA_CEILING));
     }
     // R1704003: the raise is taken back as far as it went over the cap, and whole from an X-cost card (R65).
     if reaches_hand

@@ -399,7 +399,7 @@ export const SHOWCASE_CORE_GLINT_X = 32;
 export const SHOWCASE_CORE_GLINT_Y = 28;
 /** R2943001: the glint's radius, in the picture's 100 units. */
 export const SHOWCASE_CORE_GLINT_R = 24;
-/** R2943001: the rim that rounds Core's picture into an orb, palette.css's `--pal-blue-900`. */
+/** R2943001: the rim that rounds Core's picture into an orb, SCENE_PALETTE's `--pal-blue-900`. */
 export const SHOWCASE_CORE_RIM = "#1e3a8a";
 /** R2943001: how dark the rim is at the picture's corners, from 0 to 1. */
 export const SHOWCASE_CORE_RIM_OPACITY = 0.7;
@@ -433,7 +433,7 @@ export const SHOWCASE_INK_SEAL = "#c0453f";
 export const SHOWCASE_INK_SEAL_AT = 80;
 export const SHOWCASE_INK_SEAL_SIDE = 10;
 export const SHOWCASE_INK_SEAL_OPACITY = 0.85;
-/** R2943001: Stinkyscape's deep space, from its dark to its light, palette.css's `--pal-slate-900` and `--pal-violet-300`. */
+/** R2943001: Stinkyscape's deep space, from its dark to its light, SCENE_PALETTE's `--pal-slate-900` and `--pal-violet-300`. */
 export const SHOWCASE_SPACE = "#141a2e";
 export const SHOWCASE_SPACE_LIGHT = "#c4b5fd";
 /** R2943001: the stars over Stinkyscape's dark, palette.css's `--pal-white`. */
@@ -588,7 +588,7 @@ export function showcaseSvg(picture: string, family: ShowcaseFamily, radiant: bo
 export const DEPTH_BLUR = 0.5;
 /** R2944001: how much of its colour Immersive's far backdrop keeps, below 1, as distant things grey. */
 export const DEPTH_SATURATE = 0.7;
-/** R2944001: the air Immersive's far backdrop is seen through, palette.css's `--pal-sky-300`. */
+/** R2944001: the air Immersive's far backdrop is seen through, SCENE_PALETTE's `--pal-sky-300`. */
 export const DEPTH_HAZE = "#7dd3fc";
 /** R2944001: the share of the air in Immersive's far backdrop, the rest the softened, dulled picture. */
 export const DEPTH_HAZE_MIX = 0.25;
@@ -603,7 +603,7 @@ export const PRISMATIC_CHROME_LIGHT = "#e8eaf2";
  */
 export const PRISMATIC_CHROME_TABLE: readonly number[] = [0.1, 0.85, 0.35, 1, 0.6];
 /**
- * R2944001: Prismatic's spectrum, palette.css's `--pal-red-400`, `--pal-purple-400`, `--pal-violet-500`, `--pal-sky-400`,
+ * R2944001: Prismatic's spectrum, SCENE_PALETTE's `--pal-red-400`, `--pal-purple-400`, `--pal-violet-500`, `--pal-sky-400`,
  * `--pal-cyan-400` and `--pal-green-400`: a rainbow with no yellow or orange, so none of it is Radiant's gold.
  */
 export const PRISMATIC_SPECTRUM: readonly string[] = ["#f87171", "#c084fc", "#8b5cf6", "#38bdf8", "#22d3ee", "#4ade80"];
@@ -701,7 +701,7 @@ function paintedIn(prefix: string, color: string, shape: string, result: string)
 export const NIGHT_SATURATE = 0.5;
 /** R3017002: how far Night dims the picture, each channel multiplied. */
 export const NIGHT_DIM = 0.5;
-/** R3017002: Night's sky, palette.css's `--pal-blue-900`, mixed into the dimmed picture so its dark reads blue. */
+/** R3017002: Night's sky, SCENE_PALETTE's `--pal-blue-900`, mixed into the dimmed picture so its dark reads blue. */
 export const NIGHT_SKY = "#1e3a8a";
 /** R3017002: the share of the sky in Night's picture, the rest the dimmed one. */
 export const NIGHT_SKY_MIX = 0.35;
@@ -845,14 +845,14 @@ export function stainedGlassSvg(picture: string, radiant: boolean): string {
   return restyledRoot("sg-glass", filter, picture);
 }
 
-/** R3017002: Tarot card's duotone, from its dark to its light, palette.css's `--pal-blue-900` and `--pal-slate-100`. */
+/** R3017002: Tarot card's duotone, from its dark to its light, SCENE_PALETTE's `--pal-blue-900` and `--pal-slate-100`. */
 export const TAROT_DARK = "#1e3a8a";
 export const TAROT_LIGHT = "#e8eaf2";
 /** R3017002: how much of its colour Tarot card's picture keeps under its duotone, below 1, as an old print's fades. */
 export const TAROT_SATURATE = 0.6;
 /** R3017002: the share of the duotone in Tarot card's picture, the rest its muted colour. */
 export const TAROT_DUOTONE_MIX = 0.55;
-/** R3017002: the card's arched border, palette.css's `--pal-violet-700`, and the line inside it, `--pal-slate-100`. */
+/** R3017002: the card's arched border, SCENE_PALETTE's `--pal-violet-700`, and the line inside it, `--pal-slate-100`. */
 export const TAROT_BORDER = "#6d28d9";
 export const TAROT_LINE = "#e8eaf2";
 /** R3017002: the line's width, in the picture's 100 units. */
@@ -974,7 +974,7 @@ export const NEON_LEVELS: readonly number[] = [0, 0.33, 0.67, 1];
 /** R3017002: how strongly a step between two tones becomes a tube, and how far a tube is widened each way. */
 export const NEON_TUBE_GAIN = 6;
 export const NEON_TUBE_WIDTH = 0.5;
-/** R3017002: a tube's colour where the picture is dark and where it is light, palette.css's `--pal-purple-400` and `--pal-cyan-400`. */
+/** R3017002: a tube's colour where the picture is dark and where it is light, SCENE_PALETTE's `--pal-purple-400` and `--pal-cyan-400`. */
 export const NEON_TUBE_DARK = "#c084fc";
 export const NEON_TUBE_LIGHT = "#22d3ee";
 /** R3017002: how far a tube's glow spreads, in the picture's 100 units. */

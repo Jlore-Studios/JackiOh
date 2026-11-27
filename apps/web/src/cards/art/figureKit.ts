@@ -5,7 +5,7 @@
 // outfit and the item are drawn. A look (`FigureLook`, `FIGURE_LOOKS`) picks the parts and paints a
 // tag's people: a Terminus, a CN or KY character, a Felinor, a Pancake, a Fruit, Jlockeed's people, a
 // Human. Its skin repaints each part's `skin` shapes and its cloth each `main` one. Every colour is a
-// palette.css name, none in Radiant's gold window.
+// SCENE_PALETTE name, none in Radiant's gold window.
 // R3390000: the Classic+ scenes (#3390) added six poses (spread, strike, run, sit, flex, kneel), eight
 // heads, five hairs and headgears, twelve outfits and fourteen held items, each drawn as the first ones are.
 // R3392000: Core's scenes (#3392) added the poses, heads, headgear, outfits and items their briefs name, each
@@ -287,8 +287,6 @@ export type FigureLook = {
   readonly cloth: PaletteName;
 };
 
-/** A figure's height at scale 1, feet to crown. */
-export const FIGURE_HEIGHT = 56;
 /** Where a head's centre stands above its neck. */
 const HEAD_RISE = 5.4;
 const HEAD_R = 4.8;

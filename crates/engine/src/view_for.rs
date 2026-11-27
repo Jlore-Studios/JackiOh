@@ -71,6 +71,7 @@ use crate::state::{
 use crate::subsystems::activate::activation_views_for;
 use crate::subsystems::combo_index::grade_name;
 use crate::subsystems::copied_text::{copied_text_of, text_face_of};
+use crate::subsystems::feng_shui::Judging;
 use crate::subsystems::hero_power::{power_of, power_price, power_title_of, used_this_turn};
 use crate::subsystems::pareto::pareto_hint_ids;
 use crate::subsystems::quests::quest_view_of;
@@ -522,7 +523,7 @@ fn bare_card_view(instance_id: String, def_id: String, radiant: bool, cost: i32)
 
 /// R65: the cost as it stands now (an X card's X reads 0 outside a play). The instance data rides
 /// every card view, each built only for a card the viewer may read where it is.
-fn card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
+fn card_view(state: &GameState, judging: Judging, card: &CardInstance, viewer: PlayerId) -> CardView {
     // B5 E33, R404: a quest line on the field, public as the card is.
     let quest = quest_view_of(state, card);
     let data = instance_data_view(state, card);
@@ -537,7 +538,7 @@ fn card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardVi
     view.tags = data.tags;
     view.brittle = data.brittle;
     // R980: the card's element, where the viewer may read the card and a Feng Shui acts.
-    view.element = crate::subsystems::feng_shui::shown_element(state, card);
+    view.element = crate::subsystems::feng_shui::shown_element(state, judging, card);
     view.params = data.params;
     view.tuning = data.tuning;
     view.enchantments = data.enchantments;
@@ -568,8 +569,8 @@ fn with_marks(state: &GameState, instance_id: &str) -> Option<Vec<CardMark>> {
 /// hand buffs (§10.4 layers 1, 3 and 4: #89 Corpse Eater's meals; layer 2 and auras are the
 /// field's), attack floored at 0. A #98 Heroic Power names the power it rolled (R43, R151), and a
 /// card its label (R2247000).
-fn hand_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
-    let mut view = with_copies(card_view(state, card, viewer), state, card);
+fn hand_card_view(state: &GameState, judging: Judging, card: &CardInstance, viewer: PlayerId) -> CardView {
+    let mut view = with_copies(card_view(state, judging, card, viewer), state, card);
     let stats = if card_type_of(state, card) == CardType::Unit {
         Some(stats_with_buffs(state, card))
     } else {
@@ -842,11 +843,11 @@ fn with_activations(
 }
 
 /// The card view the field shows: the glow, the preview and the abilities on top of `card_view`.
-fn field_card_view(state: &GameState, card: &CardInstance, viewer: PlayerId) -> CardView {
+fn field_card_view(state: &GameState, judging: Judging, card: &CardInstance, viewer: PlayerId) -> CardView {
     with_activations(
         with_preview(
             with_condition(
-                card_view(state, card, viewer),
+                card_view(state, judging, card, viewer),
                 condition_active(state, card, viewer, ConditionZone::Field),
             ),
             preview_of(state, card, viewer, ConditionZone::Field),
@@ -872,6 +873,7 @@ fn shown_keywords(keywords: &[Keyword]) -> Vec<Keyword> {
 fn unit_view_of(
     state: &GameState,
     auras: &AuraTable<'_>,
+    judging: Judging,
     pile: &[CardInstance],
     viewer: PlayerId,
 ) -> Option<UnitView> {
@@ -889,7 +891,7 @@ fn unit_view_of(
     } else {
         None
     };
-    let card = field_card_view(state, top, viewer);
+    let card = field_card_view(state, judging, top, viewer);
     Some(UnitView {
         instance_id: card.instance_id,
         def_id: card.def_id,
@@ -1053,6 +1055,7 @@ fn turn_open_to(state: &GameState, card: &CardInstance) -> bool {
 fn backrow_view(
     state: &GameState,
     auras: &AuraTable<'_>,
+    judging: Judging,
     card: Option<&CardInstance>,
     viewer: PlayerId,
 ) -> Option<BackrowView> {
@@ -1079,7 +1082,7 @@ fn backrow_view(
         }));
     }
     let grade = card.counters.grade;
-    let view = field_card_view(state, card, viewer);
+    let view = field_card_view(state, judging, card, viewer);
     Some(BackrowView::Public(PublicBackrowView {
         instance_id: view.instance_id,
         def_id: view.def_id,
@@ -1140,7 +1143,7 @@ fn backrow_view(
         // R1081000: a Unit standing in the backrow rides as the minion it is — the same tops
         // `active_units_of` counts, so the two cannot disagree.
         unit: if is_standing_unit(state, card) {
-            unit_view_of(state, auras, std::slice::from_ref(card), viewer)
+            unit_view_of(state, auras, judging, std::slice::from_ref(card), viewer)
         } else {
             None
         },
@@ -1155,6 +1158,7 @@ fn backrow_view(
 fn carried_view(
     state: &GameState,
     auras: &AuraTable<'_>,
+    judging: Judging,
     player: PlayerId,
     viewer: PlayerId,
 ) -> Option<Vec<Option<UnitView>>> {
@@ -1166,7 +1170,7 @@ fn carried_view(
             .into_iter()
             .map(|zone_ref| {
                 let unit: Option<CardInstance> = carried_at(state, zone_ref).cloned();
-                unit.and_then(|unit| unit_view_of(state, auras, &[unit], viewer))
+                unit.and_then(|unit| unit_view_of(state, auras, judging, &[unit], viewer))
             })
             .collect(),
     )
@@ -1466,7 +1470,13 @@ fn credit_view(state: &GameState, player: PlayerId) -> Option<CreditView> {
     })
 }
 
-fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer: PlayerId) -> SideView {
+fn side_view(
+    state: &GameState,
+    auras: &AuraTable<'_>,
+    judging: Judging,
+    player: PlayerId,
+    viewer: PlayerId,
+) -> SideView {
     let side: &PlayerState = &state.players[player];
     let powers = hero_powers_of(state, player);
     // R667: asked only for the viewer's own hand, the one hand a warning may ride.
@@ -1497,7 +1507,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                                     with_counter_warning(
                                         with_condition(
                                             with_embiggen_cost(
-                                                hand_card_view(state, card, viewer),
+                                                hand_card_view(state, judging, card, viewer),
                                                 state,
                                                 card,
                                             ),
@@ -1529,7 +1539,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
         HandView::Cards(
             side.hand
                 .iter()
-                .map(|card| hand_card_view(state, card, viewer))
+                .map(|card| hand_card_view(state, judging, card, viewer))
                 .collect(),
         )
     } else {
@@ -1580,16 +1590,16 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             .iter()
             .map(|card| {
                 if player == viewer {
-                    with_play_reason(card_view(state, card, viewer), state, card, viewer)
+                    with_play_reason(card_view(state, judging, card, viewer), state, card, viewer)
                 } else {
-                    card_view(state, card, viewer)
+                    card_view(state, judging, card, viewer)
                 }
             })
             .collect(),
         exile: side
             .exile
             .iter()
-            .map(|card| card_view(state, card, viewer))
+            .map(|card| card_view(state, judging, card, viewer))
             .collect(),
         // §10.5 step 4, R98: a Spell between its play and its graveyard, public as its play was. R448:
         // one announced to be set face-down shows the other player a card back.
@@ -1600,7 +1610,7 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
                 if announced_face_down_to(state, card, viewer) {
                     bare_card_view(HIDDEN_ID.to_string(), HIDDEN_ID.to_string(), false, HIDDEN_COST)
                 } else {
-                    with_copies(card_view(state, card, viewer), state, card)
+                    with_copies(card_view(state, judging, card, viewer), state, card)
                 }
             })
             .collect(),
@@ -1609,15 +1619,15 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             .iter()
             .map(|pile| {
                 pile.as_ref()
-                    .and_then(|pile| unit_view_of(state, auras, pile, viewer))
+                    .and_then(|pile| unit_view_of(state, auras, judging, pile, viewer))
             })
             .collect(),
         backrow: side
             .backrow
             .iter()
-            .map(|card| backrow_view(state, auras, card.as_ref(), viewer))
+            .map(|card| backrow_view(state, auras, judging, card.as_ref(), viewer))
             .collect(),
-        carried: carried_view(state, auras, player, viewer),
+        carried: carried_view(state, auras, judging, player, viewer),
         hand_cap: side.hand_cap,
         hand_marked: hand_marked_view(state, player, viewer),
         credit: credit_view(state, player),
@@ -2500,14 +2510,17 @@ fn redact_event(
         }
 
         // R1361: the report of a hit Armor took whole names what `damage` names, and hides it alike.
-        GameEventType::Damage | GameEventType::DamageAbsorbed => {
+        // R5045000: so does a pool's soak, and its pool card besides, judged as any card is.
+        GameEventType::Damage | GameEventType::DamageAbsorbed | GameEventType::DamageNullified => {
             if nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source)) {
                 // R2783001: the hit's keyword is its source's, so it goes with the source.
                 shown.remove("via");
                 hide(&mut shown, &["sourceId"]);
             }
-            if hidden(&text_at(&shown, "targetId")) {
-                hide(&mut shown, &["targetId"]);
+            for key in ["targetId", "instanceId"] {
+                if nullable_at(&shown, key).is_some_and(|id| hidden(&id)) {
+                    hide(&mut shown, &[key]);
+                }
             }
             rebuild(shown)
         }
@@ -2770,9 +2783,10 @@ fn redact_event(
 
         // R2652000: a batch of coins or dice a viewer reads at all (`withheld_rolls` drops the rest)
         // shows every face; the card itself follows R97, as Call to Chaos's does below. `faceDown` is
-        // the engine's, so no view forwards it.
+        // the engine's, and R4707000's `hit` the game record's, so no view forwards either.
         GameEventType::Rolled => {
             shown.remove("faceDown");
+            shown.remove("hit");
             if !instance.is_empty() && hidden(&instance) {
                 hide(&mut shown, &["instanceId", "defId"]);
             }
@@ -2791,11 +2805,13 @@ fn redact_event(
         }
 
         // R436: Call to Chaos names what it rolled to both players; the card itself follows R97.
+        // R4707000: the roll's places in its table are the game record's, so no view forwards them.
         GameEventType::ChaosRolled => {
-            if !hidden(&instance) {
-                return event.clone();
+            shown.remove("indices");
+            shown.remove("tableSize");
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
             }
-            hide(&mut shown, &["instanceId", "defId"]);
             rebuild(shown)
         }
 
@@ -2937,11 +2953,14 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     // R2783000: a `hookResolving` marker takes no room in R168's floor, so the window holds the events
     // it would had no hook been marked, each marker among them beside them, and the markers just before
     // its first event with it (a hook's marker comes before its first effect). R3857000: an `armorGained`
-    // report likewise takes none, so the window holds what it held before the report existed.
+    // report likewise takes none, so the window holds what it held before the report existed, and so
+    // does a pool's `damageNullified` (R5045000).
     let marker = |at: &usize| {
         matches!(
             all[*at],
-            GameEvent::HookResolving { .. } | GameEvent::ArmorGained { .. }
+            GameEvent::HookResolving { .. }
+                | GameEvent::ArmorGained { .. }
+                | GameEvent::DamageNullified { .. }
         )
     };
     let counted: Vec<usize> = read.iter().copied().filter(|at| !marker(at)).collect();
@@ -3006,15 +3025,17 @@ pub fn view_for(state: &GameState, player_id: PlayerId) -> PlayerView {
 /// `clock_ms` is the turn clock the server runs (R79): the engine never reads a clock, so the caller
 /// passes it in, `None` when nobody is counting.
 pub fn view_for_with_clock(state: &GameState, player_id: PlayerId, clock_ms: Option<i32>) -> PlayerView {
-    // #892: one aura table for the whole view.
+    // #892: one aura table for the whole view. #5136: and one answer to whether a Feng Shui judges,
+    // which every card's element reads.
     let auras = AuraTable::new(state);
+    let judging = crate::subsystems::feng_shui::judging(state);
     let mut view = PlayerView {
         viewer: player_id,
         turn: state.turn,
         active: state.active,
         phase: state.phase,
-        you: side_view(state, &auras, player_id, player_id),
-        opponent: side_view(state, &auras, opponent_of(player_id), player_id),
+        you: side_view(state, &auras, judging, player_id, player_id),
+        opponent: side_view(state, &auras, judging, opponent_of(player_id), player_id),
         pending: pending_view(state, player_id),
         events: recent_events(state, player_id),
         result: state.result.as_ref().map(|result| GameResult {

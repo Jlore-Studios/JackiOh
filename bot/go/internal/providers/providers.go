@@ -43,7 +43,7 @@ import (
 
 // ProvidersPath is PROVIDERS_PATH: the running bot's subscriptions (`identity.py`):
 // `.harness/providers.json` for the night bot, `.squishy/providers.json` for Squishy.
-var ProvidersPath = purePath(identity.Home_, "providers.json")
+var ProvidersPath = py.PurePath(identity.Home_, "providers.json")
 
 // DefaultPark is runner.DEFAULT_PARK, defined here so that providers need not import runner (the
 // Python's one import cycle, broken this way: runner uses this one). A refusal that names no

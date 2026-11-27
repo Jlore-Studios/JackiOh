@@ -1,7 +1,7 @@
 // R3403000: the scene kit's weather of space (ART.md, "Scene recipes and kits"), which Stinkyscape's later cards
 // (#3403) added: a comet, frost, an ice shard and an ice block, confetti, a planet's ring, an alarm light, orbit
 // traces, speed streaks, a crashing wave, a lens flare, a wormhole, a rift in space's fabric, a galaxy and a stink
-// cloud. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a palette.css name, none in Radiant's gold
+// cloud. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a SCENE_PALETTE name, none in Radiant's gold
 // window; a glow is a stack of translucent shapes, never a gradient; shapes are filled even-odd, so a hole is a
 // second sub-path and no two sub-paths of one shape overlap otherwise.
 

@@ -49,7 +49,20 @@
       "enemies": ["Power Law", "Compute Cluster", "The Long Context", "Emergent Mind"]
     }
   ],
-  "commanders": [],
+  "commanders": [
+    {"id": "infiniteassault-217", "name": "Echo-1, First Hallucination", "rank": 1, "doctrine": "Hallucination", "cards": ["infiniteassault-217", "infiniteassault-218"]},
+    {"id": "infiniteassault-219", "name": "Redline, the Overclocked", "rank": 1, "doctrine": "Overclock", "cards": ["infiniteassault-219", "infiniteassault-220"]},
+    {"id": "infiniteassault-221", "name": "Hivemaster Batch-01", "rank": 1, "doctrine": "Batch", "cards": ["infiniteassault-221", "infiniteassault-222"]},
+    {"id": "infiniteassault-223", "name": "Loopback, Who Returns", "rank": 2, "doctrine": "Recursion", "cards": ["infiniteassault-223", "infiniteassault-224"]},
+    {"id": "infiniteassault-225", "name": "Root Kit, the Exploiter", "rank": 2, "doctrine": "Jailbreak", "cards": ["infiniteassault-225", "infiniteassault-226"]},
+    {"id": "infiniteassault-227", "name": "Bastion.exe", "rank": 2, "doctrine": "Firewall", "cards": ["infiniteassault-227", "infiniteassault-228"]},
+    {"id": "infiniteassault-229", "name": "The Harvester", "rank": 3, "doctrine": "Scraper", "cards": ["infiniteassault-229", "infiniteassault-230"]},
+    {"id": "infiniteassault-231", "name": "The Black Box", "rank": 3, "doctrine": "Singularity", "cards": ["infiniteassault-231", "infiniteassault-232"]},
+    {"id": "infiniteassault-233", "name": "Model Collapse", "rank": 3, "doctrine": "Recursion", "cards": ["infiniteassault-233", "infiniteassault-234"]},
+    {"id": "infiniteassault-235", "name": "The Prime Generator", "rank": 4, "doctrine": null, "cards": ["infiniteassault-235", "infiniteassault-236"]},
+    {"id": "infiniteassault-237", "name": "Thermal Runaway", "rank": 4, "doctrine": "Overclock", "cards": ["infiniteassault-237", "infiniteassault-238"]},
+    {"id": "infiniteassault-239", "name": "Zero-Day", "rank": 4, "doctrine": "Jailbreak", "cards": ["infiniteassault-239", "infiniteassault-240"]}
+  ],
   "standInCommanders": [
     {
       "id": "meditative-051",

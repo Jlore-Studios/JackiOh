@@ -13,7 +13,9 @@ use jackioh_engine::testkit::*;
 /// `game` builds from it (R28), searched at test time: the roll's place in the effect table moves whenever
 /// an effect joins it.
 fn discount_seed(game: impl Fn(&str) -> Scenario) -> String {
-    let label = jackioh_engine::subsystems::chaos_effect_by_name("discount")
+    let label = jackioh_engine::subsystems::CHAOS_EFFECTS
+        .iter()
+        .find(|effect| effect.name == "discount")
         .map(|effect| effect.label)
         .unwrap_or_default();
     seed_where("chaos-discount", |seed| {

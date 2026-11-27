@@ -205,6 +205,11 @@ never state, so a hidden card cannot be named by it.
   on a Chinese face, whenever the view says the unit is a Starship or the definition holds the hull among its
   ingredients (`fused.rs` walks them, a fusion of fusions to its leaves, from the definition or the id it
   spells). The web's art code reads the same ids in `apps/web/src/cards/fused.ts`.
+- **A unit holding gear** (Miners or Weapons equipped into it) is printed as its host (R5050000): the host's name
+  and text, the gear in `equipped`, oldest first (`fused.rs` `equipped_of`, `tuning.rs` `as_host`); the log names
+  it for its host too.
+- **A fused text's numbers** are each leaf's own (R5049000, `tuning.rs` `with_part_numbers`): the first leaf to
+  declare a key prints the view's number, a later one its own declaration as the card's tuning moves it.
 - **Locale and catalog come in as arguments.** The catalog is the engine's registered one, with the
   definitions a view carries (`PlayerView.defs`) consulted next.
 - **The oracle.** `data/glossary.json`, `power-words.json` and `short-forms.json` are the tables the web
@@ -458,7 +463,7 @@ step(host, event, now) -> (host, outputs)
 | `lethal` | R2102000: ask the lethal check for that seat under `PRACTICE_LETHAL_HINT_CLOCK_MS`; when it says yes, the snapshot says `lethal`. A host without the check leaves it out |
 | `decide` | the AI owes a move: search for it under `PRACTICE_AI_CLOCK_MS` (the node budget stays the real bound, R2560000) on `ai.seat`, from `rng_seed` at `rng_cursor`, and feed `decided`: one separate, deadline-bounded step |
 | `save` | R668: write the save of a free game in progress, or clear it (a lesson, a finished game); a run fight leaves it as it was |
-| `keep` | R768: append a finished free game to the kept ones, keep the newest `keep` of them (`PRACTICE_REPLAYS_KEPT`) |
+| `keep` | R768: append a finished free game (or R5125000's Assault fight) to the kept ones, keep the newest `keep` of them (`PRACTICE_REPLAYS_KEPT`) |
 | `finished`, `voided` | the game's end with what a store must record: the human's result, turns, the human's actions (for the economy's XP, R1302004), the AI's moves, the board the human takes (R508), the final hash; or R679's void, which records nothing |
 | `claim`, `runReport`, `debug`, `failed` | the answers to the events of those names, and the reason an event was refused (nothing changed) |
 
@@ -548,7 +553,7 @@ OrderedDataStore and a MemoryStore and calls the same code through the `ranked` 
 
 | Module | Holds | Rulings |
 | --- | --- | --- |
-| `glicko2` | the hidden rating: `glicko2_period`, `rate_game`, `rate_game_scored`, `widen_for_promotions`, Glickman's steps in his order | R603, R1843004, R1560000 |
+| `glicko2` | the hidden rating: `glicko2_period`, `rate_game_scored`, `widen_for_promotions`, Glickman's steps in his order | R603, R1843004, R1560000 |
 | `ladder` | the visible ladder: `place_of`, `percentile_of`, `target_ladder`, `pip_delta`, `apply_ranked_game`, `jlorious_order`, `visible_rank`, `peak_badge` and the shapes `SeasonRank`, `Standing`, `VisibleRank`, `PeakBadge`, `Ladder` | R605 to R608, R2778000 |
 | `season` | `season_id_of`, `plan_season` (which season a build plays in, from the seasons that exist and the time), `soft_reset` | R609 |
 | `game` | `decide(&RateGameInput) -> RatedDecision`: one rated game, as data | R603 to R611, R640000, R672, R1560000, R1843004, R3074001 |
@@ -615,7 +620,7 @@ the machine's (above); these are the modules the machine and the queue are made 
 | `cosmetics` | the loadout it wears: which cosmetics people own widely and long enough for a bot to hold (`eligible`), its wardrobe from the pool's seed (`draw_wardrobe`) at the share of people of its account age that own each (`fit_for`), its account's picks, each deck's slots and its cards' own picks (`draw_account`, `draw_slots`, `draw_card_picks`), and what a refresh changes of all that (`redraw`) | R1834005, R2755000 |
 
 - **Records, not rows.** `BotRecord` (a bot, its wardrobe among it), `TicketRecord` and `RatedGameRecord` are what the pairing and the pool
-  read; the server implements them for its store rows, and `BotFacts`, `TicketFacts` and `GameFacts` are
+  read; the server implements them for its store rows (`BotRecord` through `bot_record_of_fields!`, as `BotFacts` does), and `BotFacts`, `TicketFacts` and `GameFacts` are
   the same as plain JSON for a host with no row type of its own (a Roblox script, the boundary).
 - **Hidden is the one switch** (`BotSeat.hidden`). The fallback time (R1453: a ticket waits 15 to 40 s so that a
   pairing does not come the moment it is queued) is part of it: `fallback_due_keyed(key, ticket, now, hidden)`

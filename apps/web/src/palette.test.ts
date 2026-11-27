@@ -10,9 +10,39 @@ import { describe, expect, it } from "vitest";
 const SRC = dirname(fileURLToPath(import.meta.url));
 
 /** The palette's size limit: a new color raises it in the same change, in plain sight. */
-const PALETTE_MAX = 50;
+const PALETTE_MAX = 43;
 /** WCAG 2.2 AA's contrast for text (1.4.3). */
 const AA_TEXT_CONTRAST = 4.5;
+/** R5012000: the Tailwind defaults palette.css held before #5012; none comes back. */
+const TAILWIND_DEFAULTS = [
+  "#6b7280",
+  "#fca5a5",
+  "#f87171",
+  "#ef4444",
+  "#7f1d1d",
+  "#fb923c",
+  "#d9f99d",
+  "#a3e635",
+  "#bbf7d0",
+  "#4ade80",
+  "#22c55e",
+  "#15803d",
+  "#14532d",
+  "#facc15",
+  "#fde68a",
+  "#22d3ee",
+  "#7dd3fc",
+  "#38bdf8",
+  "#bfdbfe",
+  "#1d4ed8",
+  "#1e3a8a",
+  "#c4b5fd",
+  "#8b5cf6",
+  "#6d28d9",
+  "#c084fc",
+];
+/** #5012: UNMIGRATED's ceiling; it only falls. */
+const UNMIGRATED_MAX = 867;
 
 /** The CSS named colors (CSS Color 4), which count as colors too. */
 const NAMED =
@@ -51,49 +81,34 @@ const BOARD_SHEETS = SHEETS.filter(
 
 /** Every other sheet's own colors: one that loses some lowers its number, an art sheet that gains some raises it. */
 const UNMIGRATED: Record<string, number> = {
-  "auth/auth.css": 1,
-  "auth/code-field.css": 32,
-  "auth/consent.css": 14,
-  "auth/tavern.css": 69,
-  "auth/two-step.css": 2,
-  "cards/art/art.css": 12,
-  "cards/cards.css": 291,
-  "cards/cardstate.css": 38,
-  "cards/cosmetics.css": 330,
-  "cards/glitch.css": 13,
-  "cards/inspect/inspect.css": 99,
-  "cards/inspect/list-play.css": 7,
-  "cards/keywords.css": 27,
-  "cards/marks.css": 5,
-  "cards/setmark.css": 5,
-  "cards/wheel/wheel.css": 7,
-  "collection/collection.css": 89,
-  "duos/duos.css": 13,
-  "economy/economy.css": 24,
-  "economy/jlore-pill.css": 11,
-  "economy/xp.css": 1,
-  "emotes/emotes.css": 10,
-  "emotes/portrait.css": 5,
-  "fx/fx.css": 122,
-  "game/deckbuilder/deckbuilder.css": 90,
-  "game/deckbuilder/workshop.css": 14,
-  "game/table.css": 181,
-  "packs/pack-object.css": 44,
-  "packs/packs.css": 3,
-  "patches/patches.css": 42,
-  "practice/practice.css": 33,
-  "practice/sandbox.css": 12,
-  "routes/account.css": 3,
-  "routes/game-banner.css": 8,
-  "routes/landing.css": 73,
-  "routes/lobby.css": 40,
-  "routes/site-footer.css": 1,
-  "routes/stats.css": 63,
-  "settings/changeEmail.css": 2,
-  "settings/settings.css": 17,
-  "shop/shop.css": 2,
-  "together/together.css": 2,
-  "tutorial/tutorial.css": 13,
+  "auth/code-field.css": 2,
+  "auth/consent.css": 3,
+  "auth/tavern.css": 10,
+  "cards/art/art.css": 7,
+  "cards/cards.css": 186,
+  "cards/cardstate.css": 15,
+  "cards/cosmetics.css": 254,
+  "cards/glitch.css": 11,
+  "cards/inspect/inspect.css": 13,
+  "cards/inspect/list-play.css": 2,
+  "cards/keywords.css": 18,
+  "cards/marks.css": 4,
+  "cards/setmark.css": 3,
+  "cards/wheel/wheel.css": 6,
+  "collection/collection.css": 73,
+  "economy/economy.css": 9,
+  "emotes/emotes.css": 1,
+  "fx/fx.css": 8,
+  "game/deckbuilder/deckbuilder.css": 14,
+  "game/deckbuilder/workshop.css": 3,
+  "game/table.css": 176,
+  "packs/pack-object.css": 15,
+  "patches/patches.css": 1,
+  "practice/practice.css": 2,
+  "practice/sandbox.css": 2,
+  "routes/landing.css": 12,
+  "routes/lobby.css": 10,
+  "routes/stats.css": 7,
 };
 
 /**
@@ -158,6 +173,11 @@ describe("#2105 the palette", () => {
     }
   });
 
+  it("R5012000 no palette colour is one of Tailwind's defaults", () => {
+    expect(new Set(TAILWIND_DEFAULTS).size).toBe(25);
+    expect([...PALETTE].filter(([, hex]) => TAILWIND_DEFAULTS.includes(hex)).map(([name]) => name)).toEqual([]);
+  });
+
   it("#2105 the colors that mean something keep their colors", () => {
     const MEANING: [string, string, string][] = [
       ["index.css", "--you", "#3d7bd4"],
@@ -165,18 +185,18 @@ describe("#2105 the palette", () => {
       ["index.css", "--legal", "#4ec98a"],
       ["index.css", "--selected", "#f0c04a"],
       ["index.css", "--radiant", "#ffd24a"],
-      ["index.css", "--plague", "#8b5cf6"],
-      ["index.css", "--grade", "#38bdf8"],
+      ["index.css", "--plague", "#8d6bb5"],
+      ["index.css", "--grade", "#5f93c2"],
       ["index.css", "--mana", "#3d7bd4"],
-      ["index.css", "--locked", "#6b7280"],
+      ["index.css", "--locked", "#8a8577"],
       ["buttons.css", "--primary-ink", "#2b1800"],
       ["buttons.css", "--danger", "#c0453f"],
-      ["game/board.css", "--selected", "#7dd3fc"],
-      ["game/prompt.css", "--selected", "#7dd3fc"],
-      ["game/highlights.css", "--glow-ready", "#4ade80"],
-      ["game/highlights.css", "--glow-condition", "#facc15"],
-      ["game/highlights.css", "--glow-counted", "#c084fc"],
-      ["game/highlights.css", "--glow-pareto", "#22d3ee"],
+      ["game/board.css", "--selected", "#8fb3d4"],
+      ["game/prompt.css", "--selected", "#8fb3d4"],
+      ["game/highlights.css", "--glow-ready", "#4ec98a"],
+      ["game/highlights.css", "--glow-condition", "#f0c04a"],
+      ["game/highlights.css", "--glow-counted", "#c3afd6"],
+      ["game/highlights.css", "--glow-pareto", "#3fb6a8"],
     ];
     for (const [sheet, token, hex] of MEANING) expect(resolved(sheet, token), `${sheet} ${token}`).toBe(hex);
     const seats = ["--you", "--opponent", "--legal", "--selected", "--radiant"].map((token) => resolved("index.css", token));
@@ -211,5 +231,9 @@ describe("#2105 no one-off colors", () => {
       if (own > 0) counts[sheet] = own;
     }
     expect(counts, "take the color from palette.css; an art sheet raises its number in UNMIGRATED").toEqual(UNMIGRATED);
+  });
+
+  it("#5012 the unmigrated sheets hold at most UNMIGRATED_MAX colours between them", () => {
+    expect(Object.values(UNMIGRATED).reduce((sum, count) => sum + count, 0)).toBeLessThanOrEqual(UNMIGRATED_MAX);
   });
 });

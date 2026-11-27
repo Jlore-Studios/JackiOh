@@ -1279,27 +1279,6 @@ impl SupabaseAuth {
     }
 }
 
-/// One fixture account (`e2e/support/config.ts`, `accounts`): user id, email, password, token.
-/// A private copy of `api::e2e::E2E_ACCOUNTS`' identity half; `api::e2e` owns the reseed.
-const E2E_FIXTURE_ACCOUNTS: &[(&str, &str, &str, &str)] = &[
-    ("e2e-p1", "e2e-p1@jackioh.test", "e2e-p1-password", "e2e-token-p1"),
-    ("e2e-p2", "e2e-p2@jackioh.test", "e2e-p2-password", "e2e-token-p2"),
-    ("e2e-p3", "e2e-p3@jackioh.test", "e2e-p3-password", "e2e-token-p3"),
-    ("e2e-p4", "e2e-p4@jackioh.test", "e2e-p4-password", "e2e-token-p4"),
-    (
-        "e2e-pending",
-        "e2e-pending@jackioh.test",
-        "e2e-pending-password",
-        "e2e-token-pending",
-    ),
-    (
-        "e2e-econ",
-        "e2e-econ@jackioh.test",
-        "e2e-econ-password",
-        "e2e-token-econ",
-    ),
-];
-
 /// The plain error a fixture sign-in fails with; `api::auth::call_provider` turns it into the one
 /// 401 whose wording never distinguishes "no such account" from "wrong password".
 const INVALID_LOGIN_CREDENTIALS: &str = "invalid login credentials";
@@ -1357,8 +1336,15 @@ impl E2eAuth {
                 deletion: E2eDeletion::Unsupported,
             }),
         };
-        for &(user_id, email, password, token) in E2E_FIXTURE_ACCOUNTS {
-            auth.register(user_id, email, true, Some(password), token);
+        // The fixture accounts (`e2e/support/config.ts`, `accounts`), whose reseed `api::e2e` owns.
+        for account in crate::api::e2e::E2E_ACCOUNTS {
+            auth.register(
+                account.user_id,
+                account.email,
+                true,
+                Some(account.password),
+                account.token,
+            );
         }
         auth
     }

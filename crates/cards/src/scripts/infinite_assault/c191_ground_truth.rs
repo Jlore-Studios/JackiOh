@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #191 Ground Truth ((2) Unit, Legendary, 3/5 → 6/10), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Your opponent plays with their hand revealed to you."
-//!   Radiant: "Your opponent plays with their hand revealed to you, and their cards cost ({surcharge}) more."
+//!   Base:    "Aura: Your opponent plays with their hand revealed to you."
+//!   Radiant: "Aura: Your opponent plays with their hand revealed to you, and their cards cost ({surcharge}) more."
 //!
 //! Built by C8 (#4592). R4592000, R4592003.
 

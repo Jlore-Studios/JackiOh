@@ -56,8 +56,9 @@ pub fn make_context<'b>(
         .unwrap_or(sink.state.active);
     // R1850000: the face of the text the card runs, a copier's copied one.
     let radiant = self_.is_some_and(|card| crate::subsystems::unit_text::text_def_of(card).1);
-    // B2.7, B3.4: the X it was played for, as Degrade and Upgrade have tuned it (`tuning.xOf`).
-    let x = self_.map_or(0, crate::tuning::x_of);
+    // B2.7, B3.4: the X it was played for, as Degrade and Upgrade have tuned it (`tuning.xOf`), an
+    // X-cost card's at most `MANA_CEILING` (R5148000).
+    let x = self_.map_or(0, |card| crate::mana::counted_x(sink.state, card));
     let embiggened = self_.and_then(|card| card.embiggened).unwrap_or(false);
     EffectContext {
         sink: sink.reborrow(),

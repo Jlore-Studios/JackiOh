@@ -16,7 +16,7 @@ use jackioh_server::config::{
 };
 use jackioh_server::db::fake::{CallOutcome, FakeTables};
 use jackioh_server::db::store::{MatchSeat, StoreError};
-use jackioh_server::ranked::glicko2::{Glicko, rate_game};
+use jackioh_server::ranked::glicko2::{Glicko, rate_game_scored};
 use jackioh_shared::series::NewSeriesInput;
 use serde_json::{Value, json};
 
@@ -195,7 +195,7 @@ fn rating_move(rating_a: f64, rating_b: f64, score_a: f64) -> (f64, f64) {
         deviation: RATING_DEVIATION_START,
         volatility: RATING_VOLATILITY_START,
     };
-    let next = rate_game(&fresh(rating_a), &fresh(rating_b), score_a);
+    let next = rate_game_scored(&fresh(rating_a), &fresh(rating_b), score_a, 1.0 - score_a);
     (next.a.rating, next.b.rating)
 }
 

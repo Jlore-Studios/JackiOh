@@ -79,22 +79,24 @@ use crate::scripts::stinkyscape::{
     c074_paragon_x, c080_galaxy, c083_halo, c086_prototype_x2, c087_siva_1, c094_tmack_trav,
     c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447, c112_job_application, c115_scornboi,
     c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod, c134_felinor_containment_chamber,
-    c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck,
-    c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger,
-    c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
-    c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
+    c137_firststrike_capability, c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach,
+    c149_wildar, c153_stimmycheck, c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities,
+    c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
+    c172_huge_asteroid, c173_abandoned_spice_tower, c176_preemptive_strike, t_drone_corvette,
+    t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c007_churnwalker, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie,
     c018_large_smoothie, c021_jlockeed_shredder_12, c024_forced_propagation, c025_snom_bunny, c037_scorch,
     c039_mindustrial_cross_over, c041_mend_projector, c045_surge_alloy, c046_phase_fabric, c047_plastanium,
-    c049_metaglass, c050_graphite, c056_impact_reactor, c061_1_shawarma_law, c062_overdrive_projector,
-    c063_overdrive_dome, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall, c067_phase_wall,
-    c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
-    c082_endless_expedition, c090_meltdown, c093_recessive_replicators, c097_selective_enrollment,
-    c101_a_wee_whelp, c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg,
-    c121_toxopid, c131_tetrative_reconstructor, c145_fire_beam_v5, c150_scorching_rounds,
-    c151_volcanic_rounds, c155_the_far_vagabond, c158_quick_chaos, c159_raven, c166_mindustrial_revolution,
+    c049_metaglass, c050_graphite, c056_impact_reactor, c059_mass_driver, c061_1_shawarma_law,
+    c062_overdrive_projector, c063_overdrive_dome, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall,
+    c067_phase_wall, c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea,
+    c080_the_last_voyage, c082_endless_expedition, c090_meltdown, c093_recessive_replicators,
+    c097_selective_enrollment, c101_a_wee_whelp, c102_cosmic_bard, c104_tireless_cultivation, c119_eclipse,
+    c120_crawler, c121_1_toxopid_leg, c121_toxopid, c131_tetrative_reconstructor, c145_fire_beam_v5,
+    c150_scorching_rounds, c151_volcanic_rounds, c155_the_far_vagabond, c158_quick_chaos, c159_raven,
+    c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
     c012_fortify, c015_in_a_hurry, c027_hopeful_jelly_bean, c031_level_up, c035_corpse_recycler,
@@ -128,7 +130,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R4382001: Adaptive UI's Rush Token through v0.1.0d), #4396 (R4396000), #4423 (R4423000), #4424
 /// (R4424000), #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
 /// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price),
-/// #4666 (R4666000), #4844 (R656's help aims on eight buff Spells' targets) and #4828 (R4828000).
+/// #4666 (R4666000), #4844 (R656's help aims on eight buff Spells' targets), #4828 (R4828000), #5048
+/// (R5048000), #4991 (R4991000) and #5106 (R5106000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 /// R4779000: a row's key is that version, or `"fragment:<stem>"` (`FRAGMENT_KEY`), the stem of the
 /// pending fragment that ships the change, which `resolve_kept_key` reads as the version just before
@@ -1412,6 +1415,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
     (c009_ticketed::ID, "v0.6.12c", c009_ticketed::script_v0_6_12c),
+    // #4832 (R3568001): Cosmic Bard's Radiant set price before an override alone left a Unit
+    // carrying a raise larger than the cheapest above it.
+    (
+        c102_cosmic_bard::ID,
+        "fragment:radiant-cosmic-bard-leaves-both-drawn-units-at-the-cheapest",
+        c102_cosmic_bard::script_kept_4832,
+    ),
     // #4828 (R4828000): End Times' bank in the card's memory, kept until the fragment that moves it into
     // the card's tuning ships (R4779000).
     (
@@ -1549,6 +1559,43 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c049_1_yilegpt_unleashed::ID,
         "fragment:stinkyscape-balance-changes-viii",
         c049_1_yilegpt_unleashed::script_v0_6_13h,
+    ),
+    // #4992 (R4992000): Mass Driver's badge that held its own count, kept until the fragment that drops
+    // it ships (R4779000).
+    (
+        c059_mass_driver::ID,
+        "fragment:mass-driver-s-badge-states-its-countdown-once",
+        c059_mass_driver::script_v0_6_14i,
+    ),
+    // #5048 (R5048000): Toxopid's Cry before its Flexible Legs crushed, into random empty unit zones only
+    // (R4154300), kept until the fragment that changes it ships (R4779000).
+    (
+        c121_toxopid::ID,
+        "fragment:toxopid-s-legs-are-flexible-and-crush-the-units-they-land-on",
+        c121_toxopid::script_before_crushing_legs,
+    ),
+    // #4991 (R4991000): the Aura's draw on `summoned` alone, before a Transform's card drew (R4779000).
+    (
+        c065_keymaster_keenus::ID,
+        "fragment:a-flickered-card-starts-its-printed-brittle-again-and-a",
+        c065_keymaster_keenus::script_before_transform_draw,
+    ),
+    (
+        c111_shockwave447::ID,
+        "fragment:a-flickered-card-starts-its-printed-brittle-again-and-a",
+        c111_shockwave447::script_before_transform_draw,
+    ),
+    // #5106 (R5106000): Starfleet Commander's Cry and Preemptive Strike before they read their Dormant
+    // Starship once, so a fused Cry that asked during the launch lost the Discover (R4779000).
+    (
+        c137_firststrike_capability::ID,
+        "fragment:starfleet-commander-and-preemptive-strike-still-discover-a",
+        c137_firststrike_capability::script_before_launch_read_once,
+    ),
+    (
+        c176_preemptive_strike::ID,
+        "fragment:starfleet-commander-and-preemptive-strike-still-discover-a",
+        c176_preemptive_strike::script_before_launch_read_once,
     ),
 ];
 

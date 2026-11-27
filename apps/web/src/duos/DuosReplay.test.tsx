@@ -3,7 +3,7 @@
 // fixtures: the screen computes nothing from them (CLAUDE.md rule 7).
 
 import { CATALOG } from "@jackioh/cards";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { closeInspect } from "../cards/index.ts";
@@ -47,6 +47,7 @@ import { REPLAY_FAILURE_TEXT } from "../replay/source.ts";
 import { onlineFailure } from "../replay/sources.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { duosView } from "../test/fixtures.ts";
+import { savedReplay } from "../test/savedReplay.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import { duosReplayJson } from "./download.ts";
@@ -595,14 +596,14 @@ describe("R1242000 Download JSON", () => {
     const button = within(toolbar).getByTestId(duosTestid.replayDownload);
     expect(button).toHaveTextContent("Download JSON");
     fireEvent.click(button);
-    expect(saved).toHaveLength(1);
+    // This file uses fake timers, so the clock goes back to real ones before the file is made and read.
+    vi.useRealTimers();
+    await waitFor(() => expect(saved).toHaveLength(1));
     const file = saved[0];
     if (file === undefined) throw new Error("nothing was saved");
-    expect(file.name).toBe("jackioh-duos-replay.json");
-    // This file uses fake timers, so the clock goes back to real ones before the file is read.
-    vi.useRealTimers();
-    const text = await file.text();
-    expect(JSON.parse(text)).toEqual(duosReplayJson(STEPS as unknown as DuosReplaySteps));
+    expect(file.name).toBe("jackioh-duos-replay.json.gz");
+    const { text, json } = await savedReplay(file);
+    expect(json).toEqual(duosReplayJson(STEPS as unknown as DuosReplaySteps));
     expect(text).not.toContain(MATCH);
     expect(text).not.toContain("duos-seed");
     expect(text).not.toMatch(/"(seed|log|decks|handicaps|state|pings|profileId|username|accountId|matchId)":/u);

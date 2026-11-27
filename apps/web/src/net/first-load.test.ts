@@ -94,7 +94,7 @@ const SOURCE = join(SRC, "patches/source.ts");
  * (376,832), about 8 KB (2.2%) over that: putting the offers back would cross it, and the music player has its
  * content guard below.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 376_832;
+const FIRST_LOAD_GZIP_BUDGET_BYTES = 376_832;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

@@ -225,29 +225,35 @@ describe("#492 the Embiggened card shows the embiggen price as it stands, and th
     normal: (a: number) => number;
     embiggened: (b: number) => number;
     tone: string;
-    /** Whether the change moves this card's embiggen price at all (R363's threshold). */
-    applies?: (b: number) => boolean;
+    /**
+     * Whether the change moves this card's prices at all, read off its printed normal price A and its
+     * Embiggened one B: R5109000 prices B as A's finished price plus the premium B − A, so whatever leaves
+     * A where it stands (R363's threshold, the floor at 0) leaves B there too.
+     */
+    applies?: (a: number, b: number) => boolean;
   };
   const cases: Case[] = [
-    // A cost never drops below 0 (§6.3 Cost), so a card printed (0) stays (0) on its normal price.
+    // A cost never drops below 0 (§6.3 Cost), so a card printed (0) stays (0) on its normal price, and
+    // R5109000: its Embiggened price, (0) plus the premium, stays where it is printed too.
     {
       name: "its own discount (costMod -1)",
       change: { costMod: -1 },
-      normal: (a) => Math.max(0, a - 1),
-      embiggened: (b) => Math.max(0, b - 1),
-      tone: "down",
-      applies: (b) => b > 0,
-    },
-    {
-      // R363: Professor Curvature's shape reaches a price of 4 or more: the embiggen price, not the
-      // base one. An embiggen price under 4 (Meditative #81 Deadman's Hand's (2)) is out of its reach,
-      // and a base price of 4 is in it: the Stinkyscape set's #79 Orca, (4) embiggen (5) (R1857000).
-      name: "a (4)+ Cost discount (R363)",
-      change: { mods: [{ id: "m492-curve", expiry: thisTurn, kind: "costDiscount", amount: 1, minCurrentCost: CURVE_FROM }] },
-      normal: (a) => (a >= CURVE_FROM ? a - 1 : a),
+      normal: (a) => a - 1,
       embiggened: (b) => b - 1,
       tone: "down",
-      applies: (b) => b >= CURVE_FROM,
+      applies: (a) => a > 0,
+    },
+    {
+      // R363, R5109000: Professor Curvature's shape reaches a normal price of 4 or more, and the
+      // Embiggened price is that price plus the premium, so it moves exactly when the normal one does: a
+      // base price of 4 is in its reach (the Stinkyscape set's #79 Orca, (4) embiggen (5), R1857000), and
+      // a base under 4 leaves both prices printed.
+      name: "a (4)+ Cost discount (R363)",
+      change: { mods: [{ id: "m492-curve", expiry: thisTurn, kind: "costDiscount", amount: 1, minCurrentCost: CURVE_FROM }] },
+      normal: (a) => a - 1,
+      embiggened: (b) => b - 1,
+      tone: "down",
+      applies: (a) => a >= CURVE_FROM,
     },
     {
       name: "a surcharge of 1 (R455)",
@@ -260,7 +266,7 @@ describe("#492 the Embiggened card shows the embiggen price as it stands, and th
 
   for (const { def, base, embiggen } of EMBIGGEN) {
     for (const { name, change, normal, embiggened, tone, applies } of cases) {
-      if (applies !== undefined && !applies(embiggen)) continue;
+      if (applies !== undefined && !applies(base, embiggen)) continue;
       const price = embiggened(embiggen);
       it(`${def.name} under ${name}: Normal says (${String(normal(base))}), Embiggened (${String(price)}), and the play pays that`, () => {
         const { state, cardId } = board(def.id, false, price, change);

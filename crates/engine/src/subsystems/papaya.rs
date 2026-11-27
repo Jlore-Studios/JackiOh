@@ -284,12 +284,7 @@ fn ask_cell(points: Vec<PapayaPoint>, rules: PapayaRules) -> Effect {
     })
 }
 
-/// R422: the card's on-resolve hook — the first cell prompt.
-pub fn papaya_begin() -> Vec<Effect> {
-    papaya_begin_with(PAPAYA_RULES)
-}
-
-/// R422, R1704000: `papaya_begin` under `rules`.
+/// R422, R1704000: the card's on-resolve hook under `rules` — the first cell prompt.
 pub fn papaya_begin_with(rules: PapayaRules) -> Vec<Effect> {
     vec![ask_cell(Vec::new(), rules)]
 }
@@ -300,12 +295,8 @@ fn held_points(data: Option<&Value>) -> Vec<PapayaPoint> {
         .unwrap_or_default()
 }
 
-/// R422, R831003, R1704000: an answer: the next Discover while cells are being added, else the curve.
-pub fn papaya_answered(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
-    papaya_answered_with(PAPAYA_RULES, ctx)
-}
-
-/// `papaya_answered` under `rules`.
+/// R422, R831003, R1704000: an answer under `rules`: the next Discover while cells are being added, else
+/// the curve.
 pub fn papaya_answered_with(rules: PapayaRules, ctx: &mut EffectContext<'_>) -> Vec<Effect> {
     let held = held_points(ctx.data.get(PAPAYA_POINTS_KEY));
     let used: Vec<i32> = held.iter().map(|point| point.x).collect();

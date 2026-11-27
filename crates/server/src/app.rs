@@ -713,6 +713,13 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::None,
         h!(api::stats::get_versions),
     ),
+    // R4681001: the Hall of Fame's four lists, public and cached as the versions are.
+    (
+        "GET",
+        "/api/stats/hall-of-fame",
+        AuthLevel::None,
+        h!(api::stats::get_hall_of_fame),
+    ),
     (
         "GET",
         "/api/stats/ci",

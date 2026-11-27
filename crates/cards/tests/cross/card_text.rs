@@ -49,8 +49,8 @@ fn keyword_label(keyword: &Keyword) -> String {
 }
 
 /// The labels that start a line of their own (R366; Activate is B3.2's, Quest Classic #90's). An
-/// embiggen card's Embiggened version is labeled with its Embiggened cost, one label per cost a card
-/// prints (R1175000). The Stinkyscape set prints five more: "Embiggened (5):" (S #79 Orca) and
+/// embiggen card's Embiggened version is labeled with its Embiggen premium, one label per premium a card
+/// prints (R1175000, R5109001). The Stinkyscape set prints five more: S #79 Orca's Embiggened label and
 /// "Activate 3:" to "Activate 6:" (R1857003). "Cry & Death:" (TG #38 Tutorial Master, issue #3139) labels
 /// the one line both hooks run: its "Death:" is the tail of it, not a second label mid-line.
 pub(super) const LABELS: &[&str] = &[
@@ -60,11 +60,9 @@ pub(super) const LABELS: &[&str] = &[
     "Start of turn:",
     "End of turn:",
     "Aura:",
-    "Embiggened (1):",
-    "Embiggened (2):",
-    "Embiggened (3):",
-    "Embiggened (4):",
-    "Embiggened (5):",
+    "Embiggened (+1):",
+    "Embiggened (+2):",
+    "Embiggened (+3):",
     "Activate:",
     "Activate 2:",
     "Activate 3:",
@@ -504,14 +502,14 @@ fn failures(face: &Face) -> Vec<String> {
     }
     if paid_then_digit(text) {
         out.push(
-            "writes an embiggen card's Embiggened version as \"(paid N\", not \"Embiggened (N):\""
+            "writes an embiggen card's Embiggened version as \"(paid N\", not \"Embiggened (+N):\""
                 .to_string(),
         );
     }
     // R1175000: "Paid (N):" was R366's label for the Embiggened version until issue #1175.
     if has_word_start(text, "Paid (", false) {
         out.push(
-            "writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (N):\""
+            "writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (+N):\""
                 .to_string(),
         );
     }
@@ -1679,7 +1677,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
 
 // R1175000 (issue #1175): a card with two prices is an embiggen card. Played at the cheaper price it is
 // its normal version; at the dearer one, its Embiggened cost, it is its Embiggened version, and its
-// text labels that version "Embiggened (N): …" where R366 wrote "Paid (N): …".
+// text labels that version "Embiggened (N): …" where R366 wrote "Paid (N): …"; since #5109 N is its
+// premium, "Embiggened (+N): …" (R5109001).
 
 mod r4747000_one_fixed_order_for_every_card_s_keyword_line {
     use super::*;
@@ -1782,11 +1781,11 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
     use super::*;
     use jackioh_engine::CardCost;
 
+    /// R5109001: the label names the Embiggen premium, B − A (R5109000), never the price.
     fn embiggened_label(card: &CardDef) -> Option<String> {
-        match card.cost {
-            CardCost::Embiggen { embiggen, .. } => Some(format!("Embiggened ({embiggen}):")),
-            _ => None,
-        }
+        card.cost
+            .embiggen_premium()
+            .map(|premium| format!("Embiggened (+{premium}):"))
     }
 
     /// `chinese.json`'s text of one face (R1303).
@@ -1795,7 +1794,7 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
     }
 
     #[test]
-    fn r1175000_every_embiggen_card_starts_a_line_with_embiggened_n_its_embiggened_cost_on_both_faces_in_english_and_chinese()
+    fn r1175000_r5109001_every_embiggen_card_starts_a_line_with_embiggened_plus_n_its_premium_on_both_faces_in_english_and_chinese()
      {
         let terms = chinese_terms();
         let table: Value = serde_json::from_str(chinese_json()).expect("crates/cards/chinese.json is JSON");
@@ -1904,22 +1903,58 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
         assert_eq!(
             check("Aura: Draw 1.\nPaid (4): Draw 2 instead."),
             strings(&[
-                "writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (N):\""
+                "writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (+N):\""
             ])
         );
         assert_eq!(
-            check("Aura: Draw 1.\nEmbiggened (4): Draw 2 instead."),
+            check("Aura: Draw 1.\nEmbiggened (+2): Draw 2 instead."),
             Vec::<String>::new()
         );
         assert_eq!(
-            check("Aura: Draw 1. Embiggened (4): Draw 2 instead."),
-            strings(&["does not start \"Embiggened (4):\" on a line of its own"])
+            check("Aura: Draw 1. Embiggened (+2): Draw 2 instead."),
+            strings(&["does not start \"Embiggened (+2):\" on a line of its own"])
         );
+    }
+
+    /// R5109001: every embiggen card's Embiggened line names its premium, at least (1) since its
+    /// Embiggened version is dearer, and never its Embiggened price, in English and in Chinese.
+    #[test]
+    fn r5109001_every_embiggen_cards_label_is_its_premium_of_at_least_1_never_its_price() {
+        let table: Value = serde_json::from_str(chinese_json()).expect("crates/cards/chinese.json is JSON");
+        let mut wrong: Vec<String> = Vec::new();
+        for face in faces_of(&entries()) {
+            let CardCost::Embiggen { embiggen, .. } = face.card.cost else {
+                continue;
+            };
+            let premium = face.card.cost.embiggen_premium();
+            if premium < Some(1) {
+                wrong.push(format!("{} has a premium of {premium:?} below 1", face.card.id));
+            }
+            let Some(label) = embiggened_label(face.card) else {
+                continue;
+            };
+            let price_label = format!("Embiggened ({embiggen}):");
+            if !face.text.contains(&label) || face.text.contains(&price_label) {
+                wrong.push(format!(
+                    "does not print {label} in place of {price_label}: {}",
+                    described(&face)
+                ));
+            }
+            let chinese = chinese_face(&table, &face.card.id, face.face);
+            if chinese.contains(&format!("加码({embiggen})：")) {
+                wrong.push(format!(
+                    "{} {}: the Chinese face prints the price, not the premium: {chinese}",
+                    face.card.id, face.face
+                ));
+            }
+        }
+        assert_eq!(wrong, Vec::<String>::new());
     }
 }
 
-/// R1857003: the Stinkyscape set prints five labels no other set's card does, "Activate 3:" to
-/// "Activate 6:" (an Activate of that many uses a turn, R1751000) and S #79 Orca's "Embiggened (5):".
+/// R1857003: the Stinkyscape set prints five labels no other set's card did, "Activate 3:" to
+/// "Activate 6:" (an Activate of that many uses a turn, R1751000) and S #79 Orca's "Embiggened (5):",
+/// since #5109 its premium's "Embiggened (+1):" (R5109001), which other sets print too.
 /// Each starts a line as R366's labels do, in English and in Chinese.
 mod r1857003_five_labels_the_stinkyscape_set_prints {
     use super::*;
@@ -1929,11 +1964,11 @@ mod r1857003_five_labels_the_stinkyscape_set_prints {
         ("Activate 4:", "激活4："),
         ("Activate 5:", "激活5："),
         ("Activate 6:", "激活6："),
-        ("Embiggened (5):", "加码(5)："),
+        ("Embiggened (+1):", "加码(+1)："),
     ];
 
     #[test]
-    fn r1857003_activate_3_to_6_and_embiggened_5_are_labels_in_both_languages() {
+    fn r1857003_r5109001_activate_3_to_6_and_orcas_embiggened_label_are_labels_in_both_languages() {
         let terms = chinese_terms();
         let dummy_card = entries()[0];
         let check = |text: &str| -> Vec<String> {
@@ -2134,7 +2169,7 @@ mod the_hand_written_patterns_read_as_their_regular_expressions {
         assert!(!word_dash_cost("a 3odd-cost card"));
         assert!(paid_then_digit("(Paid 4: draw)"));
         assert!(!paid_then_digit("Paid (4): draw"));
-        assert!(!paid_then_digit("Embiggened (4): draw"));
+        assert!(!paid_then_digit("Embiggened (+2): draw"));
     }
 
     #[test]
@@ -2416,5 +2451,141 @@ mod r3941000_printed_text_conventions_issue_3941 {
         for text in passed {
             assert_eq!(conventions_failures(text), Vec::<String>::new(), "{text}");
         }
+    }
+}
+
+/// R5038000: a face whose script answers from where the card waits prints that trigger as §6.2 writes it,
+/// "While this is in your <zone>: …", naming exactly the zones the script answers from. R3941000's sweep
+/// retires the openings it knew; this one reads the script, so a trigger worded any other way fails too (S+ #89
+/// Animosity's "When your exile has 5 cards, cast this, wherever in your deck it is." and Core #89 Corpse Eater's
+/// "While this is in your hand, it gains …" did). Three printings name their moment without the zone: §6.2's
+/// Float term ("Float reduces cost.", a hand trigger on its owner's Float), a discard ("When you discard this",
+/// a graveyard trigger on the discard) and a Spell's turn hook, read from the hand, the one place a Spell waits.
+mod r5038000_a_trigger_from_where_the_card_waits_reads_while_this_is_in_your {
+    use super::*;
+    use jackioh_engine::CardType;
+    use jackioh_engine::script::{ReplacementWhere, Script};
+
+    const OPENING: &str = "While this is in your ";
+    const FLOAT_TERM: &str = "Float reduces ";
+    const DISCARDS: &[&str] = &["discard this", "this is discarded"];
+    const TURN_HOOKS: &[&str] = &["End of turn:", "Start of turn:"];
+
+    /// The zones `script` answers from, in the order a face names them.
+    fn zones_answered(script: &Script) -> Vec<&'static str> {
+        let mut zones = Vec::new();
+        let from_hand = script
+            .replacements
+            .iter()
+            .any(|replacement| replacement.where_ == Some(ReplacementWhere::Hand));
+        if !script.hand_triggers.is_empty() || from_hand {
+            zones.push("hand");
+        }
+        if !script.deck_triggers.is_empty() || script.cast_from_deck_when.is_some() {
+            zones.push("deck");
+        }
+        if !script.graveyard_triggers.is_empty() {
+            zones.push("graveyard");
+        }
+        zones
+    }
+
+    /// The zones each "While this is in your <zone>: …" line of `text` names.
+    fn zones_printed(text: &str) -> Vec<String> {
+        text.split('\n')
+            .filter_map(|line| line.strip_prefix(OPENING)?.split_once(':'))
+            .map(|(zone, _)| zone.to_string())
+            .collect()
+    }
+
+    /// Whether `text`, on a card of type `card_type`, names the moment of a trigger answered from `zones`
+    /// another way §6.2 prints: the Float term, a discard, or a Spell's turn hook.
+    fn named_another_way(text: &str, card_type: CardType, zones: &[&str]) -> bool {
+        let lines = || text.split('\n');
+        match zones {
+            ["hand"] => {
+                lines().any(|line| line.starts_with(FLOAT_TERM))
+                    || (card_type == CardType::Spell
+                        && lines().any(|line| TURN_HOOKS.iter().any(|hook| line.starts_with(hook))))
+            }
+            ["graveyard"] => DISCARDS.iter().any(|discard| text.contains(discard)),
+            _ => false,
+        }
+    }
+
+    #[test]
+    fn r5038000_the_other_printings_are_only_the_float_term_a_discard_and_a_spell_s_turn_hook() {
+        assert!(named_another_way(
+            "Float reduces cost.\nSteal an enemy card.",
+            CardType::Unit,
+            &["hand"]
+        ));
+        assert!(named_another_way(
+            "Deal 4 damage.\nEnd of turn: Become a random other Book.",
+            CardType::Spell,
+            &["hand"]
+        ));
+        assert!(named_another_way(
+            "When you discard this, take all three penalties.",
+            CardType::Spell,
+            &["graveyard"]
+        ));
+        // A Unit waits on the field too, so its "End of turn:" is a field hook, never its hand's.
+        assert!(!named_another_way(
+            "End of turn: Return this to hand.",
+            CardType::Unit,
+            &["hand"]
+        ));
+        assert!(!named_another_way(
+            "When your exile has 5 cards, cast this, wherever in your deck it is.",
+            CardType::Spell,
+            &["deck"]
+        ));
+        assert!(!named_another_way(
+            "While this is in your hand, it gains the attack and health of each Unit that dies.",
+            CardType::Unit,
+            &["hand"]
+        ));
+        assert_eq!(
+            zones_printed(
+                "While this is in your hand, it gains the attack and health of each Unit that dies."
+            ),
+            Vec::<String>::new(),
+            "an aura's comma is no trigger's colon"
+        );
+    }
+
+    #[test]
+    fn r5038000_every_face_prints_its_waiting_trigger_as_while_this_is_in_your_zone() {
+        jackioh_cards::register_all();
+        let scripts = jackioh_engine::registered_scripts();
+        let mut wrong: Vec<String> = Vec::new();
+        let mut checked = 0;
+        for face in faces_of(&entries()) {
+            let Some(card_scripts) = scripts.get(&face.card.id) else {
+                continue;
+            };
+            let script = match face.face {
+                FaceKind::Base => &card_scripts.base,
+                FaceKind::Radiant => &card_scripts.radiant,
+            };
+            let answered = zones_answered(script);
+            if answered.is_empty() {
+                continue;
+            }
+            checked += 1;
+            let printed = zones_printed(&face.text);
+            if printed.is_empty() && named_another_way(&face.text, face.card.type_, &answered) {
+                continue;
+            }
+            if printed != [answered.join(" or ")] {
+                wrong.push(format!(
+                    "{} {} answers from {answered:?} but prints {printed:?}: {}",
+                    face.card.id, face.face, face.text
+                ));
+            }
+        }
+        assert_eq!(wrong, Vec::<String>::new());
+        assert!(checked > 0, "PREMISE: some face answers from where it waits");
     }
 }

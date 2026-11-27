@@ -1353,11 +1353,11 @@
     "loc": 7,
     "base": {
       "keywords": [],
-      "text": "Your cards gain \"Combo X: Deal X damage to the enemy hero.\" X = cards you played earlier this turn."
+      "text": "Aura: Your cards gain \"Combo X: Deal X damage to the enemy hero.\" X = cards you played earlier this turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your cards gain \"Combo X: Deal 2X damage to the enemy hero.\" X = cards you played earlier this turn."
+      "text": "Aura: Your cards gain \"Combo X: Deal 2X damage to the enemy hero.\" X = cards you played earlier this turn."
     }
   },
   "core-039": {
@@ -1641,11 +1641,11 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Aura: All Units have −{debuff}/−{debuff}.\nEmbiggened (3): −{paidDebuff}/−{paidDebuff} instead."
+      "text": "Aura: All Units have −{debuff}/−{debuff}.\nEmbiggened (+2): −{paidDebuff}/−{paidDebuff} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Enemy Units have −{debuff}/−{debuff}.\nEmbiggened (3): −{paidDebuff}/−{paidDebuff} instead."
+      "text": "Aura: Enemy Units have −{debuff}/−{debuff}.\nEmbiggened (+2): −{paidDebuff}/−{paidDebuff} instead."
     }
   },
   "core-047": {
@@ -1985,7 +1985,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Rush, Taunt, Lifesteal, Divine Shield\nEmbiggened (3): Equip."
+      "text": "Rush, Taunt, Lifesteal, Divine Shield\nEmbiggened (+1): Equip."
     },
     "radiant": {
       "attack": 6,
@@ -2007,7 +2007,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (3): Equip."
+      "text": "Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (+1): Equip."
     }
   },
   "core-057": {
@@ -2114,11 +2114,11 @@
     "loc": 14,
     "base": {
       "keywords": [],
-      "text": "Activate: Add a random card to your hand.\nEmbiggened (4): It costs ({setCost})."
+      "text": "Activate: Add a random card to your hand.\nEmbiggened (+2): It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Add a random Radiant card to your hand.\nEmbiggened (4): It costs ({setCost})."
+      "text": "Activate: Add a random Radiant card to your hand.\nEmbiggened (+2): It costs ({setCost})."
     }
   },
   "core-060": {
@@ -2290,11 +2290,11 @@
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
+      "text": "Aura: The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
     },
     "radiant": {
       "keywords": [],
-      "text": "The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
+      "text": "Aura: The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
     }
   },
   "core-065": {
@@ -2717,11 +2717,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
+      "text": "Aura: Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero can't take more than {cap} damage at a time.\nYour hero has Armor {armor}.\nCry: Draw {draw}."
+      "text": "Aura: Your hero can't take more than {cap} damage at a time. Your hero has Armor {armor}.\nCry: Draw {draw}."
     }
   },
   "core-074": {
@@ -2815,11 +2815,11 @@
     "loc": 37,
     "base": {
       "keywords": [],
-      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
+      "text": "Aura: Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
+      "text": "Aura: Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
     }
   },
   "core-076": {
@@ -3097,11 +3097,11 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Replace every card in your hand and deck with a random Legendary.\nEmbiggened (4): Your board too."
+      "text": "Replace every card in your hand and deck with a random Legendary.\nEmbiggened (+2): Your board too."
     },
     "radiant": {
       "keywords": [],
-      "text": "Replace every card in your hand and deck with a random Radiant Legendary.\nEmbiggened (4): Your board too."
+      "text": "Replace every card in your hand and deck with a random Radiant Legendary.\nEmbiggened (+2): Your board too."
     }
   },
   "core-084": {
@@ -3139,11 +3139,11 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
+      "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (+2): Armor {paidArmor} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
+      "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (+2): Armor {paidArmor} instead."
     }
   },
   "core-085": {
@@ -3271,7 +3271,7 @@
           "n": 1
         }
       ],
-      "text": "Brittle 1, Rush\nWhile this is in your hand, it gains the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+      "text": "Brittle 1, Rush\nWhile this is in your hand: When a Unit dies, this gains its attack and health.\nAfter this attacks a Unit, it may attack again."
     },
     "radiant": {
       "attack": 4,
@@ -3285,7 +3285,7 @@
           "n": 3
         }
       ],
-      "text": "Brittle 3, Rush\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+      "text": "Brittle 3, Rush\nWhile this is in your hand: When a Unit dies, this gains twice its attack and health.\nAfter this attacks a Unit, it may attack again."
     }
   },
   "core-090": {
@@ -5443,11 +5443,11 @@
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (2): Also draw a random Spell from your deck."
+      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (+2): Also draw a random Spell from your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (2): Also draw the highest cost Spell from your deck."
+      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (+2): Also draw the highest cost Spell from your deck."
     }
   },
   "classic-036": {
@@ -9382,11 +9382,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Shuffle {count|Bone Storm|Bone Storms} into your deck.\nEmbiggened (4): {paidCount} instead."
+      "text": "Shuffle {count|Bone Storm|Bone Storms} into your deck.\nEmbiggened (+2): {paidCount} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle {count|Radiant Bone Storm|Radiant Bone Storms} into your deck.\nEmbiggened (4): {paidCount} instead."
+      "text": "Shuffle {count|Radiant Bone Storm|Radiant Bone Storms} into your deck.\nEmbiggened (+2): {paidCount} instead."
     }
   },
   "classicplus-036-1": {
@@ -12159,7 +12159,7 @@
           "kind": "Tradable"
         }
       ],
-      "text": "Tradable, Indestructible\nThe first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
+      "text": "Tradable, Indestructible\nAura: The first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
     },
     "radiant": {
       "keywords": [
@@ -12170,7 +12170,7 @@
           "kind": "Tradable"
         }
       ],
-      "text": "Tradable, Indestructible\nThe first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
+      "text": "Tradable, Indestructible\nAura: The first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
     }
   },
   "meditative-012": {
@@ -12642,11 +12642,11 @@
     "loc": 37,
     "base": {
       "keywords": [],
-      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
+      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (+1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add a Radiant API Key Fishing to your hand."
+      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (+1): {paidChance}% instead.\nEnd of turn: Add a Radiant API Key Fishing to your hand."
     }
   },
   "meditative-022": {
@@ -13948,11 +13948,11 @@
     "loc": 31,
     "base": {
       "keywords": [],
-      "text": "Add a random KY card, a random CN card and a random Book to your hand.\nEmbiggened (4): They cost ({setCost})."
+      "text": "Add a random KY card, a random CN card and a random Book to your hand.\nEmbiggened (+2): They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a random Radiant KY card, a random Radiant CN card and a random Radiant Book to your hand.\nEmbiggened (4): They cost ({setCost})."
+      "text": "Add a random Radiant KY card, a random Radiant CN card and a random Radiant Book to your hand.\nEmbiggened (+2): They cost ({setCost})."
     }
   },
   "meditative-047": {
@@ -14767,7 +14767,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Equip\nHas {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "attack": 2,
@@ -14777,7 +14777,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Equip\nHas {keywords|random combat keyword|random combat keywords}."
     }
   },
   "meditative-066": {
@@ -15451,11 +15451,11 @@
     "loc": 38,
     "base": {
       "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (1): Each copy has a {chance}% chance to become Radiant."
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (+1): Each copy has a {chance}% chance to become Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (1): Each copy has a {chance}% chance to become Radiant."
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (+1): Each copy has a {chance}% chance to become Radiant."
     }
   },
   "meditative-082": {
@@ -15924,7 +15924,7 @@
           "n": 2
         }
       ],
-      "text": "Armor 2\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Armor 2\nAura: Lethal damage your hero or your other Units would take is redirected to this."
     },
     "radiant": {
       "attack": 6,
@@ -15935,7 +15935,7 @@
           "n": 4
         }
       ],
-      "text": "Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Armor 4\nAura: Lethal damage your hero or your other Units would take is redirected to this."
     }
   },
   "meditative-093": {
@@ -17284,11 +17284,11 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (3): Draw {embiggenedDraw} instead."
+      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (+2): Draw {embiggenedDraw} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (3): Draw {embiggenedDraw} instead."
+      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (+2): Draw {embiggenedDraw} instead."
     }
   },
   "meditativeplus-004": {
@@ -17370,11 +17370,11 @@
     "loc": 101,
     "base": {
       "keywords": [],
-      "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (4): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or add {embiggenedCards}."
+      "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (+2): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or add {embiggenedCards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (4): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or fill your hand with them."
+      "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (+2): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or fill your hand with them."
     }
   },
   "meditativeplus-005": {
@@ -17409,7 +17409,7 @@
           "kind": "Flashback"
         }
       ],
-      "text": "Flashback\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+      "text": "Flashback\nDeal {damage} damage to all Units.\nEmbiggened (+1): With Lifesteal and Pierce."
     },
     "radiant": {
       "keywords": [
@@ -17417,7 +17417,7 @@
           "kind": "Flashback"
         }
       ],
-      "text": "Echo 1, Flashback\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+      "text": "Echo 1, Flashback\nDeal {damage} damage to all Units.\nEmbiggened (+1): With Lifesteal and Pierce."
     }
   },
   "meditativeplus-006": {
@@ -17550,11 +17550,11 @@
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (2): Also has \"Cry: Add a random Spell or Field Spell that deals damage to your hand.\""
+      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (+1): Also has \"Cry: Add a random Spell or Field Spell that deals damage to your hand.\""
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (2): Also has \"Cry: Add a random Radiant Spell or Field Spell that deals damage to your hand.\""
+      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (+1): Also has \"Cry: Add a random Radiant Spell or Field Spell that deals damage to your hand.\""
     }
   },
   "meditativeplus-010": {
@@ -17941,11 +17941,11 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Steal the top {cards|card|cards} of your opponent's deck.\nEmbiggened (2): Steal {cards|random card|random cards} from their hand instead."
+      "text": "Steal the top {cards|card|cards} of your opponent's deck.\nEmbiggened (+1): Steal {cards|random card|random cards} from their hand instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal the top {cards|card|cards} of your opponent's deck. They cost ({setCost}).\nEmbiggened (2): Steal {cards|random card|random cards} from their hand instead."
+      "text": "Steal the top {cards|card|cards} of your opponent's deck. They cost ({setCost}).\nEmbiggened (+1): Steal {cards|random card|random cards} from their hand instead."
     }
   },
   "meditativeplus-020": {
@@ -18117,11 +18117,11 @@
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "Add {cards|random embiggen card|random embiggen cards} to your hand. Their Embiggened version costs no extra mana.\nEmbiggened (4): Add {embiggenedCards} instead."
+      "text": "Add {cards|random embiggen card|random embiggen cards} to your hand. Their Embiggened version costs no extra mana.\nEmbiggened (+2): Add {embiggenedCards} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random Radiant embiggen card|random Radiant embiggen cards} to your hand. Their Embiggened version costs no extra mana.\nEmbiggened (4): Add {embiggenedCards} instead."
+      "text": "Add {cards|random Radiant embiggen card|random Radiant embiggen cards} to your hand. Their Embiggened version costs no extra mana.\nEmbiggened (+2): Add {embiggenedCards} instead."
     }
   },
   "meditativeplus-024": {
@@ -21747,7 +21747,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this.\nEmbiggened (5): The Miners offered are Radiant."
+      "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this.\nEmbiggened (+1): The Miners offered are Radiant."
     },
     "radiant": {
       "attack": 6,
@@ -21757,7 +21757,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this, twice.\nEmbiggened (5): The Miners offered are Radiant."
+      "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this, twice.\nEmbiggened (+1): The Miners offered are Radiant."
     }
   },
   "stinkyscape-080": {
@@ -22949,13 +22949,13 @@
       "attack": 4,
       "health": 7,
       "keywords": [],
-      "text": "Aura: Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both players' hands with random complicated cards."
+      "text": "Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both players' hands with random complicated cards."
     },
     "radiant": {
       "attack": 8,
       "health": 14,
       "keywords": [],
-      "text": "Aura: Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both players' hands with random complicated cards. Make yours Radiant."
+      "text": "Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both players' hands with random complicated cards. Make yours Radiant."
     }
   },
   "stinkyscape-112": {
@@ -23560,13 +23560,13 @@
       "attack": 8,
       "health": 5,
       "keywords": [],
-      "text": "End of turn: This attacks a random enemy.\nEmbiggened (4): Starship Piece."
+      "text": "End of turn: This attacks a random enemy.\nEmbiggened (+1): Starship Piece."
     },
     "radiant": {
       "attack": 16,
       "health": 10,
       "keywords": [],
-      "text": "End of turn: This attacks a random enemy.\nEmbiggened (4): Starship Piece."
+      "text": "End of turn: This attacks a random enemy.\nEmbiggened (+1): Starship Piece."
     }
   },
   "stinkyscape-128": {
@@ -23597,7 +23597,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Ranged, Cleave\nEmbiggened (2): Starship Piece."
+      "text": "Ranged, Cleave\nEmbiggened (+1): Starship Piece."
     },
     "radiant": {
       "attack": 6,
@@ -23613,7 +23613,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush, Ranged, Cleave\nEmbiggened (2): Starship Piece."
+      "text": "Rush, Ranged, Cleave\nEmbiggened (+1): Starship Piece."
     }
   },
   "stinkyscape-129": {
@@ -23637,13 +23637,13 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "End of turn: Deal damage equal to its Attack split among all enemies.\nEmbiggened (3): Starship Piece."
+      "text": "End of turn: Deal damage equal to its Attack split among all enemies.\nEmbiggened (+2): Starship Piece."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "End of turn: Deal damage equal to twice its Attack split among all enemies.\nEmbiggened (3): Starship Piece."
+      "text": "End of turn: Deal damage equal to twice its Attack split among all enemies.\nEmbiggened (+2): Starship Piece."
     }
   },
   "stinkyscape-130": {
@@ -24542,7 +24542,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nYour first travel each turn is free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
+      "text": "Indestructible\nAura: Your first travel each turn is free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
     },
     "radiant": {
       "keywords": [
@@ -24550,7 +24550,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nYour first two travels each turn are free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
+      "text": "Indestructible\nAura: Your first two travels each turn are free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
     }
   },
   "stinkyscape-148-1": {
@@ -24843,11 +24843,11 @@
     "loc": 55,
     "base": {
       "keywords": [],
-      "text": "Roll a 100-sided die. If it lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (1): This also gains Lucky +1 for good."
+      "text": "Roll a 100-sided die. If it lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (+1): This also gains Lucky +1 for good."
     },
     "radiant": {
       "keywords": [],
-      "text": "Roll an 80-sided die twice. If either lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (1): This also gains Lucky +1 for good."
+      "text": "Roll an 80-sided die twice. If either lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (+1): This also gains Lucky +1 for good."
     }
   },
   "stinkyscape-155": {
@@ -24948,7 +24948,7 @@
           "n": 3
         }
       ],
-      "text": "Brittle 3\nThe unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can attack only each other, and no other Unit can attack them."
+      "text": "Brittle 3\nAura: The unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can attack only each other, and no other Unit can attack them."
     },
     "radiant": {
       "keywords": [
@@ -24957,7 +24957,7 @@
           "n": 3
         }
       ],
-      "text": "Brittle 3\nThe unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can attack only each other, and no other Unit can attack them.\nActivate: Choose one: give this +{brittleGain} Brittle, or Tribute this."
+      "text": "Brittle 3\nAura: The unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can attack only each other, and no other Unit can attack them.\nActivate: Choose one: give this +{brittleGain} Brittle, or Tribute this."
     }
   },
   "stinkyscape-158": {
@@ -25828,7 +25828,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "attack": 4,
@@ -25841,7 +25841,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
     }
   },
   "stinkyscape-t-drone-corvette": {
@@ -25880,7 +25880,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "attack": 16,
@@ -25893,7 +25893,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
     }
   },
   "stinkyscape-t-shield-layer": {
@@ -25932,7 +25932,7 @@
           "n": 4
         }
       ],
-      "text": "Can't attack, Taunt, Flying, Ranged, Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Can't attack, Taunt, Flying, Ranged, Armor 4\nAura: Lethal damage your hero or your other Units would take is redirected to this."
     },
     "radiant": {
       "attack": 24,
@@ -25955,7 +25955,7 @@
           "n": 8
         }
       ],
-      "text": "Can't attack, Taunt, Flying, Ranged, Armor 8\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Can't attack, Taunt, Flying, Ranged, Armor 8\nAura: Lethal damage your hero or your other Units would take is redirected to this."
     }
   },
   "stinkyscape-t-propagation-layer": {
@@ -28669,7 +28669,7 @@
       "attack": 5,
       "health": 5,
       "keywords": [],
-      "text": "While this is in your hand, it gains the attack and health of each Unit that dies."
+      "text": "While this is in your hand: When a Unit dies, this gains its attack and health."
     },
     "radiant": {
       "attack": 10,
@@ -28679,7 +28679,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies."
+      "text": "Rush\nWhile this is in your hand: When a Unit dies, this gains twice its attack and health."
     }
   },
   "traininggrounds-057": {
@@ -29791,11 +29791,11 @@
     "loc": 62,
     "base": {
       "keywords": [],
-      "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck. It keeps no cost changes or buffs.\nEmbiggened (3): Shuffle {copy2|copy|copies} of it into your deck instead."
+      "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck. It keeps no cost changes or buffs.\nEmbiggened (+2): Shuffle {copy2|copy|copies} of it into your deck instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck, then Buff them. It keeps no cost changes or buffs.\nEmbiggened (3): Shuffle {copy2|copy|copies} of it into your deck instead, then Buff them."
+      "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck, then Buff them. It keeps no cost changes or buffs.\nEmbiggened (+2): Shuffle {copy2|copy|copies} of it into your deck instead, then Buff them."
     },
     "params": [
       {
@@ -30081,11 +30081,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "The first card you draw each turn is replaced with a Warhero Token."
+      "text": "Aura: The first card you draw each turn is replaced with a Warhero Token."
     },
     "radiant": {
       "keywords": [],
-      "text": "The first card you draw each turn is replaced with a Radiant Warhero Token."
+      "text": "Aura: The first card you draw each turn is replaced with a Radiant Warhero Token."
     },
     "refs": [
       "stinkyscapeplus-t-warhero-token"
@@ -30521,11 +30521,11 @@
     "loc": 57,
     "base": {
       "keywords": [],
-      "text": "The first {pool} damage allies would take per turn is nullified."
+      "text": "Aura: The first {pool} damage allies would take per turn is nullified."
     },
     "radiant": {
       "keywords": [],
-      "text": "The first {pool} damage allies would take per turn is nullified."
+      "text": "Aura: The first {pool} damage allies would take per turn is nullified."
     },
     "params": [
       {
@@ -31264,11 +31264,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "params": [
       {
@@ -31305,11 +31305,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "params": [
       {
@@ -31358,7 +31358,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/24."
+      "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (+3): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/24."
     },
     "radiant": {
       "attack": 0,
@@ -31371,7 +31371,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
+      "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (+3): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
     },
     "params": [
       {
@@ -31420,7 +31420,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Taunt\nEmbiggened (4): GIGA, 0/40."
+      "text": "Can't attack, Taunt\nEmbiggened (+3): GIGA, 0/40."
     },
     "radiant": {
       "attack": 0,
@@ -31437,7 +31437,7 @@
           "n": 2
         }
       ],
-      "text": "Can't attack, Taunt, Armor 2\nEmbiggened (4): GIGA, 0/80."
+      "text": "Can't attack, Taunt, Armor 2\nEmbiggened (+3): GIGA, 0/80."
     }
   },
   "stinkyscapeplus-066": {
@@ -31468,7 +31468,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Taunt\nEnd of turn: Gain Divine Shield.\nEmbiggened (4): GIGA, 0/16."
+      "text": "Can't attack, Taunt\nEnd of turn: Gain Divine Shield.\nEmbiggened (+3): GIGA, 0/16."
     },
     "radiant": {
       "attack": 0,
@@ -31485,7 +31485,7 @@
           "n": 2
         }
       ],
-      "text": "Can't attack, Taunt, Armor 2\nEnd of turn: Gain Divine Shield.\nEmbiggened (4): GIGA, 0/32."
+      "text": "Can't attack, Taunt, Armor 2\nEnd of turn: Gain Divine Shield.\nEmbiggened (+3): GIGA, 0/32."
     }
   },
   "stinkyscapeplus-067": {
@@ -31522,7 +31522,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Immutable, Immune to Spells, Can't attack, Taunt\nEmbiggened (4): GIGA, 0/24."
+      "text": "Immutable, Immune to Spells, Can't attack, Taunt\nEmbiggened (+3): GIGA, 0/24."
     },
     "radiant": {
       "attack": 0,
@@ -31545,7 +31545,7 @@
           "n": 2
         }
       ],
-      "text": "Immutable, Immune to Spells, Can't attack, Taunt, Armor 2\nEmbiggened (4): GIGA, 0/48."
+      "text": "Immutable, Immune to Spells, Can't attack, Taunt, Armor 2\nEmbiggened (+3): GIGA, 0/48."
     }
   },
   "stinkyscapeplus-068": {
@@ -32334,7 +32334,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nEvolves when a Starship is launched.\nEvolve: Place {counters|Plague Counter|Plague Counters} on this.\nAura: Has 3X/3X stats for each Plague Counter."
+      "text": "Animated\nEvolves when a Starship is launched.\nEvolve: Place {counters|Plague Counter|Plague Counters} on this.\nHas 3X/3X stats for each Plague Counter."
     },
     "radiant": {
       "keywords": [
@@ -32342,7 +32342,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nEvolves when a Starship is launched.\nEvolve: Place {counters|Plague Counter|Plague Counters} on this.\nAura: Has 3X/3X stats for each Plague Counter."
+      "text": "Animated\nEvolves when a Starship is launched.\nEvolve: Place {counters|Plague Counter|Plague Counters} on this.\nHas 3X/3X stats for each Plague Counter."
     },
     "params": [
       {
@@ -32411,11 +32411,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "Always starts on the bottom of your deck. If several cards do, their order is random.\nWhen your exile has {card|card|cards}, cast this, wherever in your deck it is.\nAdd a random Terminus card to your hand."
+      "text": "Always starts on the bottom of your deck. If several cards do, their order is random.\nWhile this is in your deck: When your exile has {card|card|cards}, cast this.\nAdd a random Terminus card to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Always starts on the bottom of your deck. If several cards do, their order is random.\nWhen your exile has {card|card|cards}, cast this, wherever in your deck it is.\nAdd a random Radiant Terminus card to your hand."
+      "text": "Always starts on the bottom of your deck. If several cards do, their order is random.\nWhile this is in your deck: When your exile has {card|card|cards}, cast this.\nAdd a random Radiant Terminus card to your hand."
     },
     "params": [
       {
@@ -32424,7 +32424,8 @@
         "radiant": 5,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "handOrDeck"
       }
     ]
   },
@@ -32628,11 +32629,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Put a Unit on a performance enhancement plan: it has {count|turn|turns} to get a kill, or it is destroyed."
+      "text": "Put a Unit on a performance improvement plan: it has {count|turn|turns} to get a kill, or it is destroyed."
     },
     "radiant": {
       "keywords": [],
-      "text": "Put a Unit on a performance enhancement plan: it has {count2|turn|turns} to get a kill, or it is destroyed. If it fails, add {the|The Coin|The Coins} to your hand."
+      "text": "Put a Unit on a performance improvement plan: it has {count2|turn|turns} to get a kill, or it is destroyed. If it fails, add {the|The Coin|The Coins} to your hand."
     },
     "params": [
       {
@@ -32737,11 +32738,11 @@
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Fill your hand with random F tier cards (or D tier if none exist).\nEmbiggened (2): They cost (1) less."
+      "text": "Fill your hand with random F tier cards (or D tier if none exist).\nEmbiggened (+2): They cost (1) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your hand with random Radiant F tier cards (or D tier if none exist).\nEmbiggened (2): They cost (0)."
+      "text": "Fill your hand with random Radiant F tier cards (or D tier if none exist).\nEmbiggened (+2): They cost (0)."
     }
   },
   "stinkyscapeplus-097": {
@@ -34021,7 +34022,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random empty unit zones on the field.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random zones on the field, destroying the Units there.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "radiant": {
       "attack": 20,
@@ -34037,7 +34038,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random empty unit zones on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random zones on your opponent's field, destroying the Units there.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "params": [
       {
@@ -34085,6 +34086,9 @@
       "health": 8,
       "keywords": [
         {
+          "kind": "Flexible"
+        },
+        {
           "kind": "Crater"
         },
         {
@@ -34094,13 +34098,16 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Crater, Taunt\nImmune to Toxic."
+      "text": "Flexible, Can't attack, Crater, Taunt\nImmune to Toxic."
     },
     "radiant": {
       "attack": 4,
       "health": 16,
       "keywords": [
         {
+          "kind": "Flexible"
+        },
+        {
           "kind": "Crater"
         },
         {
@@ -34110,7 +34117,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Crater, Taunt\nImmune to Toxic."
+      "text": "Flexible, Can't attack, Crater, Taunt\nImmune to Toxic."
     }
   },
   "stinkyscapeplus-122": {
@@ -35188,11 +35195,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Add {automa} Automa-δ cards to your hand.\nEmbiggened (4): They have Tribute 1."
+      "text": "Add {automa} Automa-δ cards to your hand.\nEmbiggened (+2): They have Tribute 1."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {automa} Radiant Automa-δ cards to your hand.\nEmbiggened (4): They have Tribute 1."
+      "text": "Add {automa} Radiant Automa-δ cards to your hand.\nEmbiggened (+2): They have Tribute 1."
     },
     "params": [
       {
@@ -35224,11 +35231,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Add {automa} Automa-Ω cards to your hand.\nEmbiggened (3): They have Tribute 2."
+      "text": "Add {automa} Automa-Ω cards to your hand.\nEmbiggened (+2): They have Tribute 2."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {automa} Radiant Automa-Ω cards to your hand.\nEmbiggened (3): They have Tribute 2."
+      "text": "Add {automa} Radiant Automa-Ω cards to your hand.\nEmbiggened (+2): They have Tribute 2."
     },
     "params": [
       {
@@ -36251,13 +36258,13 @@
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Aura: Has +{buff}/+{buff} for every card that Evolved this game."
+      "text": "Has +{buff}/+{buff} for every card that Evolved this game."
     },
     "radiant": {
       "attack": 12,
       "health": 12,
       "keywords": [],
-      "text": "Aura: Has +{buff2}/+{buff2} for every card that Evolved this game."
+      "text": "Has +{buff2}/+{buff2} for every card that Evolved this game."
     },
     "params": [
       {
@@ -39027,7 +39034,7 @@
         "max": 100
       }
     ],
-    "loc": 50,
+    "loc": 55,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks: {chance}% chance to cancel the attack."
@@ -40886,11 +40893,11 @@
     "loc": 36,
     "base": {
       "keywords": [],
-      "text": "Your Units have +{buff}/+{buff} for each other friendly Unit."
+      "text": "Aura: Your Units have +{buff}/+{buff} for each other friendly Unit."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your Units have +{buff}/+{buff} for each other friendly Unit and Rush."
+      "text": "Aura: Your Units have +{buff}/+{buff} for each other friendly Unit and Rush."
     }
   },
   "infiniteassault-096": {
@@ -41610,13 +41617,13 @@
       "attack": 4,
       "health": 7,
       "keywords": [],
-      "text": "Your Death triggers and Reborns happen twice."
+      "text": "Aura: Your Death triggers and Reborns happen twice."
     },
     "radiant": {
       "attack": 8,
       "health": 14,
       "keywords": [],
-      "text": "Your Death triggers and Reborns happen twice, and your Units have Reborn."
+      "text": "Aura: Your Death triggers and Reborns happen twice, and your Units have Reborn."
     }
   },
   "infiniteassault-119": {
@@ -42714,7 +42721,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nYour opponent can't attack with more than three Units each turn."
+      "text": "Taunt\nAura: Your opponent can't attack with more than three Units each turn."
     },
     "radiant": {
       "attack": 6,
@@ -42724,7 +42731,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nYour opponent can't attack with more than two Units each turn."
+      "text": "Taunt\nAura: Your opponent can't attack with more than two Units each turn."
     }
   },
   "infiniteassault-153": {
@@ -43868,13 +43875,13 @@
       "attack": 3,
       "health": 4,
       "keywords": [],
-      "text": "Your cards that started in your opponent's deck cost ({discount}) less."
+      "text": "Aura: Your cards that started in your opponent's deck cost ({discount}) less."
     },
     "radiant": {
       "attack": 6,
       "health": 8,
       "keywords": [],
-      "text": "Your cards that started in your opponent's deck cost ({discount}) less."
+      "text": "Aura: Your cards that started in your opponent's deck cost ({discount}) less."
     }
   },
   "infiniteassault-188": {
@@ -43995,13 +44002,13 @@
       "attack": 3,
       "health": 5,
       "keywords": [],
-      "text": "Your opponent plays with their hand revealed to you."
+      "text": "Aura: Your opponent plays with their hand revealed to you."
     },
     "radiant": {
       "attack": 6,
       "health": 10,
       "keywords": [],
-      "text": "Your opponent plays with their hand revealed to you, and their cards cost ({surcharge}) more."
+      "text": "Aura: Your opponent plays with their hand revealed to you, and their cards cost ({surcharge}) more."
     }
   },
   "infiniteassault-192": {
@@ -44525,7 +44532,7 @@
         "min": 1
       }
     ],
-    "loc": 45,
+    "loc": 46,
     "base": {
       "attack": 0,
       "health": 8,
@@ -45054,11 +45061,11 @@
     "loc": 57,
     "base": {
       "keywords": [],
-      "text": "Your face-down cards can't be destroyed.\nOnce per turn, when you set a card face-down, draw a card."
+      "text": "Aura: Your face-down cards can't be destroyed.\nOnce per turn, when you set a card face-down, draw a card."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your face-down cards can't be destroyed.\nTwice per turn, when you set a card face-down, draw a card."
+      "text": "Aura: Your face-down cards can't be destroyed.\nTwice per turn, when you set a card face-down, draw a card."
     }
   },
   "infiniteassault-219": {

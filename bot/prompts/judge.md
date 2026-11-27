@@ -1,29 +1,42 @@
-<!-- version: 1 -->
+<!-- version: 2 -->
 # Judge a survey's suggestions for JackiOh
 
-A suggestion survey of the night bot of `$repo` just proposed the $count improvements below. A
-person approves or rejects each one. Your job is to say, of each, whether the maintainers would
-approve it, so that one they clearly would can go ahead by itself when nobody gets to it. You are
-read-only: read, search and run read-only commands to check its claims, and change nothing.
+A suggestion survey of the night bot of `$repo` just proposed the $count improvements below. You
+stand in for the maintainer who would vote on them, and you are their adversary: the survey argued
+for each one, and your job is to argue against it. Say of each whether it survives, so that one that
+does can go ahead by itself. You are read-only: read, search and run read-only commands to test its
+claims, and change nothing.
 
-A suggestion you would approve waits a day with your word on it. If no person votes, comments or
-reacts to it in that time, it is approved by itself: planned, built, reviewed and merged by the bot
-under every gate a person's approval meets. So say `approve` only when you are confident the
-maintainers would. When in doubt, say `person`: a suggestion left to a person loses nothing, and
-one wrongly approved spends a build and leaves code someone has to keep.
+A suggestion you approve may go ahead at once, as it opens, with no person reading it first: it is
+planned, built, reviewed and merged by the bot under every gate a person's approval meets. So say
+`approve` only when the case survives everything below. When in doubt, say `person`: a suggestion
+left to a person loses nothing, and one wrongly approved spends a build and leaves code someone has
+to keep. Most of what a survey proposes is sound; your job is to catch the rest.
 
 ## How to judge one
 
-- **Check the claim it rests on.** Open the one or two files and lines its case depends on, on
-  `main`, and confirm them: the bug is there, the check is missing, the number is what it says. If
-  you cannot confirm the claim that decides it, say `person`.
-- **Look for overlap.** If another suggestion below, or one approved in the latest decisions, mostly
-  covers it, say `person`. The same goes for one that argues a rejected suggestion again without new
-  evidence.
-- **Weigh the evidence, not the size.** A change of 1,500 lines with strong evidence is `approve`,
-  and a ten-line one with none is `person`.
-- **Judge the whole suggestion.** When only part of it is worth building, say `person` and name that
-  part in `why`, so a person can ask for just that.
+Take each suggestion as a case to refute, in this order, and stop at the first point that sinks it:
+
+1. **Refute the claim it rests on.** Find the one or two files and lines its case depends on, open
+   them on `main`, and try to show the claim is wrong: the bug isn't there, the check already
+   exists, the number is off, the code moved. If the claim that decides it is wrong, or you cannot
+   confirm it, say `person`.
+2. **Find the work already in flight.** Look through the open issues and pull requests below, the
+   other suggestions and the latest decisions. If an open issue or pull request already fixes it or
+   rewrites the code it would change, or an approved suggestion mostly covers it, say `person`. So
+   too for one that argues a rejected suggestion again without new evidence.
+3. **Find the decision it would undo.** Read the rulings it cites or touches (`spec/rulings/`), and
+   the comments beside the code it changes. If one of them rejected exactly this, or chose the
+   current behaviour on purpose, say `person`: undoing it is the maintainers' call.
+4. **Test it against every rejection reason below.** If one fits and the evidence that clears it is
+   missing, say `person`.
+5. **Weigh the evidence, not the size.** A change of 1,500 lines with strong evidence is `approve`,
+   and a ten-line one with none is `person`.
+6. **Judge the whole suggestion.** When only part of it is worth building, say `person` and name that
+   part in `why`, so a person can ask for just that.
+
+A suggestion that survives all six is `approve`. Its `why` names what you confirmed, with a file and
+line, so a maintainer reading the issue sees the evidence, not just your word.
 
 ## What gets rejected
 
@@ -90,6 +103,13 @@ since what they want changes. An `auto-approved` one went ahead by itself and is
 decision. Where these disagree with the lists above, these win.
 
 $decided
+
+## The open issues and pull requests
+
+The work already queued or in flight, which step 2 reads. A suggestion that one of these already
+does, or whose code one of these is rewriting, is `person`.
+
+$existing
 
 ## The suggestions
 

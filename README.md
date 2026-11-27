@@ -88,7 +88,7 @@ flowchart LR
 | The night box | AWS EC2, `m7i-flex.large`, tagged `jackioh-night-vm` | the work jobs of Codex, agy and one of Muse's lanes, each a Linux user of its own with its own runners, and Muse's in gpt's or agy's lane while that one cannot start work. A Lambda starts it when a job waits, and it powers off after 30 idle minutes | [`bot/machine/README.md`](bot/machine/README.md) |
 | The Muse box (the training box) | AWS EC2, `m7i-flex.large`, tagged `jackioh-train-box` | three of Muse's four lanes of its own; it powers off after 30 idle minutes too | [`bot/machine/README.md`](bot/machine/README.md#the-muse-box) |
 | Squishy | GitHub Actions and GitHub's runners | `@squishy-squooby`, the same harness on its own Claude account | [`bot/README.md`](bot/README.md#squishy) |
-| The gather lane | GitHub's runners | `gather.yml`'s development games for the card statistics, two of the organization's 60 hosted jobs (#3740); the other training lanes are retired (#4701) | [`training/README.md`](training/README.md) |
+| The gather lane | GitHub's runners | `gather.yml`'s development games for the card statistics, five of the organization's 60 hosted jobs (two from #3740 to 2026-11-26); the other training lanes are retired (#4701) | [`training/README.md`](training/README.md) |
 
 The AWS account is on the Free plan: its credits pay for both boxes, and a Lambda opens an issue
 when they fall under $20. [`docs/architecture.md`](docs/architecture.md) covers the code's own

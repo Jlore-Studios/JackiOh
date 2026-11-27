@@ -18,6 +18,7 @@ import { paths } from "../net/navigate.ts";
 import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import { Icon } from "../icons/Icon.tsx";
 import { ArrowIcon } from "./ArrowIcon.tsx";
 import { followInApp } from "./nav.tsx";
 import { playTestid } from "./playTestids.ts";
@@ -28,7 +29,7 @@ export function Verdict({ result }: { result: LoadoutResult | null }): ReactElem
     return (
       <p className="lobby-verdict" data-testid={playTestid.verdict} data-ready="true">
         <span className="lobby-verdict__mark" aria-hidden="true">
-          ✓
+          <Icon name="check" />
         </span>
         {t("Ready to queue")}
       </p>

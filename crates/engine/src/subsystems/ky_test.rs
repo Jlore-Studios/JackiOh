@@ -142,12 +142,8 @@ fn pool_query(pool: Option<crate::config::KyTestRewardPool>) -> Value {
     Value::Object(query)
 }
 
-/// The whole card; `bank` holds the Medium and Hard problems, the Easy ones four-digit (R2179003).
-pub fn ky_test_script(bank: &[KyTestProblem]) -> KyTestScript {
-    ky_test_script_with(bank, KyTestEasy::FourDigits)
-}
-
-/// `ky_test_script` with the Easy problems `easy` names: v0.5.2's kept script asks two-digit sums.
+/// The whole card; `bank` holds the Medium and Hard problems, and `easy` names the Easy ones:
+/// four-digit sums (R2179003), or the two-digit ones v0.5.2's kept script asks.
 pub fn ky_test_script_with(bank: &[KyTestProblem], easy: KyTestEasy) -> KyTestScript {
     let bank: Arc<Vec<KyTestProblem>> = Arc::new(bank.to_vec());
 

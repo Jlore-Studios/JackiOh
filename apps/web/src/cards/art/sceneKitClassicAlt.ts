@@ -2,7 +2,7 @@
 // so a brief's key creature is no stand-in: the frogs swelling and shrinking on Transmutable Toxins' pink river and
 // the shark Turtinator swivels its cannon toward. sceneKit.ts spreads them into `SCENE_KIT` after Classic's own parts
 // and before the Stinkyscape Alt art pass's, which stay last. Each keeps the kit's rules: one to twelve filled shapes
-// drawn in its own frame (`local`), varied by the scene's stream alone, every colour a palette.css name, none in
+// drawn in its own frame (`local`), varied by the scene's stream alone, every colour a SCENE_PALETTE name, none in
 // Radiant's gold window; shapes are filled even-odd, so no two sub-paths of one shape overlap.
 
 import { between, INKED, local, MAIN_INKED, shape } from "./kitDraw.ts";

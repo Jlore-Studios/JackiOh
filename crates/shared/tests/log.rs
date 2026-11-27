@@ -757,15 +757,26 @@ fn r3045000_a_card_named_by_its_definition_alone_is_the_hull_too() {
 
 #[test]
 fn r3045000_any_other_fused_card_is_named_by_what_it_was_fused_of() {
-    let equipped = fused_def(&[catalog_def("stinkyscape-050"), catalog_def("core-020")], 3);
-    let view = with_defs(&[&equipped], json!([fused_event(&equipped)]));
+    let both = fused_def(&[catalog_def("core-011"), catalog_def("core-020")], 3);
+    let view = with_defs(&[&both], json!([fused_event(&both)]));
     assert_eq!(
         english(&view),
         [format!(
             "2 cards fused into {} + {}",
-            name_of("stinkyscape-050"),
+            name_of("core-011"),
             name_of("core-020")
         )]
+    );
+}
+
+/// R5050000: a unit holding gear is named for the card it was equipped into, as its face is.
+#[test]
+fn r5050000_a_unit_holding_gear_is_named_for_its_host() {
+    let equipped = fused_def(&[catalog_def("stinkyscape-050"), catalog_def("core-020")], 4);
+    let view = with_defs(&[&equipped], json!([fused_event(&equipped)]));
+    assert_eq!(
+        english(&view),
+        [format!("2 cards fused into {}", name_of("core-020"))]
     );
 }
 
@@ -932,6 +943,45 @@ fn a_hit_names_its_source_off_combat_only_and_only_where_the_view_names_it() {
             format!("{panther}'s Armor absorbed 3 damage in combat"),
             format!("{panther}'s Armor absorbed 3 damage"),
             format!("{panther} took 2 damage in combat, 1 absorbed by Armor"),
+        ]
+    );
+}
+
+/// R5045000: a pool's soak opens with the card whose pool took it, then the amount, the target and,
+/// off combat, the source where the view names it, in both languages.
+#[test]
+fn r5045000_a_pools_soak_names_the_pool_card_the_target_and_the_source() {
+    let panther = name_of("core-032");
+    let vanilla = name_of("core-008");
+    let soak = |over: Value| {
+        let mut event = json!({ "type": "damageNullified", "instanceId": "u1", "sourceId": "e1", "targetId": "hero-p1", "amount": 4, "combat": false });
+        for (key, value) in over.as_object().expect("an object") {
+            event[key] = value.clone();
+        }
+        event
+    };
+    let view = board(json!([
+        soak(json!({})),
+        soak(json!({ "targetId": "u1", "amount": 3, "combat": true })),
+        soak(json!({ "sourceId": "hidden", "amount": 1 })),
+        soak(json!({ "sourceId": null, "amount": 1 })),
+    ]));
+    assert_eq!(
+        english(&view),
+        [
+            format!("{panther} nullified 4 damage to your hero from {vanilla}"),
+            format!("{panther} nullified 3 damage to {panther} in combat"),
+            format!("{panther} nullified 1 damage to your hero"),
+            format!("{panther} nullified 1 damage to your hero"),
+        ]
+    );
+    assert_eq!(cards(&view)[0], ("core-032".to_string(), Some("u1".to_string())));
+    let (zh_panther, zh_vanilla) = (chinese_name_of("core-032"), chinese_name_of("core-008"));
+    assert_eq!(
+        said(&view, Locale::ZhCn)[..2],
+        [
+            format!("{zh_panther}抵消了来自{zh_vanilla}对你的英雄的4点伤害"),
+            format!("{zh_panther}抵消了{zh_panther}在战斗中受到的3点伤害"),
         ]
     );
 }

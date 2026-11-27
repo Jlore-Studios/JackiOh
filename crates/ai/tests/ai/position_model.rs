@@ -312,6 +312,106 @@ mod signature {
         assert_signed(|state| state.players[AI].hand[0].enchantments = Some(vec![Enchantment::CastOnDraw]));
     }
 
+    /// R4793000: a hand card's buffs and granted keywords (S+ #100 Plesiosize, S+ #23 GIGA-ify) are
+    /// signed, so the hand card a buff or a grant went on is part of the position.
+    #[test]
+    fn r4793000_a_hand_cards_buffs_and_granted_keywords_are_signed() {
+        assert_signed(|state| state.players[AI].hand[0].buffs.attack = 8);
+        assert_signed(|state| state.players[AI].hand[0].buffs.health = 8);
+        assert_signed(|state| state.players[AI].hand[0].granted_keywords.push(Keyword::Giga));
+        let given_to = |at: usize| {
+            let mut state = base();
+            state.players[AI].hand[at].buffs.attack = 8;
+            state.players[AI].hand[at].buffs.health = 8;
+            state.players[AI].hand[at].granted_keywords.push(Keyword::Giga);
+            search_signature(&state, AI)
+        };
+        assert_ne!(given_to(0), given_to(1));
+    }
+
+    /// R4793000: two orders of the same grants are one position.
+    #[test]
+    fn r4793000_two_orders_of_the_same_grants_sign_alike() {
+        let granted = |keywords: [Keyword; 2]| {
+            let mut state = base();
+            state.players[AI].hand[0].granted_keywords.extend(keywords);
+            search_signature(&state, AI)
+        };
+        assert_eq!(
+            granted([Keyword::Giga, Keyword::Indestructible]),
+            granted([Keyword::Indestructible, Keyword::Giga])
+        );
+    }
+
+    /// R4793000: a position with no card given a buff or a keyword off the field signs neither part.
+    #[test]
+    fn r4793000_a_plain_position_signs_no_grant() {
+        let signature = search_signature(&base(), AI);
+        assert!(
+            !signature.contains(";b") && !signature.contains(";k"),
+            "{signature}"
+        );
+    }
+
+    /// S+ #100 Plesiosize, a (2) Spell: a Unit in its caster's hand gains +8/+8 and GIGA.
+    const PLESIOSIZE: &str = "stinkyscapeplus-100";
+    /// The unit in hand that Plesiosize leaves too dear to play this turn.
+    const SEVEN_DROP: &str = "stand-in (7) 7/7";
+    /// The unit in hand that Plesiosize makes a 10/10 GIGA still playable this turn.
+    const TWO_DROP: &str = "stand-in (2) 2/2";
+
+    /// R4793000: with 4 mana, Plesiosize on the 2-drop and then the 2-drop played as a 10/10 GIGA is a
+    /// line the beam searches. Plesiosize on the 7-drop, listed first, used to sign as the same position,
+    /// so the beam dropped the 2-drop's at its root and never played it.
+    #[test]
+    fn r4793000_the_beam_tries_plesiosize_on_the_second_hand_unit() {
+        register_cards();
+        let library = ["core-008", "core-011", "core-020"];
+        let state = board(json!({
+            "seed": "r4793000-plesiosize",
+            "p1": { "hand": [PLESIOSIZE, SEVEN_DROP, TWO_DROP], "mana": 4, "library": library },
+            "p2": { "hand": ["core-011"], "library": library },
+        }));
+        let held = |def: &str| {
+            state.players[AI]
+                .hand
+                .iter()
+                .find(|card| card.def_id == def)
+                .map(|card| card.id.clone())
+                .expect("in hand")
+        };
+        let (plesiosize, two_drop) = (held(PLESIOSIZE), held(TWO_DROP));
+        let on_two_drop = |action: &ActionBody| {
+            matches!(action, ActionBody::Play { instance_id, targets: Some(targets), .. }
+                if *instance_id == plesiosize
+                    && targets.iter().any(|picked| matches!(picked,
+                        Selection::Instance { instance_id } if *instance_id == two_drop)))
+        };
+        let lines = beam_search(
+            &state,
+            AI,
+            &create_node_counter(AI_BUDGET.nodes, None),
+            AI_BUDGET,
+            Prices::NONE,
+        );
+        let keys = || {
+            lines
+                .iter()
+                .map(|line| line.actions.iter().map(action_key).collect::<Vec<_>>().join(" "))
+                .collect::<Vec<_>>()
+                .join(" | ")
+        };
+        let plays_two_drop = |action: &ActionBody| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == two_drop);
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.actions.first().is_some_and(on_two_drop)
+                    && line.actions.iter().any(plays_two_drop)),
+            "no line plays the 2-drop after Plesiosize on it: {}",
+            keys()
+        );
+    }
+
     #[test]
     fn a_plain_position_signs_none_of_the_new_parts() {
         let signature = search_signature(&base(), AI);

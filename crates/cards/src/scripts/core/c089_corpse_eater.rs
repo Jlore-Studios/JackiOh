@@ -1,7 +1,7 @@
 //! #89 Corpse Eater (SPEC §8.5, §6.2, §10.3, §10.4, R11, R38, R68, R78, R89, R3139004, R4423000, R4423001).
 //!
-//! Base: "Rush, Brittle 1. While in your hand: whenever a unit on either side dies, this gains its attack and
-//! max health. After this attacks a Unit, it may attack again". Radiant: "Rush, Brittle 3; gains double"
+//! Base: "Rush, Brittle 1. While this is in your hand: when a unit on either side dies, this gains its attack
+//! and max health. After this attacks a Unit, it may attack again". Radiant: "Rush, Brittle 3; gains double"
 //! (its Divine Shield went in issue #4292). §8's Conventions: both keyword lists are printed in
 //! `catalog.json` (§10.4 layer 1), so no script grants them and only the gain doubles.
 //!

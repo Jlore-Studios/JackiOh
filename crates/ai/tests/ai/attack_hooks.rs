@@ -4,14 +4,18 @@
 //! may attack, for either side's units alike. A face-down or hand card is never probed, hidden cards
 //! change no decision (R185), and a zero weight, the frozen baseline's, reads no price. Its twin keeps
 //! every keyword the unit holds, a lent one among them, and a unit already Vanilla is its own twin
-//! (R4811000).
+//! (R4811000). Frenzy is no attack hook: the twin frenzies as the unit does (R4799002).
 //!
 //! The cards: The Propagation's Wasp, (1) 3/3, "After this attacks, summon a copy of this, then evolve.
 //! / Evolve: Gain Flying."; The Propagation's Hornet, (2) 3/4, Rush and the Wasp's text; Badger, (1)
 //! 2/3, "When this attacks, gain a random Stinkyscape Resource."; Honey Badger, (2) 4/6, Rush and the
-//! Badger's text; Tmack Trav, (3) 9/9, Radiant 18/18 with Rush and Pierce, "After this destroys a Unit,
-//! it may attack again."; Polymorph, (3) "Transform a Unit into a Sheep Token"; Midrange Menace, (3) 9/9
-//! Taunt; Mr. Vanilla, a (1) 4/4 with no text (`plain`); and the (1) Traps Sheepish and My Pawn.
+//! Badger's text; Tmack Trav, (3) 7/7 "Rush, Frenzy", Radiant 14/14 with Pierce too, and no script;
+//! Polymorph, (3) "Transform a Unit into a Sheep Token"; Midrange Menace, (3) 9/9 Taunt; Mr. Vanilla, a
+//! (1) 4/4 with no text (`plain`); the (1) Traps Sheepish and My Pawn; and a test card, Prem Panther
+//! printing Pierce (`PIERCING_PANTHER`).
+//!
+//! Below them, #5007's two scenes hold `AI_EVAL.attack_hook` at the 0.5 its screen of 1.0 left: a unit's
+//! next attack counts half of what its text gives, the seat's units and the enemy's alike.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -29,6 +33,18 @@ const VANILLA: &str = "core-008";
 const SHEEPISH: &str = "core-041";
 const MY_PAWN: &str = "core-096";
 const LIBRARY: &[&str] = &[VANILLA, VANILLA, VANILLA, VANILLA];
+
+/// AI_EVAL with a unit's next attack priced in full: the arm #5007 screened.
+const FULL: EvalWeights = EvalWeights {
+    attack_hook: 1.0,
+    ..AI_EVAL
+};
+
+/// AI_EVAL with a unit's next attack priced at nothing.
+const UNPRICED: EvalWeights = EvalWeights {
+    attack_hook: 0.0,
+    ..AI_EVAL
+};
 
 /// The AI's turn with the AI's side `p1` and the human's `p2`, each with `LIBRARY` added.
 fn board(seed: &str, mut p1: Value, mut p2: Value) -> GameState {
@@ -201,17 +217,66 @@ fn r2688000_a_zero_weight_reads_no_price() {
     }
 }
 
+/// A test card on top of the catalog: Core #32 Prem Panther, (3) 5/4 Rush, "Whenever this attacks, draw 1
+/// for each Unit that attack destroyed", printing Pierce too, so its text gives nothing on a hit on the
+/// hero and its Pierce takes that hit through the hero's Armor.
+const PIERCING_PANTHER: &str = "ai-test-piercing-panther";
+
+/// `board` with `PIERCING_PANTHER` registered for this thread: Prem Panther's script under its id.
+fn panther_board(seed: &str, p1: Value, p2: Value) -> GameState {
+    register_cards();
+    let mut catalog = (*jackioh_cards::CATALOG).clone();
+    let mut panther = catalog
+        .get("core-032")
+        .expect("Prem Panther is in the catalog")
+        .clone();
+    panther.id = PIERCING_PANTHER.to_string();
+    panther.index = PIERCING_PANTHER.to_string();
+    panther.base.keywords.push(Keyword::Pierce);
+    panther.radiant.keywords.push(Keyword::Pierce);
+    catalog.insert(PIERCING_PANTHER.to_string(), panther);
+    register_catalog_as(catalog, jackioh_cards::catalog_version());
+    let mut scripts = jackioh_cards::scripts_of();
+    let script = scripts
+        .get("core-032")
+        .expect("Prem Panther has a script")
+        .clone();
+    scripts.insert(PIERCING_PANTHER.to_string(), script);
+    register_scripts(scripts);
+    let mut p1 = p1;
+    let mut p2 = p2;
+    p1["library"] = json!(LIBRARY);
+    p2["library"] = json!(LIBRARY);
+    scenario(json!({ "seed": seed, "p1": p1, "p2": p2 }))
+        .state()
+        .clone()
+}
+
 #[test]
 fn r2688000_the_twin_keeps_its_printed_keywords() {
-    // Radiant Tmack Trav's hit on the hero gives nothing through its text, so its price is 0 only if
-    // its twin pierces the hero's 5 Armor as it does.
-    let state = board(
+    // The Panther's hit on the hero gives nothing through its text, so its price is 0 only if its twin
+    // pierces the hero's 5 Armor as it does. (Radiant Tmack Trav was this card until Frenzy, its one
+    // text, stopped counting as an attack hook, R4799002.)
+    let state = panther_board(
         "ai-attack-hook-twin",
-        json!({ "field": [{ "def": TMACK, "radiant": true }] }),
+        json!({ "field": [PIERCING_PANTHER] }),
         json!({ "armor": 5 }),
     );
     let (prices, _) = priced(&state);
-    close(price_of(&prices, TMACK, AI), 0.0);
+    close(price_of(&prices, PIERCING_PANTHER, AI), 0.0);
+}
+
+#[test]
+fn r4799002_a_frenzy_unit_with_no_attack_text_is_never_probed() {
+    // Tmack Trav prints Rush and Frenzy and no attack hook: its twin would frenzy as it does, so the probe
+    // could only read 0, and it spends no node on it.
+    let state = board(
+        "ai-attack-hook-frenzy",
+        json!({ "field": [TMACK] }),
+        json!({ "field": [plain(1, 1)] }),
+    );
+    assert!(unit_has(&state, unit(&state, AI, TMACK), KeywordKind::Frenzy));
+    assert_eq!(priced(&state), (vec![], 0));
 }
 
 #[test]
@@ -306,7 +371,7 @@ fn r4811000_a_lent_trample_moves_no_attack_hook_price_against_a_taunt() {
 
 #[test]
 fn r4811000_a_vanilla_unit_that_holds_frenzy_has_no_text_to_price() {
-    // Frenzy counts as an attack hook (R3551004), but a Vanilla unit runs no text: it is its own twin.
+    // A Vanilla unit runs no text, and Frenzy is no attack hook (R4799002): nothing is probed.
     let mut state = board(
         "ai-attack-hook-vanilla-frenzy",
         json!({ "field": [MENACE] }),
@@ -316,7 +381,7 @@ fn r4811000_a_vanilla_unit_that_holds_frenzy_has_no_text_to_price() {
     let card = find_instance_mut(&mut state, &menace).expect("the Menace");
     card.vanilla = true;
     card.granted_keywords.push(Keyword::Frenzy);
-    close(price_of(&priced(&state).0, MENACE, AI), 0.0);
+    assert_eq!(priced(&state), (vec![], 0));
 }
 
 #[test]
@@ -392,4 +457,47 @@ fn r2688000_the_probes_stay_within_their_cap_and_the_decision_within_its_budget(
     )
     .expect("the AI acts");
     assert!(decision.stats.nodes <= AI_BUDGET.nodes, "{:?}", decision.stats);
+}
+
+/// #5007: an own Badger that may attack counts `AI_EVAL.attack_hook` of what its next attack's Resource
+/// gives (R2688000), the 0.5 its screen of 1.0 left: half the price over a plain 2/3. At 1.0 it would
+/// count the whole price, and at 0 nothing.
+#[test]
+fn r2688000_an_own_badger_counts_half_of_its_next_attack() {
+    let state = board(
+        "ai-attack-hook-own",
+        json!({ "field": [BADGER, plain(2, 3)] }),
+        json!({}),
+    );
+    let (badger, body) = (unit(&state, AI, BADGER), unit(&state, AI, VANILLA));
+    let (prices, _) = priced(&state);
+    let price = price_of(&prices, BADGER, AI);
+    assert!(price > 0.0, "the Resource it gains counts: {price}");
+    let prices = prices_of(prices);
+    let over =
+        |w: &EvalWeights| unit_worth(&state, badger, w, &prices) - unit_worth(&state, body, w, &prices);
+    close(over(&AI_EVAL), price / 2.0);
+    close(over(&FULL), price);
+    close(over(&UNPRICED), 0.0);
+}
+
+/// #5007: destroying an enemy Wasp is worth `AI_EVAL.attack_hook` of the copy its next attack makes
+/// (R2688000), the 0.5 its screen of 1.0 left: half the price over destroying a plain 3/3, which the
+/// reply's trader ranks by (`kill_worth`). At 1.0 it would be the whole price, and at 0 nothing.
+#[test]
+fn r2688000_destroying_an_enemy_wasp_is_worth_half_of_its_next_copy() {
+    let state = board(
+        "ai-attack-hook-enemy",
+        json!({}),
+        json!({ "field": [WASP, plain(3, 3)] }),
+    );
+    let (wasp, body) = (unit(&state, HUMAN, WASP), unit(&state, HUMAN, VANILLA));
+    let (prices, _) = priced(&state);
+    let price = price_of(&prices, WASP, HUMAN);
+    assert!(price > 0.0, "the copy it makes counts: {price}");
+    let prices = prices_of(prices);
+    let over = |w: &EvalWeights| kill_worth(&state, wasp, w, &prices) - kill_worth(&state, body, w, &prices);
+    close(over(&AI_EVAL), price / 2.0);
+    close(over(&FULL), price);
+    close(over(&UNPRICED), 0.0);
 }

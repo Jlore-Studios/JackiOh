@@ -42,9 +42,9 @@
 /* R987: Luck rides the tray now (#4251), as a labelled chip beside the plate, keeping its colors
    there (board.css's `.hero-tray .hero-counter` would otherwise paint it white). */
 .hero-tray .hero-counter.hero-luck {
-  border: 1px solid rgb(240 230 200 / 55%);
+  border: 1px solid color-mix(in srgb, var(--pal-parchment) 55%, transparent);
   background: #2c4a3e;
-  color: #f2e9c9;
+  color: var(--pal-parchment);
 }
 
 .hero-portrait .hero-health {
@@ -74,9 +74,9 @@
   max-width: calc(100vw - 32px);
   padding: 10px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--bg-raised) 92%, transparent);
-  box-shadow: 0 6px 22px rgb(0 0 0 / 55%);
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--pal-black) 55%, transparent);
   transform: translateX(calc(-50% + var(--emote-menu-shift, 0px)));
   white-space: nowrap;
 }
@@ -113,7 +113,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line-bright);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   color: var(--text);
   font: inherit;
@@ -229,13 +229,13 @@
   max-width: min(28ch, calc(100vw - 48px));
   padding: 8px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 12px 12px 12px 3px;
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-md) var(--radius-xs);
   background: var(--bg-raised);
   color: var(--text);
   font-size: 1em;
   line-height: 1.3;
   transform-origin: 22px 100%;
-  box-shadow: 0 4px 14px rgb(0 0 0 / 45%);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--pal-black) 45%, transparent);
   animation: emote-bubble var(--emote-hold, 2s) ease-out both;
 }
 
@@ -243,7 +243,7 @@
 .hero-opponent .emote-bubble {
   top: calc(100% + 6px);
   bottom: auto;
-  border-radius: 3px 12px 12px 12px;
+  border-radius: var(--radius-xs) var(--radius-md) var(--radius-md) var(--radius-md);
   transform-origin: 22px 0;
 }
 
@@ -287,7 +287,7 @@
   width: 100%;
   height: 100%;
   display: block;
-  filter: drop-shadow(0 3px 6px rgb(0 0 0 / 50%));
+  filter: drop-shadow(0 3px 6px color-mix(in srgb, var(--pal-black) 50%, transparent));
 }
 
 /* Sob's tears run while the sticker holds. */
@@ -480,13 +480,11 @@
   gap: 2px;
   padding: 2px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--text-dim);
   font: inherit;
   font-size: 0.66em;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   cursor: var(--cursor-glove-point, pointer);
 }
 
@@ -511,9 +509,9 @@
   max-width: min(92vw, 460px);
   padding: 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: var(--bg-raised);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 60%);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 .portrait-grid {
@@ -537,7 +535,7 @@
   width: 100%;
   padding: 8px 6px;
   border: 1px solid var(--line-bright);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   color: var(--text);
   font: inherit;
@@ -545,8 +543,8 @@
 }
 
 .portrait-tile[data-selected="true"] .portrait-pick {
-  border-color: var(--selected, #e8b64a);
-  box-shadow: 0 0 0 1px var(--selected, #e8b64a);
+  border-color: var(--selected, var(--pal-gold-400));
+  box-shadow: 0 0 0 1px var(--selected, var(--pal-gold-400));
 }
 
 .portrait-pick .cf-art {
@@ -564,7 +562,7 @@
 .portrait-preview-toggle {
   padding: 2px 10px;
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: none;
   color: var(--text-dim);
   font: inherit;
@@ -574,7 +572,7 @@
 
 .portrait-preview-toggle[aria-expanded="true"] {
   color: var(--text);
-  border-color: var(--selected, #e8b64a);
+  border-color: var(--selected, var(--pal-gold-400));
 }
 
 .portrait-preview {

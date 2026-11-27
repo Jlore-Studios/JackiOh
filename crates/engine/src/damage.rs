@@ -608,9 +608,10 @@ fn land(
 
     // R3550004, §4.4 step 3b: the first damage allies would take per turn is nullified — after Armor
     // ("accounts for armor"), on the controller's Units and hero alike, never spent on an
-    // Indestructible Unit. No event is emitted. R4022000: worked out here, written only once the hit
-    // lands (`spend_pool`), so a hit step 4a cancels or moves spends nothing here. `project_hit` reads
-    // steps 1 to 4 in this order for My Pawn and the forecast (R4032000): a change here changes it too.
+    // Indestructible Unit. R4022000: worked out here, written only once the hit lands (`spend_pool`,
+    // which reports each pool's share, R5045000), so a hit step 4a cancels or moves spends nothing
+    // here. `project_hit` reads steps 1 to 4 in this order for My Pawn and the forecast (R4032000): a
+    // change here changes it too.
     let side = match target {
         DamageTarget::Hero { player } => Some(*player),
         DamageTarget::Unit { .. } => unit.as_ref().map(|live| live.controller),
@@ -626,7 +627,7 @@ fn land(
     // `damageAbsorbed`, which nothing answers (`triggers::dispatch_event`); a cap's stop is not Armor's.
     if amount <= 0 {
         // R4022000: a pool that took the hit whole has been hit.
-        spend_pool(sink.state, &soaked);
+        spend_pool(sink, args, &soaked);
         if absorbed > 0 && absorbed >= struck {
             sink.events.push(GameEvent::DamageAbsorbed {
                 source_id: source.map(|card| card.id.clone()),
@@ -670,7 +671,7 @@ fn land(
 
     // R4022000: the hit goes on past step 4a, so its pool is spent. A cancel or a move returned above
     // and spent nothing here: a moved hit soaks at its new target's own step 3b.
-    spend_pool(sink.state, &soaked);
+    spend_pool(sink, args, &soaked);
 
     // Step 5: apply, capping what a Trample source deals to a unit at its health (R63).
     let mut dealt = amount;
@@ -1034,11 +1035,25 @@ fn pool_soak(state: &GameState, player: PlayerId, amount: i32) -> Vec<PoolSoak> 
 }
 
 /// R4022000: the hit `soaked` was worked out for has landed, so each pool card notes what it took.
-fn spend_pool(state: &mut GameState, soaked: &[PoolSoak]) {
+/// R5045000: and reports it, `damageNullified`, withheld from the frontier as `damageAbsorbed` is
+/// (R1361), so it takes no number in R68's order and moves no hash.
+fn spend_pool(sink: &mut DamageSink<'_>, args: &DamageArgs, soaked: &[PoolSoak]) {
     for soak in soaked {
-        if let Some(live) = find_instance_mut(state, &soak.card_id) {
+        if let Some(live) = find_instance_mut(sink.state, &soak.card_id) {
             live.memory.insert(DAMAGE_POOL_KEY.to_string(), soak.note.clone());
         }
+        sink.events.push(GameEvent::DamageNullified {
+            instance_id: soak.card_id.clone(),
+            source_id: args.source.as_ref().map(|card| card.id.clone()),
+            target_id: crate::reduce::attack_target_id(&args.target),
+            amount: soak.take,
+            combat: args
+                .flags
+                .as_ref()
+                .is_some_and(|flags| flags.combat == Some(true)),
+        });
+        let at = sink.events.len() - 1;
+        crate::triggers::withhold_report(sink, at);
     }
 }
 

@@ -4,22 +4,22 @@
 # 8), so each site's figures always have fresh development games of the version that is live, beside
 # its live games.
 #
-# Since #3740 it runs all the time on two of the organization's 60 hosted jobs; CI and the bots take
-# the rest. A run is two parts side by side, each playing GATHER_HOURS hours of `cargo jackioh stats
-# --series gather` (AI against AI on R258's All Random deals at the browser's budget) on main as it
-# was when the run started,
-# GATHER_FILE_GAMES games at a time (about an hour of a runner), each batch filed as it finishes with
-# `training/file-records.sh`: `jackioh-server stats-import --totals-only` over
+# Since #3740 it runs all the time, on five of the organization's 60 hosted jobs since 2026-11-26 (two
+# before); CI and the bots take the rest. A run is five parts side by side, each playing GATHER_HOURS
+# hours of `cargo jackioh stats --series gather` (AI against AI on R258's All Random deals at the
+# browser's budget) on main as it was when the run started, in one process that writes each
+# GATHER_FILE_GAMES games to a file of their own as soon as they have all finished. Each file is filed
+# as it appears with `training/file-records.sh`: `jackioh-server stats-import --totals-only` over
 # STATS_IMPORT_DATABASE_URL (staging's) and then PRODUCTION_STATS_IMPORT_DATABASE_URL (no row per
-# game, each batch's file claimed once by its SHA-256 in each database, so a rerun files no batch
-# twice). So the statistics take the newest version's games an hour at a time. As a run ends it starts
+# game, each file claimed once by its SHA-256 in each database, so a rerun files no file twice). So
+# the statistics take the newest version's games every few minutes. As a run ends it starts
 # the next (`next`), which plays main as it is then: a version shipped meanwhile is played from the
 # next run on, within GATHER_HOURS. A schedule every six hours starts the lane again should that chain
 # stop. Until #3740 the workflow played 5,000 games of each new patch or set once, on the owner's PC.
 #
 # Game `n` of run `r` is `gather:<(r - 1) * GATHER_STRIDE + n>`, and part k plays from the k-th of the
 # run's equal slices of that stride, so no two runs or parts play the same game and no two files hold
-# one (R1976000, What it does not catch); a rerun of a part plays the same games. The batches' files
+# one (R1976000, What it does not catch); a rerun of a part plays the same games. The files
 # are kept as the run's artifacts, `gather-<run>-<part>`, for GATHER_RETENTION_DAYS. Each version's
 # development totals take about 3 MB of the database however few its games (#1976), and the lane files
 # every version it plays, micros among them (db-size.yml watches the database's size).
@@ -46,14 +46,16 @@ permissions:
   contents: read
 
 env:
-  # Hours each part plays: with its build and its last batch, under GitHub's 6-hour job limit.
+  # Hours each part plays: with its build and its last filing, under GitHub's 6-hour job limit.
   GATHER_HOURS: "5"
-  # Games played and then filed at a time: about an hour of a GitHub runner (about 400 games an hour
-  # on four vCPUs at the AI's budget since #2628: run 72's 850-game batches took about two hours each),
-  # so the statistics take a version's games an hour at a time. Each
-  # batch is one file in each database (`game_record_batches`), whose totals are the version's
-  # however many.
-  GATHER_FILE_GAMES: "400"
+  # Games a file holds, filed as soon as all of them have finished: about six minutes of a part (about
+  # 500 games an hour on four vCPUs at the AI's budget, #5103), so the statistics take a version's
+  # games every few minutes. A game the deadline stops holds back at most the other games of its file,
+  # which are never filed. Each file is one batch in each database (`game_record_batches`), whose
+  # totals are the version's however many.
+  GATHER_FILE_GAMES: "50"
+  # Seconds between a part's looks for files to file.
+  GATHER_POLL_SECONDS: "30"
   # Game numbers each run owns: run r plays from (r - 1) * GATHER_STRIDE + 1.
   GATHER_STRIDE: "100000"
   # Days the run's record files are kept as its artifacts.
@@ -75,9 +77,10 @@ jobs:
     timeout-minutes: 350
     strategy:
       fail-fast: false
-      # Two parts side by side, the gather lane's two runners (#3740).
+      # Five parts side by side, the gather lane's five runners (two from #3740 to 2026-11-26). Each
+      # plays its own fifth of the run's GATHER_STRIDE game numbers.
       matrix:
-        part: [1, 2]
+        part: [1, 2, 3, 4, 5]
     steps:
       # The commit that started the run (a scheduled or dispatched run's, the lane's own `next`
       # among them: main as it was then), so a rerun plays the same commit, and its batches are byte
@@ -92,12 +95,14 @@ jobs:
           node: "false"
       - name: build
         run: cargo build --release -q -p jackioh-tools -p jackioh-server
-      # GATHER_FILE_GAMES at a time for HOURS hours: each batch is played, then filed into staging's
-      # and production's (R1933001) before the next starts, so the statistics take the games an hour
-      # at a time. A batch starts only while one as long as the last still fits before the part's time
-      # is up (an hour, before the first has been timed). A batch a database refuses or cannot take is
-      # reported and the games go on; the part then fails at its end, and a rerun plays the same
-      # batches and files only those a database is missing.
+      # One `stats` over the part's whole slice for HOURS hours, stopped by `timeout` at the deadline:
+      # it writes each GATHER_FILE_GAMES games (by number) to a file of their own as soon as every one
+      # of them has finished, and the loop files each file into staging's and production's (R1933001)
+      # as it appears, every GATHER_POLL_SECONDS, while the games go on. Every part plays to the same
+      # deadline, so no run waits on a part that stopped early, and a slow game holds back only its own
+      # file. The files the deadline cuts short are never written, so a rerun, which plays the same
+      # games, writes the same files and files only those a database is missing (R1976000). A file a
+      # database refuses or cannot take is reported and the games go on; the part then fails at its end.
       - name: play and file, a batch at a time (cargo jackioh stats --series gather, stats-import --totals-only)
         id: play
         env:
@@ -118,37 +123,54 @@ jobs:
           # and part k (from 0) of PARTS plays from the k-th of PARTS equal slices, never past it.
           slice=$(( GATHER_STRIDE / PARTS ))
           from=$(( (RUN - 1) * GATHER_STRIDE + 1 + PART * slice ))
-          end=$(( from + slice ))
           deadline=$(( $(date +%s) + HOURS * 3600 ))
           dir="$RUNNER_TEMP/gather-$patch-$RUN-$((PART + 1))"
           mkdir -p "$dir"
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
           [ -n "$STATS_IMPORT_DATABASE_URL" ] || echo "::notice::STATS_IMPORT_DATABASE_URL is not set, so staging's statistics get none of these games"
           [ -n "$PRODUCTION_STATS_IMPORT_DATABASE_URL" ] || echo "::notice::PRODUCTION_STATS_IMPORT_DATABASE_URL is not set, so production's statistics get none of these games"
-          echo "## gather: $patch, part $((PART + 1)) of $PARTS, $HOURS hours from game $from, filed $GATHER_FILE_GAMES at a time" >> "$GITHUB_STEP_SUMMARY"
+          echo "## gather: $patch, part $((PART + 1)) of $PARTS, $HOURS hours from game $from, each $GATHER_FILE_GAMES filed as they finish" >> "$GITHUB_STEP_SUMMARY"
+          timeout "$(( deadline - $(date +%s) ))" target/release/jackioh stats --series gather --patch "$patch" \
+            --from "$from" --games "$slice" --out-every "$GATHER_FILE_GAMES" --out "$dir" > /dev/null &
+          play=$!
+          filed="$RUNNER_TEMP/filed-$((PART + 1))"
+          : > "$filed"
           finished=0
+          files=0
           unfiled=0
-          took=3600
-          start=$from
-          while [ "$start" -lt "$end" ] && [ $(( $(date +%s) + took )) -le "$deadline" ]; do
-            began=$(date +%s)
-            n=$(( end - start < GATHER_FILE_GAMES ? end - start : GATHER_FILE_GAMES ))
-            file="$dir/gather-$patch-$RUN-$start.jsonl"
-            target/release/jackioh stats --series gather --patch "$patch" --from "$start" --games "$n" \
-              --out "$file" > /dev/null
-            got=$(grep -c . "$file" || true)
-            finished=$(( finished + got ))
-            echo "### Games $start to $(( start + n - 1 )): $got finished" >> "$GITHUB_STEP_SUMMARY"
-            if ! sh training/file-records.sh target/release/jackioh-server "$file" | tee -a "$GITHUB_STEP_SUMMARY"; then
-              echo "::warning::games $start to $(( start + n - 1 )) were not filed everywhere; the part fails at its end, and a rerun files them"
-              unfiled=$(( unfiled + 1 ))
-            fi
-            took=$(( $(date +%s) - began ))
-            start=$(( start + n ))
+          # Files each whole file not filed yet: `stats` renames a file into place only once it is whole.
+          file_new() {
+            for file in "$dir"/*.jsonl; do
+              [ -e "$file" ] || continue
+              if grep -qxF "$file" "$filed"; then
+                continue
+              fi
+              echo "$file" >> "$filed"
+              got=$(grep -c . "$file" || true)
+              if sh training/file-records.sh target/release/jackioh-server "$file" | tee -a "$GITHUB_STEP_SUMMARY"; then
+                finished=$(( finished + got ))
+                files=$(( files + 1 ))
+              else
+                echo "::warning::$(basename "$file") was not filed everywhere; the part fails at its end, and a rerun files it"
+                unfiled=$(( unfiled + 1 ))
+              fi
+            done
+          }
+          while kill -0 "$play" 2> /dev/null; do
+            file_new
+            sleep "$GATHER_POLL_SECONDS"
           done
-          echo "$finished of $(( start - from )) games finished." >> "$GITHUB_STEP_SUMMARY"
+          status=0
+          wait "$play" || status=$?
+          file_new
+          echo "$finished games finished and filed, in $files files." >> "$GITHUB_STEP_SUMMARY"
+          # 124 is timeout's own: the deadline stopped the games, as it should.
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then
+            echo "::error::cargo jackioh stats stopped with exit status $status; the files it finished are filed"
+            exit 1
+          fi
           if [ "$unfiled" -gt 0 ]; then
-            echo "::error::$unfiled batches were not filed everywhere (above); rerun this job to file them"
+            echo "::error::$unfiled files were not filed everywhere (above); rerun this job to file them"
             exit 1
           fi
       - uses: actions/upload-artifact@v4

@@ -1436,17 +1436,6 @@ pub enum MoveResult {
     Replaced,
 }
 
-impl MoveResult {
-    /// The literal, as serde writes it.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            MoveResult::Moved => "moved",
-            MoveResult::Vanished => "vanished",
-            MoveResult::Replaced => "replaced",
-        }
-    }
-}
-
 // B5 E5: "would go to a graveyard" (damage and combat)
 
 /// Where a replacement sends a card that would go to a graveyard (B5 E5; Classic #28, #50, #60).
@@ -1952,7 +1941,8 @@ pub fn step_into_backrow(
 
 /// B5 E22: the card leaves the field and re-enters its zone at once, in the same place in its pile.
 /// Leaving is leaving (R174, its home released) and R78 resets it; re-entering is entering: summoning
-/// sick (R83), in Attack Position. Passing through no other pile, a unit token comes back (R444, R175).
+/// sick (R83), in Attack Position; its Brittle starts as on any arrival (R441). Passing through no other
+/// pile, a unit token comes back (R444, R175).
 /// The caller emits the events. False for a card not acting on the field.
 pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
     let current = live_or(state, card);
@@ -1984,6 +1974,13 @@ pub fn flicker_in_place(state: &mut GameState, card: &CardInstance) -> bool {
         if unit_face {
             live.position = Some(Position::Atk);
         }
+    }
+    // B3.3 rule 1, R441: re-entering is entering, so a printed Brittle starts afresh and a held count's
+    // turn cycle restarts, as on every arrival from off the field (`place_with`).
+    let mut back = live_or(state, &current);
+    start_brittle_on_field(state, &mut back, true);
+    if let Some(live) = find_instance_mut(state, &current.id) {
+        live.brittle = back.brittle;
     }
     true
 }

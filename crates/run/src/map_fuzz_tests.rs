@@ -6,46 +6,11 @@
 //! still `run_fold` back to the live run.
 
 use super::*;
-use crate::config::{
-    MAP_FUZZ_DAILY_SEEDS, MAP_FUZZ_SEEDS, RUN_STARTER_CARDS, RUN_STARTER_SIZE, WALK_MAX_STEPS, WALK_TRIES,
-    WALK_WAY_ON_PERCENT,
-};
+use crate::config::{MAP_FUZZ_DAILY_SEEDS, MAP_FUZZ_SEEDS, WALK_MAX_STEPS, WALK_TRIES, WALK_WAY_ON_PERCENT};
 use crate::fight_tests::catalog_content;
 use crate::invariants::check_run_invariants;
-use crate::walk_tests::{free_action, random_action};
+use crate::walk_tests::{free_action, random_action, walk_setup};
 use jackioh_engine::rng::Rng;
-
-/// A fuzz walk's start, as `walk_tests`' `walk_setup`: the placeholder's first starting cards
-/// with one Greedy, or the catalog's first starting cards with none, under a random subset of the
-/// content's curses. Draws come from the walk's own `Rng`, never the run's `rng_cursor` (rule 4).
-fn fuzz_setup(tag: &str, n: usize, content: &RunContent, rng: &mut Rng) -> (RunSetup, RunUnlocks) {
-    let starter = if tag == "placeholder" {
-        content.starter_access[..RUN_STARTER_SIZE].to_vec()
-    } else {
-        RUN_STARTER_CARDS[..RUN_STARTER_SIZE]
-            .iter()
-            .map(|id| (*id).to_string())
-            .collect()
-    };
-    let artifacts = if tag == "placeholder" {
-        vec!["temp-greedy".to_string()]
-    } else {
-        Vec::new()
-    };
-    let curses = content
-        .curses
-        .iter()
-        .filter(|_| rng.coin())
-        .map(|curse| curse.id.clone())
-        .collect();
-    let setup = RunSetup {
-        seed: run_seed(&format!("mapfuzz-4247-{tag}-{n}")),
-        starter,
-        artifacts,
-        curses,
-    };
-    (setup, RunUnlocks::default())
-}
 
 /// One action the phase must refuse: a step no path reaches, a leave for no shop, a pack or a
 /// take out of turn, a kept card from outside the pack, an extraction past the end (or of the
@@ -116,7 +81,7 @@ fn illegal_action(state: &RunState, content: &RunContent, rng: &mut Rng) -> RunA
 /// back to the live state). No phase is a dead end; the walk is bounded.
 fn drive(content: &RunContent, tag: &str, n: usize) {
     let mut rng = Rng::new(&format!("mapfuzz-4247-{tag}-{n}"), 0);
-    let (setup, unlocks) = fuzz_setup(tag, n, content, &mut rng);
+    let (setup, unlocks) = walk_setup("mapfuzz-4247", tag, n, content, &mut rng);
     let mut state =
         run_create(&setup, &unlocks, content).unwrap_or_else(|e| panic!("mapfuzz {tag} {n}: no run: {e}"));
     let mut log = Vec::new();

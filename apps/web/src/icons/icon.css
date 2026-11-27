@@ -1,0 +1,53 @@
+/* Bespoke icon component styles (#5016). */
+.icon {
+  display: inline-block;
+  vertical-align: -0.125em;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.icon--size-xs {
+  width: var(--type-xs);
+  height: var(--type-xs);
+}
+
+.icon--size-sm {
+  width: var(--type-sm);
+  height: var(--type-sm);
+}
+
+.icon--size-md {
+  width: var(--type-md);
+  height: var(--type-md);
+}
+
+.icon--size-lg {
+  width: var(--type-lg);
+  height: var(--type-lg);
+}
+
+.icon--size-xl {
+  width: var(--type-xl);
+  height: var(--type-xl);
+}
+
+.icon--size-2xl {
+  width: var(--type-2xl);
+  height: var(--type-2xl);
+}
+
+.icon--size-3xl {
+  width: var(--type-3xl);
+  height: var(--type-3xl);
+}
+
+.icon--size-4xl {
+  width: var(--type-4xl);
+  height: var(--type-4xl);
+}

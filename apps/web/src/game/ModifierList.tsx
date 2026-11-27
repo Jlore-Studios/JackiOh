@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 
 import type { PlayerView } from "@jackioh/shared";
 
+import { Icon } from "../icons/Icon.tsx";
 import { t } from "../i18n/i18n.ts";
 import { BackLayer } from "../net/backLayers.ts";
 import "./modifierList.css";
@@ -74,7 +75,7 @@ export function ModifierList({ view, opponentLabel }: ModifierListProps): ReactE
           setOpen((was) => !was);
         }}
       >
-        <span aria-hidden="true">✦</span> {count}
+        <Icon name="spark" /> {count}
       </button>
       {/* The HUD clips its contents (a blurred, rounded bar), so the list opens on the page. */}
       {open

@@ -664,11 +664,13 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         let mut state = game(&seed, None);
         let mut events: Vec<GameEvent> = Vec::new();
         let me = chaos_card(&mut state, true, None);
-        let expected = labels_of(&roll_chaos_effects(
-            &mut Rng::new(&seed, 0),
-            true,
-            Some(CHAOS_EFFECTS),
-        ));
+        let roll = roll_chaos_effects(&mut Rng::new(&seed, 0), true, Some(CHAOS_EFFECTS));
+        let expected = labels_of(&roll);
+        // R4707000: each rolled entry's place in the table, and the table's size, for the game record.
+        let indices: Vec<usize> = roll
+            .iter()
+            .filter_map(|rolled| CHAOS_EFFECTS.iter().position(|entry| entry.name == rolled.name))
+            .collect();
 
         sink_events(&mut state, &mut events, |sink| {
             run(sink, call_to_chaos(CallToChaosArgs::default()), Some(&me), P1);
@@ -676,7 +678,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
 
         assert_eq!(
             json_of(events_of_type(&events, GameEventType::ChaosRolled)),
-            json!([{ "type": "chaosRolled", "player": "p1", "instanceId": me.id, "defId": chaos().id, "effects": expected }])
+            json!([{ "type": "chaosRolled", "player": "p1", "instanceId": me.id, "defId": chaos().id, "effects": expected, "indices": indices, "tableSize": CHAOS_EFFECTS.len() }])
         );
         assert_eq!(
             events.first().map(|event| event.event_type()),
@@ -762,7 +764,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         let mut state = game("chaos-cap", Some(hook(|_ctx| vec![cast_random_call_to_chaos()])));
         let mut events: Vec<GameEvent> = Vec::new();
         let at_cap = chaos_card(&mut state, false, Some(CALL_TO_CHAOS_CHAIN_CAP));
-        let before = clone_state(&state);
+        let before = state.clone();
 
         sink_events(&mut state, &mut events, |sink| {
             run(sink, cast_random_call_to_chaos(), Some(&at_cap), P1);
@@ -831,7 +833,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         sink_events(&mut second, &mut Vec::new(), |sink| {
             run(sink, call_to_chaos(CallToChaosArgs::default()), Some(&self_b), P1);
         });
-        assert_eq!(clone_state(&first), clone_state(&second));
+        assert_eq!(first.clone(), second.clone());
 
         let names: IndexSet<Option<String>> = (0..20)
             .map(|i| {

@@ -94,6 +94,8 @@ mod tests {
     const VANILLA: &str = "core-008"; // Mr. Vanilla
     const FILLER: &str = "core-010";
     const STOCKPILE: &str = "core-005";
+    /// M #25 Blue-Eyes White Felinor: a Felinor Unit whose Radiant face is Immutable (R23).
+    const BLUE_EYES: &str = "meditative-025";
     /// Every non-token Felinor-tagged Unit of every set (R405, R380): Meditative's are §8.8 #25, #30,
     /// #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet); Stinkyscape's
     /// #87 Siva 1 (#1884); Training Grounds' #17, #22, #23 and #33 and the snapshots #44 (of Core #12)
@@ -302,13 +304,27 @@ mod tests {
     mod radiant {
         use super::*;
 
+        /// The Radiant trap fired on the first seed of `prefix` (#848) whose five Felinors `accept` takes.
+        fn fired_where(prefix: &str, accept: impl Fn(&Scenario, &[String]) -> bool) -> Scenario {
+            let fire = |seed: &str| {
+                let mut s = setup(json!({}), true, Some(seed));
+                let attacker = s.unit(P2, 1).unwrap();
+                s.attack(&attacker, "hero");
+                s
+            };
+            let seed = seed_where(prefix, |seed| {
+                let s = fire(seed);
+                accept(&s, &summoned_ids(&s))
+            });
+            fire(&seed)
+        }
+
         #[test]
         fn the_felinors_are_summoned_on_their_radiant_faces_each_granted_taunt() {
             crate::register_all();
-            let mut s = setup(json!({}), true, None);
-
-            let attacker = s.unit(P2, 1).unwrap();
-            s.attack(&attacker, "hero");
+            // R5113000: an Immutable Felinor takes no Taunt (`r5113000_…` below), so the five here are
+            // searched for, none of them Immutable, and not pinned to a seed's roll (R380).
+            let mut s = fired_where("groom-radiant", |s, ids| ids.iter().all(|id| !is_immutable(s.state(), s.card(id))));
 
             let ids = summoned_ids(&s);
             assert_eq!(ids.len(), 5);
@@ -317,6 +333,25 @@ mod tests {
                 assert!(kinds(&s.stats(id).keywords).contains(&KeywordKind::Taunt));
             }
             s.expect_health(P1, 27);
+        }
+
+        #[test]
+        fn r5113000_an_immutable_felinor_takes_no_taunt_and_the_others_do() {
+            crate::register_all();
+            // M #25's Radiant face is Immutable, which keeps another card's keyword off it (R5113000).
+            let s = fired_where("groom-immutable", |s, ids| ids.iter().any(|id| s.card(id).def_id == BLUE_EYES));
+            let ids = summoned_ids(&s);
+            assert_eq!(ids.len(), 5);
+            for id in &ids {
+                let card = s.card(id);
+                let immutable = is_immutable(s.state(), card);
+                assert_eq!(immutable, card.def_id == BLUE_EYES, "{}", card.def_id);
+                assert!(card.radiant);
+                assert_eq!(kinds(&card.granted_keywords).contains(&KeywordKind::Taunt), !immutable, "{}", card.def_id);
+                assert_eq!(kinds(&s.stats(id).keywords).contains(&KeywordKind::Taunt), !immutable, "{}", card.def_id);
+            }
+            // The kept-off grant reports nothing (R5113000): one `keywordGranted` for each of the other four.
+            assert_eq!(s.count("keywordGranted"), 4);
         }
     }
 }

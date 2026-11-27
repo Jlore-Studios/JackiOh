@@ -38,11 +38,11 @@ use crate::config::{
     TERMS_VERSION, USERNAME_DEFAULT_BASE,
 };
 use crate::db::store::{
-    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CodeAttemptResult,
-    CollectionEntry, CollectionGrant, ConsentRow, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow,
-    FavoriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
-    LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
-    MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode,
+    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CardRows, CodeAttempt,
+    CodeAttemptResult, CollectionEntry, CollectionGrant, ConsentRow, Db, DeckVersion, DeckVersionOutcome,
+    EmoteEventRow, FavoriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster,
+    InviteCode, LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow,
+    MatchClocks, MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot,
     PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
     PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
     ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
@@ -50,7 +50,7 @@ use crate::db::store::{
     SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
     StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
     TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
-    UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
+    UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step, file_card_totals,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::{Ladder, SeasonRank};
@@ -1618,34 +1618,6 @@ fn replay_row_in(tables: &FakeTables, row: &MatchRow) -> Option<ReplayRow> {
     })
 }
 
-pub fn replays_list(
-    f: &mut FakeTx<'_>,
-    profile_id: &str,
-    limit: i64,
-    offset: i64,
-) -> Result<Vec<ReplayRow>, StoreError> {
-    call(f, "replays.list")?;
-    let tables: &FakeTables = f.tables();
-    let mut rows: Vec<ReplayRow> = tables
-        .matches
-        .iter()
-        .filter(|row| row.players.0 == profile_id || row.players.1 == profile_id)
-        .filter_map(|row| replay_row_in(tables, row))
-        .filter(|replay| replay.actions > 0)
-        .collect();
-    rows.sort_by(|a, b| {
-        b.row
-            .finished_at
-            .cmp(&a.row.finished_at)
-            .then_with(|| b.row.id.cmp(&a.row.id))
-    });
-    Ok(rows
-        .into_iter()
-        .skip(usize::try_from(offset).unwrap_or(0))
-        .take(usize::try_from(limit).unwrap_or(0))
-        .collect())
-}
-
 pub fn replays_list_with_modes(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -1817,18 +1789,6 @@ pub fn tickets_count_open(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
         .iter()
         .filter(|ticket| ticket.status == TicketStatus::Open)
         .count() as i64)
-}
-
-/// R257: open tickets per mode. Every mode is present, in the order `bo1`, `bo3`, `random`.
-pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<PerMode<i64>, StoreError> {
-    call(f, "tickets.countOpenByMode")?;
-    let mut counts: PerMode<i64> = PerMode::default();
-    for ticket in &f.tables().tickets {
-        if ticket.status == TicketStatus::Open {
-            counts[ticket.mode] += 1;
-        }
-    }
-    Ok(counts)
 }
 
 pub fn tickets_recent_waits(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {
@@ -2788,17 +2748,30 @@ pub fn game_records_unfiled(
 }
 
 pub fn stats_totals_load(f: &mut FakeTx<'_>, query: &StatsTotalsQuery) -> Result<StatsTotals, StoreError> {
-    call(f, "statsTotals.load")?;
-    if query.patch.is_none() {
+    // R4965000: a read of the records and game totals alone, one row per key, is no load of the card
+    // totals R3067000 counts.
+    if query.cards == CardRows::None {
+        call(f, "statsTotals.loadRecords")?;
+    } else {
+        call(f, "statsTotals.load")?;
+    }
+    if query.patch.is_none() && query.cards != CardRows::None {
         // R3067000: every patch's totals, counted apart from one patch's load.
         call(f, "statsTotals.loadAllPatches")?;
+        // R5174000: and among those, a read no list of patches bounds, which on Postgres goes over every
+        // version's card totals.
+        if query.cards.patches().is_none() {
+            call(f, "statsTotals.loadWholeTable")?;
+        }
     }
-    Ok(f.tables().stats_totals.select(
+    let totals = f.tables().stats_totals.select(
         &sources_of(query.source),
         query.mode,
         query.patch.as_deref(),
         query.drills,
-    ))
+    );
+    // R4965000: the card totals the query keeps, under the patch it files each under.
+    Ok(file_card_totals(totals, &query.cards))
 }
 
 /// R1044000 (R1454, R750000): the patch's live Best-of-1 human decklists, first held first.

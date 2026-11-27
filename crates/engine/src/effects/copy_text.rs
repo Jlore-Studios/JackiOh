@@ -27,7 +27,9 @@ pub struct CopyUnitTextArgs {
 /// face: keywords, aura, triggers, Death, abilities and declared numbers; its name, cost, type, tags
 /// and stats stay. Reported by an in-place `transformed`. Nothing happens when the running card is off
 /// the field or Immutable (§6.1, R23), or the target is no Unit on the field, is the running card, or
-/// is Vanilla, with no text to copy (§6.3).
+/// is Vanilla, with no text to copy (§6.3). A copied text whose Aura draws its keywords
+/// (`Script::combat_keywords_follow`) draws the copier's own as it lands: what its number asks beyond
+/// any list the copier holds this stay (R4839000).
 pub fn copy_unit_text(args: CopyUnitTextArgs) -> Effect {
     Effect::new("copyUnitText", move |ctx| {
         let Some(copier) = ctx
@@ -60,6 +62,8 @@ pub fn copy_unit_text(args: CopyUnitTextArgs) -> Effect {
         if let Some(live) = find_instance_mut(ctx.state, &copier.id) {
             live.memory.insert(UNIT_TEXT_KEY.to_string(), record);
         }
+        // R4839000: a copied Aura that draws its keywords draws the copier's own as the text lands.
+        crate::effects::buff::top_up_to_number(ctx, &copier.id);
         ctx.events.push(GameEvent::Transformed {
             instance_id: copier.id.clone(),
             from_def_id: copier.def_id.clone(),

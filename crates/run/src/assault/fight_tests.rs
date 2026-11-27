@@ -5,14 +5,16 @@ use super::*;
 use crate::assault::content::content_file;
 use crate::assault::day::MONTH_DAYS;
 use crate::config::ASSAULT_LEVELS;
+use crate::fight::VOIDED_FIGHT;
+use crate::fight_tests::voided_game;
 use jackioh_engine::catalog::{deckable, registered_catalog};
 use jackioh_engine::config::{HUMAN_HANDICAP, Handicap, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::reduce::{begin_game, legal_actions, reduce, seat_to_act};
-use jackioh_engine::replay::{self, ReplayInput};
+use jackioh_engine::replay::{self, ReplayInput, fold};
 use jackioh_engine::state::{
     CreateGameOptions, SetupKind, create_game, create_recorded_game, validate_setup,
 };
-use jackioh_engine::wire::{Action, ActionBody, PerPlayerOpt, PlayerId, Rarity};
+use jackioh_engine::wire::{Action, ActionBody, GameOverReason, PerPlayerOpt, PlayerId, Rarity, Winner};
 
 /// The first `n` `deckable` ids of the catalog that ships, in catalog order.
 fn first_deckable(n: usize) -> Vec<String> {
@@ -192,6 +194,37 @@ fn create_game_takes_every_level_of_a_year_on_the_placeholder() {
     }
 }
 
+/// R4597001: since the release every level of a year dealt from the set's real cards is a setup
+/// `createGame` takes, the enemy's seat naming the Assault's set (`enemy_sets`, R4595000), and refused
+/// when it names none: the set is single-player, so no other deck may hold its cards.
+#[test]
+fn r4597001_create_game_takes_every_level_of_a_year_on_the_catalog_content() {
+    jackioh_cards::register_all();
+    let catalog = registered_catalog();
+    let content = assault_catalog_content(catalog);
+    assert_eq!(content.commanders.len(), 12);
+    let human = first_deckable(25);
+    for date in year() {
+        let day = assault_day(&date, &content).unwrap();
+        assert_eq!(day.levels.len(), ASSAULT_LEVELS as usize, "{date}");
+        for level in &day.levels {
+            let (unnamed, _) = fight_options(&human, level, &format!("{}-L{}-A1", day.seed, level.level));
+            let error = validate_setup(&unnamed, catalog, SetupKind::New)
+                .expect_err("an Assault deck needs its seat to name the set");
+            assert!(error.message.starts_with("p2:"), "{date}: {}", error.message);
+            let options = CreateGameOptions {
+                deck_sets: Some(PerPlayerOpt {
+                    p1: None,
+                    p2: Some(vec![crate::config::ASSAULT_SET]),
+                }),
+                ..unnamed
+            };
+            validate_setup(&options, catalog, SetupKind::New)
+                .unwrap_or_else(|error| panic!("{date} level {}: {error}", level.level));
+        }
+    }
+}
+
 #[test]
 fn every_level_of_a_week_folds_back_to_its_hash() {
     jackioh_cards::register_all();
@@ -294,12 +327,56 @@ fn r4579002_a_draw_at_the_turn_cap_reports_a_loss_and_a_concession_a_win() {
     }
 
     // When P2 concedes, P1 reports a win.
-    let begun = begin_game(&create_recorded_game(&options)).state;
+    let log = conceded_log(&options, PlayerId::P2);
+    let conceded = ReplayInput {
+        seed: options.seed.clone(),
+        decks: options.decks.clone(),
+        log,
+        handicaps: options.handicaps.clone(),
+        ..Default::default()
+    };
+    assert!(
+        matches!(
+            assault_fight_report(&conceded, PlayerId::P1),
+            Ok(AssaultAction::FightOver { won: true, .. })
+        ),
+        "P1 reports a win"
+    );
+}
+
+/// The placeholder content's day `2027-01-02` and an attempt at level 1 on the catalog's first 25
+/// deckable cards, its first fight begun.
+fn first_fight() -> (AssaultDay, AssaultState) {
+    jackioh_cards::register_all();
+    let catalog = registered_catalog();
+    let content = assault_placeholder_content(catalog);
+    let date = "2027-01-02";
+    let day = assault_day(date, &content).expect("the placeholder content deals");
+    let setup = AssaultSetup {
+        date: date.into(),
+        deck: first_deckable(25),
+        source: AssaultDeckSource::Saved,
+        start_level: 1,
+        attempt: 1,
+    };
+    let record = AssaultRecord {
+        date: date.into(),
+        ..Default::default()
+    };
+    let briefing = assault_create(&setup, &record, &day).expect("create attempt");
+    let fighting = assault_reduce(&briefing, &day, &AssaultAction::Fight).expect("start fight");
+    (day, fighting)
+}
+
+/// The log of `options`' game, both hands kept, every seat ending its turns until `conceder`'s first
+/// turn, when it concedes.
+fn conceded_log(options: &CreateGameOptions, conceder: PlayerId) -> Vec<Action> {
+    let begun = begin_game(&create_recorded_game(options)).state;
     let (mut state, mut log) = keep_all(&begun);
     let mut nonce = log.len();
     while state.result.is_none() {
         let seat = seat_to_act(&state).expect("a seat acts");
-        let body = if seat == PlayerId::P2
+        let body = if seat == conceder
             && !legal_actions(&state, seat)
                 .iter()
                 .any(|body| matches!(body, ActionBody::Mulligan { .. }))
@@ -314,13 +391,47 @@ fn r4579002_a_draw_at_the_turn_cap_reports_a_loss_and_a_concession_a_win() {
         assert_eq!(result.error, None, "{action:?}");
         log.push(action);
         state = result.state;
-        assert!(nonce < 20, "P1 ends one turn, then P2 concedes");
+        assert!(nonce < 20, "{conceder:?} concedes on its first turn");
     }
+    log
+}
+
+#[test]
+fn r4999000_a_glitch_voided_assault_fight_is_refused_and_dealt_again() {
+    let (day, fighting) = first_fight();
+    assert_eq!(fighting.phase, AssaultPhase::Fight);
+    assert!(fighting.beaten.is_empty());
+
+    let setup_before = assault_fight_setup(&fighting, &day).expect("setup before void");
+    assert_eq!(setup_before.seed, format!("{}-L1-A1", day.seed));
+
+    let voided = voided_game();
+    assert_eq!(
+        fold(&voided).state.result.map(|r| (r.winner, r.reason)),
+        Some((Winner::Draw, GameOverReason::Voided))
+    );
+    assert_eq!(
+        assault_fight_report(&voided, PlayerId::P1),
+        Err(VOIDED_FIGHT.to_string())
+    );
+    assert_eq!(
+        assault_fight_report(&voided, PlayerId::P2),
+        Err(VOIDED_FIGHT.to_string())
+    );
+
+    let setup_after = assault_fight_setup(&fighting, &day).expect("setup after void");
+    assert_eq!(setup_before, setup_after);
+    assert_eq!(fighting.phase, AssaultPhase::Fight);
+    assert!(fighting.beaten.is_empty());
+
+    let (options, handicaps) = fight_options(&setup_after.human_deck, &setup_after.level, &setup_after.seed);
+    let log = conceded_log(&options, PlayerId::P2);
     let conceded = ReplayInput {
         seed: options.seed.clone(),
         decks: options.decks.clone(),
         log,
-        handicaps: options.handicaps.clone(),
+        handicaps: Some(handicaps),
+        deck_marks: options.deck_marks.clone(),
         ..Default::default()
     };
     assert!(
@@ -329,5 +440,28 @@ fn r4579002_a_draw_at_the_turn_cap_reports_a_loss_and_a_concession_a_win() {
             Ok(AssaultAction::FightOver { won: true, .. })
         ),
         "P1 reports a win"
+    );
+}
+
+#[test]
+fn r4999000_a_real_loss_still_reports_a_loss() {
+    let (day, fighting) = first_fight();
+    let setup_fight = assault_fight_setup(&fighting, &day).expect("setup for fight");
+    let (options, handicaps) = fight_options(&setup_fight.human_deck, &setup_fight.level, &setup_fight.seed);
+    let log = conceded_log(&options, PlayerId::P1);
+    let game = ReplayInput {
+        seed: options.seed.clone(),
+        decks: options.decks.clone(),
+        log,
+        handicaps: Some(handicaps),
+        deck_marks: options.deck_marks.clone(),
+        ..Default::default()
+    };
+    assert!(
+        matches!(
+            assault_fight_report(&game, PlayerId::P1),
+            Ok(AssaultAction::FightOver { won: false, .. })
+        ),
+        "P1 reports a loss"
     );
 }

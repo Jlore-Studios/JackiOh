@@ -24,23 +24,23 @@
 }
 
 .cf-stamp[data-stamp="2"] {
-  --stamp-fill: var(--pal-green-900);
-  --stamp-ink: var(--pal-green-400);
+  --stamp-fill: var(--pal-jade-900);
+  --stamp-ink: var(--pal-jade-400);
 }
 
 .cf-stamp[data-stamp="3"] {
-  --stamp-fill: var(--pal-blue-900);
-  --stamp-ink: var(--pal-sky-300);
+  --stamp-fill: var(--pal-ink-900);
+  --stamp-ink: var(--pal-ink-300);
 }
 
 .cf-stamp[data-stamp="4"] {
-  --stamp-fill: var(--pal-violet-700);
-  --stamp-ink: var(--pal-violet-300);
+  --stamp-fill: var(--pal-amethyst-700);
+  --stamp-ink: var(--pal-amethyst-300);
 }
 
 .cf-stamp[data-stamp="5"] {
-  --stamp-fill: var(--pal-red-900);
-  --stamp-ink: var(--pal-red-300);
+  --stamp-fill: var(--pal-lacquer-900);
+  --stamp-ink: var(--pal-lacquer-300);
 }
 
 .cf-stamp > svg {

@@ -672,6 +672,82 @@ mod tests {
             s.play(JAMMED, json!({ "targets": pick::id(&ticketed) }));
             assert_eq!(s.unit(P2, 3).map(|top| top.id), Some(enemy));
         }
+
+        const IKWZKI: &str = "stinkyscape-110"; // iKwzki: "Cry: Duo with a permanent and make it Radiant next turn."
+        const HANGER: &str = "stinkyscape-168"; // Drone Hanger: a face-up Field Spell to stack on
+        const PRESTIGE: &str = "meditative-053"; // Prestige: "De-Radiant a Radiant card on the field or …"
+
+        /// p1 holds Ticketed (`radiant` or not) and `hand`, with a face-up Drone Hanger in backrow lane 2;
+        /// Ticketed is played onto the Hanger and returned.
+        fn on_the_hanger(radiant: bool, hand: Value) -> (Scenario, CardInstance) {
+            let mut cards = vec![json!({ "def": ID, "radiant": radiant })];
+            cards.extend(hand.as_array().cloned().unwrap_or_default());
+            cards.extend([json!(FILLER), json!(FILLER), json!(FILLER)]);
+            let mut s = crate::scenario(json!({
+                "seed": "ticketed-face",
+                "p1": {
+                    "hand": cards,
+                    "backrow": [{ "def": HANGER, "faceUp": true, "lane": 2 }],
+                    "library": crate::filler(14),
+                    "mana": 10,
+                },
+                "p2": { "hand": [FILLER, FILLER, FILLER], "library": crate::filler(14) },
+            }));
+            for player in [P1, P2] {
+                s.state_mut().players[player].auto_end_turn = Some(false);
+            }
+            let hanger = s.backrow(P1, 2).expect("the Drone Hanger");
+            stack_on(&mut s, &hanger.id);
+            let ticketed = s.card(ID).clone();
+            (s, ticketed)
+        }
+
+        fn on_field(s: &Scenario, card: &CardInstance) -> bool {
+            matches!(s.card(card).zone, Zone::Field { .. })
+        }
+
+        /// R4817000, R1875001: a base Ticketed made Radiant where it stands (S #110 iKwzki's Duo, at the
+        /// start of p1's next turn) wears a face with no Brittle, so the count its base face's Brittle 3
+        /// started goes and it holds until it is removed.
+        #[test]
+        fn r4817000_a_base_ticketed_made_radiant_where_it_stands_stops_crumbling() {
+            let (mut s, ticketed) = on_the_hanger(false, json!([IKWZKI]));
+            assert_eq!(s.card(&ticketed).brittle.map(|brittle| brittle.count), Some(3));
+            s.play(IKWZKI, json!({ "zone": 1, "targets": pick::instance(&ticketed) }));
+            s.end_turn();
+            s.end_turn();
+            assert!(s.card(&ticketed).radiant, "iKwzki's Duo made it Radiant at the start of p1's next turn");
+            assert!(s.card(&ticketed).brittle.is_none(), "its base face's count went with that face");
+            for _ in 0..3 {
+                s.end_turn();
+                s.end_turn();
+            }
+            assert!(
+                on_field(&s, &ticketed),
+                "R1875001: the Radiant face has no Brittle; it is in {:?} with {} `crumbled`",
+                s.card(&ticketed).zone,
+                s.count("crumbled")
+            );
+        }
+
+        /// R4817000: the mirror. A Radiant Ticketed De-Radianted where it stands (M #53 Prestige) wears
+        /// its base face again, so its Brittle 3 starts then and crumbles it three of p1's turns later.
+        #[test]
+        fn r4817000_a_radiant_ticketed_de_radianted_where_it_stands_starts_brittle_3() {
+            let (mut s, ticketed) = on_the_hanger(true, json!([PRESTIGE]));
+            assert!(s.card(&ticketed).brittle.is_none());
+            s.play(PRESTIGE, pick::targets(pick::id(&ticketed.id)));
+            assert!(!s.card(&ticketed).radiant, "Prestige De-Radianted it");
+            assert_eq!(s.card(&ticketed).brittle.map(|brittle| brittle.count), Some(3));
+            for _ in 0..2 {
+                s.end_turn();
+                s.end_turn();
+            }
+            assert!(on_field(&s, &ticketed), "its count is at 1");
+            s.end_turn();
+            s.end_turn();
+            assert!(matches!(s.card(&ticketed).zone, Zone::Graveyard { .. }), "its Brittle 3 crumbled it");
+        }
     }
 
     /// R767000: the script kept for v0.6.12c, its Cry holding a face-up permanent beneath it in its own

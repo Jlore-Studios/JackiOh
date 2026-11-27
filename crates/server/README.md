@@ -249,10 +249,10 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000); an offer past `REMATCH_OFFER_TTL_MS` of the match's end lapses silently, recording nothing (R2685000) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436). R2778000: each on `?ladder=` (`constructed`, the default, or `random`), named in the body's `ladder` |
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; friends may always watch, so the settings carry no watching switch (R2615000); a `cosmetics` group's six picks must each be of its kind, or the write is 400 `bad_request` (R1834001); a pick the account does not own is left out of the write, keeping the stored one (R4403000) |
-| `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000); every window and history is cut from one snapshot of every patch's totals, kept `CARD_STATS_CACHE_TTL_SECONDS` and loaded once, and a patch the server does not ship reads only its own totals and is never kept (R3067000); anyone but a dev account reads the newest patches alone, a patch past them 403 `patch_dev_only` and the patch list and the drill-down's history cut to them, and a dev account's answer, told by its token, is `private, no-store` (R4677000); both card routes take `face=all\|normal\|radiant`, All when missing, reading one face against its own field and band, and the drill-down answers the card's Normal and Radiant figures and their gap at its `patch=`, past the caller's patches 403 `patch_dev_only` (R4673000, R4673001); the drill-down answers `variants`, the card's choices by kind (`mode`, `x`, `embiggen`), each row's share, adjusted rate, range and tier read against a field of every card's choices on that face and patch (R4676000) |
+| `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000); every window and history is cut from one snapshot of every patch's totals, kept `CARD_STATS_CACHE_TTL_SECONDS` and loaded once, and a patch the server does not ship reads only its own totals and is never kept (R3067000); anyone but a dev account reads the newest patches alone, a patch past them 403 `patch_dev_only` and the patch list and the drill-down's history cut to them, and a dev account's answer, told by its token, is `private, no-store` (R4677000); both card routes take `face=all\|normal\|radiant`, All when missing, reading one face against its own field and band, and the drill-down answers the card's Normal and Radiant figures and their gap at its `patch=`, past the caller's patches 403 `patch_dev_only` (R4673000, R4673001); the drill-down answers `variants`, the card's choices by kind (`mode`, `x`, `embiggen`), each row's share, adjusted rate, range and tier read against a field of every card's choices on that face and patch (R4676000); and `outputs`, each card it made or offered, read against its other outputs, with `offered` and `pickRate` for a pick (R4679000); and `rolled`, each outcome its plays rolled by kind (`effect`, `coin`, `die`), its `expected` share beside its `share`, read against its other outcomes (R4707001) |
 | `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
 | `GET` | `/api/stats/games` | none | the patch's game figures (the first seat's wins with their interval, the endings, the turns, R1256000's counts) over the window every card shares, under R654's gate, split by both seats' pilots, through the engine's `windowed_game_figures`; kept and cached as the cards', and a patch past the caller's 403 `patch_dev_only` as there (R1994000, R4677000) |
-| `GET` | `/api/stats/versions` | none | every deck card's play versions (R4675000), in catalog order, each with its figures summed over the versions it spans and read against a field of every play version's, figures only and no source (`?pilot=`, `?mode=`); through the engine's `play_version_figures`, one table per pilot and mode cut from the cards' snapshot and cached as theirs (R4675001); each row also counts `patches`, the windows every card shares that its versions reach, which `/stats`' Experimental tab shows (R4678001) |
+| `GET` | `/api/stats/versions` | none | every deck card's play versions (R4675000), in catalog order, each with its figures summed over the versions it spans and read against a field of every play version's, figures only and no source (`?pilot=`, `?mode=`, `?scope=`); through the engine's `play_version_figures`, one table per pilot and mode cut from the cards' snapshot and cached as theirs (R4675001); each row also counts `patches`, the windows every card shares that its versions reach, which `/stats`' Experimental tab shows (R4678001), sends `firstShipped`, the position of its first version in the shipped history, which the Date sort reads (R5033000), `winRate` and `playRate`, the Cards tab's summed over the span, `null` when no game was counted or seen (R5037000), and `iteration`, its play version's label (`v1`, `v1b`, `v2`, R5035000); `?scope=major` sends the live ones alone, each cut to the newest major's line and read against those rows' own field, kept once per scope (R5040000); each row also sends `decisiveness`, its Decisiveness over its span, and the body the typical one's (R5036000) |
 | `GET` | `/api/stats/ci` | none | the daily super run's last `CI_RUNS_LISTED` runs on `main` and a failed run's jobs that did not pass, read from GitHub's Actions API (with `CREATE_ISSUES_TOKEN` when set) and kept `CI_RUNS_CACHE_TTL_SECONDS`; `unavailable` when GitHub cannot be read; none on the end-to-end server (`api/ci_runs.rs`, R1935000) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654); a PUT keeps only R1142000's summary inputs, for catalog cards (R1771000) |
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5), each page with both seats' frozen `loadouts` and the `cardLoadouts` of the cards its steps show (R1834003) and both seats' `portraits` (R3976000, `vanilla` before them); a page of a replay kept in memory waits for nothing, while an opening that is not kept folds its whole game behind `REPLAY_FOLDS_RUNNING_MAX` folds at once for the whole server (the co-op replays' too), a concurrent opening of the same match sharing that fold, and one that waits past `REPLAY_FOLD_WAIT_MS` is 429 `rate_limited` with `retryAfterMs` (`REPLAY_FOLD_RETRY_AFTER_MS`, R192, R3500000) |
@@ -618,7 +618,15 @@ one pointer while empty: every patch's totals, which the public routes keep (`ke
 329,000 rows on staging by 2026-11-25, and read whole with those parts inline they outgrew the game
 server's 1 GiB, which was killed loading them. A read a patch at a time instead took minutes there,
 past the client's `API_REQUEST_TIMEOUT_SECONDS`, since each patch's rows lie scattered through the
-table. `stats-import` writes and
+table. So the read files each row as it arrives (`StatsTotalsQuery::cards`, R4965000): the snapshot
+reads the records first, keeps as filed the card totals of the patches anyone may read and of the window
+before them (`api::stats::snapshot_filing`), folds each deck card's older totals into one per play
+version, and drops the rest; a dev account's older patch reads its own reach when asked, and the play
+rates keep one total per card and key. Only the play versions' table and the Hall of Fame read those folded
+older totals, so only they make the read that goes over every version's rows, and only when asked
+(R5174000). The snapshot every other figure reads, the win-rate snapshot each match starts with among them,
+names its patches (`CardRows::patches`) and reads their rows alone, through the primary key, since the
+gather lane files a version's worth of rows into both databases for every version main ships. `stats-import` writes and
 folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record written before migration
 0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
 folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the
@@ -635,6 +643,10 @@ outlive the purge; a record folded before 0063 counts in `record_totals` alone, 
 (R1994000). A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
 Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
 decks into those that played the card Radiant at least once and those that never did (R1147000).
+Records written since R5054000 also list the dealt cards each seat held Radiant in its hand
+(`heldRadiant`), and `seenRadiant` and `seenNormal` split the seen decks the same way, played or not:
+the Face control's Normal and Radiant read those, so a win-more card's plays are not its whole face. A
+total folded before them reads empty on a face, with no back-fill.
 A Created card (R943: a token, a generated or copied card, a transform's result, The Coin) is no deck
 card: a record lists each seat's Created cards apart, those it made and used and those it made and never
 used, and its figures (`createdPlayed`, `createdNotPlayed` and the used ones split by face) ride in the
@@ -644,9 +656,10 @@ the deck's, `--json` as `created`, `--card` filtering both, and `GET /api/stats/
 `created` (R2089000), each row only its games, an adjusted win rate, its range and a tier (R4083000), read
 against the other Created cards (`created_field`, answered as `tiers.created`), or against the average deck for The Coin, Glitch and
 the Dormant Starship, which a rule makes (R4082000).
-Each play also records what was chosen for it (its Choose One options, X and Embiggen, R4672000), each
-Created card the card whose effect made it (R4672001) and each Discover-like choice what it offered and
-picked (R4672002); the totals keep each card's `variants`, `outputs` and `offers` in the same row's `stats`,
+Each play also records what was chosen for it (its Choose One options, X and Embiggen, R4672000) and what it
+rolled (R4707000), each Created card the card whose effect made it (R4672001) and each Discover-like choice what
+it offered and picked (R4672002); the totals keep each card's `variants`, `outputs`, `offers` and `rolled`
+(R4707001) in the same row's `stats`,
 a seat once a game by face, no migration (R4672003). `stats-cards --card=<id>` prints its variants and
 outputs tables after its other tables, and `--json` writes them as `choices`; no public route reads them yet.
 
@@ -1534,8 +1547,8 @@ when the list sorts or a ledger filters the day.
 Migration 0099 widens the `cards` tag check once more, as 0088 did, with #4577's nine Infinite Assault tags
 (R4577001) — the eight doctrine tags Hallucination, Overclock, Batch, Recursion, Jailbreak, Firewall, Scraper
 and Singularity, and Commander — so the check names the engine's whole `Tag` union again. The set is a
-single-player set held while it is built (R4577000), so `seed-catalog` writes none of its cards yet; the day
-it does, nothing fails. It rewrites no row. `tests/sql/01_schema_invariants.sql` CHECK 18 probes every tag.
+single-player set (R4577000; held while it was built, open since its release, #4597), which never ships, so
+`seed-catalog` writes none of its cards; the day it does, nothing fails. It rewrites no row. `tests/sql/01_schema_invariants.sql` CHECK 18 probes every tag.
 
 Migration 0100 gives a daily seat 0012's rule for a 1v1 seat (R4621000), as 0051 gave a co-op seat.
 `daily_games.p1_profile_id` and `p2_profile_id` become nullable and `on delete set null`, replacing 0089's
@@ -1571,17 +1584,20 @@ scans off.
 cargo test -p jackioh-server                          # the whole suite, on the in-memory store and fixture auth
 cargo test -p jackioh-server --test server actor::    # one area of the general binary: api::, actor::, bots::, loops::
 cargo test -p jackioh-server --test server_store store::   # the store suite, on the in-memory store
+cargo test -p jackioh-server --test stats_memory           # what one kept card total costs, heap included (#5129)
 sh crates/server/tests/sql/run.sh                     # schema, RLS and trigger invariants (Docker)
 sh crates/server/tests/db/run.sh                      # the store contract against Postgres (Docker; KEEP_DB=1 keeps it; DB_SHARDS=n databases at once, 3 by default)
 sh crates/server/tests/deploy/rehearse.sh             # the container's boot rehearsed: the image, a non-superuser migration, a production boot (Docker)
 ```
 
-Two binaries: `tests/server.rs` is the general one over `tests/{api,actor,bots,loops,support}/`, and
+Two main binaries: `tests/server.rs` is the general one over `tests/{api,actor,bots,loops,support}/`, and
 `tests/server_store.rs` the store's, over `tests/store/` and `support/test_app.rs` alone, so that
 `tests/db/run.sh` builds and links only that, the engine, the cards and the AI at opt-level 0 through its
 `PROFILE_FLAGS`, which each of its `cargo` calls repeats, each finding the build fresh because every root
 `build.rs` hashes exists (CI's `db (store contract)` job stays under five minutes, #3162, #3410, #3436). A
-`store::` test lives in `server_store` only, and every other area in `server` only. CI's four
+`store::` test lives in `server_store` only, and every other area in `server` only. `tests/stats_memory.rs`
+(#5129) stands alone because its allocator counts what each thread holds: it holds a kept card total's cost,
+heap included, to a budget, and the count would slow every other test in the binary that holds it. CI's four
 `rust (test server …)` groups split the suite by test name (.github/ci/rust-test.toml says how), so only
 the lib and `server` hold tests whose path has `api::`, and only `server` ones with `api::practice::`.
 `support/test_app.rs` builds a test `App` on `Db::Fake` and `Auth::E2e`; `support/deps.rs` re-exports it and calls the router with

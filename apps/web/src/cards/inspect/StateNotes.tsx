@@ -5,9 +5,10 @@
 
 import type { ReactElement } from "react";
 
+import { Icon } from "../../icons/Icon.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
-import { MARK_GLYPH, markWords } from "../marks.ts";
-import { Icon } from "../icons.tsx";
+import { markWords } from "../marks.ts";
+import { Icon as CardIcon } from "../icons.tsx";
 import type { FaceModel } from "../model.ts";
 import { locWords } from "./locWords.ts";
 import { RulesText } from "../RulesText.tsx";
@@ -15,15 +16,13 @@ import { TALLY_GLYPH, tallyWords } from "../tallies.ts";
 import { INSPECT_LOC, INSPECT_STATES, INSPECT_TUNED } from "./testids.ts";
 
 /** R404: the glyphs of a quest and of an aura its line holds; R511: of a copier's note. */
-const QUEST_GLYPH = "⚑";
-const STAGE_GLYPH: Readonly<Record<"done" | "current" | "upcoming", string>> = { done: "✓", current: "▸", upcoming: "·" };
+const STAGE_GLYPH: Readonly<Record<"current" | "upcoming", string>> = { current: "▸", upcoming: "·" };
 /** A stage's state in words, for a reader that cannot see its glyph. */
 const STAGE_STATE_WORDS: Readonly<Record<"done" | "current" | "upcoming", string>> = {
   done: "done",
   current: "now",
   upcoming: "to come",
 };
-const AURA_GLYPH = "✦";
 /** The glyph each way a number moved is drawn with, so a mark never rests on color alone. */
 const TUNED_GLYPH = "◆";
 const WAY_GLYPH: Readonly<Record<"better" | "worse", string>> = { better: "▲", worse: "▼" };
@@ -163,7 +162,7 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
               data-goal={quest.goal}
             >
               <span className="inspect-state-glyph" aria-hidden="true">
-                {QUEST_GLYPH}
+                <Icon name="flag" />
               </span>
               <span className="inspect-state-words">
                 {t("Quest: ")}
@@ -182,7 +181,7 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
           {stages.length === 0 ? null : (
             <li className="inspect-state inspect-quest-stages" data-state="questStages">
               <span className="inspect-state-glyph" aria-hidden="true">
-                {QUEST_GLYPH}
+                <Icon name="flag" />
               </span>
               <span className="inspect-state-words">
                 {face.badges.find((badge) => badge.kind === "questStage")?.words}
@@ -194,7 +193,7 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
                       data-stage-state={stage.state}
                       data-hear-back={stage.hearBack}
                     >
-                      <span aria-hidden="true">{STAGE_GLYPH[stage.state]} </span>
+                      <span aria-hidden="true">{stage.state === "done" ? <Icon name="check" /> : STAGE_GLYPH[stage.state]} </span>
                       <span className="inspect-quest-stage-name">{t(stage.name)}</span>
                       <span className="inspect-sr">{` (${t(STAGE_STATE_WORDS[stage.state])})`}</span>
                       <ul className="inspect-quest-stage-goals">
@@ -214,7 +213,7 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
           {auras.map((aura) => (
             <li key={`aura:${aura.id}`} className="inspect-state" data-state="questAura" data-aura={aura.id}>
               <span className="inspect-state-glyph" aria-hidden="true">
-                {AURA_GLYPH}
+                <Icon name="spark" />
               </span>
               <span className="inspect-state-words">
                 <RulesText words={aura.text} />
@@ -224,7 +223,7 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
           {marks.map((mark) => (
             <li key={`mark:${mark.mark}`} className="inspect-state" data-state="mark" data-mark={mark.mark} data-mark-color={mark.color}>
               <span className="inspect-state-glyph" aria-hidden="true">
-                {MARK_GLYPH}
+                <Icon name="spark" />
               </span>
               <span className="inspect-state-words">{t(markWords(mark.mark).text)}</span>
             </li>
@@ -232,7 +231,7 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
           {others.map((badge) => (
             <li key={`${badge.kind}:${badge.words}`} className="inspect-state" data-state={badge.kind}>
               <span className="inspect-state-glyph" aria-hidden="true">
-                {badge.icon === null ? badge.text : <Icon name={badge.icon} />}
+                {badge.icon === null ? badge.text : <CardIcon name={badge.icon} />}
               </span>
               <span className="inspect-state-words">{badge.words}</span>
             </li>

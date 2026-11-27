@@ -11,7 +11,7 @@
 .portrait-art {
   position: relative;
   display: block;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   overflow: hidden;
   isolation: isolate;
   pointer-events: none;
@@ -43,7 +43,7 @@
 .portrait-art-rim {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   pointer-events: none;
 }
 
@@ -76,7 +76,7 @@
   top: var(--mote-y);
   width: var(--mote-size);
   aspect-ratio: 1;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle, var(--portrait-mote), transparent 70%);
   opacity: 0.55;
   animation: portrait-mote var(--portrait-drift) linear var(--mote-delay) infinite;
@@ -86,13 +86,13 @@
 .portrait-art-rim {
   box-shadow:
     inset 2px 3px 4px -1px var(--portrait-rim),
-    inset -2px -3px 5px -2px rgb(0 0 0 / 55%);
+    inset -2px -3px 5px -2px color-mix(in srgb, var(--pal-black) 55%, transparent);
 }
 
 .hero-inspect-portrait .portrait-art-rim {
   box-shadow:
     inset 6px 8px 12px -4px var(--portrait-rim),
-    inset -6px -8px 14px -6px rgb(0 0 0 / 55%);
+    inset -6px -8px 14px -6px color-mix(in srgb, var(--pal-black) 55%, transparent);
 }
 
 @keyframes portrait-breathe {
@@ -136,9 +136,9 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   pointer-events: none;
-  background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 80%) 48%, transparent 66%) no-repeat;
+  background: linear-gradient(115deg, transparent 30%, color-mix(in srgb, var(--pal-white) 80%, transparent) 48%, transparent 66%) no-repeat;
   background-size: 260% 100%;
   animation: portrait-glint var(--portrait-react) ease-out both;
 }
@@ -162,7 +162,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: transparent;
   transform: none;
   cursor: var(--cursor-glove-point, pointer);
@@ -172,7 +172,7 @@
 }
 
 .hero .hero-portrait > button.hero-portrait-open:focus-visible {
-  outline: 2px solid var(--selected, #f0c04a);
+  outline: 2px solid var(--selected, var(--pal-gold-400));
   outline-offset: 2px;
 }
 
@@ -195,9 +195,9 @@
   overscroll-behavior: contain;
   padding: 18px 16px 16px;
   border: 1px solid var(--line-bright);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: var(--bg-raised);
-  box-shadow: 0 14px 36px rgb(0 0 0 / 55%);
+  box-shadow: 0 14px 36px color-mix(in srgb, var(--pal-black) 55%, transparent);
   color: var(--text);
   text-align: center;
   animation: hero-inspect-in 180ms ease-out;
@@ -224,8 +224,6 @@
   color: var(--text-dim);
   font-size: 0.72em;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .hero-inspect-name {
@@ -259,7 +257,7 @@
   gap: 6px;
   padding: 4px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-sunken);
 }
 
@@ -344,4 +342,10 @@
 
 :root[data-reduce-motion="true"] .hero-portrait-glint {
   display: none;
+}
+
+/* R5128000: Low graphics stills the idle's light and motes, as Reduce Motion does; a reaction still plays. */
+:root[data-low-graphics="true"] .portrait-art-breath,
+:root[data-low-graphics="true"] .portrait-art-mote {
+  animation: none;
 }

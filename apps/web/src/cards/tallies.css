@@ -25,7 +25,7 @@
   background: color-mix(in srgb, var(--pal-brass-500) 70%, var(--pal-white));
   box-shadow: var(--shadow-1);
   color: var(--pal-wood-950);
-  font-size: var(--type-3xs-em);
+  font-size: var(--type-2xs-em);
   font-weight: 800;
   line-height: 1.35;
   white-space: nowrap;

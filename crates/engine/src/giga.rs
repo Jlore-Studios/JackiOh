@@ -135,6 +135,16 @@ pub fn entry_anchor_where(
         .or_else(|| first_anchor(player, row, |slot| room(slot) && takes_move(state, slot)))
 }
 
+/// R4990000: where `card` is summoned into `player`'s unit row with no lane named (R64, R688): the
+/// leftmost GIGA fit for a card that enters GIGA (R3546002), else the leftmost entry zone.
+pub fn summon_anchor(state: &GameState, player: PlayerId, card: &CardInstance) -> Option<ZoneSlot> {
+    if enters_giga(state, card) {
+        entry_anchor(state, player, Row::Units)
+    } else {
+        crate::zones::first_entry_zone(state, player, Row::Units)
+    }
+}
+
 /// R3546001: the zones beside this card in its own row: its side and row at one past either end
 /// of its lanes, those on the board. A GIGA beside the target is met once, by id.
 pub fn adjacent_slots(_state: &GameState, card: &CardInstance) -> Vec<ZoneSlot> {

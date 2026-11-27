@@ -37,17 +37,30 @@
 "ai slow" = 1
 "tools fuzz" = 1
 "tools duos, selfplay" = 1
-# `tools, wasm` ran 14m 8s at 1 (#4441, 18m 24s in #4432) and runs in 4 shards (#4434). One test of the jackioh
+# `tools, wasm` ran 14m 8s at 1 (#4441, 18m 24s in #4432) and runs in 8 shards (#4721). One test of the jackioh
 # binary, fork_screen's r4397000 cap test, ran 477 s alone (the group's other 487 tests, 490 s on four
 # threads together), and a count cannot split a test: #4441 cut that test's rollouts instead. #4634's
 # R4607000 save tests then put shards 1/4 and 4/4 past ten minutes again (13m 43s and 14m 33s on
-# bot/issue-4607, #4690): fork_screen's r4607000_resume_after_cut (810 s alone on two threads here)
-# and r4607000_a_torn_last_line_is_played_again (517 s) each replay whole deals, while their shards'
-# other tests sum to two to three minutes. #4690 daily-moved those two, each with a hand-written
-# keeper that reprints without playing a game, and left the count at 4: each shard's remaining tests
-# run in about three minutes at most here, so every shard should finish well under eight. Any count
-# other than 4 needs bot/tests/test_ci_matrix.py's pin changed.
-"tools, wasm" = 4
+# bot/issue-4607, #4690), and #4690 daily-moved those two, each with a hand-written keeper that
+# reprints without playing a game. #4721's shards 1/4 and 4/4 still ran 12m 21s and 13m 5s on `main`,
+# with no single test over the threshold: the slowest tests measured here (two threads, slower than
+# CI's four) are fork_screen's r4607000_resume_refuses_a_changed_header (90 s),
+# r4607000_a_finished_save_plays_nothing (86 s) and r4607000_a_deal_finished_before_a_batch_error
+# (68 s); every other test of the jackioh binary runs in 41 s or less, and every other binary of the
+# old shards finishes its share in 46 s altogether, so no daily-move was needed and the fix is the
+# count alone. 8 is the most a count may be (matrix.py's MAX_SHARDS; the web unit
+# job already runs at 8): each shard's tests run in about half the old three minutes at most here,
+# so every shard should finish well under eight. Any count other than 8 needs
+# bot/tests/test_ci_matrix.py's pin changed.
+# #5046 flagged `rust (test tools, wasm 4/4)` at 10m 19s. That run (d9fb4d6) predates #4739
+# (#4721's fix, the count of 8), so its copy of this file still said 4: no change was needed.
+# The three slow tests above land in shards 5, 8 and 1 of 8 (matrix.py's `shard` hash,
+# zlib.crc32(name) % total + 1); at 4 shards two of them shared shard 1 and the third sat in
+# shard 4, which is why 1/4 and 4/4 were the slow ones. The count is at its cap, so if a
+# `tools, wasm k/8` shard still passes eight minutes on a base that holds #4739, split the
+# group's tests across more binaries or daily-move the slowest, with a cheaper per-pull-request
+# test keeping each rule.
+"tools, wasm" = 8
 
 # `web (unit k/K)`: Vitest's `--shard=k/K` over the web's and the Worker's unit tests.
 # 4 shards ran one past seven minutes (web (unit 1/4), 8m 52s, #3258); 8 is the most a count may be (matrix.py's MAX_SHARDS).

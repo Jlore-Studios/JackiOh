@@ -17,15 +17,14 @@ use super::data::{
     CHINESE_ALL_TRIBES, CHINESE_CARDS, CHINESE_CREATED, CHINESE_GLOSSARY, CHINESE_KEYWORDS, CHINESE_RADIANT,
     CHINESE_TAGS, CHINESE_TYPES, ChineseRow, find,
 };
-use super::fused::{DORMANT_STARSHIP_ID, holds_dormant_starship};
+use super::fused::{DORMANT_STARSHIP_ID, FUSED_LINE, equipped_host, holds_dormant_starship};
 use super::tuning::fill_params_text;
 use super::words::Words;
 
 /// What joins a list of keywords on a Chinese face, as the table's texts join them ("嘲讽，圣盾，复生").
 pub const CHINESE_COMMA: &str = "，";
 
-/// R102, R468: what joins a fused definition's ingredients' texts (one per line) and names.
-const FUSED_LINE: &str = "\n";
+/// R102, R468: what joins a fused definition's ingredients' names (their texts, one per line: `FUSED_LINE`).
 const FUSED_NAME: &str = " + ";
 
 /// Glitch (issue #170, SPEC §7) wears corrupted words wherever a lookup answers for it (`glitch.rs`).
@@ -95,9 +94,18 @@ fn hull_name_of(def: &CardDef) -> Option<&'static str> {
     }
 }
 
+/// R5050000: the Chinese name of the card a unit holding gear was equipped into, which it is named for, as the
+/// English face is (`model.rs`); `None` for any other definition.
+fn host_name_of(def: &CardDef) -> Option<&'static str> {
+    equipped_host(def)
+        .and_then(|host| entry_of(&host.id))
+        .map(|entry| entry.name)
+}
+
 /// R1301: `def` with its name and both faces' texts in Chinese. A fused one's (R468) are its ingredients'
 /// joined as the engine joins the English (R469: one fused on its Radiant face puts that face in the base
-/// text too), but a fused Dormant Starship's name is the hull's (R3045000). Any other with no entry, and
+/// text too), but a fused Dormant Starship's name is the hull's (R3045000), and a unit holding gear's its host's
+/// (R5050000). Any other with no entry, and
 /// Glitch, comes back as given.
 pub fn chinese_def(def: &CardDef) -> CardDef {
     if is_glitch(&def.id) {
@@ -110,7 +118,7 @@ pub fn chinese_def(def: &CardDef) -> CardDef {
         out.radiant.text = own.radiant.to_string();
         return out;
     }
-    let hull = hull_name_of(def);
+    let hull = hull_name_of(def).or_else(|| host_name_of(def));
     let Some(parts) = ingredient_entries(def) else {
         if let Some(hull) = hull {
             out.name = hull.to_string();
@@ -213,7 +221,11 @@ pub fn chinese_name(def_id: &str, english: &str, def: Option<&CardDef>) -> Strin
         return own.name.to_string();
     }
     match def {
-        Some(def) if ingredient_entries(def).is_some() || hull_name_of(def).is_some() => {
+        Some(def)
+            if ingredient_entries(def).is_some()
+                || hull_name_of(def).is_some()
+                || host_name_of(def).is_some() =>
+        {
             chinese_def(def).name
         }
         _ => english.to_string(),

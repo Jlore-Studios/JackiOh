@@ -17,7 +17,7 @@
   aspect-ratio: 5 / 7;
   padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
 }
 
@@ -38,7 +38,7 @@
   transform: translate(-50%, -50%);
   font-weight: 700;
   color: var(--tavern-parchment);
-  text-shadow: 0 1px 2px #000;
+  text-shadow: 0 1px 2px var(--pal-black);
   pointer-events: none;
 }
 
@@ -80,9 +80,9 @@
   overflow-y: auto;
   padding: 18px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(52, 30, 16, 0.98), rgba(22, 13, 7, 0.99));
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-800) 98%, transparent), color-mix(in srgb, var(--pal-wood-900) 99%, transparent));
+  box-shadow: 0 24px 60px color-mix(in srgb, var(--pal-black) 60%, transparent);
   text-align: start;
 }
 
@@ -242,8 +242,8 @@
   min-height: 0;
   padding: 6px 4px;
   border: 2px solid transparent;
-  border-radius: 10px;
-  background: rgba(239, 224, 191, 0.06);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-parchment) 6%, transparent);
   box-shadow: none;
   text-shadow: none;
   font-family: inherit;
@@ -258,7 +258,7 @@
 
 .tavern.app-shell button.collection-strip__item:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"])[data-equipped="true"] {
   border-color: var(--tavern-gold);
-  background: rgba(243, 201, 105, 0.14);
+  background: color-mix(in srgb, var(--pal-brass-300) 14%, transparent);
 }
 
 .tavern.app-shell button.collection-strip__item:not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"])[data-owned="false"] {
@@ -274,7 +274,7 @@
 
 .tavern.app-shell .collection-strip__picture--full-art {
   overflow: hidden;
-  border-radius: 7% / 5%;
+  border-radius: var(--radius-card);
 }
 
 .tavern.app-shell .collection-strip__picture--full-art .cf-art {
@@ -316,8 +316,6 @@
 .tavern.app-shell .collection-tile__lock {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--tavern-text-dim);
 }
 
@@ -407,8 +405,8 @@
   gap: 3px;
   width: 128px;
   padding: 6px;
-  border-radius: 10px;
-  background: rgba(239, 224, 191, 0.06);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-parchment) 6%, transparent);
   font-size: 12px;
   font-weight: 600;
 }
@@ -421,7 +419,7 @@
   min-height: 0;
   padding: 0;
   border: 2px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
   box-shadow: none;
   cursor: var(--cursor-glove-point, pointer);
@@ -442,7 +440,7 @@
   height: 84px;
   aspect-ratio: 5 / 7;
   overflow: hidden;
-  border-radius: 7% / 5%;
+  border-radius: var(--radius-card);
 }
 
 /* A mini board: the viewer's half on the playmat, the backdrop over it, a row of pads each side.
@@ -450,7 +448,7 @@
    as a game's do (the motion gate below). It draws the same in a tile and in a `.cosmetic-look`
    outside the tavern frame (a pack's reveal, the shop's rows), at the same weight. */
 :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard {
-  --mini-line: rgb(201 149 63 / 35%);
+  --mini-line: color-mix(in srgb, var(--pal-brass-500) 35%, transparent);
   --mini-zone: rgb(255 226 178 / 10%);
   position: relative;
   isolation: isolate;
@@ -458,8 +456,8 @@
   width: 100%;
   aspect-ratio: 16 / 10;
   overflow: hidden;
-  border: 1px solid #000;
-  border-radius: 8px;
+  border: 1px solid var(--pal-black);
+  border-radius: var(--radius-sm);
   background: #1c110a;
 }
 
@@ -478,7 +476,7 @@
 
 :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-wood"]::before {
   background:
-    linear-gradient(180deg, transparent 40%, rgb(0 0 0 / 28%)),
+    linear-gradient(180deg, transparent 40%, color-mix(in srgb, var(--pal-black) 28%, transparent)),
     repeating-linear-gradient(90deg, #a47142 0 12px, #7d5328 12px 13px, #9a672f 13px 25px, #774e24 25px 26px);
 }
 
@@ -499,7 +497,7 @@
 /* R3335001: the Stinkyscape playmat is the neon grid recolored in the set's deep space: its nebula's
    blue lines over a navy that falls to black, its lane in the fleet's engine glow. */
 :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-stinkyscape"] {
-  --mini-line: color-mix(in srgb, var(--pal-violet-300) 45%, transparent);
+  --mini-line: color-mix(in srgb, #c4b5fd 45%, transparent);
   --mini-zone: color-mix(in srgb, var(--pal-blue-600) 12%, transparent);
   --grid-ink: color-mix(in srgb, var(--pal-blue-600) 40%, transparent);
   --grid-top: var(--pal-slate-900);
@@ -524,7 +522,7 @@
     linear-gradient(118deg, transparent 31%, rgb(92 88 96 / 42%) 31.4%, transparent 32.4%),
     linear-gradient(141deg, transparent 64%, rgb(84 80 90 / 36%) 64.4%, transparent 65.2%),
     radial-gradient(140% 90% at 10% 130%, transparent 60%, rgb(110 104 112 / 32%) 60.8%, transparent 62%),
-    radial-gradient(60% 80% at 20% 30%, rgb(255 255 255 / 30%), transparent 70%),
+    radial-gradient(60% 80% at 20% 30%, color-mix(in srgb, var(--pal-white) 30%, transparent), transparent 70%),
     linear-gradient(160deg, #d8d5cf, #bdb8b0 45%, #cfcbc4);
 }
 
@@ -535,7 +533,7 @@
 
 :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-chessboard"]::before {
   background:
-    linear-gradient(180deg, rgb(0 0 0 / 12%), rgb(0 0 0 / 32%)),
+    linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 12%, transparent), color-mix(in srgb, var(--pal-black) 32%, transparent)),
     conic-gradient(#cdb88f 0 25%, #3d2a1c 0 50%, #cdb88f 0 75%, #3d2a1c 0) 0 0 / 16px 16px,
     #3d2a1c;
 }
@@ -554,12 +552,12 @@
 
 :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-obsidian-slab"] {
   --mini-line: rgb(200 190 255 / 40%);
-  --mini-zone: rgb(255 255 255 / 5%);
+  --mini-zone: color-mix(in srgb, var(--pal-white) 5%, transparent);
 }
 
 :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-obsidian-slab"]::before {
   background:
-    linear-gradient(115deg, transparent 22%, rgb(255 255 255 / 11%) 30%, transparent 38%, transparent 62%, rgb(255 255 255 / 7%) 68%, transparent 74%),
+    linear-gradient(115deg, transparent 22%, color-mix(in srgb, var(--pal-white) 11%, transparent) 30%, transparent 38%, transparent 62%, color-mix(in srgb, var(--pal-white) 7%, transparent) 68%, transparent 74%),
     radial-gradient(70% 90% at 50% 0%, rgb(120 90 200 / 20%), transparent 70%),
     linear-gradient(170deg, #1b1724, #0a0910 55%, #15121c);
 }
@@ -588,7 +586,7 @@
 
 :is(.tavern.app-shell, .cosmetic-look) .collection-miniboard[data-table="table-astral"]::before {
   background:
-    radial-gradient(circle, rgb(255 255 255 / 90%) 0 0.7px, transparent 1.2px) 0 0 / 19px 15px,
+    radial-gradient(circle, color-mix(in srgb, var(--pal-white) 90%, transparent) 0 0.7px, transparent 1.2px) 0 0 / 19px 15px,
     radial-gradient(circle, rgb(200 214 255 / 70%) 0 0.5px, transparent 1px) 7px 9px / 13px 11px,
     radial-gradient(circle, rgb(255 236 250 / 85%) 0 1px, transparent 1.6px) 11px 3px / 37px 27px,
     radial-gradient(50% 80% at 25% 60%, rgb(120 60 200 / 32%), transparent 70%),
@@ -617,7 +615,7 @@
   flex: 1 1 0;
   aspect-ratio: 5 / 6;
   border: 1px solid var(--mini-line);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--mini-zone);
 }
 
@@ -785,7 +783,7 @@
   max-width: calc(100vw - 16px);
   padding: 10px 12px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-night));
   box-shadow: 0 18px 40px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
@@ -862,7 +860,7 @@
   min-height: 0;
   padding: 6px 4px;
   border: 2px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow: none;
   font-family: inherit;
   font-size: var(--type-xs);

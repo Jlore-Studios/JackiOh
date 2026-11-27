@@ -5,7 +5,7 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 
 use jackioh_engine::config::Difficulty;
-use jackioh_engine::duos::DuosReplayInput;
+use jackioh_engine::duos::{DuosReplayInput, duos_hash};
 use jackioh_engine::{Action, GameState, PlayerId, reduce};
 use jackioh_server::actor::clock::initial_clocks;
 use jackioh_server::actor::engine::hash_state;
@@ -253,5 +253,5 @@ async fn a_duos_rebuild_installs_the_test_cards_before_folding() {
         },
     );
     assert_eq!(folded.refused_at, None, "the empty log folds whole");
-    assert_eq!(actor.hash(), duos_engine::hash(&folded.state));
+    assert_eq!(actor.hash(), duos_hash(&folded.state));
 }

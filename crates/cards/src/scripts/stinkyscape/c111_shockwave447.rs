@@ -1,11 +1,12 @@
 //! Stinkyscape #111 Shockwave447 (SPEC §8.10 row 111). (4) Unit, Human, Acclaimed, Mythic, 4/7 → 8/14.
-//!   Base:    "Aura: Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both
+//!   Base:    "Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both
 //!            players' hands with random complicated cards." — keywords 3
 //!   Radiant: "… Cry: Replace both players' hands with random complicated cards. Make yours Radiant." — 3
 //!
 //! The Aura is M #65 Keymaster Keenus's (R781004): §10.4's layers read with no rng, so the keywords are
-//! drawn as it arrives on the field (played, summoned, Flickered, back through Reborn), different ones
-//! from the combat keyword pool, none it has, into one list kept on it until it leaves the field (R78).
+//! drawn as it arrives on the field (played, summoned, Flickered, back through Reborn, or made there by a
+//! Transform, R4991000), different ones from the combat keyword pool, none it has, into one list kept on
+//! it until it leaves the field (R78).
 //! The Aura gives the first `keywords` of it: a Buff of the number, a number set higher or the Radiant
 //! face draws only the rest, a lower number takes the newest off and the number back returns them
 //! (R3778000). The Aura reads them back (`conditionalKeywords`), so a Vanilla takes them.
@@ -23,22 +24,18 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-111";
 
-/// R781004: this card arrived on the field.
-fn arrived(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
-    let Some(me) = ctx.live_self() else {
-        return false;
-    };
-    matches!(event, GameEvent::Summoned { instance_id, .. } if *instance_id == me.id)
-}
+/// R781004, R4991000: what the Aura draws on as it arrives (`self_arrived_on_field`): a `summoned`, or
+/// the `transformed` of a Transform that made it on the field. The kept scripts draw on `summoned` alone.
+const ARRIVALS: &[GameEventType] = &[GameEventType::Summoned, GameEventType::Transformed];
 
 /// R3778000: `top_up` draws what the number asks beyond the list; the kept script's draw keeps any it
 /// holds (R781004).
-fn draw_on_arrival(top_up: bool) -> TriggerDef {
+fn draw_on_arrival(top_up: bool, on: &[GameEventType]) -> TriggerDef {
     TriggerDef::new(
         "shockwave447-combat-keywords",
-        &[GameEventType::Summoned],
+        on,
         move |ctx, event| {
-            if !arrived(ctx, event) {
+            if !self_arrived_on_field(ctx, event) {
                 return vec![];
             }
             let args = DrawCombatKeywordsArgs {
@@ -52,12 +49,12 @@ fn draw_on_arrival(top_up: bool) -> TriggerDef {
             }]
         },
     )
-    .with_when(|ctx, event| arrived(ctx, event))
+    .with_when(|ctx, event| self_arrived_on_field(ctx, event))
 }
 
-fn shockwave(radiant: bool, top_up: bool) -> Script {
+fn shockwave(radiant: bool, top_up: bool, on: &[GameEventType]) -> Script {
     Script {
-        triggers: vec![draw_on_arrival(top_up)],
+        triggers: vec![draw_on_arrival(top_up, on)],
         // R3778000: a Buff, a number set or the Radiant face that raises its number draws the rest.
         combat_keywords_follow: top_up.then_some("keywords"),
         conditional_keywords: Some(if top_up {
@@ -81,8 +78,17 @@ fn shockwave(radiant: bool, top_up: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: shockwave(false, true),
-        radiant: shockwave(true, true),
+        base: shockwave(false, true, ARRIVALS),
+        radiant: shockwave(true, true, ARRIVALS),
+    }
+}
+
+/// R4991000: in every version before this change's, a Shockwave447 a Transform made drew nothing;
+/// `KEPT_SCRIPTS` folds those replays under it, keyed by the change's fragment (R767000, R4779000).
+pub fn script_before_transform_draw() -> CardScripts {
+    CardScripts {
+        base: shockwave(false, true, &[GameEventType::Summoned]),
+        radiant: shockwave(true, true, &[GameEventType::Summoned]),
     }
 }
 
@@ -90,8 +96,8 @@ pub fn script() -> CardScripts {
 /// number did (R781004); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_0c() -> CardScripts {
     CardScripts {
-        base: shockwave(false, false),
-        radiant: shockwave(true, false),
+        base: shockwave(false, false, &[GameEventType::Summoned]),
+        radiant: shockwave(true, false, &[GameEventType::Summoned]),
     }
 }
 
@@ -102,7 +108,7 @@ mod tests {
     use jackioh_engine::catalog::is_complicated;
     use jackioh_engine::testkit::*;
 
-    use crate::{filler, scenario};
+    use crate::{filler, ids, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -155,6 +161,71 @@ mod tests {
         s.end_turn();
         let id = me(&s);
         (s, id)
+    }
+
+    /// (1) Spell: Transform a permanent into one that costs (1) more (S+ #104 Tireless Cultivation).
+    const CULTIVATION: &str = "stinkyscapeplus-104";
+    /// (3) 4/6 Unit with no keywords, which a Transform may touch: one costing (1) more costs (4), as
+    /// Shockwave447 does.
+    const RENO: &str = "core-053";
+
+    /// Tireless Cultivation cast on p1's Reno on `seed`: the id of the Unit standing in its zone after, and
+    /// both hands' ids before the cast, Tireless Cultivation's left out.
+    fn cultivated(seed: &str) -> (Scenario, String, Vec<String>, Vec<String>) {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [CULTIVATION, FILLER], "field": [RENO], "library": filler(6), "mana": 10 },
+            "p2": { "hand": [FILLER, FILLER], "library": filler(6) },
+        }));
+        s.state_mut().players.p1.auto_end_turn = Some(false);
+        let mine = ids(&s.hand(P1)[1..]);
+        let theirs = ids(&s.hand(P2));
+        let old = me(&s);
+        s.play(CULTIVATION, pick::targets(pick::id(&old)));
+        let id = me(&s);
+        (s, id, mine, theirs)
+    }
+
+    /// The first seed whose Tireless Cultivation turns the Reno into Shockwave447.
+    fn shockwave_seed() -> String {
+        seed_where("shockwave-4991", |seed| {
+            let (s, id, _, _) = cultivated(seed);
+            s.card(id.as_str()).def_id == ID
+        })
+    }
+
+    /// R4991000: a Transform's new card on the field arrives (R4816000), so the Aura draws its 3 (R781004);
+    /// it is no summon, so the Cry replaces neither hand (R1).
+    #[test]
+    fn r4991000_a_transform_that_makes_it_on_the_field_draws_3_and_runs_no_cry() {
+        let seed = shockwave_seed();
+        let (s, id, mine, theirs) = cultivated(&seed);
+
+        let three = drawn(&s, &id);
+        assert_eq!(three.len(), 3, "{three:?}");
+        let mut unique = three.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), 3, "different ones: {three:?}");
+        assert_eq!(aura(&s, &id), three, "the Aura gives them");
+        assert_eq!(ids(&s.hand(P1)), mine, "no Cry replaced your hand");
+        assert_eq!(ids(&s.hand(P2)), theirs, "nor theirs");
+
+        let (again, again_id, _, _) = cultivated(&seed);
+        assert_eq!(drawn(&again, &again_id), three, "the same seed draws the same");
+    }
+
+    #[test]
+    fn r767000_the_kept_script_draws_nothing_for_a_shockwave447_a_transform_makes() {
+        let seed = shockwave_seed();
+        crate::under_kept(ID, script_before_transform_draw(), || {
+            let (s, id, _, _) = cultivated(&seed);
+            assert_eq!(s.card(id.as_str()).def_id, ID);
+            assert!(drawn(&s, &id).is_empty(), "before this change a Transform's Shockwave447 drew nothing");
+
+            let (s, _, _) = played(false, "shockwave-kept-4991", 2);
+            assert_eq!(drawn(&s, &me(&s)).len(), 3, "and played it drew its 3");
+        });
     }
 
     #[test]

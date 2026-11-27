@@ -7,7 +7,8 @@
 //! 4. a single candidate is played with no search, listed on a throwaway determinization (the seat's own
 //!    legal actions never depend on the hidden cards, so `options.rng` is untouched).
 //! 5. the exact lethal solver, verified on every determinization and trimmed (R1965000), unless a style
-//!    passes over it (R1452).
+//!    passes over it (R1452). On a state whose budget was scaled down, its walk runs on to the caller's own
+//!    allowance while it stands at a position that already reads as lethal (R4788000).
 //! 6. the beam on determinization 0, its best lines scored after the opponent's reply and its best first
 //!    actions re-scored on the other determinizations; the best mean wins, a finalist that won on
 //!    determinization 0 alone taking its mean on the others (R4608000). A host's wrap-up stops the beam and
@@ -30,59 +31,34 @@ use jackioh_engine::{
 
 use crate::candidates::candidate_actions;
 use crate::config::{
-    AI_DECISION_PRICE_NODES, AI_EVAL, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY,
-    AI_KY_TEST_ACCURACY, AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
-    AI_WON_SCORE_SHARE, AI_WRAP_UP_SHARE,
+    AI_EVAL, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY, AI_KY_TEST_ACCURACY,
+    AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT, AI_WON_SCORE_SHARE,
+    AI_WRAP_UP_SHARE,
 };
 use crate::determinize::{DetGround, DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{
-    Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, evolve_prices,
-    prompt_activation_prices, turn_hook_prices,
+    NextSwing, Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, evaluate_priced,
+    evolve_prices, prompt_activation_prices, turn_hook_prices,
 };
-use crate::lethal::{find_lethal, trim_lethal};
+use crate::lethal::{find_lethal_reaching, trim_lethal};
 use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
 use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
-use crate::search::{Line, ReplayFill, beam_search, replay_line};
+use crate::search::{Line, ReplayFill, beam_search, open_in_main, replay_line};
 use crate::simulate::{
-    CountingNodeCounter, LineStatus, create_node_counter, create_sub_counter, create_wrap_up_counter,
-    note_sim_panic,
+    CountingNodeCounter, LineStatus, create_beam_counter, create_node_counter, create_sub_counter,
+    line_status, note_sim_panic, simulate,
 };
 use crate::types::{
     AiOptions, AiStyle, Decision, DecisionReason, NodeCounter, SearchBudget, SearchStats, StoppedBy,
 };
-
-fn quiet_stats() -> SearchStats {
-    SearchStats {
-        nodes: 0,
-        determinizations: 0,
-        lines: 0,
-        sim_errors: 0,
-        sim_panics: 0,
-        stopped_by: StoppedBy::Exhausted,
-        replied: 0,
-        worlds_scored: 0,
-        replays_cut: 0,
-        score: 0.0,
-    }
-}
 
 /// R3498000: the milliseconds into a host's `limit_ms` at which it fires the wrap-up
 /// (`AiOptions.wrap_up`), `AI_WRAP_UP_SHARE` of it, rounded; 0 for a limit of 0 or below. The one place
 /// the share is applied, so that every host wraps up alike.
 pub fn wrap_up_after_ms(limit_ms: i64) -> i64 {
     (limit_ms.max(0) as f64 * AI_WRAP_UP_SHARE).round() as i64
-}
-
-fn immediate(action: ActionBody, reason: DecisionReason) -> Decision {
-    Decision {
-        line: vec![action.clone()],
-        action,
-        reason,
-        stats: quiet_stats(),
-        first_sim_panic: None,
-    }
 }
 
 /// Step 7: endTurn when it is a candidate, else the first candidate, else endTurn regardless.
@@ -93,6 +69,31 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
         .or_else(|| candidates.first())
         .cloned()
         .unwrap_or(ActionBody::EndTurn)
+}
+
+/// R4595001: the candidate whose one `reduce` on `det` leaves `seat` the best `evaluate_priced`
+/// position, its prompts left open, the first on a tie; `None` when every candidate is refused.
+fn best_single_step(
+    det: &GameState,
+    seat: PlayerId,
+    candidates: &[ActionBody],
+    prices: &Prices,
+) -> Option<(ActionBody, f64)> {
+    let mut best: Option<(ActionBody, f64)> = None;
+    for (index, action) in candidates.iter().enumerate() {
+        let stepped = catch_unwind(AssertUnwindSafe(|| {
+            reduce_unpiloted(det, &Action::new(action.clone(), seat, format!("single:{index}")))
+        }));
+        let Ok(stepped) = stepped else { continue };
+        if stepped.error.is_some() {
+            continue;
+        }
+        let score = evaluate_priced(&stepped.state, seat, NextSwing::Enemy, &AI_EVAL, prices);
+        if best.as_ref().is_none_or(|(_, top)| score > *top) {
+            best = Some((action.clone(), score));
+        }
+    }
+    best
 }
 
 /// Step 3, R1184002: the answer to a question of a sequence open for `seat` (Meditative+ #20 KY's
@@ -279,6 +280,7 @@ fn fat_width(probe: &GameState, candidates: usize) -> usize {
 /// lethal solver keeps its share of it, floored at fat_min_lethal. R4802000: neither floor raises a
 /// figure above the caller's own, so a solver the caller gave nothing keeps nothing, and the share's
 /// product saturates, so a field at any value overflows nothing. The search's shape is unchanged.
+/// R4788000: `plan` lets the solver's walk reach past that share while it is closing on a lethal.
 fn scaled_budget(budget: SearchBudget, fat: usize) -> SearchBudget {
     let reference = AI_SEARCH.fat_reference.max(1) as usize;
     if fat <= reference {
@@ -300,6 +302,25 @@ fn scaled_budget(budget: SearchBudget, fat: usize) -> SearchBudget {
         lethal_nodes,
         ..budget
     }
+}
+
+/// R4788000: the lethal solver's reach on a decision `scaled_budget` gave `scaled` of the caller's `budget`,
+/// and the searched section with room for it. On a state scaled down, its walk may go on to the allowance
+/// the caller gave, at most its `nodes` (R4802000), while it stands at a position that already reads as
+/// lethal (`find_lethal_reaching`); a state that is not fat keeps that allowance, so it has no reach, and
+/// a caller that gives the solver nothing gives it no reach either. The section is the scaled `nodes` and
+/// what the reach adds, never past the caller's `nodes`.
+fn lethal_reach(budget: SearchBudget, scaled: SearchBudget) -> (usize, usize) {
+    let reach = if AI_SEARCH.lethal_reach && scaled.lethal_nodes > 0 {
+        budget.lethal_nodes.min(budget.nodes).max(scaled.lethal_nodes)
+    } else {
+        scaled.lethal_nodes
+    };
+    let section = scaled
+        .nodes
+        .saturating_add(reach - scaled.lethal_nodes)
+        .min(budget.nodes);
+    (reach, section)
 }
 
 /// R1452: whether this decision passes over the lethal line the solver found. A style that never
@@ -358,18 +379,15 @@ pub fn pick_finalist(means: &[f64], temperature: f64, rng: &mut Rng) -> usize {
     best_index
 }
 
-/// R4608000: each finalist's mean from its row of scores, determinization 0's first. With `confirm`, a row
-/// whose first score is a won game (above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) and whose other scores, at
-/// least one, are none won takes the mean of those others; every other row the mean of all its scores.
-pub fn finalist_means(rows: &[Vec<f64>], confirm: bool) -> Vec<f64> {
+/// R4608000: each finalist's mean from its row of scores, determinization 0's first. A row whose
+/// first score is a won game (above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) and whose other scores, at least
+/// one, are none won takes the mean of those others; every other row the mean of all its scores.
+pub fn finalist_means(rows: &[Vec<f64>]) -> Vec<f64> {
     let won = AI_EVAL.win * AI_WON_SCORE_SHARE;
     rows.iter()
         .map(|row| match row.split_first() {
             Some((first, others))
-                if confirm
-                    && *first > won
-                    && !others.is_empty()
-                    && others.iter().all(|score| *score <= won) =>
+                if *first > won && !others.is_empty() && others.iter().all(|score| *score <= won) =>
             {
                 mean_of(others)
             }
@@ -386,20 +404,41 @@ fn mean_of(scores: &[f64]) -> f64 {
     }
 }
 
-/// What the guarded body decided, before the stats are read off the counter.
-enum Plan {
-    /// Answered at once, with quiet stats.
-    Immediate(ActionBody, DecisionReason),
-    /// Searched: the stats are the counter's, with this score and, when given, this stop reason.
-    Searched {
-        action: ActionBody,
-        reason: DecisionReason,
-        line: Vec<ActionBody>,
-        score: f64,
-        stopped_by: Option<StoppedBy>,
-        /// The finalists not chosen, best mean first (`runners_up_of`); empty off step 6's pick.
-        runners_up: Vec<RunnerUp>,
-    },
+/// What the guarded body decided, before the stats are read off the counter: they are the counter's,
+/// with this score and, when given, this stop reason.
+struct Plan {
+    action: ActionBody,
+    reason: DecisionReason,
+    line: Vec<ActionBody>,
+    score: f64,
+    stopped_by: Option<StoppedBy>,
+    /// The finalists not chosen, best mean first (`runners_up_of`); empty off step 6's pick.
+    runners_up: Vec<RunnerUp>,
+}
+
+impl Plan {
+    /// `action` alone for `reason`, scored 0, with this stop reason when given.
+    fn single(action: ActionBody, reason: DecisionReason, stopped_by: Option<StoppedBy>) -> Plan {
+        Plan {
+            line: vec![action.clone()],
+            action,
+            reason,
+            score: 0.0,
+            stopped_by,
+            runners_up: Vec::new(),
+        }
+    }
+
+    /// Answered at once, before a node is taken or a world made, so the counter's stats are all zero;
+    /// it reads as a search that ran out of moves, whatever the host's clock says.
+    fn immediate(action: ActionBody, reason: DecisionReason) -> Plan {
+        Plan::single(action, reason, Some(StoppedBy::Exhausted))
+    }
+
+    /// Step 7's plan: the fallback action alone.
+    fn fallback(candidates: &[ActionBody], stopped_by: Option<StoppedBy>) -> Plan {
+        Plan::single(fallback_action(candidates), DecisionReason::Fallback, stopped_by)
+    }
 }
 
 /// A finalist the decision did not choose: its line and its mean score. `submitted` plays the first
@@ -427,6 +466,7 @@ fn runners_up_of(finalists: &[Scored<'_>], means: &[f64], chosen_index: usize) -
 }
 
 /// What the guarded body leaves behind for the fallback when it panics.
+#[derive(Default)]
 struct Scratch {
     candidates: Vec<ActionBody>,
     determinizations: usize,
@@ -457,8 +497,7 @@ pub fn probe_world(public: &GameState, seat: PlayerId, ground: &DetGround) -> Ga
 /// awakening and Evolve card's evolution the seat can read, priced once on the probe world (`probe_world` of `public`) for the
 /// whole decision from `counter`'s nodes; all are priced before any is passed, so no probe reads a price.
 /// R4197000: and, at the seat's own prompt whose card can take a power, what each answer's power gives
-/// (`prompt_activation_prices`). R4070000: `decide` and `decision_prices_at` both take a decision's prices
-/// from here.
+/// (`prompt_activation_prices`).
 pub fn decision_prices(probe: &GameState, seat: PlayerId, counter: &dyn NodeCounter) -> Prices {
     let deaths = death_prices(probe, seat, counter);
     let turn_hooks = turn_hook_prices(probe, seat, counter);
@@ -480,14 +519,18 @@ pub fn decision_prices(probe: &GameState, seat: PlayerId, counter: &dyn NodeCoun
     }
 }
 
-/// R4070000: the prices a decision of `seat`'s at `state` would pass its search, for a caller outside a
-/// decision: `state` redacted for the seat (R185), so a true state is fine,
-/// its `probe_world`, and `decision_prices` on a counter of `AI_DECISION_PRICE_NODES`, every probe's cap.
-pub fn decision_prices_at(state: &GameState, seat: PlayerId) -> Prices {
-    let public = redact(state, seat);
-    let ground = det_ground(&public, seat);
-    let probe = probe_world(&public, seat, &ground);
-    decision_prices(&probe, seat, &create_node_counter(AI_DECISION_PRICE_NODES, None))
+/// R4797000: a sampled world as `decide` plays it: the opponent's automatic turn end is off (R82, R345),
+/// as the concession check's worlds have it (`unstoppable.rs`), so the seat's End turn, or a play that ends
+/// its turn, stops where the opponent's turn begins, the seat's turn log still holding the crystals it left
+/// unspent (`passed_score`, `reply_score`), and the reply ends that turn itself. Without it, an opponent
+/// with nothing to do ended its turn inside the seat's, whose next turn start rebuilt the log, and a line
+/// that floated every crystal scored as one that spent them. With `AI_SEARCH.hold_opponent_turn` off, the
+/// world as sampled.
+pub fn search_world(mut world: GameState, seat: PlayerId) -> GameState {
+    if AI_SEARCH.hold_opponent_turn {
+        world.players[seat.opponent()].auto_end_turn = Some(false);
+    }
+    world
 }
 
 /// Steps 1–7 on the redacted copy; every number `stats` reads beside the counter goes in `scratch`.
@@ -510,7 +553,7 @@ fn plan(
 
     // 2. R188.
     if unanswered_draw_offer(&public, seat) {
-        return Plan::Immediate(
+        return Plan::immediate(
             ActionBody::AnswerDraw { accept: false },
             DecisionReason::DrawOffer,
         );
@@ -519,13 +562,13 @@ fn plan(
     // 3. The mulligan: its own, at once, whether or not the other seat has answered (R265).
     if public.pending.is_none() && mulligan_prompt_for(&public, seat).is_some() {
         let keep = mulligan_keep_curved(&public, seat, AI_MULLIGAN.keep_max_cost, &AI_MULLIGAN_CURVE);
-        return Plan::Immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
+        return Plan::immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
     }
 
     // 3, R1184002: a question of a sequence, or C+ #42 KY's Test's Easy problem (#2929), worked out from
     // its statement, at once (R1563005: right most of the time).
     if let Some(answer) = worked_answer_action(&public, seat, rng) {
-        return Plan::Immediate(answer, DecisionReason::Prompt);
+        return Plan::immediate(answer, DecisionReason::Prompt);
     }
 
     // 4. Forced: a throwaway world lists the candidates without touching options.rng. Every
@@ -538,16 +581,21 @@ fn plan(
     if scratch.candidates.len() == 1
         && let Some(only) = scratch.candidates.first()
     {
-        return Plan::Immediate(only.clone(), DecisionReason::Forced);
+        return Plan::immediate(only.clone(), DecisionReason::Forced);
     }
 
     // A decision's nodes cost more the wider the state is, so the searched part of the budget shrinks
     // where the state is fat (AI_SEARCH.fat_*, R186). The whole searched section (the lethal solver's
     // slice, the beam's, the replies') is drawn from one sub-counter of that size, so the replies
     // cannot spend what the beam was denied.
-    let budget = scaled_budget(budget, fat_width(&probe, scratch.candidates.len()));
-    let stage = create_sub_counter(counter, budget.nodes);
-    let counter: &dyn NodeCounter = &stage;
+    let scaled = scaled_budget(budget, fat_width(&probe, scratch.candidates.len()));
+    // R4788000: the lethal solver's reach (`lethal_reach`). `wide` is the searched section with room for
+    // it; everything else draws from `narrow`, the scaled budget, or from `stage` below.
+    let (reach, section) = lethal_reach(budget, scaled);
+    let wide = create_sub_counter(counter, section);
+    let narrow = create_sub_counter(&wide, scaled.nodes);
+    let budget = scaled;
+    let counter: &dyn NodeCounter = &narrow;
 
     // R2424000, R2477000, R2564000, R2688000, R3064000, R4648000: the decision's prices (`decision_prices`,
     // each Evolve card's evolution among them), from the searched section's nodes, passed to every step
@@ -562,12 +610,9 @@ fn plan(
     let k = budget.determinizations.max(1);
     let mut dets: Vec<GameState> = Vec::new();
     for _ in 0..k {
-        dets.push(determinize_on(
-            &public,
+        dets.push(search_world(
+            determinize_on(&public, seat, rng, DeterminizeOptions::default(), &ground),
             seat,
-            rng,
-            DeterminizeOptions::default(),
-            &ground,
         ));
     }
     scratch.determinizations = k;
@@ -577,7 +622,19 @@ fn plan(
     // actions it needs (R1965000), else a lethal behind a free step that changes nothing would play that
     // step at every decision; a trim the counter stops short of a first action leaves no lethal to play.
     let mut passed_over: Option<ActionBody> = None;
-    if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes, &prices)
+    let before_lethal = counter.used();
+    let found_lethal = find_lethal_reaching(&dets, seat, counter, budget.lethal_nodes, &wide, reach, &prices);
+    // R4788000: what the walk spent past its scaled allowance is added to the searched section, so the beam
+    // and the replies keep the nodes they had: with nothing spent past it, `stage` is `narrow`'s rest, node
+    // for node.
+    let extended = (counter.used() - before_lethal).saturating_sub(budget.lethal_nodes);
+    let budget = SearchBudget {
+        nodes: budget.nodes.saturating_add(extended),
+        ..budget
+    };
+    let stage = create_sub_counter(&wide, budget.nodes.saturating_sub(wide.used()));
+    let counter: &dyn NodeCounter = &stage;
+    if let Some(lethal) = found_lethal
         && let Some(first_lethal) = lethal.first().cloned()
     {
         if passes_over_lethal(style, rng) {
@@ -585,7 +642,7 @@ fn plan(
         } else if let Some(trimmed) = trim_lethal(&dets, seat, lethal, counter, &prices)
             && let Some(first) = trimmed.first().cloned()
         {
-            return Plan::Searched {
+            return Plan {
                 action: first,
                 reason: DecisionReason::Lethal,
                 line: trimmed,
@@ -599,15 +656,7 @@ fn plan(
     // 6. The beam on determinization 0, keeping enough nodes back to score the finalists after the
     // opponent's reply on every determinization.
     let Some(det0) = dets.first() else {
-        let action = fallback_action(&scratch.candidates);
-        return Plan::Searched {
-            line: vec![action.clone()],
-            action,
-            reason: DecisionReason::Fallback,
-            score: 0.0,
-            stopped_by: None,
-            runners_up: Vec::new(),
-        };
+        return Plan::fallback(&scratch.candidates, None);
     };
     let root_turn = det0.turn;
     let remaining = budget.nodes.saturating_sub(counter.used());
@@ -631,28 +680,34 @@ fn plan(
     // reply and the other determinizations below still run until the hard stop. R4801000: it is first
     // polled once the beam has tried every move at its root (`end_root`), however many nodes those cost,
     // so a wrap-up that fired before the beam still leaves it a line, the root's End turn among them.
+    // R4604014: and so is the slice's own limit, so a root move dearer than the slice still closes one.
+    let before_beam = counter.used();
     let (found, beam_stopped_by) = {
-        let beam_counter = create_wrap_up_counter(counter, remaining - reserve, wrap_up);
+        let beam_counter = create_beam_counter(counter, remaining - reserve, wrap_up);
         let found = beam_search(det0, seat, &beam_counter, budget, &prices);
         (found, beam_counter.stopped_by())
     };
     scratch.lines = found.len();
 
     if found.is_empty() {
-        let action = fallback_action(&scratch.candidates);
         let stopped_by = if counter.stopped_by() != StoppedBy::Exhausted {
             counter.stopped_by()
         } else {
             beam_stopped_by
         };
-        return Plan::Searched {
-            line: vec![action.clone()],
-            action,
-            reason: DecisionReason::Fallback,
-            score: 0.0,
-            stopped_by: Some(stopped_by),
-            runners_up: Vec::new(),
-        };
+        // R4595001: the beam spent nodes and no candidate's step fit them (a chain of expensive casts
+        // each answer starts): each is stepped once, unanswered and uncharged, and the one that leaves the
+        // best position is taken, a search of one ply rather than a fallback. A beam given no node at all
+        // still falls back (B15).
+        if counter.used() > before_beam
+            && let Some((action, score)) = best_single_step(det0, seat, &scratch.candidates, &prices)
+        {
+            return Plan {
+                score,
+                ..Plan::single(action, DecisionReason::Search, Some(stopped_by))
+            };
+        }
+        return Plan::fallback(&scratch.candidates, Some(stopped_by));
     }
 
     let found = match &passed_over {
@@ -672,11 +727,37 @@ fn plan(
         seat,
     );
     let hidden0 = hidden_card_ids(det0, seat);
+    // R3498000: only a passed or yielded line is replied to; `reply_score` scores any other statically.
+    let hands_over = |end: &GameState| {
+        matches!(
+            line_status(end, seat, root_turn),
+            LineStatus::Passed | LineStatus::Yielded
+        )
+    };
+    // R4791000: where the beam's slice refused a node (its budget or the host's wrap-up), a shortlisted line
+    // it left open in the seat's main phase ends its turn here, on the decision's own nodes, and is
+    // replied to as every other line is; a node refused there ends the replies as a refused reply does.
+    let close_cut = AI_SEARCH.close_cut_lines && beam_stopped_by != StoppedBy::Exhausted;
     let mut replied: Vec<Scored<'_>> = Vec::new();
+    let mut replied_count = 0;
     for &line in &shortlist {
-        let Some(score) = reply_score(&line.end, seat, root_turn, counter, &hidden0, &prices) else {
+        let closed;
+        let end = if close_cut && open_in_main(&line.end, seat, root_turn) {
+            match simulate(&line.end, seat, &ActionBody::EndTurn, counter, &prices) {
+                None => break,
+                Some(Ok(next)) => {
+                    closed = next;
+                    &closed
+                }
+                Some(Err(_)) => &line.end,
+            }
+        } else {
+            &line.end
+        };
+        let Some(score) = reply_score(end, seat, root_turn, counter, &hidden0, &prices) else {
             break;
         };
+        replied_count += usize::from(hands_over(end));
         replied.push(Scored { line, score });
     }
     // R3696000: the payoff line last, once every shortlisted line is replied to: skipped once the host's
@@ -698,16 +779,15 @@ fn plan(
                 &hidden0,
                 &prices,
             ) {
-                Some(score) => replied.push(Scored { line, score }),
+                Some(score) => {
+                    replied_count += usize::from(hands_over(&line.end));
+                    replied.push(Scored { line, score });
+                }
                 None => payoff_stop = Some(StoppedBy::Budget),
             }
         }
     }
-    // R3498000: only a passed or yielded line is replied to; `reply_score` scores any other statically.
-    scratch.replied = replied
-        .iter()
-        .filter(|entry| matches!(entry.line.status, LineStatus::Passed | LineStatus::Yielded))
-        .count();
+    scratch.replied = replied_count;
     let unreplied: Vec<Scored<'_>> = found
         .iter()
         .map(|line| Scored {
@@ -756,7 +836,7 @@ fn plan(
     scratch.worlds_scored = usize::try_from(scored_on).unwrap_or(0);
 
     // R4608000: a finalist that won on determinization 0 alone is ranked by its mean on the others.
-    let means = finalist_means(&rows, AI_SEARCH.confirm_lone_win);
+    let means = finalist_means(&rows);
     let chosen_index = pick_finalist(&means, style.temperature, rng);
     let chosen_mean = means.get(chosen_index).copied().unwrap_or(0.0);
 
@@ -764,15 +844,7 @@ fn plan(
     let Some((chosen, action)) =
         chosen.and_then(|line| line.actions.first().map(|action| (line, action.clone())))
     else {
-        let fallback = fallback_action(&scratch.candidates);
-        return Plan::Searched {
-            line: vec![fallback.clone()],
-            action: fallback,
-            reason: DecisionReason::Fallback,
-            score: 0.0,
-            stopped_by: None,
-            runners_up: Vec::new(),
-        };
+        return Plan::fallback(&scratch.candidates, None);
     };
     let stopped_by = if counter.stopped_by() != StoppedBy::Exhausted {
         counter.stopped_by()
@@ -788,7 +860,7 @@ fn plan(
     } else {
         DecisionReason::Search
     };
-    Plan::Searched {
+    Plan {
         action,
         reason,
         line: chosen.actions.clone(),
@@ -925,14 +997,7 @@ fn decide_in(
 
     let budget = options.budget;
     let counter = create_node_counter(budget.nodes, options.should_stop);
-    let mut scratch = Scratch {
-        candidates: Vec::new(),
-        determinizations: 0,
-        lines: 0,
-        replied: 0,
-        worlds_scored: 0,
-        replays_cut: 0,
-    };
+    let mut scratch = Scratch::default();
 
     let outcome = catch_unwind(AssertUnwindSafe(|| {
         plan(state, seat, style, options, &counter, &mut scratch, pool_loss)
@@ -951,46 +1016,20 @@ fn decide_in(
         score,
     };
 
-    match outcome {
-        Ok(Plan::Immediate(action, reason)) => Some(submitted(state, seat, immediate(action, reason), &[])),
-        Ok(Plan::Searched {
-            action,
-            reason,
-            line,
-            score,
-            stopped_by,
-            runners_up,
-        }) => Some(submitted(
-            state,
-            seat,
-            Decision {
-                action,
-                reason,
-                line,
-                stats: stats(&counter, score, stopped_by),
-                first_sim_panic: counter.first_sim_panic(),
-            },
-            &runners_up,
-        )),
-        Err(payload) => {
-            // The plan's own panic: a failed simulation like the others (once in `sim_errors`, #1429),
-            // and a panic.
-            note_sim_panic(&counter, payload.as_ref());
-            let action = fallback_action(&scratch.candidates);
-            Some(submitted(
-                state,
-                seat,
-                Decision {
-                    line: vec![action.clone()],
-                    action,
-                    reason: DecisionReason::Fallback,
-                    stats: stats(&counter, 0.0, None),
-                    first_sim_panic: counter.first_sim_panic(),
-                },
-                &[],
-            ))
-        }
-    }
+    // The plan's own panic is a failed simulation like the others (once in `sim_errors`, #1429), and a
+    // panic: the fallback, with the stats the counter holds.
+    let planned = outcome.unwrap_or_else(|payload| {
+        note_sim_panic(&counter, payload.as_ref());
+        Plan::fallback(&scratch.candidates, None)
+    });
+    let decision = Decision {
+        action: planned.action,
+        reason: planned.reason,
+        line: planned.line,
+        stats: stats(&counter, planned.score, planned.stopped_by),
+        first_sim_panic: counter.first_sim_panic(),
+    };
+    Some(submitted(state, seat, decision, &planned.runners_up))
 }
 
 #[cfg(test)]
@@ -1087,6 +1126,51 @@ mod tests {
         assert_eq!(scaled_budget(huge, 1), huge);
     }
 
+    #[test]
+    fn r4788000_a_reach_never_passes_the_callers_own_figures() {
+        let reference = AI_SEARCH.fat_reference as usize;
+        // The practice budget at twice the reference: 300 nodes, 75 of them the solver's, which reaches
+        // to the caller's 300 in a section of 525.
+        let fat = 2 * reference;
+        assert_eq!(lethal_reach(AI_BUDGET, scaled_budget(AI_BUDGET, fat)), (300, 525));
+        let none = SearchBudget {
+            lethal_nodes: 0,
+            ..AI_BUDGET
+        };
+        let past = SearchBudget {
+            nodes: 200,
+            lethal_nodes: 400,
+            ..AI_BUDGET
+        };
+        let huge = SearchBudget {
+            nodes: usize::MAX,
+            lethal_nodes: usize::MAX,
+            ..AI_BUDGET
+        };
+        for budget in [AI_BUDGET, SMALL_BUDGET, none, past, huge] {
+            for width in [reference, fat, 1000] {
+                let scaled = scaled_budget(budget, width);
+                let (reach, section) = lethal_reach(budget, scaled);
+                assert!(reach >= scaled.lethal_nodes, "{budget:?} at {width}");
+                assert!(
+                    reach <= budget.lethal_nodes.min(budget.nodes),
+                    "{budget:?} at {width}"
+                );
+                assert!(
+                    section >= scaled.nodes && section <= budget.nodes,
+                    "{budget:?} at {width}"
+                );
+                if width <= reference || budget.lethal_nodes == 0 {
+                    assert_eq!(
+                        (reach, section),
+                        (scaled.lethal_nodes, scaled.nodes),
+                        "{budget:?} at {width}"
+                    );
+                }
+            }
+        }
+    }
+
     /// The AI (p1) at 3 mana with a (3) and a (1) Unit in hand. With `lobbyist`, C #68 stands on the
     /// other side's field and the (3) costs 4: the hidden tax R403's face-down aura was, planted where
     /// the search cannot see it by deciding on the board without it. It is the literal's last card, so
@@ -1103,23 +1187,9 @@ mod tests {
     /// What `decide` would submit, its runners-up beside it, as planned on `state`.
     fn planned(state: &GameState) -> (Decision, Vec<RunnerUp>) {
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let mut scratch = Scratch {
-            candidates: Vec::new(),
-            determinizations: 0,
-            lines: 0,
-            replied: 0,
-            worlds_scored: 0,
-            replays_cut: 0,
-        };
+        let mut scratch = Scratch::default();
         let mut options = AiOptions::with_budget(Rng::new("decide-1575", 0), AI_BUDGET);
-        let Plan::Searched {
-            action,
-            reason,
-            line,
-            score,
-            runners_up,
-            ..
-        } = plan(
+        let planned = plan(
             state,
             AI,
             &AI_STYLE_EXACT,
@@ -1127,21 +1197,18 @@ mod tests {
             &counter,
             &mut scratch,
             None,
-        )
-        else {
-            panic!("the search decides");
-        };
+        );
         let decision = Decision {
-            action,
-            reason,
-            line,
+            action: planned.action,
+            reason: planned.reason,
+            line: planned.line,
             stats: SearchStats {
-                score,
-                ..quiet_stats()
+                score: planned.score,
+                ..SearchStats::default()
             },
             first_sim_panic: None,
         };
-        (decision, runners_up)
+        (decision, planned.runners_up)
     }
 
     fn plays(action: Option<&ActionBody>, card: &CardInstance) -> bool {
@@ -1424,5 +1491,39 @@ mod tests {
             plain
         );
         assert!(ample.used() > 0);
+    }
+
+    #[test]
+    fn r4595001_an_unsearched_decision_takes_the_candidate_whose_one_step_evaluates_best() {
+        let s = board(false);
+        let state = s.state();
+        let candidates = candidate_actions(state, AI, Prices::NONE);
+        let menace = s.card(MENACE).id.clone();
+        let (action, score) =
+            best_single_step(state, AI, &candidates, Prices::NONE).expect("a step is accepted");
+        assert!(
+            matches!(&action, ActionBody::Play { instance_id, .. } if *instance_id == menace),
+            "the 9/9 Taunt beats the 4/4 and passing: {action:?}"
+        );
+        // Its score is the best of every candidate's one step.
+        let best = candidates
+            .iter()
+            .filter_map(|candidate| {
+                let stepped =
+                    reduce_unpiloted(state, &Action::new(candidate.clone(), AI, "check".to_string()));
+                stepped
+                    .error
+                    .is_none()
+                    .then(|| evaluate_priced(&stepped.state, AI, NextSwing::Enemy, &AI_EVAL, Prices::NONE))
+            })
+            .fold(f64::MIN, f64::max);
+        assert_eq!(score, best);
+        // Every candidate refused: nothing to take, so the decision falls back.
+        let mut gone = action.clone();
+        if let ActionBody::Play { instance_id, .. } = &mut gone {
+            *instance_id = "no-such-card".to_string();
+        }
+        let refused = vec![gone];
+        assert_eq!(best_single_step(state, AI, &refused, Prices::NONE), None);
     }
 }

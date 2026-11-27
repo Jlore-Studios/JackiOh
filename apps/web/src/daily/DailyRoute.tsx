@@ -46,6 +46,7 @@ import { NewDailyDialog } from "./NewDailyDialog.tsx";
 import { dailySections, isUrgent, perMoveRowText, yourMoveTitle, type DailySections } from "./order.ts";
 import { NotificationSettings } from "./NotificationSettings.tsx";
 import { dailyTestid } from "./testids.ts";
+import { useAct } from "./useAct.ts";
 
 import "../auth/tavern.css";
 import "../routes/lobby.css";
@@ -219,8 +220,7 @@ export default function DailyRoute(): ReactElement {
   const now = useNow();
   const [creating, setCreating] = useState(false);
   const [accepting, setAccepting] = useState<DailyInvite | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { busy, error, act } = useAct(reload);
   const opener = useRef<HTMLButtonElement>(null);
 
   const waitingSeen = useRef(dailyWaiting);
@@ -235,23 +235,6 @@ export default function DailyRoute(): ReactElement {
   useEffect(() => {
     document.title = waiting > 0 ? `${yourMoveTitle(waiting)} · ${SITE_NAME}` : documentTitleFor(paths.daily);
   }, [waiting, locale]);
-
-  const act = (work: () => Promise<void>): void => {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    attempt(work)
-      .then(
-        () => undefined,
-        (cause: unknown) => {
-          setError(messageOf(cause));
-        },
-      )
-      .finally(() => {
-        setBusy(false);
-        reload();
-      });
-  };
 
   const closeNew = (): void => {
     setCreating(false);

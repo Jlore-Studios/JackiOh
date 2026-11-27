@@ -202,7 +202,7 @@
   flex: none;
   color: var(--tavern-gold);
   font-family: var(--font-display);
-  font-size: max(var(--type-2xs), 14cqw);
+  font-size: max(var(--type-xs), 14cqw);
   font-weight: 750;
   line-height: 1.15;
   text-align: center;
@@ -214,7 +214,7 @@
   min-height: 0;
   overflow: hidden;
   color: var(--tavern-text-dim);
-  font-size: max(var(--type-3xs), 10cqw);
+  font-size: max(var(--type-xs), 10cqw);
   line-height: 1.2;
   text-align: center;
 }
@@ -247,8 +247,8 @@
   white-space: nowrap;
   color: var(--tavern-gold-pale);
   text-shadow:
-    -0.08em 0 color-mix(in srgb, var(--pal-red-400) 80%, transparent),
-    0.08em 0 color-mix(in srgb, var(--pal-cyan-400) 80%, transparent);
+    -0.08em 0 color-mix(in srgb, var(--pal-lacquer-400) 80%, transparent),
+    0.08em 0 color-mix(in srgb, var(--pal-verdigris-400) 80%, transparent);
 }
 
 /* ---- motion --------------------------------------------------------------------------------- */

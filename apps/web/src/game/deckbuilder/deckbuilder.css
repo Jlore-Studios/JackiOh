@@ -63,13 +63,13 @@
   right: 0;
   bottom: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(240 194 74 / 0.55) 18%, rgb(240 194 74 / 0.2) 70%, transparent);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--pal-gold-400) 55%, transparent) 18%, color-mix(in srgb, var(--pal-gold-400) 20%, transparent) 70%, transparent);
 }
 
 /* --- rarity color, per element that carries data-rarity --------------------------------------- */
 
 :where(.db-chip, .db-card, .db-tile, .db-tile-pip)[data-rarity="Common"] {
-  --db-rarity: var(--rarity-common, #d4d8e1);
+  --db-rarity: var(--rarity-common, var(--pal-ink-200));
 }
 
 :where(.db-chip, .db-card, .db-tile, .db-tile-pip)[data-rarity="Rare"] {
@@ -89,7 +89,7 @@
 }
 
 :where(.db-chip, .db-card, .db-tile, .db-tile-pip)[data-rarity="Token"] {
-  --db-rarity: var(--rarity-token, #9aa1b8);
+  --db-rarity: var(--rarity-token, var(--pal-slate-400));
 }
 
 /* --- the two columns ---------------------------------------------------------------------------- */
@@ -118,9 +118,9 @@
   gap: 10px;
   padding: 10px;
   border: 1px solid var(--line-bright);
-  border-radius: calc(var(--radius) + 3px);
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 5%, transparent);
 }
 
 /* --- the filter bar ----------------------------------------------------------------------------- */
@@ -131,7 +131,7 @@
   gap: 8px;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--bg-raised);
   min-width: 0;
 }
@@ -158,14 +158,14 @@
   align-items: center;
   justify-content: center;
   padding: 5px 12px;
-  border-radius: 999px;
-  font-size: 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--type-sm);
   white-space: nowrap;
 }
 
 .deckbuilder.app-shell .db-filter-toggle[data-active="true"] {
   border-color: var(--you);
-  color: #fff;
+  color: var(--pal-white);
 }
 
 .deckbuilder.app-shell .db-filter-toggle[aria-expanded="true"] {
@@ -189,7 +189,7 @@
   color: inherit;
   background: var(--bg-sunken);
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 7px 14px;
 }
 
@@ -231,7 +231,7 @@
   color: inherit;
   background: var(--bg-sunken);
   border: 1px solid var(--line-bright);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   padding: 5px 8px;
 }
 
@@ -251,10 +251,8 @@
 
 .db-group-label {
   margin-right: 4px;
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-dim);
 }
 
@@ -262,14 +260,14 @@
 .deckbuilder.app-shell .db-chip {
   min-height: 28px;
   padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--type-sm);
   line-height: 1.2;
   white-space: nowrap;
 }
 
 .deckbuilder.app-shell .db-chip[aria-pressed="true"] {
-  color: #fff;
+  color: var(--pal-white);
   border-color: var(--you);
   background: color-mix(in srgb, var(--you) 45%, var(--bg-raised));
 }
@@ -278,15 +276,15 @@
 .deckbuilder.app-shell .db-chip--cost {
   min-width: 30px;
   padding: 3px 6px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-weight: 750;
   font-variant-numeric: tabular-nums;
 }
 
 .deckbuilder.app-shell .db-chip--cost[aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--mana) 55%, #fff);
-  background: linear-gradient(160deg, color-mix(in srgb, var(--mana) 60%, #fff), var(--mana) 60%);
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+  border-color: color-mix(in srgb, var(--mana) 55%, var(--pal-white));
+  background: linear-gradient(160deg, color-mix(in srgb, var(--mana) 60%, var(--pal-white)), var(--mana) 60%);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 .deckbuilder.app-shell .db-chip--rarity::before {
@@ -296,7 +294,7 @@
   width: 8px;
   height: 8px;
   margin-right: 5px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--db-rarity, var(--text-dim));
   vertical-align: 0;
 }
@@ -313,7 +311,7 @@
 
 .deckbuilder.app-shell .db-filter-clear {
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--type-sm);
 }
 
 /* --- the pool grid ------------------------------------------------------------------------------ */
@@ -328,11 +326,11 @@
   gap: 10px;
   padding: 10px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background:
-    radial-gradient(90% 260px at 50% 0, rgb(201 149 63 / 0.1), transparent 75%),
+    radial-gradient(90% 260px at 50% 0, color-mix(in srgb, var(--pal-brass-500) 10%, transparent), transparent 75%),
     var(--bg-sunken);
-  box-shadow: inset 0 2px 10px rgb(0 0 0 / 0.45);
+  box-shadow: inset 0 2px 10px color-mix(in srgb, var(--pal-black) 45%, transparent);
   min-width: 0;
 }
 
@@ -371,7 +369,7 @@
   aspect-ratio: 5 / 7;
   padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -405,7 +403,7 @@
   border-color: transparent;
   background: transparent;
   transform: translateY(-3px);
-  filter: drop-shadow(0 8px 14px rgb(0 0 0 / 0.6));
+  filter: drop-shadow(0 8px 14px color-mix(in srgb, var(--pal-black) 60%, transparent));
 }
 
 .deckbuilder.app-shell .db-card:focus-visible {
@@ -486,12 +484,12 @@
   left: 50%;
   transform: translateX(-50%);
   padding: 2px 9px;
-  border: 1px solid rgb(255 255 255 / 0.35);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--you) 85%, #000);
-  box-shadow: 0 1px 5px rgb(0 0 0 / 0.65);
-  color: #fff;
-  font-size: 11px;
+  border: 1px solid color-mix(in srgb, var(--pal-white) 35%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--you) 85%, var(--pal-black));
+  box-shadow: 0 1px 5px color-mix(in srgb, var(--pal-black) 65%, transparent);
+  color: var(--pal-white);
+  font-size: var(--type-xs);
   font-weight: 750;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -500,8 +498,8 @@
 
 /* A compared deck holds it (R251): the badge names that deck, in the color of a clash. */
 .db-held[data-place="other"] {
-  border-color: rgb(255 214 170 / 0.5);
-  background: color-mix(in srgb, var(--opponent) 80%, #000);
+  border-color: color-mix(in srgb, var(--pal-parchment) 50%, transparent);
+  background: color-mix(in srgb, var(--opponent) 80%, var(--pal-black));
   max-width: 88%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -515,14 +513,12 @@
   top: 44%;
   left: -3px;
   padding: 1px 7px 1px 6px;
-  border-radius: 0 999px 999px 0;
-  background: #c8322b;
-  box-shadow: 0 1px 5px rgb(0 0 0 / 0.65);
-  color: #fff;
-  font-size: 10px;
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+  background: var(--pal-red-600);
+  box-shadow: 0 1px 5px color-mix(in srgb, var(--pal-black) 65%, transparent);
+  color: var(--pal-white);
+  font-size: var(--type-xs);
   font-weight: 750;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -542,28 +538,28 @@
   width: 28px;
   height: 28px;
   padding: 0;
-  border: 1px solid rgb(255 255 255 / 0.45);
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--legal) 70%, #fff 10%), color-mix(in srgb, var(--legal) 55%, #000));
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.65);
-  color: #fff;
-  font-size: 18px;
+  border: 1px solid color-mix(in srgb, var(--pal-white) 45%, transparent);
+  border-radius: var(--radius-round);
+  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--legal) 70%, var(--pal-white) 10%), color-mix(in srgb, var(--legal) 55%, var(--pal-black)));
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--pal-black) 65%, transparent);
+  color: var(--pal-white);
+  font-size: var(--type-xl);
   font-weight: 800;
   line-height: 1;
-  text-shadow: 0 1px 1px rgb(0 0 0 / 0.6);
+  text-shadow: 0 1px 1px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 .deckbuilder.app-shell .db-add::before {
   content: "";
   position: absolute;
   inset: min(-8px, (100% - var(--hit-min)) / 2);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 .deckbuilder.app-shell .db-add:hover,
 .deckbuilder.app-shell .db-add:focus-visible {
-  border-color: #fff;
-  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--legal) 80%, #fff 20%), var(--legal));
+  border-color: var(--pal-white);
+  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--legal) 80%, var(--pal-white) 20%), var(--legal));
 }
 
 .deckbuilder.app-shell .db-add:focus-visible {
@@ -593,11 +589,11 @@
   margin: 0;
   padding: 8px 14px;
   border: 1px solid color-mix(in srgb, var(--legal) 60%, var(--line-bright));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-raised) 92%, #000);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 0.55);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg-raised) 92%, var(--pal-black));
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--pal-black) 55%, transparent);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 650;
   text-align: center;
   white-space: nowrap;
@@ -634,7 +630,7 @@
   margin: 0;
   padding: 24px 12px;
   border: 1px dashed var(--line-bright);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   color: var(--text-dim);
   text-align: center;
 }
@@ -660,9 +656,9 @@
 
 .db-deck-title {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: var(--type-lg);
   font-weight: 700;
-  color: #f3e3b3;
+  color: var(--pal-brass-200);
 }
 
 /* A thin bar under the title that fills toward a full deck, green once it is full. */
@@ -671,21 +667,21 @@
   display: block;
   height: 5px;
   overflow: hidden;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.06);
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.6);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--pal-white) 6%, transparent);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 .db-deck-meter-fill {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--mana) 70%, #000), color-mix(in srgb, var(--mana) 70%, #fff));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--mana) 70%, var(--pal-black)), color-mix(in srgb, var(--mana) 70%, var(--pal-white)));
   transition: width 200ms ease;
 }
 
 .db-deck-meter[data-full="true"] .db-deck-meter-fill {
-  background: linear-gradient(90deg, color-mix(in srgb, var(--legal) 70%, #000), color-mix(in srgb, var(--legal) 75%, #fff));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--legal) 70%, var(--pal-black)), color-mix(in srgb, var(--legal) 75%, var(--pal-white)));
   box-shadow: 0 0 8px color-mix(in srgb, var(--legal) 60%, transparent);
 }
 
@@ -702,8 +698,8 @@
 .deckbuilder.app-shell .db-deck-fold {
   display: none;
   padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--type-sm);
   font-weight: 650;
   white-space: nowrap;
 }
@@ -712,9 +708,9 @@
   margin: 0;
   padding: 14px 8px;
   border: 1px dashed var(--line-bright);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: var(--type-sm);
   text-align: center;
 }
 
@@ -728,9 +724,9 @@
   gap: 5px;
   height: 88px;
   padding: 6px 4px 0;
-  border: 1px solid rgb(255 255 255 / 0.05);
-  border-radius: var(--radius);
-  background: linear-gradient(180deg, rgb(0 0 0 / 0.25), rgb(0 0 0 / 0.1));
+  border: 1px solid color-mix(in srgb, var(--pal-white) 5%, transparent);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 25%, transparent), color-mix(in srgb, var(--pal-black) 10%, transparent));
 }
 
 .db-bar {
@@ -746,7 +742,7 @@
 .db-bar-count {
   min-height: 11px;
   color: #cfe0ff;
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 750;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -758,18 +754,18 @@
   flex: 1 1 auto;
   width: 100%;
   max-width: 22px;
-  border-radius: 4px 4px 1px 1px;
-  background: rgb(255 255 255 / 0.04);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.03);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--pal-white) 4%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pal-white) 3%, transparent);
 }
 
 .db-bar-fill {
   display: block;
   width: 100%;
-  border-radius: 4px 4px 1px 1px;
+  border-radius: var(--radius-xs);
   background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.28), transparent 45%, rgb(0 0 0 / 0.2)),
-    linear-gradient(180deg, color-mix(in srgb, var(--mana) 45%, #fff), var(--mana) 55%, color-mix(in srgb, var(--mana) 60%, #000));
+    linear-gradient(90deg, color-mix(in srgb, var(--pal-white) 28%, transparent), transparent 45%, color-mix(in srgb, var(--pal-black) 20%, transparent)),
+    linear-gradient(180deg, color-mix(in srgb, var(--mana) 45%, var(--pal-white)), var(--mana) 55%, color-mix(in srgb, var(--mana) 60%, var(--pal-black)));
   box-shadow: 0 0 6px color-mix(in srgb, var(--mana) 55%, transparent);
   transition: height 160ms ease;
 }
@@ -785,14 +781,14 @@
   height: 20px;
   clip-path: polygon(50% 0, 96% 25%, 96% 75%, 50% 100%, 4% 75%, 4% 25%);
   background:
-    radial-gradient(circle at 36% 26%, #d8ecff 0 9%, transparent 32%),
+    radial-gradient(circle at 36% 26%, var(--pal-slate-100) 0 9%, transparent 32%),
     radial-gradient(circle at 45% 40%, #6aa7ff, var(--mana) 50%, #173a80 88%);
-  color: #fff;
-  font-size: 10px;
+  color: var(--pal-white);
+  font-size: var(--type-xs);
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
-  text-shadow: 0 0 2px #000, 0 1px 1px #000;
+  text-shadow: 0 0 2px var(--pal-black), 0 1px 1px var(--pal-black);
 }
 
 .db-deck-list {
@@ -809,18 +805,18 @@
 /* The ends a long list has scrolled past fade out (DeckSidebar's useScrollEdges sets data-more),
    so a list that scrolls says so instead of cutting its last tile off. */
 .db-deck-list[data-more="bottom"] {
-  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 30px), transparent);
-  mask-image: linear-gradient(180deg, #000 calc(100% - 30px), transparent);
+  -webkit-mask-image: linear-gradient(180deg, var(--pal-black) calc(100% - 30px), transparent);
+  mask-image: linear-gradient(180deg, var(--pal-black) calc(100% - 30px), transparent);
 }
 
 .db-deck-list[data-more="top"] {
-  -webkit-mask-image: linear-gradient(0deg, #000 calc(100% - 30px), transparent);
-  mask-image: linear-gradient(0deg, #000 calc(100% - 30px), transparent);
+  -webkit-mask-image: linear-gradient(0deg, var(--pal-black) calc(100% - 30px), transparent);
+  mask-image: linear-gradient(0deg, var(--pal-black) calc(100% - 30px), transparent);
 }
 
 .db-deck-list[data-more="both"] {
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 30px, #000 calc(100% - 30px), transparent);
-  mask-image: linear-gradient(180deg, transparent, #000 30px, #000 calc(100% - 30px), transparent);
+  -webkit-mask-image: linear-gradient(180deg, transparent, var(--pal-black) 30px, var(--pal-black) calc(100% - 30px), transparent);
+  mask-image: linear-gradient(180deg, transparent, var(--pal-black) 30px, var(--pal-black) calc(100% - 30px), transparent);
 }
 
 .db-deck-list > li {
@@ -841,9 +837,9 @@
   padding: 0 10px 0 3px;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 6%, transparent);
   font-weight: 400;
   text-align: left;
   -webkit-touch-callout: none;
@@ -861,8 +857,8 @@
     opacity: 0;
     transform: translateX(-14px);
     box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.06),
-      0 0 0 1px color-mix(in srgb, var(--mana) 80%, #fff),
+      inset 0 1px 0 color-mix(in srgb, var(--pal-white) 6%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--mana) 80%, var(--pal-white)),
       0 0 14px color-mix(in srgb, var(--mana) 70%, transparent);
   }
   60% {
@@ -894,21 +890,21 @@
   height: 28px;
   clip-path: polygon(50% 0, 96% 25%, 96% 75%, 50% 100%, 4% 75%, 4% 25%);
   background:
-    radial-gradient(circle at 36% 26%, #d8ecff 0 9%, transparent 32%),
+    radial-gradient(circle at 36% 26%, var(--pal-slate-100) 0 9%, transparent 32%),
     radial-gradient(circle at 45% 40%, #6aa7ff, var(--mana) 50%, #173a80 88%);
-  color: #fff;
-  font-size: 14px;
+  color: var(--pal-white);
+  font-size: var(--type-md);
   font-weight: 850;
   line-height: 1;
   text-shadow:
-    0 0 2px #000,
-    0 1px 2px #000;
+    0 0 2px var(--pal-black),
+    0 1px 2px var(--pal-black);
   font-variant-numeric: tabular-nums;
 }
 
 /* Ceaseless Void's 100 steps down to stay inside the crystal. */
 .db-tile-cost[data-digits="3"] {
-  font-size: 10px;
+  font-size: var(--type-xs);
   letter-spacing: -0.04em;
 }
 
@@ -918,13 +914,13 @@
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
-  color: #f3f4f8;
+  color: var(--pal-slate-100);
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-shadow:
-    0 1px 2px #000,
-    0 0 6px rgb(0 0 0 / 0.85);
+    0 1px 2px var(--pal-black),
+    0 0 6px color-mix(in srgb, var(--pal-black) 85%, transparent);
 }
 
 .db-tile-art {
@@ -936,8 +932,8 @@
   width: 60%;
   opacity: 0.9;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 55%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 55%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, var(--pal-black) 55%);
+  mask-image: linear-gradient(90deg, transparent 0, var(--pal-black) 55%);
 }
 
 /* R1956000: the viewer's own copy's foil, as one still sheen over the strip (DeckSidebar.tsx). A
@@ -948,7 +944,7 @@
   inset: 0;
   pointer-events: none;
   mix-blend-mode: screen;
-  background: linear-gradient(115deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%);
+  background: linear-gradient(115deg, transparent 30%, color-mix(in srgb, var(--pal-white) 35%, transparent) 50%, transparent 70%);
 }
 
 .db-tile-pip {
@@ -957,10 +953,10 @@
   flex: none;
   width: 9px;
   height: 9px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--db-rarity, var(--text-dim));
   box-shadow:
-    0 0 0 1px rgb(0 0 0 / 0.65),
+    0 0 0 1px color-mix(in srgb, var(--pal-black) 65%, transparent),
     0 0 6px var(--db-rarity, transparent);
 }
 
@@ -969,7 +965,7 @@
 .deckbuilder.app-shell .db-tile[data-issue] {
   border-color: color-mix(in srgb, #e0a93b 75%, var(--line-bright));
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 6%, transparent),
     inset 3px 0 0 #e0a93b;
 }
 
@@ -978,7 +974,7 @@
 .deckbuilder.app-shell .db-tile[data-conflict="true"] {
   border-color: color-mix(in srgb, var(--opponent) 75%, var(--line-bright));
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 6%, transparent),
     inset 3px 0 0 var(--opponent);
 }
 
@@ -1029,7 +1025,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: var(--type-sm);
   line-height: 1.35;
 }
 
@@ -1047,7 +1043,7 @@
   padding: 6px 10px 6px 28px;
   border: 1px solid color-mix(in srgb, var(--opponent) 55%, var(--line));
   border-left: 3px solid var(--opponent);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: linear-gradient(90deg, color-mix(in srgb, var(--opponent) 14%, var(--bg-raised)), var(--bg-raised) 60%);
 }
 
@@ -1075,7 +1071,7 @@
   left: 6px;
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   clip-path: none;
   background: #e0a93b;
 }
@@ -1086,7 +1082,7 @@
 
 .db-save-error {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--type-sm);
 }
 
 /* --- the detail view's slots (CardDetail draws the dialog itself) ------------------------------ */

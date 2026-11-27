@@ -12,6 +12,7 @@ import { attempt, messageOf } from "../net/errors.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { disablePush, enablePush, needsHomeScreen, pushOnHere, pushSupported } from "./push.ts";
 import { dailyTestid } from "./testids.ts";
+import { useAct } from "./useAct.ts";
 
 import "./daily.css";
 
@@ -20,8 +21,7 @@ export function NotificationSettings(): ReactElement {
   const [settings, setSettings] = useState<DailySettings | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pushOn, setPushOn] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { busy, error, act } = useAct();
   const [homeScreen] = useState(needsHomeScreen);
   const [supported] = useState(pushSupported);
   const [desktopHere] = useState(desktopSupported);
@@ -49,22 +49,6 @@ export function NotificationSettings(): ReactElement {
       canceled = true;
     };
   }, []);
-
-  const act = (work: () => Promise<void>): void => {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    attempt(work)
-      .then(
-        () => undefined,
-        (cause: unknown) => {
-          setError(messageOf(cause));
-        },
-      )
-      .finally(() => {
-        setBusy(false);
-      });
-  };
 
   const toggleEmail = (on: boolean): void => {
     act(async () => {

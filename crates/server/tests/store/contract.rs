@@ -25,14 +25,14 @@ use jackioh_server::config::{
 };
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry, CollectionGrant, Db,
-    DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
-    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
-    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayListRow, ResultRow,
-    RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, StatsTotalsQuery,
-    StoreError, TermsSource, Ticket, TicketStatus, TutorialMergeInput, TutorialProgressRow, Tx,
-    UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
+    BatchFolded, BotDeck, BotRating, BotRow, BotState, CardFiling, CardRows, CodeAttempt, CollectionEntry,
+    CollectionGrant, Db, DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode,
+    LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile,
+    ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayListRow,
+    ResultRow, RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
+    StatsTotalsQuery, StoreError, TermsSource, Ticket, TicketStatus, TutorialMergeInput, TutorialProgressRow,
+    Tx, UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome, file_card_totals,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{
@@ -4572,7 +4572,7 @@ mod tickets {
         );
     }
 
-    async fn r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode(
+    async fn r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_the_open_tickets(
         harness: &StoreHarness,
     ) {
         let a = active_profile(harness, None).await;
@@ -4590,15 +4590,9 @@ mod tickets {
 
         assert_eq!(q!(harness, t => t.tickets_get(&bo3.id)), Some(bo3.clone()));
         assert_eq!(q!(harness, t => t.tickets_get(&random.id)), Some(random.clone()));
-        assert_eq!(
-            j(&q!(harness, t => t.tickets_count_open_by_mode())),
-            json!({ "bo1": 1, "bo3": 1, "random": 1 })
-        );
+        assert_eq!(q!(harness, t => t.tickets_count_open()), 3);
         q!(harness, t => t.tickets_cancel(&random.id, harness.now()));
-        assert_eq!(
-            j(&q!(harness, t => t.tickets_count_open_by_mode())),
-            json!({ "bo1": 1, "bo3": 1, "random": 0 })
-        );
+        assert_eq!(q!(harness, t => t.tickets_count_open()), 2);
     }
 
     async fn r642_keeps_a_best_of_3_ticket_s_per_deck_portraits_and_absence_stays_absent(
@@ -4927,7 +4921,7 @@ mod tickets {
 
     both_stores!(
         inserts_a_ticket_and_finds_the_profile_s_open_one,
-        r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode,
+        r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_the_open_tickets,
         r642_keeps_a_best_of_3_ticket_s_per_deck_portraits_and_absence_stays_absent,
         r1372_r924000_keeps_an_all_random_ticket_s_lean_until_it_is_paired,
         refuses_a_second_open_ticket_for_one_profile,
@@ -5262,6 +5256,7 @@ mod game_records {
             mode: None,
             patch: None,
             drills: true,
+            cards: CardRows::All,
         }
     }
 
@@ -5374,6 +5369,7 @@ mod game_records {
                         mode,
                         patch: patch.clone(),
                         drills: false,
+                        cards: CardRows::All,
                     };
                     let totals = q!(harness, t => t.stats_totals_load(&query));
                     assert_eq!(
@@ -5865,6 +5861,137 @@ mod game_records {
         );
     }
 
+    /// R4965000: a read that files the card totals keeps what filing the whole read keeps: none, all under
+    /// one patch, or one patch's as filed with the patches before it folded into the first of them. Postgres
+    /// files each row as it arrives; the fake files the whole read.
+    async fn r4965000_a_filed_read_keeps_what_filing_the_whole_read_keeps(harness: &StoreHarness) {
+        let records = mixed_records();
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        let whole = folded(&records).select(GAME_SOURCES, None, None, false);
+        let filing = CardFiling {
+            versions: ["v0.1.1", "v0.2.0", "v0.2.3"]
+                .map(str::to_string)
+                .into_iter()
+                .collect(),
+            kept_from: 2,
+            kept_to: 2,
+            also_kept: Vec::new(),
+            folded: whole
+                .cards
+                .values()
+                .flat_map(|cards| cards.keys())
+                .map(|card| (card.clone(), vec![(0, 1)]))
+                .collect(),
+        };
+        for cards in [CardRows::None, CardRows::Merged, CardRows::Filed(filing)] {
+            let query = StatsTotalsQuery {
+                cards: cards.clone(),
+                drills: false,
+                ..every_total()
+            };
+            assert_eq!(
+                q!(harness, t => t.stats_totals_load(&query)),
+                file_card_totals(whole.clone(), &cards),
+                "{cards:?}"
+            );
+        }
+    }
+
+    /// #5129: the patches `the_every_patch_read_goes_over_the_card_totals_once` folds a record on.
+    const SCAN_PATCHES: [&str; 5] = ["v0.1.1", "v0.2.0", "v0.2.3", "v0.3.0", "v0.3.1"];
+
+    /// R5174000: a filing that folds no play version keeps a list of patches' totals, its run and the versions
+    /// it keeps beside it, and a read of those patches' rows alone keeps what filing the whole read keeps. The
+    /// run here is the middle two of four versions, and the fifth patch is kept beside it as a build's own.
+    async fn r5174000_a_read_of_the_kept_run_keeps_what_filing_the_whole_read_keeps(harness: &StoreHarness) {
+        let records: Vec<GameRecord> = SCAN_PATCHES
+            .iter()
+            .enumerate()
+            .map(|(n, patch)| game_record(&format!("m-run-{n}"), json!({ "patch": patch })))
+            .collect();
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        let whole = folded(&records).select(GAME_SOURCES, None, None, false);
+        let cards = CardRows::Filed(CardFiling {
+            versions: SCAN_PATCHES[..4].iter().map(|patch| patch.to_string()).collect(),
+            kept_from: 1,
+            kept_to: 2,
+            also_kept: vec![SCAN_PATCHES[4].to_string()],
+            folded: IndexMap::new(),
+        });
+        assert_eq!(
+            cards.patches(),
+            Some(["v0.2.0", "v0.2.3", "v0.3.1"].map(str::to_string).to_vec())
+        );
+        let query = StatsTotalsQuery {
+            cards: cards.clone(),
+            drills: false,
+            ..every_total()
+        };
+        let read = q!(harness, t => t.stats_totals_load(&query));
+        let patches: IndexSet<&str> = read.cards.keys().map(|key| key.patch.as_str()).collect();
+        assert_eq!(
+            patches,
+            IndexSet::from(["v0.2.0", "v0.2.3", "v0.3.1"]),
+            "{}",
+            harness.name
+        );
+        assert_eq!(read, file_card_totals(whole, &cards), "{}", harness.name);
+    }
+
+    /// #5129: the read of every patch's totals (`kept_snapshot`'s, R3067000) goes over `card_totals` once,
+    /// however many patches the table holds. #4964 read it a patch at a time, after a `select distinct patch`.
+    /// Staging upserts each patch's rows as its records fold, so they lie scattered through the table, and each
+    /// patch's read went through most of the table's pages. The read took minutes, and every /stats request
+    /// was cancelled at the client's 75 s timeout until #4989 made it one read again. Postgres counts the scans
+    /// a transaction has made (`pg_stat_xact_user_tables`); the fake has no table to scan.
+    async fn the_every_patch_read_goes_over_the_card_totals_once(harness: &StoreHarness) {
+        let records: Vec<GameRecord> = SCAN_PATCHES
+            .iter()
+            .enumerate()
+            .map(|(n, patch)| game_record(&format!("m-scan-{n}"), json!({ "patch": patch })))
+            .collect();
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+
+        let mut tx = harness
+            .db
+            .begin(None)
+            .await
+            .unwrap_or_else(|error| panic!("{}: begin: {error}", harness.name));
+        let totals = tx
+            .stats_totals_load(&every_total())
+            .await
+            .unwrap_or_else(|error| panic!("{}: stats_totals_load: {error}", harness.name));
+        assert_eq!(totals, loaded(&records), "{}", harness.name);
+        let patches: IndexSet<&str> = totals.cards.keys().map(|key| key.patch.as_str()).collect();
+        assert_eq!(patches.len(), SCAN_PATCHES.len(), "{}: {patches:?}", harness.name);
+        if let Tx::Pg(t) = &mut tx {
+            let scans: i64 = sqlx::query_scalar(
+                "select coalesce(seq_scan, 0) + coalesce(idx_scan, 0) from pg_stat_xact_user_tables
+                  where schemaname = 'public' and relname = 'card_totals'",
+            )
+            .fetch_one(&mut **t)
+            .await
+            .expect("the transaction's scans of card_totals");
+            assert_eq!(
+                scans, 1,
+                "reading every patch's totals scanned card_totals {scans} times: read the table once, as one \
+                 stream (#4989), not a patch at a time"
+            );
+        }
+        tx.commit()
+            .await
+            .unwrap_or_else(|error| panic!("{}: commit: {error}", harness.name));
+    }
+
     both_stores!(
         r376_reads_a_match_s_mode_off_its_room_its_queue_tickets_or_its_series,
         r376_writes_one_record_per_game_and_refuses_a_second_with_the_same_id,
@@ -5881,6 +6008,9 @@ mod game_records {
         r2089000_folds_the_created_figures_and_loads_them_as_the_records_give,
         r4672003_folds_the_choices_and_loads_them_as_the_records_give,
         r4673001_keeps_each_faces_drills_and_loads_them_as_the_records_give,
+        r4965000_a_filed_read_keeps_what_filing_the_whole_read_keeps,
+        r5174000_a_read_of_the_kept_run_keeps_what_filing_the_whole_read_keeps,
+        the_every_patch_read_goes_over_the_card_totals_once,
     );
 }
 
@@ -6985,25 +7115,31 @@ mod replays {
         // DIVERGENCES, deleted accounts); either way the player keeps the replay.
         assert!(q!(harness, t => t.profiles_remove(&gone.id)));
 
-        let listed = q!(harness, t => t.replays_list(&a.id, 10, 0));
-        let ids: Vec<&str> = listed.iter().map(|replay| replay.row.id.as_str()).collect();
+        let listed = q!(harness, t => t.replays_list_with_modes(&a.id, 10, 0));
+        let ids: Vec<&str> = listed.iter().map(|replay| replay.id.as_str()).collect();
         assert_eq!(
             ids,
             vec![newer.as_str(), deleted.as_str(), as_p2.as_str(), older.as_str()]
         );
         let actions: Vec<i64> = listed.iter().map(|replay| replay.actions).collect();
         assert_eq!(actions, vec![3, 1, 1, 2]);
-        for replay in listed.iter().filter(|replay| replay.row.id != deleted) {
+        for replay in listed.iter().filter(|replay| replay.id != deleted) {
+            let row = must(q!(harness, t => t.matches_get(&replay.id)), "the match");
             assert_eq!(
-                Some(&replay.row),
-                q!(harness, t => t.matches_get(&replay.row.id)).as_ref()
+                (
+                    &replay.players,
+                    &replay.catalog_version,
+                    &replay.ranked,
+                    &replay.portraits
+                ),
+                (&row.players, &row.catalog_version, &row.ranked, &row.portraits)
             );
             assert_eq!(
                 Some(&replay.result),
-                q!(harness, t => t.results_get_by_match(&replay.row.id)).as_ref()
+                q!(harness, t => t.results_get_by_match(&replay.id)).as_ref()
             );
         }
-        assert_eq!(listed[1].row.players.0, a.id);
+        assert_eq!(listed[1].players.0, a.id);
         assert_eq!(listed[1].result.players.0, a.id);
 
         for (offset, expected) in [
@@ -7011,18 +7147,17 @@ mod replays {
             (2, vec![as_p2.clone(), older.clone()]),
             (4, Vec::new()),
         ] {
-            let page = q!(harness, t => t.replays_list(&a.id, 2, offset));
-            let ids: Vec<String> = page.iter().map(|replay| replay.row.id.clone()).collect();
+            let page = q!(harness, t => t.replays_list_with_modes(&a.id, 2, offset));
+            let ids: Vec<String> = page.iter().map(|replay| replay.id.clone()).collect();
             assert_eq!(ids, expected, "offset {offset}");
         }
-        let for_c = q!(harness, t => t.replays_list(&c.id, 10, 0));
-        assert_eq!(
-            ids_of(&for_c.iter().map(|replay| replay.row.clone()).collect::<Vec<_>>()),
-            vec![others]
-        );
+        let for_c = q!(harness, t => t.replays_list_with_modes(&c.id, 10, 0));
+        let ids: Vec<String> = for_c.iter().map(|replay| replay.id.clone()).collect();
+        assert_eq!(ids, vec![others]);
 
         let read = must(q!(harness, t => t.replays_get(&newer)), "the replay");
-        assert_eq!(read, listed[0]);
+        let mode = q!(harness, t => t.matches_mode_of(&newer));
+        assert_eq!(ReplayListRow::of(read, mode), listed[0]);
         let purged = must(q!(harness, t => t.replays_get(&no_log)), "the purged replay");
         assert_eq!(purged.actions, 0);
         for missing in [no_result, live, id()] {
@@ -7153,6 +7288,24 @@ mod replays {
         let live = a_match(harness, (&a.id, &b.id), 1, None, false).await;
         let others = a_match(harness, (&b.id, &c.id), 1, Some(now - 1_000), true).await;
 
+        // The list's order, each row as `replays_get` and `matches_mode_of` read it by id.
+        let mut ties = [plain.as_str(), tied.as_str()];
+        ties.sort_by(|x, y| y.cmp(x));
+        let order = [
+            deleted.as_str(),
+            series_game.as_str(),
+            queue_match.as_str(),
+            room_match.as_str(),
+            rematch_id.as_str(),
+            ties[0],
+            ties[1],
+        ];
+        let mut whole: Vec<ReplayListRow> = Vec::with_capacity(order.len());
+        for id in order {
+            let replay = must(q!(harness, t => t.replays_get(id)), "the replay");
+            let mode = q!(harness, t => t.matches_mode_of(id));
+            whole.push(ReplayListRow::of(replay, mode));
+        }
         for (limit, offset) in [
             (10, 0),
             (3, 0),
@@ -7167,15 +7320,11 @@ mod replays {
             (0, 0),
             (3, i64::MAX),
         ] {
-            let listed = q!(harness, t => t.replays_list(&a.id, limit, offset));
-            let mut modes = Vec::with_capacity(listed.len());
-            for replay in &listed {
-                modes.push(q!(harness, t => t.matches_mode_of(&replay.row.id)));
-            }
-            let expected: Vec<ReplayListRow> = listed
-                .into_iter()
-                .zip(modes)
-                .map(|(replay, mode)| ReplayListRow::of(replay, mode))
+            let expected: Vec<ReplayListRow> = whole
+                .iter()
+                .skip(usize::try_from(offset).unwrap_or(usize::MAX))
+                .take(usize::try_from(limit).unwrap_or(0))
+                .cloned()
                 .collect();
             assert_eq!(
                 q!(harness, t => t.replays_list_with_modes(&a.id, limit, offset)),
@@ -7186,20 +7335,7 @@ mod replays {
 
         let batched = q!(harness, t => t.replays_list_with_modes(&a.id, 10, 0));
         let ids: Vec<&str> = batched.iter().map(|entry| entry.id.as_str()).collect();
-        let mut ties = [plain.as_str(), tied.as_str()];
-        ties.sort_by(|x, y| y.cmp(x));
-        assert_eq!(
-            ids,
-            [
-                deleted.as_str(),
-                series_game.as_str(),
-                queue_match.as_str(),
-                room_match.as_str(),
-                rematch_id.as_str(),
-                ties[0],
-                ties[1],
-            ]
-        );
+        assert_eq!(ids, order);
         for missing in [&no_result, &no_log, &live, &others] {
             assert!(!ids.contains(&missing.as_str()), "{missing}");
         }
@@ -13335,7 +13471,7 @@ mod dev_dashboard {
             "{}: {first} {second} {third}",
             harness.name
         );
-        let recent = q!(harness, t => t.admin_actions_recent(10));
+        let recent = q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 10));
         let order: Vec<(i64, &str)> = recent.iter().map(|row| (row.id, row.route.as_str())).collect();
         assert_eq!(
             order,
@@ -13352,7 +13488,10 @@ mod dev_dashboard {
         assert_eq!(recent[0].before, json!({ "jlore": 0 }));
         assert_eq!(recent[0].after, json!({ "jlore": 5 }));
         assert_eq!(recent[0].at, now);
-        assert_eq!(q!(harness, t => t.admin_actions_recent(1)).len(), 1);
+        assert_eq!(
+            q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 1)).len(),
+            1
+        );
         for refused in [
             "GET /api/news",
             "POST /api/dev",
@@ -13367,7 +13506,7 @@ mod dev_dashboard {
         }
 
         assert!(q!(harness, t => t.profiles_remove(&dev.id)));
-        let kept = q!(harness, t => t.admin_actions_recent(10));
+        let kept = q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 10));
         assert_eq!(kept.len(), 3, "{}: the rows outlive the account", harness.name);
         let owners: Vec<Option<&str>> = kept.iter().map(|row| row.profile_id.as_deref()).collect();
         assert_eq!(
@@ -13813,8 +13952,8 @@ mod moderate_audit {
 
     use super::*;
     use jackioh_server::admin::store::{
-        AdminAction, MODERATE_BAN_ROUTE, MODERATE_REDEMPTION_ROUTE, MODERATE_REVOKE_CODE_ROUTE,
-        MODERATE_ROUTES, MODERATE_UNBAN_ROUTE, NewAdminAction,
+        AdminAction, AdminActionFilter, MODERATE_BAN_ROUTE, MODERATE_REDEMPTION_ROUTE,
+        MODERATE_REVOKE_CODE_ROUTE, MODERATE_ROUTES, MODERATE_UNBAN_ROUTE, NewAdminAction,
     };
     use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
     use jackioh_server::api::crypto::{canonical_invite_code, hashes_for_pepper};
@@ -13826,7 +13965,7 @@ mod moderate_audit {
 
     /// The audit, newest first.
     async fn audit(harness: &StoreHarness) -> Vec<AdminAction> {
-        q!(harness, t => t.admin_actions_recent(10))
+        q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 10))
     }
 
     /// `row` is a lever's: no profile, `route`, and the request and the states before and after.

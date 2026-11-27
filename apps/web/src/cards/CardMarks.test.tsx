@@ -114,7 +114,7 @@ describe("R437 the mark on the board", () => {
     const badge = aura(root, ids.theirs ?? "")?.querySelector<HTMLElement>(".card-mark-badge");
     expect(badge?.getAttribute("title")).toBe(MARK_WORDS.steal?.text);
     expect(badge?.querySelector(".card-mark-badge__text")?.textContent).toBe(MARK_WORDS.steal?.text);
-    expect(badge?.querySelector(".card-mark-badge__glyph")?.textContent).toBe("✦");
+    expect(badge?.querySelector(".card-mark-badge__glyph")?.querySelector(".icon--spark")).not.toBeNull();
     expect(marksTestid("u6").startsWith("card-")).toBe(false);
     // The aura takes no pointer event (marks.css); the card underneath keeps every click.
     expect(aura(root, ids.theirs ?? "")?.querySelector(".card-marks__aura")?.getAttribute("aria-hidden")).toBe("true");

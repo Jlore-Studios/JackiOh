@@ -1,6 +1,6 @@
 //! S T-drone-corvette Drone Corvette (SPEC §8.10 row T-drone-corvette): (3) Unit, Token (printed Rare),
 //! 8/8 → 16/16, a token of the Stinkyscape set.
-//!   Both faces: "Ranged, Flying\nAura: Has {keywords|random combat keyword|random combat keywords}." — 2
+//!   Both faces: "Ranged, Flying\nHas {keywords|random combat keyword|random combat keywords}." — 2
 //!   on the base face, 4 on the Radiant face (the declared number `keywords`, R386).
 //! Engine: as the Drone Interceptor: Ranged and Flying are catalog keywords (§6.1), and the Aura is
 //!   Keymaster Keenus's (R781004), its keywords drawn with the match rng as it arrives on the field into

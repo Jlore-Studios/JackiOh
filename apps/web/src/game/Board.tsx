@@ -42,7 +42,8 @@ import SandSurface from "./SandSurface.tsx";
 import StarscapeMap from "./StarscapeMap.tsx";
 import { BurnNotice, PileNotice, noticesFrom, noticeTestid, type OverflowNotices } from "./OverflowNotices.tsx";
 import Zone from "./Zone.tsx";
-import { listedFace, namedFace } from "./faces.ts";
+import { hasFace, listedFace, namedFace } from "./faces.ts";
+import GigaPlacement from "./GigaPlacement.tsx";
 import { glowAttr, hasMovesLeft } from "./glow.ts";
 import { HoveredHandCardProvider } from "./hoveredHandCard.tsx";
 import { revealedOpponentHand } from "./reveal.ts";
@@ -264,11 +265,25 @@ function pileLabel(title: string, count: number, order: string | undefined): str
     : t("{title}: {count} cards, {order}. Show them", { title, count, order: lower });
 }
 
-function browseEntries(
-  lookup: CardLookup | null,
-  browse: PileBrowse,
-  plays?: PilePlays,
-): { entries: CardListEntry[]; order?: string } {
+/**
+ * #5136: whether `browseEntries` lists anything, decided without building a face. A long game's piles
+ * hold dozens of cards and each face is a call into the face model, so the list itself is built only
+ * when it is drawn (the preview or the sheet), never on each render of the board.
+ */
+function listsAny(browse: PileBrowse): boolean {
+  if (browse.kind === "library") {
+    return browse.library.unknown > 0 || browse.library.cards.some((entry) => hasFace(entry.defId));
+  }
+  return browse.cards.some((card) => hasFace(card.defId));
+}
+
+/** R313: what a pile's list says of its order: only the library's has a note. */
+function orderOf(browse: PileBrowse): string | undefined {
+  return browse.kind === "library" ? t(LIBRARY_ORDER) : undefined;
+}
+
+/** The pile's list as drawn; `listsAny` says, without building it, whether it holds an entry. */
+function browseEntries(lookup: CardLookup | null, browse: PileBrowse, plays?: PilePlays): CardListEntry[] {
   const entries: CardListEntry[] = [];
   if (browse.kind === "library") {
     for (const entry of browse.library.cards) {
@@ -282,7 +297,7 @@ function browseEntries(
     if (browse.library.unknown > 0) {
       entries.push({ key: "unknown", face: null, count: browse.library.unknown, ...(browse.back === undefined ? {} : { back: browse.back }) });
     }
-    return { entries, order: t(LIBRARY_ORDER) };
+    return entries;
   }
   // Newest first: a pile grows at its end (the engine appends each card that lands in it).
   for (let at = browse.cards.length - 1; at >= 0; at -= 1) {
@@ -292,7 +307,7 @@ function browseEntries(
     const play = playFor(plays, card.instanceId);
     entries.push(play === undefined ? { key: card.instanceId, face } : { key: card.instanceId, face, play });
   }
-  return { entries };
+  return entries;
 }
 
 function Pile({
@@ -326,25 +341,29 @@ function Pile({
 }): ReactElement {
   const lookup = useContext(CatalogContext);
   const hoverPreviews = useSetting("hoverPreviews");
-  const { entries, order } = browse === undefined ? { entries: [] } : browseEntries(lookup, browse, plays);
+  // #5136: the list is built inside `render`, which runs only while the preview or the sheet is open.
+  const listing = browse !== undefined && listsAny(browse) ? browse : undefined;
+  const order = listing === undefined ? undefined : orderOf(listing);
   const title = browse?.title ?? label;
-  const browsable = entries.length > 0;
+  const browsable = listing !== undefined;
   const orderNote = order === undefined ? {} : { order };
   // R1639000: an empty deck that has dealt fatigue says how much in its label as well as its badge.
   const fatigued = restingFatigue(count, fatigue);
   const named = fatigued === null ? label : t("{label}, Fatigue {count}", { label, count: fatigued });
   const inspect = useInspectTrigger(
-    browsable
-      ? {
+    listing === undefined
+      ? null
+      : {
           key: `pile-${regionId}`,
-          render: ({ mode, anchor, close }: InspectOverlayState) =>
-            mode === "hover" ? (
+          render: ({ mode, anchor, close }: InspectOverlayState) => {
+            const entries = browseEntries(lookup, listing, plays);
+            return mode === "hover" ? (
               <CardListPreview title={title} entries={entries} anchor={anchor} {...orderNote} />
             ) : (
               <CardListSheet title={title} entries={entries} onClose={close} {...orderNote} />
-            ),
-        }
-      : null,
+            );
+          },
+        },
   );
 
   const open = (event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>): void => {
@@ -774,6 +793,8 @@ export default function Board({
                 ))}
               </div>
             ))}
+            {/* #4995: a selected GIGA hand card's offered placements, over the zones they would take. */}
+            <GigaPlacement view={view} highlight={highlight} />
             {/* A group, so its name is allowed on a div that may hold no notice (axe aria-prohibited-attr, spec 38). */}
             <div className="board-notices" role="group" aria-label={t("Notices")}>
               {boardNotices}

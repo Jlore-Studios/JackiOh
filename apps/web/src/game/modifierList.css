@@ -48,8 +48,6 @@
   color: var(--text-dim);
   font-size: var(--type-xs);
   font-weight: 750;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .modifier-list__item {

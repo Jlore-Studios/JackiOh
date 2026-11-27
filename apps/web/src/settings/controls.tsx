@@ -6,9 +6,10 @@ import { useId, type CSSProperties, type ReactElement } from "react";
 
 import { CARD_SETTINGS_FIELDS, isBoardNamesOption, useCardSettings, writeCardSettings, type CardSettings } from "../cards/settings.ts";
 import { FX_SPEED_DEFAULT, FX_SPEED_MAX, FX_SPEED_MIN, FX_SPEED_STEP } from "../fx/constants.ts";
-import { useFxSettings, type FxBigMoments, type FxIntensity } from "../fx/settings.ts";
+import { setFxSettings, useChosenFxSettings, type FxBigMoments, type FxIntensity } from "../fx/settings.ts";
 import { useHapticsSettings, writeHapticsSettings } from "../haptics/settings.ts";
 import { LOCALES, parseLocale, setLocale, t, useLocale, useLocaleSettled } from "../i18n/i18n.ts";
+import { useSetting } from "./store.ts";
 
 const INTENSITIES: readonly { value: FxIntensity; label: string }[] = [
   { value: "off", label: "Off" },
@@ -94,6 +95,8 @@ export function SelectRow(props: {
   value: string;
   options: readonly { value: string; label: string }[];
   onChange: (value: string) => void;
+  /** R5128000: shown but held, as Low graphics holds the effects' intensity and Big moments. */
+  disabled?: boolean;
 }): ReactElement {
   const id = useId();
   return (
@@ -105,6 +108,7 @@ export function SelectRow(props: {
           className="settings-select"
           data-testid={props.testId}
           value={props.value}
+          disabled={props.disabled}
           aria-describedby={`${id}-hint`}
           onChange={(event) => {
             props.onChange(event.currentTarget.value);
@@ -125,35 +129,40 @@ export function SelectRow(props: {
 }
 
 export function FxControls(): ReactElement {
-  const [settings, set] = useFxSettings();
+  // R5128000: the player's own choices; Low graphics holds intensity and Big moments off without writing over them.
+  const settings = useChosenFxSettings();
+  const held = useSetting("lowGraphics");
+  const heldHint = t("Off while Low graphics is on.");
   return (
     <>
       <SpeedSlider
         speed={settings.speed}
         onChange={(speed) => {
-          set({ speed });
+          setFxSettings({ speed });
         }}
       />
       <SelectRow
         label={t("Effects intensity")}
-        hint={t("Fire, sparks, light rays and the board shake. Off keeps the card motion only.")}
+        hint={held ? heldHint : t("Fire, sparks, light rays and the board shake. Off keeps the card motion only.")}
         testId="setting-fxIntensity"
         value={settings.intensity}
         options={INTENSITIES}
+        disabled={held}
         onChange={(value) => {
           const next = INTENSITIES.find((option) => option.value === value);
-          if (next !== undefined) set({ intensity: next.value });
+          if (next !== undefined) setFxSettings({ intensity: next.value });
         }}
       />
       <SelectRow
         label={t("Big moments")}
-        hint={t("The biggest moments hold the board for a beat; a tap, a click or Space skips one. Short holds them briefly, Off not at all.")}
+        hint={held ? heldHint : t("The biggest moments hold the board for a beat; a tap, a click or Space skips one. Short holds them briefly, Off not at all.")}
         testId="setting-fxBigMoments"
         value={settings.bigMoments}
         options={BIG_MOMENTS}
+        disabled={held}
         onChange={(value) => {
           const next = BIG_MOMENTS.find((option) => option.value === value);
-          if (next !== undefined) set({ bigMoments: next.value });
+          if (next !== undefined) setFxSettings({ bigMoments: next.value });
         }}
       />
     </>

@@ -341,11 +341,20 @@ describe("R2943001 Set showcase's name banners", () => {
   /** WCAG 2.2 AA's contrast for text (1.4.3). */
   const AA_TEXT_CONTRAST = 4.5;
 
+  /**
+   * The hex `declaration` gives in `body`: a literal, which an owned look keeps (R5012000), or a palette name's.
+   * No `\s*` before the capture (#4009).
+   */
+  function colourOf(body: string, declaration: RegExp): string | undefined {
+    const value = (declaration.exec(body)?.[1] ?? "").trim();
+    return /^#[0-9a-f]{6}$/i.test(value) ? value : PALETTE.get(/^var\((--pal-[a-z0-9-]+)\)$/.exec(value)?.[1] ?? "");
+  }
+
   it("R2943001 each Set showcase name banner keeps its name at AA contrast", () => {
     for (const family of FAMILIES) {
       const body = bodyOf(cardsCss, `.cf[data-showcase="${family}"]:not([data-radiant-face="true"]) .card-name`);
-      const background = PALETTE.get(/(?:^|[;\s])background:\s*var\((--pal-[a-z0-9-]+)\);/.exec(body)?.[1] ?? "");
-      const ink = PALETTE.get(/(?:^|[;\s])color:\s*var\((--pal-[a-z0-9-]+)\);/.exec(body)?.[1] ?? "");
+      const background = colourOf(body, /(?:^|[;\s])background:([^;]*);/);
+      const ink = colourOf(body, /(?:^|[;\s])color:([^;]*);/);
       expect(background, family).toMatch(/^#[0-9a-f]{6}$/i);
       expect(ink, family).toMatch(/^#[0-9a-f]{6}$/i);
       const [light, dark] = [luminance(background ?? ""), luminance(ink ?? "")].sort((a, b) => b - a);

@@ -77,6 +77,39 @@ impl From<RebuildError> for AttachError {
 
 type Rebuild = Arc<OnceCell<Result<MatchActor, RebuildError>>>;
 
+/// §9.5: one rebuild of `match_id` for every caller that wants it at once, on a match or a co-op game,
+/// so two sockets arriving together fold the log once, not twice. The first caller makes the cell, every
+/// caller waits on its one `rebuild`, and the first removes it once it is done, unless it was replaced
+/// in the meantime.
+pub(crate) async fn rebuild_once<T: Clone, F: Future<Output = T>>(
+    rebuilding: &Mutex<IndexMap<String, Arc<OnceCell<T>>>>,
+    match_id: &str,
+    rebuild: impl FnOnce() -> F,
+) -> T {
+    let (cell, mine) = {
+        let mut rebuilding = lock(rebuilding);
+        match rebuilding.get(match_id) {
+            Some(in_flight) => (Arc::clone(in_flight), false),
+            None => {
+                let cell = Arc::new(OnceCell::new());
+                rebuilding.insert(match_id.to_string(), Arc::clone(&cell));
+                (cell, true)
+            }
+        }
+    };
+    let outcome = cell.get_or_init(rebuild).await.clone();
+    if mine {
+        let mut rebuilding = lock(rebuilding);
+        if rebuilding
+            .get(match_id)
+            .is_some_and(|current| Arc::ptr_eq(current, &cell))
+        {
+            rebuilding.shift_remove(match_id);
+        }
+    }
+    outcome
+}
+
 /// Live actors by match id; a finished one stays until `reap_finished` or a restart (SURFACE §11.2).
 pub struct Registry {
     actors: Mutex<IndexMap<String, MatchActor>>,
@@ -598,28 +631,9 @@ impl Registry {
             return Ok(existing);
         }
 
-        let (cell, mine) = {
-            let mut rebuilding = lock(&self.rebuilding);
-            match rebuilding.get(match_id) {
-                Some(in_flight) => (Arc::clone(in_flight), false),
-                None => {
-                    let cell: Rebuild = Arc::new(OnceCell::new());
-                    rebuilding.insert(match_id.to_string(), Arc::clone(&cell));
-                    (cell, true)
-                }
-            }
-        };
-        let outcome = cell.get_or_init(|| self.rebuild(app, match_id)).await.clone();
-        if mine {
-            let mut rebuilding = lock(&self.rebuilding);
-            if rebuilding
-                .get(match_id)
-                .is_some_and(|current| Arc::ptr_eq(current, &cell))
-            {
-                rebuilding.shift_remove(match_id);
-            }
-        }
-        outcome.map_err(AttachError::from)
+        rebuild_once(&self.rebuilding, match_id, || self.rebuild(app, match_id))
+            .await
+            .map_err(AttachError::from)
     }
 
     pub fn has(&self, match_id: &str) -> bool {
@@ -778,5 +792,33 @@ impl Registry {
             .iter()
             .filter(|actor| actor.mute_emotes_between(x, y))
             .count()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::AtomicUsize;
+
+    use super::*;
+
+    /// §9.5: two callers that want the same match at once share its one rebuild, and its cell goes once
+    /// the rebuild is done.
+    #[tokio::test]
+    async fn one_rebuild_serves_every_caller_at_once_and_leaves_no_cell() {
+        let rebuilding: Mutex<IndexMap<String, Arc<OnceCell<u32>>>> = Mutex::new(IndexMap::new());
+        let runs = AtomicUsize::new(0);
+        let counted = &runs;
+        let rebuild = move || async move {
+            counted.fetch_add(1, Ordering::SeqCst);
+            tokio::task::yield_now().await;
+            7
+        };
+        let (first, second) = tokio::join!(
+            rebuild_once(&rebuilding, "m-1", rebuild),
+            rebuild_once(&rebuilding, "m-1", rebuild),
+        );
+        assert_eq!((first, second), (7, 7));
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
+        assert!(lock(&rebuilding).is_empty());
     }
 }

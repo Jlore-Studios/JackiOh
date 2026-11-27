@@ -10,7 +10,7 @@
 export const UPDATE_CHECK_MIN_MS = 10 * 60 * 1000;
 
 /** Where the build writes its entry name, served `no-cache` (public/_headers). */
-export const VERSION_PATH = "/version.json";
+const VERSION_PATH = "/version.json";
 
 /** What `sessionStorage` holds the entry a chunk failure already reloaded for, so it reloads once. */
 export const UPDATE_RELOAD_KEY = "jackioh:update-reloaded-entry";

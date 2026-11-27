@@ -22,7 +22,8 @@ use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
-use sqlx::postgres::{PgConnection, PgPool, PgPoolOptions, PgRow};
+use sqlx::postgres::{PgArguments, PgConnection, PgPool, PgPoolOptions, PgRow};
+use sqlx::query::Query;
 use sqlx::types::Json;
 use sqlx::{AssertSqlSafe, Connection, Postgres, Row, Transaction};
 use time::OffsetDateTime;
@@ -44,12 +45,12 @@ use crate::config::{
 };
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
-    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry,
-    CollectionGrant, ConsentRow, DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState,
-    DailyNotifyRow, DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio,
-    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow,
-    MatchCheckpointRow, MatchClocks, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode,
-    PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CardRows, CodeAttempt,
+    CollectionEntry, CollectionGrant, ConsentRow, DailyGameRow, DailyInviteKind, DailyInviteRow,
+    DailyInviteState, DailyNotifyRow, DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords,
+    FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample,
+    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow,
+    NewBot, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
     ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, PushSubRow,
     QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayListRow, ReplayRow,
@@ -57,7 +58,7 @@ use crate::db::store::{
     SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow,
     TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice,
     TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome,
-    UsernameClaim, UsernameClaimOutcome, deck_version_step,
+    UsernameClaim, UsernameClaimOutcome, add_card_total, deck_version_step,
 };
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
@@ -3536,42 +3537,6 @@ async fn replay_row(t: &mut PgTx<'_>, match_id: &str, actions: i64) -> Result<Op
     Ok(Some(ReplayRow { row, result, actions }))
 }
 
-pub async fn replays_list(
-    t: &mut PgTx<'_>,
-    profile_id: &str,
-    limit: i64,
-    offset: i64,
-) -> Result<Vec<ReplayRow>, StoreError> {
-    if !is_uuid(profile_id) {
-        return Ok(Vec::new());
-    }
-    run_as(t, None).await?;
-    let rows = sqlx::query(
-        "select m.id, (select count(*) from public.match_actions a where a.match_id = m.id) as actions
-           from public.matches m
-          where m.status = 'over'
-            and (m.p1_profile_id = $1::uuid or m.p2_profile_id = $1::uuid)
-            and exists (select 1 from public.results r where r.match_id = m.id)
-            and exists (select 1 from public.match_actions a where a.match_id = m.id)
-          order by m.ended_at desc nulls last, m.id desc
-          limit $2::bigint offset $3::bigint",
-    )
-    .bind(profile_id)
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&mut **t)
-    .await
-    .map_err(db_error)?;
-    let mut replays = Vec::with_capacity(rows.len());
-    for row in &rows {
-        let match_id = uuid_text(row, "id")?;
-        if let Some(replay) = replay_row(t, &match_id, get(row, "actions")?).await? {
-            replays.push(replay);
-        }
-    }
-    Ok(replays)
-}
-
 /// R768: one query, the page of matches, their results and their action counts joined, with the mode
 /// derived in Rust by the same precedence `matches_mode_of` uses. #4712: the page is found first, one
 /// arm per seat, each walking its seat's index of finished matches (`matches_p1_over_ended_idx`,
@@ -3943,22 +3908,6 @@ pub async fn tickets_count_open(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
     row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
 }
 
-pub async fn tickets_count_open_by_mode(t: &mut PgTx<'_>) -> Result<PerMode<i64>, StoreError> {
-    run_as(t, None).await?;
-    let rows = sqlx::query(
-        "select mode, count(*)::int as n from public.tickets where status = 'queued' group by mode",
-    )
-    .fetch_all(&mut **t)
-    .await
-    .map_err(db_error)?;
-    let mut counts: PerMode<i64> = PerMode::default();
-    for row in &rows {
-        let mode = queue_mode_of(&get::<String>(row, "mode")?)?;
-        counts[mode] = i64::from(get::<i32>(row, "n")?);
-    }
-    Ok(counts)
-}
-
 pub async fn tickets_recent_waits(t: &mut PgTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(concat!(
@@ -4247,11 +4196,32 @@ fn series_params(row: &SeriesRow) -> Result<SeriesParams, StoreError> {
     })
 }
 
+impl SeriesParams {
+    /// `$1` to `$14` of `series_create`'s insert and `series_update`'s compare-and-set, in their order.
+    fn bind_to<'q>(&self, query: Query<'q, Postgres, PgArguments>) -> Query<'q, Postgres, PgArguments> {
+        query
+            .bind(self.id.as_str())
+            .bind(self.p1_profile_id.as_str())
+            .bind(self.p2_profile_id.as_str())
+            .bind(self.status.as_str())
+            .bind(self.next_match_id.as_str())
+            .bind(self.pick_deadline)
+            .bind(self.version)
+            .bind(self.catalog_version.as_str())
+            .bind(self.winner.as_deref())
+            .bind(self.state.as_str())
+            .bind(self.created_at)
+            .bind(self.updated_at)
+            .bind(self.ended_at)
+            .bind(self.ranked)
+    }
+}
+
 /// A second series with the same id raises (`series_pkey`), as the port requires.
 pub async fn series_create(t: &mut PgTx<'_>, row: &SeriesRow) -> Result<(), StoreError> {
     let p = series_params(row)?;
     run_as(t, Some(p.p1_profile_id.as_str())).await?;
-    sqlx::query(concat!(
+    p.bind_to(sqlx::query(concat!(
         "insert into public.series (
            id, p1_profile_id, p2_profile_id, status, next_match_id, pick_deadline_at, version,
            catalog_version, winner, state, created_at, updated_at, ended_at, ranked)
@@ -4266,21 +4236,7 @@ pub async fn series_create(t: &mut PgTx<'_>, row: &SeriesRow) -> Result<(), Stor
         nullable_ts!("$13"),
         ",
                  $14::boolean)"
-    ))
-    .bind(p.id.as_str())
-    .bind(p.p1_profile_id.as_str())
-    .bind(p.p2_profile_id.as_str())
-    .bind(p.status.as_str())
-    .bind(p.next_match_id.as_str())
-    .bind(p.pick_deadline)
-    .bind(p.version)
-    .bind(p.catalog_version.as_str())
-    .bind(p.winner.as_deref())
-    .bind(p.state.as_str())
-    .bind(p.created_at)
-    .bind(p.updated_at)
-    .bind(p.ended_at)
-    .bind(p.ranked)
+    )))
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
@@ -4310,7 +4266,7 @@ pub async fn series_get(t: &mut PgTx<'_>, series_id: &str) -> Result<Option<Seri
 pub async fn series_update(t: &mut PgTx<'_>, next: &SeriesRow) -> Result<bool, StoreError> {
     let p = series_params(next)?;
     run_as(t, Some(p.p1_profile_id.as_str())).await?;
-    let done = sqlx::query(concat!(
+    let update = sqlx::query(concat!(
         "update public.series set
            p1_profile_id = $2::uuid, p2_profile_id = $3::uuid, status = $4::text,
            next_match_id = $5::uuid, pick_deadline_at = ",
@@ -4326,24 +4282,8 @@ pub async fn series_update(t: &mut PgTx<'_>, next: &SeriesRow) -> Result<bool, S
         ",
            ranked = $14::boolean
          where id = $1::uuid and version = $7::int - 1"
-    ))
-    .bind(p.id.as_str())
-    .bind(p.p1_profile_id.as_str())
-    .bind(p.p2_profile_id.as_str())
-    .bind(p.status.as_str())
-    .bind(p.next_match_id.as_str())
-    .bind(p.pick_deadline)
-    .bind(p.version)
-    .bind(p.catalog_version.as_str())
-    .bind(p.winner.as_deref())
-    .bind(p.state.as_str())
-    .bind(p.created_at)
-    .bind(p.updated_at)
-    .bind(p.ended_at)
-    .bind(p.ranked)
-    .execute(&mut **t)
-    .await
-    .map_err(db_error)?;
+    ));
+    let done = p.bind_to(update).execute(&mut **t).await.map_err(db_error)?;
     Ok(done.rows_affected() == 1)
 }
 
@@ -5408,32 +5348,57 @@ pub async fn stats_totals_load(
             .game_totals
             .insert(records_key_of(row)?, from_json(get::<Value>(row, "total")?)?);
     }
+    if query.cards == CardRows::None {
+        return Ok(totals);
+    }
     // One read, taken a row at a time as it arrives and each card's `stats` read straight into its
     // figures, so no raw row is held past its own and no JSON tree stands between. A read a patch at a
     // time cost minutes on staging (2026-11-26): each patch's rows lie scattered through the table, so
-    // every patch's read went through most of its pages.
-    let mut rows = sqlx::query(
+    // every patch's read went through most of its pages. R4965000: a row the query's `cards` drops is
+    // skipped before its figures are read, and one it folds is added into the total it is kept under.
+    // R5174000: a read that keeps a list of patches' totals reads those patches' rows alone, through the
+    // primary key, so its cost is theirs and not the whole table's, which grows with every version filed.
+    let only = query.cards.patches();
+    let sql = if only.is_some() {
         "select patch, source, mode, pilot, card, stats,
                 case when $4::boolean then turns end as turns,
                 case when $4::boolean then co end as co
            from public.card_totals
           where source = any($1::text[])
             and ($2::text is null or mode = $2::text)
-            and ($3::text is null or patch = $3::text)",
-    )
-    .bind(&sources)
-    .bind(mode.as_deref())
-    .bind(query.patch.as_deref())
-    .bind(query.drills)
-    .fetch(&mut **t);
+            and ($3::text is null or patch = $3::text)
+            and patch = any($5::text[])"
+    } else {
+        "select patch, source, mode, pilot, card, stats,
+                case when $4::boolean then turns end as turns,
+                case when $4::boolean then co end as co
+           from public.card_totals
+          where source = any($1::text[])
+            and ($2::text is null or mode = $2::text)
+            and ($3::text is null or patch = $3::text)"
+    };
+    let read = sqlx::query(sql)
+        .bind(&sources)
+        .bind(mode.as_deref())
+        .bind(query.patch.as_deref())
+        .bind(query.drills);
+    let read = match &only {
+        Some(patches) => read.bind(patches),
+        None => read,
+    };
+    let mut rows = read.fetch(&mut **t);
     while let Some(row) = rows.try_next().await.map_err(db_error)? {
+        let patch: String = get(&row, "patch")?;
+        let card: String = get(&row, "card")?;
+        let Some(patch) = query.cards.file(&patch, &card) else {
+            continue;
+        };
         let key = TotalsKey {
-            patch: get(&row, "patch")?,
+            patch: patch.to_string(),
             source: from_literal(&get::<String>(&row, "source")?)?,
             mode: from_literal(&get::<String>(&row, "mode")?)?,
             pilot: from_literal(&get::<String>(&row, "pilot")?)?,
         };
-        let card: String = get(&row, "card")?;
         let mut total = CardTotal {
             stats: get::<Json<CardStats>>(&row, "stats")?.0,
             ..CardTotal::new(&card)
@@ -5444,7 +5409,7 @@ pub async fn stats_totals_load(
         if let Some(co) = get::<Option<Value>>(&row, "co")? {
             co_of(co, &mut total)?;
         }
-        totals.cards.entry(key).or_default().insert(card, total);
+        add_card_total(totals.cards.entry(key).or_default(), card, total);
     }
     drop(rows);
     for cards in totals.cards.values_mut() {
@@ -6443,12 +6408,14 @@ async fn lock_free_bot(t: &mut PgTx<'_>, bot_id: &str) -> Result<bool, StoreErro
     Ok(held.is_none())
 }
 
-/// R1453: the bot is locked first (free: `lock_free_bot`), then the ticket claimed
-/// (`status = 'queued'`, as `app.claim_ticket_pair` claims), and only then is the `open` skeleton
-/// written, the ticket linked to it and the bot put in it. The skeleton's bot deck is empty until
-/// `matches_create` writes the match.
-pub async fn tickets_claim_for_bot(
+/// R1453, R641000: the bot is locked first (free: `lock_free_bot`), then the ticket claimed by
+/// `claim`, which binds the ticket as `$1` and the time as `$2` and answers a row when it claimed it,
+/// and only then is the `open` skeleton written and the ticket linked to it. The skeleton's bot deck is
+/// empty until `matches_create` writes the match. Answers whether the ticket was claimed; the bot is put
+/// in no match here.
+async fn claim_ticket_into_skeleton(
     t: &mut PgTx<'_>,
+    claim: &'static str,
     ticket_id: &str,
     bot_id: &str,
     match_id: &str,
@@ -6458,18 +6425,12 @@ pub async fn tickets_claim_for_bot(
     if !lock_free_bot(t, bot_id).await? {
         return Ok(false);
     }
-    let claimed = sqlx::query(concat!(
-        "update public.tickets set status = 'claimed', claimed_at = ",
-        ts!("$2"),
-        "
-          where id = $1::uuid and status = 'queued'
-          returning id"
-    ))
-    .bind(ticket_id)
-    .bind(at)
-    .fetch_optional(&mut **t)
-    .await
-    .map_err(db_error)?;
+    let claimed = sqlx::query(claim)
+        .bind(ticket_id)
+        .bind(at)
+        .fetch_optional(&mut **t)
+        .await
+        .map_err(db_error)?;
     if claimed.is_none() {
         return Ok(false);
     }
@@ -6499,6 +6460,30 @@ pub async fn tickets_claim_for_bot(
         .execute(&mut **t)
         .await
         .map_err(db_error)?;
+    Ok(true)
+}
+
+/// R1453: the bot is locked first (free: `lock_free_bot`), then the ticket claimed
+/// (`status = 'queued'`, as `app.claim_ticket_pair` claims), and only then is the `open` skeleton
+/// written, the ticket linked to it and the bot put in it. The skeleton's bot deck is empty until
+/// `matches_create` writes the match.
+pub async fn tickets_claim_for_bot(
+    t: &mut PgTx<'_>,
+    ticket_id: &str,
+    bot_id: &str,
+    match_id: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    let claim = concat!(
+        "update public.tickets set status = 'claimed', claimed_at = ",
+        ts!("$2"),
+        "
+          where id = $1::uuid and status = 'queued'
+          returning id"
+    );
+    if !claim_ticket_into_skeleton(t, claim, ticket_id, bot_id, match_id, at).await? {
+        return Ok(false);
+    }
     sqlx::query("update public.profiles set current_match_id = $2::uuid where id = $1::uuid")
         .bind(bot_id)
         .bind(match_id)
@@ -6519,69 +6504,26 @@ pub async fn tickets_claim_for_bot_series(
     match_id: &str,
     at: i64,
 ) -> Result<bool, StoreError> {
-    run_as(t, None).await?;
-    if !lock_free_bot(t, bot_id).await? {
-        return Ok(false);
-    }
-    let claimed = sqlx::query(concat!(
+    let claim = concat!(
         "update public.tickets set status = 'claimed', claimed_at = ",
         ts!("$2"),
         "
           where id = $1::uuid and status = 'queued' and mode = 'bo3'
           returning id"
-    ))
-    .bind(ticket_id)
-    .bind(at)
-    .fetch_optional(&mut **t)
-    .await
-    .map_err(db_error)?;
-    if claimed.is_none() {
-        return Ok(false);
-    }
-    sqlx::query(concat!(
-        "insert into public.matches (
-             id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
-             ceiling_at, created_at)
-           select $3::uuid, 'open', '', a.profile_id, $2::uuid, a.frozen_deck, '[]'::jsonb,
-                  a.catalog_version, ",
-        ts!("$4"),
-        ", ",
-        ts!("$4"),
-        "
-             from public.tickets a
-            where a.id = $1::uuid"
-    ))
-    .bind(ticket_id)
-    .bind(bot_id)
-    .bind(match_id)
-    .bind(at)
-    .execute(&mut **t)
-    .await
-    .map_err(db_error)?;
-    sqlx::query("update public.tickets set match_id = $2::uuid where id = $1::uuid")
-        .bind(ticket_id)
-        .bind(match_id)
-        .execute(&mut **t)
-        .await
-        .map_err(db_error)?;
-    Ok(true)
+    );
+    claim_ticket_into_skeleton(t, claim, ticket_id, bot_id, match_id, at).await
 }
 
-/// R639000: the bot is locked (free: `lock_free_bot`) before the `open` skeleton is written. Its
-/// decks are empty until `matches_create` writes the match; a start that never comes leaves it to
-/// `bots_release_stale_starts`.
-pub async fn bots_claim_for_rematch(
+/// R639000, R1555000: the `open` skeleton of a match a bot was claimed into with no ticket, `players`
+/// its seats, written once the bots are locked. Its decks are empty until `matches_create` writes the
+/// match; a start that never comes leaves it to `bots_release_stale_starts`.
+async fn insert_bot_skeleton(
     t: &mut PgTx<'_>,
-    bot_id: &str,
     players: &(String, String),
     match_id: &str,
     catalog_version: &str,
     at: i64,
-) -> Result<bool, StoreError> {
-    run_as(t, None).await?;
-    if !lock_free_bot(t, bot_id).await? {
-        return Ok(false);
-    }
+) -> Result<(), StoreError> {
     sqlx::query(concat!(
         "insert into public.matches (
              id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
@@ -6600,6 +6542,25 @@ pub async fn bots_claim_for_rematch(
     .execute(&mut **t)
     .await
     .map_err(db_error)?;
+    Ok(())
+}
+
+/// R639000: the bot is locked (free: `lock_free_bot`) before the `open` skeleton is written. Its
+/// decks are empty until `matches_create` writes the match; a start that never comes leaves it to
+/// `bots_release_stale_starts`.
+pub async fn bots_claim_for_rematch(
+    t: &mut PgTx<'_>,
+    bot_id: &str,
+    players: &(String, String),
+    match_id: &str,
+    catalog_version: &str,
+    at: i64,
+) -> Result<bool, StoreError> {
+    run_as(t, None).await?;
+    if !lock_free_bot(t, bot_id).await? {
+        return Ok(false);
+    }
+    insert_bot_skeleton(t, players, match_id, catalog_version, at).await?;
     sqlx::query("update public.profiles set current_match_id = $2::uuid where id = $1::uuid")
         .bind(bot_id)
         .bind(match_id)
@@ -6673,24 +6634,7 @@ pub async fn bots_claim_pair(
     if !lock_free_bot(t, first).await? || !lock_free_bot(t, second).await? {
         return Ok(false);
     }
-    sqlx::query(concat!(
-        "insert into public.matches (
-             id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck, catalog_version,
-             ceiling_at, created_at)
-           values ($1::uuid, 'open', '', $2::uuid, $3::uuid, '[]'::jsonb, '[]'::jsonb, $4::text, ",
-        ts!("$5"),
-        ", ",
-        ts!("$5"),
-        ")"
-    ))
-    .bind(match_id)
-    .bind(players.0.as_str())
-    .bind(players.1.as_str())
-    .bind(catalog_version)
-    .bind(at)
-    .execute(&mut **t)
-    .await
-    .map_err(db_error)?;
+    insert_bot_skeleton(t, players, match_id, catalog_version, at).await?;
     sqlx::query("update public.profiles set current_match_id = $2::uuid where id in ($1::uuid, $3::uuid)")
         .bind(players.0.as_str())
         .bind(match_id)
@@ -8056,7 +8000,7 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
 use crate::db::store::{ReplayShare, SharedReplayRow};
 
 /// B52: what a share `s`, joined to its match `m`, is read through on: the match is over, the
-/// sharer held a seat in it, the retention purge has not taken its action log (as `replays_list`
+/// sharer held a seat in it, the retention purge has not taken its action log (as `replays_list_with_modes`
 /// does), and the two are still friends (`a < b`) with neither blocking the other.
 macro_rules! readable_share {
     () => {

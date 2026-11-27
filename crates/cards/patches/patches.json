@@ -36975,5 +36975,1449 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.14j",
+    "date": "2026-11-26",
+    "title": "Mass Driver's badge states its countdown once",
+    "source": "issue #4992",
+    "notes": "R4992000: Mass Driver's badge no longer holds the count the view adds, so it reads 'in 2 turns' once; the older label is kept (script_v0_6_14i, KEPT_SCRIPTS keyed by this fragment, R4779000). Doomsday Clock is a card of a held set, so it takes no claim.",
+    "player": {
+      "title": "Mass Driver's countdown reads once",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Mass Driver's countdown badge no longer says \"in 2 turns\" twice."
+      ]
+    },
+    "commits": [
+      "3cfbef178cc1f05c0bbabbec3c0f3417039906bc"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-059"
+    ],
+    "fragment": "mass-driver-s-badge-states-its-countdown-once",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14k",
+    "date": "2026-11-26",
+    "title": "Card-face code cleanup",
+    "source": "issue #4702",
+    "notes": "Four exports of the card-face code that nothing read are removed (FIGURE_HEIGHT, FLAVOUR_MAX_CHARS, ARTIST_MAX_CHARS, setFlavourForTests); no card looks or plays differently.",
+    "player": {
+      "title": "Card-face code cleanup",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Unused code behind the card faces is removed. No card looks or plays differently."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "0f3e8f961ec05866d940cd2662f012c22405d762"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "card-face-code-cleanup",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14l",
+    "date": "2026-11-26",
+    "title": "PIP says performance improvement plan",
+    "source": "#4996",
+    "notes": "Stinkyscape+ #94 PIP's text reads 'performance improvement plan' (was 'performance enhancement plan').",
+    "player": {
+      "title": "PIP says performance improvement plan",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "PIP: now says \"performance improvement plan\"."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "6e1450bf6f9dbfbbe603f7d38ae0fe523daebae9"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "pip-says-performance-improvement-plan",
+    "changes": [
+      {
+        "id": "stinkyscapeplus-094",
+        "name": "PIP",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.14m",
+    "date": "2026-11-26",
+    "title": "Patch: the tier cards and KPIs read the newest win rates",
+    "source": "winrates-refresh.yml: production's windowed card figures at v0.6.14k (R3882000)",
+    "notes": "The win rates of record refresh from the card statistics at v0.6.14k: 794 cards with at least 20 games over their own windows (provisional figures). The tier pools and KPIs read them from this version on (R3538000, R3538001); earlier versions keep theirs, and CN Tech and NA Tech still read each game's snapshot (R3049000).",
+    "player": {
+      "title": "Win rates refreshed",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "61758a8b61caae7b24f87b4562792ba161f9f1bc"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-164"
+    ],
+    "fragment": "the-tier-cards-and-kpis-read-the-newest-win-rates",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14n",
+    "date": "2026-11-26",
+    "title": "Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints",
+    "source": "issue #4817",
+    "notes": "Issue #4817 (R4817000, R4817001): Make Radiant and De-Radiant on a card where it stands refit its Brittle count to the new face (a count its printed Brittle started goes when the new face prints none; a card on the field with no count starts the one the new face prints), and a Radiant face that newly prints Reborn gives a used Reborn back, as it already did a spent Divine Shield. Engine change only, no catalog or script change; claimed with --plays as classify's stage 2 against daee3b7's build names it.",
+    "player": {
+      "title": "A card made Radiant where it stands follows its new face's Brittle and Reborn",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Sack made Radiant on the field now crumbles at its Radiant face's Brittle 1, as one played Radiant does.",
+        "A Ticketed made Radiant on the field no longer crumbles, since its Radiant face has no Brittle; one De-Radianted by Prestige starts its Brittle 3.",
+        "A Unit that already used a Reborn regains it when made Radiant, if only its Radiant face has Reborn (Wrong-House Attacker, 4-mana 7/7, Jilliax and others)."
+      ]
+    },
+    "commits": [
+      "22a9db19dd2732f368f4612dff9ddf08a9dbfc0b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "core-091"
+    ],
+    "fragment": "a-card-made-radiant-where-it-stands-starts-the-brittle-its",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14o",
+    "date": "2026-11-26",
+    "title": "Patch: Radiant Cosmic Bard leaves both drawn Units at the cheapest price, even one that carries a cost raise larger than that price",
+    "source": "#4832",
+    "notes": "Cosmic Bard's Radiant face took a carried cost raise off the cost override, which bottoms out at 0; a raise larger than the cheapest price survived and the card cost more. Now the override is 0 for such a card and the excess comes off its cost change in hand, so every drawn Unit still in the hand ends at the cheapest drawn price. The longer script makes Cosmic Bard complicated (R1846000), so Stinkyscape #109 and #111 read new pools (R2173001); `plays` claims those two, the families classify's games show playing differently. Cosmic Bard itself meets no raiser in those games, so its own play is unobservable there and goes unclaimed.",
+    "player": {
+      "title": "Radiant Cosmic Bard prices both drawn Units at the cheapest",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Radiant Cosmic Bard's Combo no longer leaves a drawn Unit that carries a cost raise larger than the cheapest price above it: both drawn Units cost the cheapest drawn price."
+      ]
+    },
+    "commits": [
+      "f9b18868b35013858635c73fe397f3a11ea7c469"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscape-111"
+    ],
+    "fragment": "radiant-cosmic-bard-leaves-both-drawn-units-at-the-cheapest",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14p",
+    "date": "2026-11-26",
+    "title": "Toxopid's Legs are Flexible and crush the Units they land on",
+    "source": "#5048",
+    "notes": "S+ #121.1 Toxopid Leg gains Flexible. S+ #121 Toxopid's Cry draws its Legs' zones from every unit and backrow zone of both sides (Radiant: the opponent's) that holds nothing or only Units, destroys the Units there, and lands a Leg in each zone once the deaths resolve (R5048000). Claimed with --plays as classify's stage 2 against the merge base names them: M #8 Reach the Summit (its random Radiant cards can be a Toxopid) and S+ #127 Corvus (its line now meets Legs standing in the backrow).",
+    "player": {
+      "title": "Toxopid's Legs crush what they land on",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Toxopid Leg is now Flexible, so it can stand in the backrow as well as the unit row.",
+        "Toxopid's Legs now land in random zones of either row, empty or holding Units, and destroy the Units there before they land.",
+        "Radiant Toxopid's Legs still land only on your opponent's side, now in either row, destroying the Units there."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "4d0564418fbf44e5db0f52fd11a04902f98fdba2"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-008",
+      "stinkyscapeplus-121",
+      "stinkyscapeplus-127"
+    ],
+    "fragment": "toxopid-s-legs-are-flexible-and-crush-the-units-they-land-on",
+    "changes": [
+      {
+        "id": "stinkyscapeplus-121",
+        "name": "Toxopid",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-121-1",
+        "name": "Toxopid Leg",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.14q",
+    "date": "2026-11-26",
+    "title": "One corner language for the table",
+    "source": "issue #5015",
+    "notes": "Every border-radius in the web client is a surfaces.css token: the corner scale is retuned to 2, 4, 6 and 10 px (xl dropped), the settings switch keeps its track's pill as --radius-switch, and the card faces' cuts and the effects' shapes are named tokens that keep their values.",
+    "player": {
+      "title": "One corner language for the table",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Menus, panels, buttons, badges and the card inspector have tighter corners; card faces keep the corner their frame is cut to."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "7a32473e328105b864cc63b8ac241d22d5c025d2"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "one-corner-language-for-the-table",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14r",
+    "date": "2026-11-26",
+    "title": "Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload",
+    "source": "#4977",
+    "notes": "When a counted game's result pays the account (match.economy set on the match screen), the client loads the account's card proficiency again: cards/proficiencySync.ts's reloadOwnProficiency(), called from routes/match.tsx's paid effect beside announceWallet(), queues a GET /api/proficiency behind any stamp pick in flight (R4977000, amending R3013001). A level the game earned and the stamp it unlocks show in the Collection and can be worn without a page reload. No card looks or plays differently; claims --visual because the change touches apps/web/src/cards/ (R2529000), a micro of no family.",
+    "player": {
+      "title": "Card levels show as soon as a game ends",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A card level an online game earned now shows in the Collection as soon as the game ends, and the stamp it unlocks can be worn at once, without reloading the page."
+      ]
+    },
+    "commits": [
+      "0c4a11d63c1a94b9a46d19b0ddf79bdc093962e0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "a-counted-game-s-result-reloads-the-card-proficiency-the",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14s",
+    "date": "2026-11-26",
+    "title": "A readable type scale, Alegreya for the game's words and fewer capitals",
+    "source": "#5013",
+    "notes": "Type scale re-spaced around a 16px body (the board's base 14px); no step under 11px outside cards/; card names and rules text, headings, titles and banners in Alegreya; capitals kept only for one shared small-caps label rule and the card faces' printed inscriptions. How cards look only: no card plays differently.",
+    "player": {
+      "title": "Larger, easier type",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card names and rules text are now set in the game's serif, Alegreya.",
+        "Text across the menus and the board is larger, and far fewer labels are in capitals."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "0af41ad1f2d87c47b95150ac6007266b1447a09f"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "a-readable-type-scale-alegreya-for-the-game-s-words-and",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14t",
+    "date": "2026-11-26",
+    "title": "Patch: a Flickered card starts its printed Brittle again, and a Keymaster Keenus or Shockwave447 made by a Transform draws its Aura's keywords",
+    "source": "issue #4991",
+    "notes": "R441: a Flicker re-enters the field, so zones::flicker_in_place now starts a printed Brittle afresh when the crumble spent its count, and restarts a held count's turn cycle, as every arrival from off the field does (zones::place_with); a Brittle Unit Radiant C #14 Shadowstep saves keeps its Brittle. An engine rule, so a replay it changes is refused as rules_changed (R767000). R4991000: a Keymaster Keenus (M #65) or Shockwave447 (S #111) a Transform makes on the field draws its Aura's keywords as it arrives (query::self_arrived_on_field), with no Cry; a Transform in a hand or a library draws nothing. Each card's script_before_transform_draw keeps the draw on summoned alone, keyed by this fragment, so replays of every version before this one fold under it (R4779000). classify stage 2 against main's build (a6a0c4ae99) finds M #65 and S #111 play differently, and M #24 Polymorph: the Aura now listens to transformed, so a Transform while one stands on the field queues its entry, which draws nothing but takes a number from nextSeq (one of the 200 unforced games, seed 89).",
+    "player": {
+      "title": "Saved Brittle Units crumble again, and transformed Auras draw",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Brittle Unit that Radiant Shadowstep saves counts its Brittle down again.",
+        "A Keymaster Keenus or Shockwave447 that a Transform makes gets its random keywords."
+      ]
+    },
+    "commits": [
+      "5991e8da39cf724421f36f38f417da3af9e9debf"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-024",
+      "meditative-065",
+      "stinkyscape-111"
+    ],
+    "fragment": "a-flickered-card-starts-its-printed-brittle-again-and-a",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15",
+    "date": "2026-11-26",
+    "title": "Patch: the daily patch, rolling up v0.6.14b to v0.6.14t",
+    "source": "patches cut at 5991e8da39cf724421f36f38f417da3af9e9debf: v0.6.14b, v0.6.14c, v0.6.14d, v0.6.14e, v0.6.14f, v0.6.14g, v0.6.14h, v0.6.14i, v0.6.14j, v0.6.14k, v0.6.14l, v0.6.14m, v0.6.14n, v0.6.14o, v0.6.14p, v0.6.14q, v0.6.14r, v0.6.14s, v0.6.14t",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.14, each a snapshot of its own: v0.6.14b (Patch: Omura's Activate is not offered with no enemy Unit to aim at, so it cannot be spent on nothing and start its cooldown); v0.6.14c (Inner Fire reads Attack below 0); v0.6.14d (Patch: a Unit token sent into a deck is reported as gone, not shuffled in, and a Unit-token card cannot be traded, so no Trade ends in fatigue); v0.6.14e (Patch: Help-aimed buffs land stolen and random casts on the caster's side); v0.6.14f (Patch: tributing a GIGA empties all four zones it covers for the play that pays it, so a GIGA Tribute card can take its place); v0.6.14g (Patch: `permanents_on_field` meets a card lying on a unit zone after its side's backrow); v0.6.14h (End Times gives back its cuts after leaving the field); v0.6.14i (Stinkyscape+ Balance Changes VIII); v0.6.14j (Mass Driver's badge states its countdown once); v0.6.14k (Card-face code cleanup); v0.6.14l (PIP says performance improvement plan); v0.6.14m (Patch: the tier cards and KPIs read the newest win rates); v0.6.14n (Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints); v0.6.14o (Patch: Radiant Cosmic Bard leaves both drawn Units at the cheapest price, even one that carries a cost raise larger than that price); v0.6.14p (Toxopid's Legs are Flexible and crush the Units they land on); v0.6.14q (One corner language for the table); v0.6.14r (Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload); v0.6.14s (A readable type scale, Alegreya for the game's words and fewer capitals); v0.6.14t (Patch: a Flickered card starts its printed Brittle again, and a Keymaster Keenus or Shockwave447 made by a Transform draws its Aura's keywords).",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes VIII, and 18 more changes",
+      "new": [],
+      "balance": [
+        "Plesiosize gives +8/+8 (Radiant +16/+16), up from +6/+6 (Radiant +12/+12).",
+        "Cloaking Module is 3/2 (Radiant 6/4), up from 2/2 (Radiant 4/4).",
+        "Venomous Rounds is 1/4 (Radiant 2/8), from 2/1 (Radiant 4/2).",
+        "Cannon v3 deals 4 damage (Radiant 8), down from 5 (Radiant 10).",
+        "Cannon v4 deals 6 damage (Radiant 12), down from 7 (Radiant 14).",
+        "Cannon v5 deals 8 damage (Radiant 16), down from 9 (Radiant 18).",
+        "YileGPT Prime costs (4), down from (8), and its Cry starts with Overload (2).",
+        "The Last Voyage launches a Starship as you cast it, and its base face skips the end-of-turn launch on the turn you cast it.",
+        "CN in a Bottle's card costs (2) more (up to (4)), up from (1) more.",
+        "Jlockeed Shredder-12 has Tribute 4, up from 3; its Radiant face deals 4 damage at the end of your turn, down from 5.",
+        "Mommy Barker is 2/1 (Radiant 4/2), down from 2/2 (Radiant 4/4).",
+        "Call to Chaos (Mindustrial-Swarm Edition): the Toxopid it adds costs (2), up from (0), and its Terminus effect replenishes 3 mana, down from 4.",
+        "Impact Reactor's Cry is Overload (2) (Radiant (1)), down from Overload (4), then (2) the turn after (Radiant (2), then (1)).",
+        "Toxopid no longer ignores Taunt.",
+        "Meltdown no longer heals fully when it is Frozen.",
+        "Gary the Gambler flips 6 coins (Radiant 12), up from 5 (Radiant 10), and no longer flips for Divine Shield or Rush.",
+        "Knowledge Breaker is Cloaked itself and no longer Cloaks your other Units.",
+        "Crawler has Flashback instead of being playable from your graveyard for (1).",
+        "Yuma costs (1) and is 1/3 (Radiant 2/6), down from (2) and 1/8 (Radiant 2/16).",
+        "Volcanic Rounds is 6/1 (Radiant 12/2), up from 5/1 (Radiant 10/2); its hits deal their damage and also Burn that much, instead of becoming Burn.",
+        "Scorching Rounds is 4/1 (Radiant 8/2) and Burns 4 (Radiant 8), up from 3/1 (Radiant 6/2) and Burns 3 (Radiant 6).",
+        "Hull Repairer mk2 is 1/5 (Radiant 2/10), up from 1/4 (Radiant 2/8).",
+        "Servo Surge is 3/2 (Radiant 6/4), down from 5/3 (Radiant 10/6).",
+        "A Wee Whelp is 2/1 (Radiant 4/2), up from 1/1 (Radiant 2/2); its Evolve gives +8/+8 (Radiant +16/+16) instead of setting its stats to 10/10 (Radiant 20/20).",
+        "Quick Chaos's base face also discards a random card from your hand.",
+        "Outbreak costs (4), up from (3).",
+        "Drone Commander is 4/8 (Radiant 8/16), down from 8/12 (Radiant 16/24).",
+        "Chaos Machine costs (3), up from (2).",
+        "Imitated Instrumentality costs (4), up from (3).",
+        "Expedition12 also Buffs the card it makes Radiant.",
+        "Metaglass also gives +1 Attack (Radiant +5, up from +3)."
+      ],
+      "changes": [
+        "The AI saves Last Hurrah and A Glimpse into the Endless Sea for when it has nothing else to play or is about to lose (A Glimpse also when a card in its hand can refill its deck).",
+        "The AI plays Feng Shui better: it counts next turn's Auspicious Rock and plays cards that set up a rewarded element earlier.",
+        "Unused code behind the card faces is removed. No card looks or plays differently.",
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games.",
+        "Toxopid Leg is now Flexible, so it can stand in the backrow as well as the unit row.",
+        "Toxopid's Legs now land in random zones of either row, empty or holding Units, and destroy the Units there before they land.",
+        "Radiant Toxopid's Legs still land only on your opponent's side, now in either row, destroying the Units there.",
+        "Menus, panels, buttons, badges and the card inspector have tighter corners; card faces keep the corner their frame is cut to.",
+        "Card names and rules text are now set in the game's serif, Alegreya.",
+        "Text across the menus and the board is larger, and far fewer labels are in capitals."
+      ],
+      "text": [
+        "The Perfect Pair no longer lists the pairs in its text.",
+        "PIP: now says \"performance improvement plan\"."
+      ],
+      "fixes": [
+        "Omura's Activate can no longer be used with no enemy Unit on the field, where it did nothing and started its 3-turn cooldown.",
+        "Inner Fire on a Unit with negative Attack (under an aura such as Spikey Pillow) now sets it to exactly its Health, instead of coming up short.",
+        "A Unit token shuffled into a deck no longer shows as going in: it ceases to exist, and the deck pile shows \"Ceased to exist\".",
+        "A Unit-token card can no longer be Traded, so a Trade never puts its player into fatigue.",
+        "Stolen or random casts that aim at enemies now land Fortify, Hopeful Jelly Bean, Divine Spirit and Power Word Shield on the caster's own side.",
+        "Surge Alloy, Plastanium, Metaglass and Graphite land the same way now, instead of buffing the enemy.",
+        "Tributing a GIGA Unit frees all four zones it stood in for the card you pay with it, so a GIGA card with a Tribute cost can take its place.",
+        "A Tribute card that tributes a GIGA Unit may go into either of the GIGA's lanes, not only its left one.",
+        "Random effects over every permanent, and the choice of where a Plague Counter goes, now meet a Ticketed stacked on a Unit after that side's backrow cards, as other such effects do.",
+        "Heroic Power's End Times costs (10) again after a use, even if the card left the field or was copied after its cost went down.",
+        "End Times no longer costs more than (10) after a use when it was Immutable at some of its ends of turn.",
+        "Mass Driver's countdown badge no longer says \"in 2 turns\" twice.",
+        "A Sack made Radiant on the field now crumbles at its Radiant face's Brittle 1, as one played Radiant does.",
+        "A Ticketed made Radiant on the field no longer crumbles, since its Radiant face has no Brittle; one De-Radianted by Prestige starts its Brittle 3.",
+        "A Unit that already used a Reborn regains it when made Radiant, if only its Radiant face has Reborn (Wrong-House Attacker, 4-mana 7/7, Jilliax and others).",
+        "Radiant Cosmic Bard's Combo no longer leaves a drawn Unit that carries a cost raise larger than the cheapest price above it: both drawn Units cost the cheapest drawn price.",
+        "A card level an online game earned now shows in the Collection as soon as the game ends, and the stamp it unlocks can be worn at once, without reloading the page.",
+        "A Brittle Unit that Radiant Shadowstep saves counts its Brittle down again.",
+        "A Keymaster Keenus or Shockwave447 that a Transform makes gets its random keywords."
+      ]
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-019",
+      "classic-024",
+      "classic-026",
+      "classic-030",
+      "classic-037",
+      "classic-039",
+      "classic-045",
+      "classic-053",
+      "classic-058",
+      "classic-064",
+      "classic-070",
+      "classic-076",
+      "classic-081",
+      "classic-083",
+      "classic-085",
+      "classicplus-006",
+      "classicplus-010",
+      "classicplus-011",
+      "classicplus-013",
+      "classicplus-023",
+      "classicplus-029",
+      "classicplus-046",
+      "classicplus-064",
+      "classicplus-065",
+      "classicplus-070",
+      "core-003",
+      "core-004",
+      "core-007",
+      "core-023",
+      "core-050",
+      "core-083",
+      "core-084",
+      "core-091",
+      "core-098",
+      "meditative-008",
+      "meditative-024",
+      "meditative-031",
+      "meditative-033",
+      "meditative-037",
+      "meditative-039",
+      "meditative-045",
+      "meditative-049",
+      "meditative-051",
+      "meditative-053",
+      "meditative-055",
+      "meditative-058",
+      "meditative-065",
+      "meditative-080",
+      "meditative-084",
+      "meditative-087",
+      "meditative-091",
+      "meditative-097",
+      "meditative-100",
+      "stinkyscape-010",
+      "stinkyscape-012",
+      "stinkyscape-018",
+      "stinkyscape-020",
+      "stinkyscape-045",
+      "stinkyscape-048",
+      "stinkyscape-052",
+      "stinkyscape-056",
+      "stinkyscape-060",
+      "stinkyscape-070",
+      "stinkyscape-074",
+      "stinkyscape-077",
+      "stinkyscape-090",
+      "stinkyscape-098",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-113",
+      "stinkyscape-130",
+      "stinkyscape-148",
+      "stinkyscape-169",
+      "stinkyscape-177",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscapeplus-015",
+      "stinkyscapeplus-016",
+      "stinkyscapeplus-021",
+      "stinkyscapeplus-035",
+      "stinkyscapeplus-049",
+      "stinkyscapeplus-056",
+      "stinkyscapeplus-059",
+      "stinkyscapeplus-066",
+      "stinkyscapeplus-079",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-100",
+      "stinkyscapeplus-101",
+      "stinkyscapeplus-105",
+      "stinkyscapeplus-113",
+      "stinkyscapeplus-117",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-121",
+      "stinkyscapeplus-124",
+      "stinkyscapeplus-125",
+      "stinkyscapeplus-127",
+      "stinkyscapeplus-130",
+      "stinkyscapeplus-133",
+      "stinkyscapeplus-135",
+      "stinkyscapeplus-136",
+      "stinkyscapeplus-142",
+      "stinkyscapeplus-150",
+      "stinkyscapeplus-151",
+      "stinkyscapeplus-152",
+      "stinkyscapeplus-158",
+      "stinkyscapeplus-164",
+      "traininggrounds-040"
+    ],
+    "includes": [
+      "v0.6.14b",
+      "v0.6.14c",
+      "v0.6.14d",
+      "v0.6.14e",
+      "v0.6.14f",
+      "v0.6.14g",
+      "v0.6.14h",
+      "v0.6.14i",
+      "v0.6.14j",
+      "v0.6.14k",
+      "v0.6.14l",
+      "v0.6.14m",
+      "v0.6.14n",
+      "v0.6.14o",
+      "v0.6.14p",
+      "v0.6.14q",
+      "v0.6.14r",
+      "v0.6.14s",
+      "v0.6.14t"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.15b",
+    "date": "2026-11-26",
+    "title": "Motion and glow budget",
+    "source": "issue #5014",
+    "notes": "Card faces stop looping their decoration (keyword treatments, the Mythic hand shimmer, the zzz, the Dormant seal and shipyard idle, marks, Glitch, the animated rarity foil, the full-screen view's camera); owned cosmetics keep theirs; no card plays differently.",
+    "player": {
+      "title": "A calmer table",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card faces no longer loop their decorations. Playable cards, legal targets, End turn and the turn timer still pulse; cosmetics you own keep their motion."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "8a54a004551a2b60950db15928c73e9470aba12d"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "motion-and-glow-budget",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15c",
+    "date": "2026-11-26",
+    "title": "The palette's colours come from the table's materials",
+    "source": "issue #5012",
+    "notes": "palette.css trades its 25 Tailwind default colours for jade, lacquer, ink, verdigris, copper, amethyst and pale brass (43 colours, from 50); the board's and menus' status colours follow, and 903 literal colours move onto the palette. Card art, owned cosmetics, playmats and card versions keep their colours.",
+    "player": {
+      "title": "Warmer status colours",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Glows, damage, healing, timers, map nodes and proficiency stamps are redrawn in jade, lacquer red, ink blue and verdigris, to sit on the table's wood and parchment.",
+        "Card art and the cosmetics you own keep their colours."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "26ec15b7cb2715e0950d758f097767f02a011ce7"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "the-palette-s-colours-come-from-the-table-s-materials",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15d",
+    "date": "2026-11-26",
+    "title": "One SVG icon set in place of Unicode glyphs",
+    "source": "#5016",
+    "notes": "Replace Unicode glyphs with inline SVG Icon component across the client, including card inspect notes",
+    "player": {
+      "title": "One SVG icon set in place of Unicode glyphs",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Card inspect state notes and client UI components render consistent SVG icons instead of device-dependent Unicode character glyphs."
+      ]
+    },
+    "commits": [
+      "ffc2614a7bf1095cd2a639762e793aa183a71600"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "one-svg-icon-set-in-place-of-unicode-glyphs",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15e",
+    "date": "2026-11-26",
+    "title": "Aura on every standing text",
+    "source": "#5039",
+    "notes": "R5039000: Aura: added to the standing line of Core #38, #64, #73, #75, #84, M #11, #92, S #148, #157, T-shield-layer, S+ #30, #42, #62, #63; removed from the own-text line of M #65, S #111, T-drone-interceptor, T-drone-corvette, S+ #87, #163. English and Chinese, wording only.",
+    "player": {
+      "title": "Aura on every standing text",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Every line that keeps working while its card is on the field and changes other cards, a player or a hero now starts with \"Aura:\".",
+        "Fourteen cards gain it, among them Anti-oneshot Armor, Going Long, Unan, The Gauntlet and Force Projector.",
+        "Keymaster Keenus, Shockwave447, Frontier Flora, Accelerationist and the Drones lose it: text about the card itself reads like a keyword.",
+        "No card plays differently: only the words changed, in English and Chinese."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "5aebbb5f5e70bac9474b4c70c1634fac5dd8da04"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "aura-on-every-standing-text",
+    "changes": [
+      {
+        "id": "core-038",
+        "name": "Quickstriker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-064",
+        "name": "Gifted Program",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-075",
+        "name": "Infinite Reserves",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-011",
+        "name": "Double Header",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-065",
+        "name": "Keymaster Keenus",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-092",
+        "name": "Unan",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-111",
+        "name": "Shockwave447",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-148",
+        "name": "Alteran Reach",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-157",
+        "name": "The Gauntlet",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-drone-interceptor",
+        "name": "Drone Interceptor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-drone-corvette",
+        "name": "Drone Corvette",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-shield-layer",
+        "name": "Drone Battleship (Shield Layer)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-030",
+        "name": "Yeah I’m a War Hero",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-042",
+        "name": "Force Projector",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-062",
+        "name": "Overdrive Projector",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-063",
+        "name": "Overdrive Dome",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-087",
+        "name": "Frontier Flora",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-163",
+        "name": "Accelerationist",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.15f",
+    "date": "2026-11-26",
+    "title": "Patch: hand, deck and graveyard triggers read alike",
+    "source": "issue #5038",
+    "notes": "Animosity (S+ #89), Corpse Eater (Core #89) and Legacy: Corpse Eater (TG #56) print their trigger from where the card waits as \"While this is in your <zone>: …\", as every other such card does (R5038000, §6.2); their Chinese faces follow. Corpse Eater's two are wording only. Animosity's `card` number is marked `read: \"handOrDeck\"`, as catalog check infers from its new line, so a Buff or Nerf reaches it only in the hand or deck (R3888000), no longer while it resolves or lies in a graveyard it could be played from.",
+    "player": {
+      "title": "Hand, deck and graveyard triggers read alike",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Buff or Nerf changes Animosity's exile count only while it is in your hand or deck, the only places that count is read."
+      ],
+      "text": [
+        "Animosity now reads \"While this is in your deck: When your exile has 5 cards, cast this.\"",
+        "Corpse Eater and Legacy: Corpse Eater now read \"While this is in your hand: When a Unit dies, this gains its attack and health.\""
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "444207ec448498f01347325348ca7e45c54fa585"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-089"
+    ],
+    "fragment": "hand-deck-and-graveyard-triggers-read-alike",
+    "changes": [
+      {
+        "id": "core-089",
+        "name": "Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-056",
+        "name": "Legacy: Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-089",
+        "name": "Animosity",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.15g",
+    "date": "2026-11-26",
+    "title": "Patch: a unit with Weapons or Miners equipped keeps its own name and text and lists its gear, and a Smoothie's Fruit text prints its numbers",
+    "source": "issue #5050, issue #5049",
+    "notes": "Issue #5050 (R5050000): a unit holding gear (Miners or Weapons equipped into it: Radi, Halo, Radix, Phalanx, Raven, Icarus, Prototype-X1, Prototype-X2, Ozark, Orca, Galaxy and any other) is drawn as a Starship is, named for its host, its host's text, then its gear listed oldest first (apps/web/src/cards/StarshipPieces.tsx EquippedGear; the face model's FaceModel.equipped). Issue #5049 (R5049000): a fused text's face fills each ingredient's numbers from its own declaration, so a Smoothie's gained Fruit text prints numbers instead of placeholders. Presentation only: no card plays differently.",
+    "player": {
+      "title": "Equipped Units keep their own faces, and Smoothies show their numbers",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Unit with Weapons or Miners Equipped into it, such as Radi or Halo, keeps its own name and text.",
+        "Its gear is listed below its text, oldest first, as a Starship lists its pieces: hover a piece to read its card."
+      ],
+      "text": [],
+      "fixes": [
+        "A Smoothie or Large Smoothie in hand now shows its Fruits' numbers, each Fruit its own, instead of placeholders such as {amount}."
+      ]
+    },
+    "commits": [
+      "794173f2dff9c9fd39ed32d89dca4e3a971d4b05"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "a-unit-with-weapons-or-miners-equipped-keeps-its-own-name",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15h",
+    "date": "2026-11-26",
+    "title": "Patch: Immutable stops stat buffs, debuffs, keyword grants and auras from other cards",
+    "source": "issue #5113",
+    "notes": "Issue #5113 (R5113000): Immutable keeps every change another card makes to a card's stats or keywords off it, in every zone, an Indestructible Unit card's included (R4353000): a buff or debuff, for good or this turn (buff, buffAllUnits, buffCards, buffRandomUnit, doubleStats, buffThisTurn), a set Attack this turn (amending R4591000), a keyword given (grantKeyword, grantRandomKeywords with no draw, grantKeywordCards; a summon's or a draw's keywords on the card it brings still land, as how it arrives), another card's aura (stats, keywords, set Attack), a combat-only Attack bonus (R1120) and its controller's \"your Units have\" lends. Its own text still changes it (R23). Reported from a practice game where S #15 Arg Arg Defender gave S #116 Megabase +1/+1 and Taunt. R5113001: S+ #46 Phase Fabric gives its keywords with one grantKeywords, so its own Immutable does not turn the rest away; an Immutable target takes none. Every Indestructible Unit is Immutable (R4353000), so no other card's aura or debuff takes its max health to 0 any more (R69 amended), the owner's call on the issue.",
+    "player": {
+      "title": "Immutable Units can't be buffed or nerfed",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Immutable now also stops other cards from changing a card's Attack, Health or keywords.",
+        "Buffs and debuffs, ones that last a turn included, keywords given to it, auras and \"your Units have\" effects all pass an Immutable card by.",
+        "An Immutable card's own text still changes it, and damage, healing and destroy effects still reach it.",
+        "Every Indestructible Unit is Immutable, so the same holds for it.",
+        "Suppressive Aura, Transmutable Toxins and Adaptive Growth no longer lower an Indestructible Unit's Health, so they no longer defeat it.",
+        "Phase Fabric still gives all of its keywords, but gives none to a Unit that is already Immutable."
+      ],
+      "text": [],
+      "fixes": [
+        "Arg Arg Defender no longer gives an Immutable neighbour such as Megabase +1/+1 and Taunt."
+      ]
+    },
+    "commits": [
+      "868487421c9ce33fbad54bf0663fd3bc18516307"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-028",
+      "classic-041",
+      "classic-042",
+      "classic-047",
+      "classic-049",
+      "classic-053",
+      "classicplus-001",
+      "classicplus-006",
+      "classicplus-007",
+      "classicplus-010",
+      "classicplus-030",
+      "classicplus-038",
+      "classicplus-047",
+      "classicplus-077",
+      "core-014",
+      "core-066",
+      "core-075",
+      "core-091",
+      "meditative-025",
+      "meditative-059",
+      "stinkyscape-015",
+      "stinkyscape-021",
+      "stinkyscape-023",
+      "stinkyscape-024",
+      "stinkyscape-038",
+      "stinkyscape-051",
+      "stinkyscape-054",
+      "stinkyscape-058",
+      "stinkyscape-063",
+      "stinkyscape-064",
+      "stinkyscape-081",
+      "stinkyscape-106",
+      "stinkyscape-112",
+      "stinkyscape-119",
+      "stinkyscape-122",
+      "stinkyscape-127",
+      "stinkyscape-131",
+      "stinkyscape-133",
+      "stinkyscape-134",
+      "stinkyscape-135",
+      "stinkyscape-141",
+      "stinkyscape-156",
+      "stinkyscape-165",
+      "stinkyscape-177",
+      "stinkyscape-t-anomaly-found",
+      "stinkyscape-t-dormant-starship",
+      "stinkyscape-t-shield-layer",
+      "stinkyscapeplus-041",
+      "stinkyscapeplus-044",
+      "stinkyscapeplus-046",
+      "stinkyscapeplus-061",
+      "stinkyscapeplus-067",
+      "stinkyscapeplus-088",
+      "stinkyscapeplus-110",
+      "stinkyscapeplus-111",
+      "stinkyscapeplus-112",
+      "stinkyscapeplus-114",
+      "stinkyscapeplus-116",
+      "stinkyscapeplus-121",
+      "stinkyscapeplus-123",
+      "stinkyscapeplus-132",
+      "stinkyscapeplus-133",
+      "stinkyscapeplus-158",
+      "stinkyscapeplus-t-alnilam",
+      "traininggrounds-003",
+      "traininggrounds-021",
+      "traininggrounds-031",
+      "traininggrounds-045",
+      "traininggrounds-056"
+    ],
+    "fragment": "immutable-stops-stat-buffs-debuffs-keyword-grants-and-auras",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15i",
+    "date": "2026-11-26",
+    "title": "Motion and glow budget reverted",
+    "source": "issue #5130",
+    "notes": "Reverts issue #5014's motion and glow budget (v0.6.15b) and its follow-up from issue #5091: card faces loop their decoration again (keyword treatments, the Mythic hand shimmer, the zzz, the Dormant seal and shipyard idle, marks, Glitch, the animated rarity foil, the full-screen view's camera), and the title screen's gold wordmark, hearth and embers are back; no card plays differently.",
+    "player": {
+      "title": "The table glows again",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card faces loop their decorations again, as they did before the calmer table, and the title screen's gold lettering, hearth and embers are back."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "bf57b99b3856c1483c90fda182911ccf9ba6f0e1"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "motion-and-glow-budget-reverted",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15j",
+    "date": "2026-11-27",
+    "title": "Patch: Starfleet Commander and Preemptive Strike still Discover a War Doctrine when a fused Cry asks during the launch",
+    "source": "issue #5106",
+    "notes": "R5106000: S #137 Starfleet Commander's Cry and S #176 Preemptive Strike read their Dormant Starship once, as the text begins (for_each_card's memo, R113), and build the launch and the Discover as one part from that read (crate::war_doctrine, the text both run, kept out of the card files so neither crosses the complicated line count, R1846000, R2173001). Before, the hook read dormant_starship_of each time the list was built: when a fused Cry asked during the launch (S #40 Poison Capsule's placement), the list paused after awaken, and its rebuild after the answer found the Starship launched, built nothing, and lost the Discover. Each card's script_before_launch_read_once keeps the old read, keyed by this fragment, so replays of every version before this one fold under it (R4779000). classify stage 2 against main's build finds S #176 playing differently in its forced games, and Core #39 Recycling Initiative in its unforced games.",
+    "player": {
+      "title": "War Doctrines after a Starship launch that asks",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Starfleet Commander and Preemptive Strike now let you Discover a War Doctrine even when a piece's Cry asks you something as the Starship launches, such as where Poison Capsule's counters go."
+      ]
+    },
+    "commits": [
+      "b6c40db1dc2f90c04b3e38843beef25b91c855e5"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "core-039",
+      "stinkyscape-176"
+    ],
+    "fragment": "starfleet-commander-and-preemptive-strike-still-discover-a",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15k",
+    "date": "2026-11-27",
+    "title": "Patch: cap every mana amount and every chosen X at 15",
+    "source": "issue #5148",
+    "notes": "Issue #5148 (R5148000): a player holds at most MANA_CEILING (15) mana, current or maximum, temporary mana included (every gain, a refresh and its riders, persistent modifiers, crystal steals); what would pass it is lost. An X-cost card's chosen, cast, set or counted X is at most 15 (an X that is no price, Lil' Kenny's count, is not capped), under a credit line (R1223) and infinite mana (R3548004) too. Costs are not capped: infinite mana still pays Core #100 Ceaseless Void at (16) or more. Asked for as a preemptive counter to infinite mana dealing unbounded damage. S #153 Stimmycheck, a (0) gain of 1 mana that returns each turn, is the card classify finds playing differently.",
+    "player": {
+      "title": "Mana and X capped at 15",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "You can hold at most 15 mana. Mana you would gain past 15, temporary mana included, is lost.",
+        "In Too Deep's 100-mana reward and Last Word's Radiant 100 mana now leave you with 15.",
+        "An X is at most 15, however much mana you have, borrowed mana and infinite mana included.",
+        "Card costs are not capped: infinite mana still lets you play Ceaseless Void while it costs (16) or more."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "d1f4b46691114ce22f55b4b0479461974bd7e851"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-153"
+    ],
+    "fragment": "cap-every-mana-amount-and-every-chosen-x-at-15",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15l",
+    "date": "2026-11-27",
+    "title": "Patch: an Embiggened version costs its normal price plus a premium",
+    "source": "issue #5109",
+    "notes": "An embiggen card's Embiggened version costs its normal version's finished price (every rung of R65 and R455, floored at 0) plus its Embiggen premium, B - A; a Garden's premium replaces it and noEmbiggenPremium makes it 0 (R5109000). Every embiggen card's Embiggened line is relabeled with its premium, 'Embiggened (+N):', in English and Chinese, and patch diffs write '(2) Cost, Embiggened (+2)'; the second cost badge stays the realized price and shows under a discount too (R5109001).",
+    "player": {
+      "title": "Embiggen is a flat extra cost",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Embiggen now costs a flat +N on top of the card's current price, so discounts and set prices apply to both versions alike.",
+        "A card that costs (0) after a discount still pays its whole Embiggen extra, and \"costs (1)\" effects make its Embiggened version cost (1) plus the extra.",
+        "Professor Curvature lowers an Embiggen card's two prices together, only when its normal price is (4) or more.",
+        "Under Mountaintop Garden, its extra replaces the card's own, on top of the card's current price."
+      ],
+      "text": [
+        "Every Embiggen card's Embiggened line names its extra cost: \"Embiggened (+2):\" in place of \"Embiggened (4):\".",
+        "The small second price beside the cost gem still shows what the Embiggened version costs right now, discounts included."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "49b908bc47893c2a2cf4f9bc8371c42e587ddd9d"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-004",
+      "classic-021",
+      "classic-025",
+      "classic-028",
+      "classic-035",
+      "classic-036",
+      "classic-048",
+      "classic-050",
+      "classic-061",
+      "classic-068",
+      "classicplus-003",
+      "classicplus-030",
+      "classicplus-058",
+      "classicplus-065",
+      "core-021",
+      "core-032",
+      "core-059",
+      "core-083",
+      "core-100",
+      "core-t-coin",
+      "meditative-066",
+      "meditative-078",
+      "meditativeplus-002",
+      "meditativeplus-003",
+      "meditativeplus-006",
+      "stinkyscape-011",
+      "stinkyscape-020",
+      "stinkyscape-064",
+      "stinkyscape-114",
+      "stinkyscape-127",
+      "stinkyscape-128",
+      "stinkyscape-129",
+      "stinkyscape-154",
+      "stinkyscape-170",
+      "stinkyscapeplus-005",
+      "stinkyscapeplus-043",
+      "stinkyscapeplus-064",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-106",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-124",
+      "stinkyscapeplus-134",
+      "stinkyscapeplus-139",
+      "traininggrounds-018",
+      "traininggrounds-054"
+    ],
+    "fragment": "an-embiggened-version-costs-its-normal-price-plus-a-premium",
+    "changes": [
+      {
+        "id": "core-046",
+        "name": "Suppressive Aura",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-056",
+        "name": "Jilliax",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-059",
+        "name": "Unbiased Immigration",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-083",
+        "name": "Transmogulate",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-035",
+        "name": "Prep",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-036",
+        "name": "Conjure Bones",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-021",
+        "name": "API Key Fishing",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-046",
+        "name": "Conjure Intellect",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-081",
+        "name": "Deadman's Hand",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-003",
+        "name": "Wondrous Wand",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-004",
+        "name": "Jlockeed's Supply Drop",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-005",
+        "name": "Spirit Lash",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-009",
+        "name": "Magic Amplifier",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-019",
+        "name": "Grubby Gloves",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-023",
+        "name": "Enormous Elderberry",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-079",
+        "name": "Orca",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-127",
+        "name": "Jlockeed's Siege Tank",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-128",
+        "name": "Jlockeed's Yamato Cannon",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-129",
+        "name": "Jlockeed's Missile Pod",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-154",
+        "name": "Dice of Doom",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-024",
+        "name": "Forced Propagation",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-064",
+        "name": "Surge Wall",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-065",
+        "name": "Thorium Wall",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-066",
+        "name": "Plastanium Wall",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-067",
+        "name": "Phase Wall",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-096",
+        "name": "Open Enrollment",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-138",
+        "name": "Delta Definition",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-139",
+        "name": "Operation Omega",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]

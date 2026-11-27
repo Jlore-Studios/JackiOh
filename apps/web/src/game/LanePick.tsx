@@ -16,7 +16,7 @@ import "./lanePick.css";
 /** One lane the player may choose: its number, the option it answers with, and the words the card gives it. */
 export type LaneChoice = { lane: number; key: string; label: string; detail?: string };
 
-type Box = { left: number; top: number; width: number; height: number };
+export type Box = { left: number; top: number; width: number; height: number };
 
 /** How far an oblong stands out from the zones it covers, so its ring is not drawn on their edges. */
 export const LANE_PICK_OUTSET_PX = 4;
@@ -29,21 +29,33 @@ export function laneOblongTestid(lane: number): string {
   return `lane-pick-${String(lane)}`;
 }
 
+/**
+ * #4995: each testid's box, skipping ids with no element on the page. `GigaPlacement.tsx` unions
+ * them into its own oblongs.
+ */
+export function measureBoxes(ids: readonly string[]): Map<string, Box> {
+  const out = new Map<string, Box>();
+  for (const id of ids) {
+    const zone = byTestid(id);
+    if (zone === null) continue;
+    const rect = zone.getBoundingClientRect();
+    out.set(id, { left: rect.left, top: rect.top, width: rect.width, height: rect.height });
+  }
+  return out;
+}
+
 /** The box that spans a lane's four zones, or null while one of them is not on the page. */
 function measure(lanes: readonly number[]): Map<number, Box> {
   const out = new Map<number, Box>();
   for (const lane of lanes) {
     const ids = laneZoneTestids(lane);
-    const rects: DOMRect[] = [];
-    for (const id of ids) {
-      const zone = byTestid(id);
-      if (zone !== null) rects.push(zone.getBoundingClientRect());
-    }
-    if (rects.length < ids.length) continue;
+    const boxes = measureBoxes(ids);
+    if (boxes.size < ids.length) continue;
+    const rects = [...boxes.values()];
     const left = Math.min(...rects.map((rect) => rect.left)) - LANE_PICK_OUTSET_PX;
     const top = Math.min(...rects.map((rect) => rect.top)) - LANE_PICK_OUTSET_PX;
-    const right = Math.max(...rects.map((rect) => rect.right)) + LANE_PICK_OUTSET_PX;
-    const bottom = Math.max(...rects.map((rect) => rect.bottom)) + LANE_PICK_OUTSET_PX;
+    const right = Math.max(...rects.map((rect) => rect.left + rect.width)) + LANE_PICK_OUTSET_PX;
+    const bottom = Math.max(...rects.map((rect) => rect.top + rect.height)) + LANE_PICK_OUTSET_PX;
     out.set(lane, { left, top, width: right - left, height: bottom - top });
   }
   return out;
@@ -73,6 +85,36 @@ export function neighbourZone(lanes: readonly LaneChoice[], from: EventTarget | 
   if (next === undefined || !lit.includes(place.lane)) return null;
   const to = byTestid(testid.zone(place.side, place.row, next));
   return to instanceof HTMLElement ? to : null;
+}
+
+/**
+ * Reads hover and focus off the page's zones, as R514's answer is (Prompt.tsx): `at` names what a zone
+ * under the pointer or focus lights, null for none. Returns the cleanup, which also clears both.
+ * The giga placement's oblongs read theirs the same way (GigaPlacement.tsx).
+ */
+export function listenZoneHover<T>(
+  at: (target: EventTarget | null) => T | null,
+  setHovered: (value: T | null) => void,
+  setFocused: (value: T | null) => void,
+): () => void {
+  const onOver = (event: PointerEvent): void => setHovered(at(event.target));
+  const onOut = (event: PointerEvent): void => {
+    if (event.relatedTarget === null) setHovered(null);
+  };
+  const onFocusIn = (event: FocusEvent): void => setFocused(at(event.target));
+  const onFocusOut = (): void => setFocused(null);
+  document.addEventListener("pointerover", onOver);
+  document.addEventListener("pointerout", onOut);
+  document.addEventListener("focusin", onFocusIn);
+  document.addEventListener("focusout", onFocusOut);
+  return () => {
+    document.removeEventListener("pointerover", onOver);
+    document.removeEventListener("pointerout", onOut);
+    document.removeEventListener("focusin", onFocusIn);
+    document.removeEventListener("focusout", onFocusOut);
+    setHovered(null);
+    setFocused(null);
+  };
 }
 
 export default function LanePick(props: { lanes: readonly LaneChoice[]; readOnly: boolean }): ReactElement {
@@ -114,24 +156,7 @@ export default function LanePick(props: { lanes: readonly LaneChoice[]; readOnly
       const lane = zone === null ? null : placeOf(zone)?.lane;
       return lane !== null && lane !== undefined && lit.includes(lane) ? lane : null;
     };
-    const onOver = (event: PointerEvent): void => setHovered(laneAt(event.target));
-    const onOut = (event: PointerEvent): void => {
-      if (event.relatedTarget === null) setHovered(null);
-    };
-    const onFocusIn = (event: FocusEvent): void => setFocused(laneAt(event.target));
-    const onFocusOut = (): void => setFocused(null);
-    document.addEventListener("pointerover", onOver);
-    document.addEventListener("pointerout", onOut);
-    document.addEventListener("focusin", onFocusIn);
-    document.addEventListener("focusout", onFocusOut);
-    return () => {
-      document.removeEventListener("pointerover", onOver);
-      document.removeEventListener("pointerout", onOut);
-      document.removeEventListener("focusin", onFocusIn);
-      document.removeEventListener("focusout", onFocusOut);
-      setHovered(null);
-      setFocused(null);
-    };
+    return listenZoneHover(laneAt, setHovered, setFocused);
   }, [offeredKey, readOnly]);
 
   const active = hovered ?? focused;

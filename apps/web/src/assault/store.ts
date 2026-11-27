@@ -31,7 +31,7 @@ import {
   assaultReduce,
   catalogVersion,
 } from "../wasm/index.ts";
-import { isRecord, isStringArray } from "../wire/json.ts";
+import { isCount, isRecord, isStringArray } from "../wire/json.ts";
 import {
   ASSAULT_ATTEMPT_KEY,
   ASSAULT_ATTEMPT_STEP,
@@ -83,12 +83,8 @@ type Core = {
   record: AssaultRecord;
 };
 
-export function assaultToday(now: Date = new Date()): string {
+function assaultToday(now: Date = new Date()): string {
   return now.toISOString().slice(0, ASSAULT_DATE_FORMAT.length);
-}
-
-function isCount(value: unknown): value is number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
 function isPositiveCount(value: unknown): value is number {
@@ -103,10 +99,14 @@ function parseSetup(raw: unknown): AssaultSetup | null {
   return { date, deck, source, startLevel, attempt };
 }
 
-function parseRecord(raw: unknown): AssaultRecord | null {
+/** R4581001: a record no attempt could make, its best past the module's last level or a checkpoint
+ *  that is none of the module's, is malformed: the module refuses a level past its own range, and a
+ *  start from a checkpoint that is none. */
+function parseRecord(raw: unknown, constants: AssaultConstants): AssaultRecord | null {
   if (!isRecord(raw)) return null;
   const { date, best, checkpoints, attempts, repelledOn } = raw;
-  if (typeof date !== "string" || !isCount(best) || !Array.isArray(checkpoints) || !checkpoints.every(isPositiveCount)) return null;
+  const isCheckpoint = (value: unknown): value is number => isPositiveCount(value) && constants.checkpoints.includes(value);
+  if (typeof date !== "string" || !isCount(best) || best > constants.levels || !Array.isArray(checkpoints) || !checkpoints.every(isCheckpoint)) return null;
   if (!isCount(attempts) || (repelledOn !== null && !isPositiveCount(repelledOn))) return null;
   return { date, best, checkpoints, attempts, repelledOn };
 }
@@ -127,10 +127,10 @@ function parseAction(raw: unknown): AssaultAction | null {
   }
 }
 
-function parseFile(raw: unknown): AssaultFile | null {
+function parseFile(raw: unknown, constants: AssaultConstants): AssaultFile | null {
   if (!isRecord(raw) || typeof raw.version !== "string" || !Array.isArray(raw.actions)) return null;
   const setup = parseSetup(raw.setup);
-  const record = parseRecord(raw.record);
+  const record = parseRecord(raw.record, constants);
   const actions = raw.actions.map(parseAction);
   if (setup === null || record === null || actions.some((action) => action === null)) return null;
   return { version: raw.version, setup, record, actions: actions as AssaultAction[] };
@@ -147,15 +147,15 @@ function readJson(key: string): { present: boolean; value: unknown } {
   }
 }
 
-function parseAttempt(raw: unknown): AssaultFile | null {
+function parseAttempt(raw: unknown, constants: AssaultConstants): AssaultFile | null {
   if (!isRecord(raw) || raw.v !== ASSAULT_STORAGE_VERSION) return null;
-  return parseFile(raw.file);
+  return parseFile(raw.file, constants);
 }
 
-function readAttempt(): AssaultFile | null {
+function readAttempt(constants: AssaultConstants): AssaultFile | null {
   const stored = readJson(ASSAULT_ATTEMPT_KEY);
   if (!stored.present) return null;
-  const attempt = parseAttempt(stored.value);
+  const attempt = parseAttempt(stored.value, constants);
   if (attempt === null) removeStored(ASSAULT_ATTEMPT_KEY);
   return attempt;
 }
@@ -191,21 +191,21 @@ function clearHeld(): void {
   removeStored(ASSAULT_HELD_KEY);
 }
 
-function parseRecords(raw: unknown): Record<string, AssaultRecord> | null {
+function parseRecords(raw: unknown, constants: AssaultConstants): Record<string, AssaultRecord> | null {
   if (!isRecord(raw) || raw.v !== ASSAULT_STORAGE_VERSION || !isRecord(raw.days)) return null;
   const days: Record<string, AssaultRecord> = {};
   for (const [date, value] of Object.entries(raw.days)) {
-    const record = parseRecord(value);
+    const record = parseRecord(value, constants);
     if (record === null || record.date !== date) return null;
     days[date] = record;
   }
   return days;
 }
 
-function readRecords(): Record<string, AssaultRecord> {
+function readRecords(constants: AssaultConstants): Record<string, AssaultRecord> {
   const stored = readJson(ASSAULT_RECORDS_KEY);
   if (!stored.present) return {};
-  const records = parseRecords(stored.value);
+  const records = parseRecords(stored.value, constants);
   if (records === null) {
     removeStored(ASSAULT_RECORDS_KEY);
     return {};
@@ -261,10 +261,10 @@ function foldAttempt(file: AssaultFile, currentContent: AssaultContent): {
 function loadCore(): Core {
   const constants = assaultConstants();
   const currentContent = assaultContent();
-  const storedRecords = readRecords();
+  const storedRecords = readRecords(constants);
   let records = trimRecords(storedRecords, constants);
   if (Object.keys(records).length !== Object.keys(storedRecords).length) persistRecords(records);
-  const file = readAttempt();
+  const file = readAttempt(constants);
   if (file !== null) {
     const folded = foldAttempt(file, currentContent);
     if (folded !== null) {
@@ -332,6 +332,8 @@ function loadCore(): Core {
 let core: Core | null = null;
 const listeners = new Set<() => void>();
 let pageListening = false;
+/** An Assault page was open and left: the cache may be older than what the device holds. */
+let pageWasOpen = false;
 
 function current(): Core {
   core ??= loadCore();
@@ -343,11 +345,22 @@ function commit(next: Core): void {
   for (const listener of [...listeners]) listener();
 }
 
+function reloadCore(): void {
+  // Another tab changed what is kept: read it all again, but for a finished attempt this tab still shows.
+  const kept = core;
+  const next = loadCore();
+  commit(
+    next.state === null && kept !== null && kept.state !== null && terminal(kept.state)
+      ? { ...next, content: kept.content, day: kept.day, state: kept.state, file: kept.file, record: next.records[kept.record.date] ?? kept.record }
+      : next,
+  );
+}
+
 function onStorage(event: StorageEvent): void {
   // R4733000: another tab holding or clearing a report reloads this tab too, so a report is
   // applied once no matter which tab left the fight.
   if (event.key !== null && event.key !== ASSAULT_ATTEMPT_KEY && event.key !== ASSAULT_RECORDS_KEY && event.key !== ASSAULT_HELD_KEY) return;
-  commit(loadCore());
+  reloadCore();
 }
 
 function subscribe(listener: () => void): () => void {
@@ -355,9 +368,14 @@ function subscribe(listener: () => void): () => void {
   if (!pageListening && typeof window !== "undefined") {
     window.addEventListener("storage", onStorage);
     pageListening = true;
+    // The page opens again after leaving: start from what the device holds now, as another tab
+    // may have written while nothing listened. A first load already read it. A finished attempt
+    // this tab still shows is kept.
+    if (pageWasOpen) reloadCore();
   }
   return () => {
     listeners.delete(listener);
+    if (listeners.size === 0) pageWasOpen = true;
     if (listeners.size === 0 && pageListening) {
       window.removeEventListener("storage", onStorage);
       pageListening = false;
@@ -368,6 +386,12 @@ function subscribe(listener: () => void): () => void {
 function startAttempt(start: AssaultStart): string | null {
   const from = current();
   if (from.state !== null && !terminal(from.state)) return t("Finish or abandon the attempt in progress first.");
+  // R4581000: every attempt started is dealt on the current UTC day, so a Start from a screen left open
+  // past UTC midnight, which names the day before, is refused and the screen shows the new day (#5005).
+  if (start.date !== assaultToday()) {
+    reloadCore();
+    return t("A new day's Assault has begun. Look it over and start again.");
+  }
   try {
     // R4581000: a finished attempt may have been folded on an older catalog's content; the next one
     // is dealt on the current content, the version its file names.
@@ -507,4 +531,5 @@ export function __resetAssaultForTests(): void {
   listeners.clear();
   if (pageListening && typeof window !== "undefined") window.removeEventListener("storage", onStorage);
   pageListening = false;
+  pageWasOpen = false;
 }

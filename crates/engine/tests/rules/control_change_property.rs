@@ -5,7 +5,7 @@
 //! forced attack by a crossed unit happens and spends nothing. Runs reproduce from PROPERTY_SEED
 //! (CLAUDE.md rules 4 and 9 in spirit); a failing run names its index.
 
-use jackioh_engine::effects::{rotate, steal, steal_all, swap_board};
+use jackioh_engine::effects::{SwapArgs, rotate, steal, swap};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
@@ -70,9 +70,6 @@ enum Verb {
         actor: PlayerId,
         pick: usize,
     },
-    StealAll {
-        actor: PlayerId,
-    },
     SwapBoard {
         actor: PlayerId,
     },
@@ -86,10 +83,7 @@ enum Verb {
 impl Verb {
     fn actor(&self) -> PlayerId {
         match *self {
-            Verb::Steal { actor, .. }
-            | Verb::StealAll { actor }
-            | Verb::SwapBoard { actor }
-            | Verb::Rotate { actor, .. } => actor,
+            Verb::Steal { actor, .. } | Verb::SwapBoard { actor } | Verb::Rotate { actor, .. } => actor,
         }
     }
 }
@@ -144,15 +138,12 @@ fn actor_arb(rng: &mut Rng) -> PlayerId {
 }
 
 fn verb_arb(rng: &mut Rng) -> Verb {
-    match rng.int(4) {
+    match rng.int(3) {
         0 => Verb::Steal {
             actor: actor_arb(rng),
             pick: rng.int(UNIT_ZONES) as usize,
         },
-        1 => Verb::StealAll {
-            actor: actor_arb(rng),
-        },
-        2 => Verb::SwapBoard {
+        1 => Verb::SwapBoard {
             actor: actor_arb(rng),
         },
         _ => Verb::Rotate {
@@ -310,8 +301,9 @@ fn effect_of(state: &GameState, verb: &Verb) -> Option<Effect> {
             let target = enemies.get(pick % enemies.len().max(1))?;
             Some(steal(json_as(json!({ "instanceId": target }))))
         }
-        Verb::StealAll { .. } => Some(steal_all(Default::default())),
-        Verb::SwapBoard { .. } => Some(swap_board()),
+        Verb::SwapBoard { .. } => Some(swap(SwapArgs {
+            what: Some(SwapWhat::Board),
+        })),
         Verb::Rotate {
             direction, radiant, ..
         } => Some(rotate(json_as(

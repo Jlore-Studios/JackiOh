@@ -110,17 +110,17 @@ mod tests {
         }
 
         #[test]
-        fn r4353001_its_own_controllers_immutable_unit_in_play_is_a_target_and_gets_5_5() {
+        fn r4353001_r5113000_its_own_controllers_immutable_unit_in_play_is_a_target_and_gets_nothing() {
             let mut s = scenario(json!({
                 "p1": { "hand": [BOOK, FILLER], "field": [{ "def": "core-019", "radiant": true }] },
                 "p2": { "hand": [FILLER] },
             }));
             let unit = unit_id(&s, PlayerId::P1, 1);
-            // Immutable bars no aim, and a +5/+5 changes no text, so it lands as on any Unit.
+            // Immutable bars no aim (R4353001), and it keeps another card's +5/+5 off (R5113000).
             assert!(offered(&s).contains(&unit));
             let targets = pick::unit_at(&s, PlayerId::P1, 1);
             s.play(BOOK, json!({ "targets": targets }));
-            s.expect_stats(&unit, json!({ "attack": 23, "health": 23, "maxHealth": 23 }));
+            s.expect_stats(&unit, json!({ "attack": 18, "health": 18, "maxHealth": 18 }));
         }
 
         #[test]

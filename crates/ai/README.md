@@ -16,9 +16,8 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
 R2477000, R2564000, R2688000, R3064000), and the evolution prices (R4648000), travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
-through the search to the scorers that read them. `decide` takes them from `decision_prices` on its `probe_world`, and
-`decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`
-(R4070000). Any other call outside a decision passes
+through the search to the scorers that read them. `decide` takes them from `decision_prices` on its `probe_world`.
+Any call outside a decision passes
 `Prices::NONE` (plain `evaluate`, the probes, the baselines) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
@@ -94,12 +93,18 @@ one redaction (R1184002); and so is C+ #42 KY's Test's Easy problem (#2929). Ahe
 answers such a question of the AI's own the same way, judged right on its world, a sequence until
 `AI_KY_COMPETITION_EXPECTED_STREAK` (6, Radiant 12) and then Stop (`simulate::worked_step`,
 R1563005); the greedy baseline's simulation does not.
+R4797000: `decide` plays each sampled world with the opponent's automatic turn end off (`search_world`,
+R82, R345, as `unstoppable.rs` does), so a line's End turn stops where the opponent's turn begins, the
+crystals it left unspent still in the seat's turn log for `passed_score` and `reply_score`, even against an
+opponent with nothing to do, and the reply ends that turn (`AI_SEARCH.hold_opponent_turn`).
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field (the AI's hero first, then dealt over every card and ability at its most valuable
 cards, R4515000), then its attacks, a kill priced at what it removes (a unit with Reborn unspent
-less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
+less the body it comes back as, #1796, the engine's own read ahead of that body, `reborn_body_of`: its
+keeper's card on the side it died on and a unit token at its summoned X/X, `reborn_body_read`, R4798000,
+#4798, off in `GREEDY_EVAL`, and less what its Death leaves behind, R2424000; plus a Trample
 attacker's excess on the hero and a Lifesteal attacker's heal, #1820, which its hit on the hero counts
 too, #3858; an attacker a First Strike defender destroys first earning no chip and no shield pop, since
 `fight` reads a blow that never lands as none, R4171000), and once none is worth making, or facing lethal
@@ -214,7 +219,10 @@ prices the best as the controller's evaluation after less before, each crystal a
 backrow card, inside its Brittle share. `activate_sources` lists each Dormant card acting for its
 awakening alone too (R3575404, R1839002: a Dormant Starship's launch, and the `wakesBy` ability a hull's
 text names, R3539000), and for that use alone the card need not be the instance left standing, since a
-shipyard's launch exiles the hull and stands a fresh Starship in its place. Then, within
+shipyard's launch exiles the hull and stands a fresh Starship in its place. `slumber_worth` counts
+that awakening use in full: it puts back what the awake copy's own Activate does not count of the
+sleeper's, so a Dormant Starship whose pieces print only keywords, which has its launch only while it
+slumbers, counts the launch whole (R4799003). Then, within
 `AI_HAND_ACTIVATION_PROBE_NODES` of its own, each Unit and Field Spell in the seat's own hand with an
 ability, and each Dormant card of the seat's acting to awaken, is priced the same way and keyed by the
 card as the seat holds it now (R3575400, R923001: a hand card is spawned where a play would put it
@@ -227,7 +235,8 @@ the power an answer leaves that card the same way; every price is keyed by the p
 `turn_hook_prices` prices it by one run of the engine's own yard step, for each Dormant shipyard on
 either field and each in the seat's hand, and `slumber_worth` adds `AI_EVAL.turn_hook` of it outside the
 slumber share, which that probe's own evaluation already applied (R3575402).
-A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000):
+A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000; Frenzy is
+none, since the twin below holds it too, R4799002):
 `attack_hook_prices` walks the same two turns, within `AI_ATTACK_HOOK_PROBE_NODES`; at the start of each
 player's next turn it plays each of that player's units with a hook at the enemy hero, or at the first
 target `legal_actions` lists, beside the same attack by the unit's hookless twin (Vanilla, granted its
@@ -257,6 +266,7 @@ A passed line's Float counts toward the seat's own "Float reduces cost" cards (R
 `float_cuts_in_hand` reads what the Float took off each of them, and `float_credit` pays
 `AI_EVAL.float_discount` for each crystal that went toward one still above the seat's crystals (its
 `mana.max`, never the handicap's), in `passed_score` and `replied_score` alike; `GREEDY_EVAL` keeps 0.
+An unconditional price hike on the coming turn (IA #123 Cost Injection, IA #144 Total Compromise, IA #225 Root Kit, C+ T-AI-7 Alignment Tax) counts in `coming_refreshes` as harm against that player's next-turn crystals (`coming_cost_hike`, R5122000): each crystal of the hike is priced at `next_turn_mana` times `AI_TAXED_PLAYS` (1), weighted by `cost_hike` in `AI_EVAL` (1.0), and preserved across reply scoring in `replied_score`; `GREEDY_EVAL` keeps 0.
 A card beneath one of the seat's own Stack piles counts `AI_EVAL.dormant_share`, a half, of its
 `unit_worth` (`dormant_worth`, R3695001), so the Drone Battleship counts its two lower layers; the
 enemy's count `dormant_card` each, and `GREEDY_EVAL` keeps 0.
@@ -323,12 +333,16 @@ its first `branching`, End Turn always among them. Inside one card's plays, each
 X, Embiggen, Equip, face-down set, Tribute set) gets its first variant before any way gets a second lane or
 target, the dearest way first, then the cheapest, then the rest dearest first, Tribute sets cheapest units
 first (#1778). Its root tries a play in every distinct placement (the zones beside its lane and
-across it), each in its lowest lane, or its midlane lane when it has one, which a Cry may read (R2203001);
+across it, a zone a GIGA covers read as the GIGA, and the half of a slashed board its lane is on,
+R4799001), each in its lowest lane, or its midlane lane when it has one, which a Cry may read (R2203001);
 deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). The beam
 drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
 are one position). A position also holds the last Spell played while a card that copies it (C #57 Echo) is
 in the seat's hand or graveyard, and each unit's Churnwalker chain; its units' lanes include a Dormant card's
-lane and an animated card's home zone (R4808000). A line that differs from an earlier one only in where its cards stand is a lane variant
+lane and an animated card's home zone (R4808000). A card off the field signs its buffs and granted
+keywords, each only when it holds some and the keywords sorted (`grants_signature`,
+`AI_SEARCH.hand_grants_signed`), so which hand card an S+ #100 Plesiosize or an S+ #23 GIGA-ify went on is
+part of the position, for the beam, the lethal solver and the concession check's walk (R4793000). A line that differs from an earlier one only in where its cards stand is a lane variant
 (#1797; R4132000: a backrow card's lane, and which side of a standing unit a new one goes, included, read off
 `lane_free_signature`, which sorts each side's units and backrow cards and leaves out its empty zones): the
 evaluation reads no lane but through a unit's stats, which that signature keeps, so it takes no place in the
@@ -351,6 +365,17 @@ first action of the next finalist the true state accepts, best mean first, with 
 only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer
 or other legal action (#1575).
 
+R4792000: while a Mayor acts (R1200) `legal_actions` lists one attack per attacker, naming
+`RANDOM_ATTACK_TARGET`, and the engine draws its target. Such an attack is worth the mean of a hit on each
+target it may draw (`candidates::drawn_attack`: `attack_targets`, each as likely, a hit on the hero by
+`face_value` and on a unit by `trade_value`), in the reply's `ranked_attacks` and the move order's
+`front_value` alike. The move order puts it with the attacks on the hero when the enemy hero is its only
+target, otherwise with the even trades when some draw hits the hero or kills and the mean is 0 or more
+(`Drawn::even`), otherwise among the other attacks. `ready_gap` counts it only when the hero is its only
+target (`draws_only_hero`), and only then does `face_is_lethal` make its hit the win. A Radiant Mayor's
+Lucky (R1201) is not read. `AI_REPLY.drawn_attacks` off prices it at nothing and counts it on the hero,
+as before.
+
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
 keeps off every line that wins this turn, `lines_missing_lethal`, or it would find the same lethal),
@@ -361,7 +386,7 @@ which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinization
 
 R4608000: a finalist whose line won on determinization 0, the one searched, and on no other scored world
 (a score above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) takes its mean on those others (`finalist_means`).
-Every other finalist keeps the plain mean, which `AI_SEARCH.confirm_lone_win` off restores bit for bit.
+Every other finalist keeps the plain mean, added in world order.
 The solver, the hint and the concession check never read the means.
 
 ## The lethal hint (R2102000, R2291000)
@@ -395,8 +420,9 @@ pub const UNSTOPPABLE_LETHAL_REPLY_NODES: usize;        // AI_BUDGET.lethal_node
 
 Whether `seat`, at its own turn, faces a lethal showing on the opponent's board that nothing it does
 this turn stops. Like `lethal_hint` it reads the true state only through `redact`, and it counts only
-what shows: the opponent's hand and face-down cards are taken out, so no unseen trap stops the seat's
-answer and no unseen card makes the lethal. It fills the rest in as
+what shows: the opponent's hand, face-down cards and unrevealed secrets are taken out, so no unseen
+trap stops the seat's answer and no unseen card or guessed secret makes the lethal (a secret's reward
+finds no choice and does nothing, R4796000). It fills the rest in as
 `UNSTOPPABLE_LETHAL_DETERMINIZATIONS` worlds from `UNSTOPPABLE_LETHAL_SEED`'s stream and, on each,
 plays every line of the seat's turn through the engine (every legal action but R84's and the
 mulligan, "end turn" first, a position once), and for each line that hands the turn over asks
@@ -404,7 +430,9 @@ mulligan, "end turn" first, a position once), and for each line that hands the t
 line again. It holds only when every line on every world ends lost. Every doubt answers false: a cut
 walk (`UNSTOPPABLE_LETHAL_NODES`, `should_stop`), a failed step, a step that rolls the game's random
 numbers or moves a card of the seat's library (one outcome of a roll, one guessed order, could hide
-the escape), an opponent's lethal that rolls, moves a card of its own library or opens a prompt for
+the escape), a step that returns the board to a snapshot (its `rolledBack`: the worlds' board history
+is one stand-in snapshot, the field as it shows, for the one `redact` drops, so a seat that can play a
+Rollback plays on, R4796000), an opponent's lethal that rolls, moves a card of its own library or opens a prompt for
 the seat, a panic, and every moment but the seat's own main phase with no prompt open. A turn that ends with the
 Marketplace open ends without it, so the opponent's turn start rolls no offers (R1853000), and a lethal
 that needs the opponent's turn to end is not counted: both err only towards playing on. `decide` never
@@ -449,9 +477,29 @@ of the counter and skips the payoff line R3696000 adds: the beam's open lines en
 run on until `should_stop`. R4801000: it is first polled once the beam has tried every move at its
 root (`NodeCounter::end_root`), however many nodes those cost (a surcharged play, its auto-answers),
 so a wrap-up that fired before the beam still leaves it lines, the root's End turn among them.
+R4604014: so is the slice's own limit (`create_beam_counter`): the root's moves draw on the decision's
+counter however many nodes they cost, so a root move dearer than the whole slice still closes a line;
+the decision's own limit and clock still stop it.
+R4791000: a beam whose slice refused a node, to its budget or the wrap-up, closes on its stop only the
+frontier line the stop cut short, those after it and the children (a line it finished expanding filed its
+End turn already), and ranks a line whose End turn was refused, open in the seat's main phase, as a passed
+one, its hand eval less `AI_EVAL.unspent_mana` a crystal (`closed_score`); `decide` then ends the turn of
+each such shortlisted line on the decision's own nodes before `reply_score`, and a node refused there ends
+the replies. A beam its slice never refused decides node for node as before (`AI_SEARCH.close_cut_lines`).
 `SearchStats.replied` and `worldsScored` say how far they got, and
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.
+
+R4788000: on a decision whose budget was scaled down (a width past `AI_SEARCH.fat_reference`, R2575000),
+the lethal solver has a reach, the caller's own `lethal_nodes` (at most its `nodes`, R4802000): its walks
+spend the scaled allowance as before, and past it the best-first walk goes on only from a position whose
+ready attacks already reach
+lethal (`ready_gap` at or under 0), and the proof on the other determinizations of a line that won on the
+first is always finished (`find_lethal_reaching`). What the walk spends past the scaled allowance is added
+to the searched section, so the beam and the replies keep their nodes, and no decision passes its caller's
+`nodes`. A state of ordinary width, and a wide one whose walk never reads as lethal, decide node for node
+as before; `lethal_hint` and `unstoppable_lethal` call `find_lethal` and have no reach;
+`AI_SEARCH.lethal_reach` off stops every walk at its scaled allowance.
 
 R4447000: `decide` replays each finalist's world-0 line on the other determinizations with
 `replay_line`, which says whether the line was cut there: whether it met a step that world does not
@@ -464,8 +512,7 @@ turn on greedily (`fill_turn`: up to that many steps, each the best by `static_s
 leaves the seat's own prompt open), on a slice of `steps × (branching + 1)` nodes, which `decide` keeps
 back beside each other world's reserve. It ships at 3 (R4697000), so `decide` keeps up to 126 more of
 `AI_BUDGET`'s 1,200 nodes back from the beam (21 for each of three finalists on two other worlds); at 0 a
-cut replay ends its turn where it stands and a decision is node for node what it was before R4447000;
-`score_line` keeps the cut whatever the switch.
+cut replay ends its turn where it stands and a decision is node for node what it was before R4447000.
 
 ## Decks and the shadow ban (R184, R186, R390, R1370, R4784000, R1390, R817000, R976000)
 
@@ -486,11 +533,8 @@ gated card in by name. Emptying the list lifts the gate and deals every deck as 
 Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
 ships before the AI is trained on it is listing it there. It held the Stinkyscape+ set from its release
 (issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000), and is
-empty since. `shape`
-(R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
-`src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
-practice, the quality gates and both seats of an arena or a promotion deal unshaped. Nothing else reads
-`shaped_weight`: the mulligan ranks by `hand_card_value` (R4110000).
+empty since. No deal is shaped: the unban lane's dealt-quality table and the option that read it are
+removed (R4702001), so practice, the quality gates and both seats of an arena deal by one rule (R976000).
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand, and
 never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block
@@ -556,7 +600,10 @@ A seat the AI plays has a skill (R747000): `SeatController::Ai { budget, skill }
 `[0, 1]` that each decision follows the AI, the rest being the skill miss (`skill::skill_miss_action`,
 R2214000): a softmax at `AI_SKILL_MISS_TEMPERATURE` over the greedy baseline's one-ply scores of the
 candidates the probe world lists (`decide::probe_world` of `redact(state, seat)`, as `decide` lists
-its own, R4216000), read on one determinization of what the seat sees at the shown costs (R762).
+its own, R4216000), read on one determinization of what the seat sees at the shown costs (R762). The
+greedy baseline and the miss simulate each candidate on a counter of its own, sized to its one node, its
+surcharge and `max_auto_answers` answers (`one_ply_step`, R4799000), so a surcharged play (a Zephrys, a
+play Pareto Optimality judges) is simulated whatever the candidates before it took.
 `None` is `AI_SKILL_MAX`: full skill, which takes no draw, so a seat without one plays as it did
 before the knob; `AI_SKILL_MIN` is the miss at every decision, with no search. In
 between, `skill::plays_best(skill, rng)` rolls the seat's own seeded stream once per decision
@@ -568,11 +615,10 @@ the same way, and the skill-to-Elo curve is measured with the arena.
 `MatchConfig.setup` (`MatchSetup`: `dealt`, `lastBoards`, `glitchBoards`, `deckMarks`, written beside
 the config's other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps
 (R433, R417, R564, R678, R2702000), and `MatchConfig::fold_args` folds a record with all of them
-(#1697). Unset, a game is created, played and folded exactly as before. No gate sets it;
-`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `SweepOptions.face`
-(`SweepFace`, base when absent) picks the face the forced card is dealt on: the Radiant one adds a `deckMarks`
-entry for it on the AI's seat (R2702000), and `cargo jackioh sweep` plays both (#4466). `cargo jackioh
-run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
+(#1697). Unset, a game is created, played and folded exactly as before. No gate sets it.
+`SweepOptions.face` (`SweepFace`, base when absent) picks the face the forced card is dealt on: the
+Radiant one sets a `deckMarks` entry for it on the AI's seat (R2702000), and `cargo jackioh sweep`
+plays both (#4466). `cargo jackioh run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
 
 ## Development runs for the card statistics (R378)
 
@@ -583,8 +629,8 @@ record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`
 `forced_dev_game_config`, which `DevRunOptions.force` selects, deals the same game with one card in one
 seat's deck, p1's in odd games and p2's in even ones (R1284000). Both decks are dealt with the card
 banned, and the holder's card at the slot `${seed}:force` picks is replaced by it.
-`DevRunOptions.setup` creates every game of a run with the same setup inputs (`dev_run_config`), so a
-record stays a pure function of its number.
+`dev_run_config` deals game n of the run its options describe, so a record stays a pure function of
+its number.
 
 R4552000, R4552002: `swing_turns` (`src/swing_turns.rs`) replays a finished game's log from the engine's
 own start and steps (`recorded_start`, `read_steps`, as `summarize_game` does) and writes, at the start of
@@ -632,13 +678,15 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   and has a place for it: an open zone of its row or, failing that, any play of it the engine
   lists, onto a Stack, into the backrow with Flying, onto an Equip host or a stack base, or into a
   zone its Tribute frees), when the seat can pay the pass; with `pass_cost` 0 also a card the
-  teammate can afford next turn and the seat cannot; never more than the passes left or the
-  teammate's free hand slots. Immediate passes rank by the teammate's best bounded follow-up
+  teammate can afford next turn and the seat cannot, each side's next refresh read as its turn's
+  start gives it, a "+N mana per turn" (R4440052) and a credit line's instalment (R1224) counted;
+  never more than the passes left or the teammate's free hand slots. Immediate passes rank by the teammate's best bounded follow-up
   (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays on a fixed-seed probe, past it the first plays
   of the teammate's best-valued hand cards, R4932000), ties by cost then hand order; free-pass
   next-turn cards keep cost order. An immediate pass is named only when it is
   worth it (R1723000): the teammate's best follow-up with the card, also tried after the teammate's
-  own best play, beats its best without it by more than the card's `hand_card_value` in the seat's
+  own best play (each a real engine step under a nonce of its own, a step that changed nothing
+  skipped), beats its best without it by more than the card's `hand_card_value` in the seat's
   hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost` and `DUOS_PASS_MIN_GAIN`. A card the
   seat can play itself is named only when that gain also beats what the seat's own best bounded play
   of the card gains it in its own duel (R2827000): gain against gain, never one duel's score against
@@ -669,9 +717,8 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   (0.8) against random and `DUOS_GATE_GREEDY_WIN_FLOOR` (0.7) against greedy, of
   `DUOS_GATE_GAMES_SMOKE` (20) games with no action of either team refused, no AI action off a
   fallback path and no panic an AI seat's search caught (`cargo jackioh gate --duos` plays both);
-  `duos_gate_game_at` plays a game at another budget, and `duos_gate_game_with` one with a stand-in
-  decider (`DuosGateDecider`) for the AI team, which the tests use to show the gate catching a
-  weakened pass.
+  `duos_gate_game_with` plays a game at another budget or with a stand-in decider (`DuosGateDecider`)
+  for the AI team, which the tests use to show the gate catching a weakened pass.
 
 ## Commands
 

@@ -9,12 +9,10 @@ use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::config::{AI_DIFFICULTY, DUOS_HUMAN_TEAM, Difficulty, HUMAN_HANDICAP, duos_ai_team};
 use jackioh_engine::duos::{
     DuosReduceResult, DuosReplayInput, DuosReplayResult, DuosState, duos_begin, duos_create,
-    duos_create_recorded, duos_fold, duos_fold_from, duos_hash, duos_legal_actions, duos_reduce,
-    duos_view_for,
+    duos_create_recorded, duos_fold, duos_fold_from, duos_reduce, duos_view_for,
 };
 use jackioh_engine::wire::{
-    DuosAction, DuosActionBody, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosResult, DuosSeat, DuosView,
-    PerTeam,
+    DuosAction, DuosCreateOptions, DuosDecks, DuosHandicaps, DuosResult, DuosSeat, DuosView, PerTeam,
 };
 use jackioh_engine::{Handicap, ReplayRefusal, Rng};
 use jackioh_shared::host::DuosTeamB;
@@ -44,18 +42,6 @@ pub fn reduce(pinned: Pinned, state: &DuosState, action: &DuosAction) -> DuosRed
     pinned.run(|| duos_reduce(state, action))
 }
 
-/// S4: what `seat` may send now, the `legal` beside its view.
-pub fn legal(pinned: Pinned, state: &DuosState, seat: DuosSeat) -> Vec<DuosActionBody> {
-    registered();
-    pinned.run(|| duos_legal_actions(state, seat))
-}
-
-/// S2, B23: the only window a seat gets onto the game.
-pub fn view(pinned: Pinned, state: &DuosState, seat: DuosSeat) -> DuosView {
-    registered();
-    pinned.run(|| duos_view_for(state, seat))
-}
-
 /// B24, B40: a match rebuilt from its seed, options and log.
 pub fn fold(pinned: Pinned, input: &DuosReplayInput) -> DuosReplayResult {
     registered();
@@ -68,10 +54,6 @@ pub fn fold(pinned: Pinned, input: &DuosReplayInput) -> DuosReplayResult {
 pub fn fold_tail(pinned: Pinned, state: DuosState, tail: &[DuosAction], skipped: usize) -> DuosReplayResult {
     registered();
     pinned.run(|| duos_fold_from(state, tail, skipped))
-}
-
-pub fn hash(state: &DuosState) -> String {
-    duos_hash(state)
 }
 
 /// The engine's options for a stored match: its seed and what it was created with (no catalog

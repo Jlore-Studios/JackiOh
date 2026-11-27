@@ -11,6 +11,7 @@ text: string,
  */
 value: string, tone: CostTone, 
 /**
- * The embiggen price, shown small beside the gem while the gem shows the base price; null otherwise.
+ * The embiggen price, shown small beside the gem: the view's `embiggenCost` wherever it gives one
+ * (R5109001), else the printed one while the gem shows the base price; null otherwise.
  */
 alt: string | null, };

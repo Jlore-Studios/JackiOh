@@ -15,11 +15,11 @@
    under the hand's cards (`.hand-slot` is positioned and comes after it). */
 
 .clock {
-  --clock-urgent: var(--pal-red-500);
-  --clock-urgent-deep: color-mix(in srgb, var(--pal-red-900) 72%, transparent);
+  --clock-urgent: var(--pal-red-600);
+  --clock-urgent-deep: color-mix(in srgb, var(--pal-lacquer-900) 72%, transparent);
   --clock-urgent-ink: var(--pal-slate-100);
-  --clock-ember: var(--pal-orange-400);
-  --clock-ember-hot: var(--pal-gold-200);
+  --clock-ember: var(--pal-copper-400);
+  --clock-ember-hot: var(--pal-brass-200);
 
   display: inline-flex;
   flex: 0 0 auto;
@@ -41,10 +41,8 @@
 
 .clock-side-label,
 .clock-grace-label {
-  font-size: var(--type-2xs-em);
+  font-size: var(--type-xs-em);
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .clock-digits {
@@ -84,7 +82,7 @@
   background: var(--clock-urgent-deep);
   color: var(--clock-urgent-ink);
   font-size: var(--type-lg-em);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-black) 35%, transparent), 0 0 12px color-mix(in srgb, var(--pal-red-500) 45%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-black) 35%, transparent), 0 0 12px color-mix(in srgb, var(--pal-red-600) 45%, transparent);
 }
 
 .clock-line[data-urgency="last10"] {
@@ -142,7 +140,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: 0 0 18px 3px color-mix(in srgb, var(--pal-red-500) 70%, transparent);
+  box-shadow: 0 0 18px 3px color-mix(in srgb, var(--pal-red-600) 70%, transparent);
   opacity: 0;
   pointer-events: none;
 }
@@ -240,7 +238,7 @@
 .clock-fuse-edge {
   position: absolute;
   background: var(--clock-ember);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--pal-orange-400) 75%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--pal-copper-400) 75%, transparent);
   transition: transform 200ms linear;
   will-change: transform;
 }
@@ -294,7 +292,7 @@
   margin: calc(var(--space-2) * -1) 0 0 calc(var(--space-2) * -1);
   border-radius: var(--radius-round);
   background: var(--clock-ember-hot);
-  box-shadow: 0 0 12px 4px color-mix(in srgb, var(--pal-orange-400) 70%, transparent);
+  box-shadow: 0 0 12px 4px color-mix(in srgb, var(--pal-copper-400) 70%, transparent);
   transition:
     left 200ms linear,
     top 200ms linear;
@@ -324,14 +322,14 @@
 }
 
 .clock-fuse[data-urgency="last10"] .clock-fuse-edge {
-  box-shadow: 0 0 12px 1px color-mix(in srgb, var(--pal-red-500) 85%, transparent);
+  box-shadow: 0 0 12px 1px color-mix(in srgb, var(--pal-red-600) 85%, transparent);
 }
 
 .clock-fuse[data-urgency="last10"] .clock-fuse-spark {
   width: 18px;
   height: 18px;
   margin: calc(var(--space-3) * -1) 0 0 calc(var(--space-3) * -1);
-  box-shadow: 0 0 18px 7px color-mix(in srgb, var(--pal-red-500) 70%, transparent);
+  box-shadow: 0 0 18px 7px color-mix(in srgb, var(--pal-red-600) 70%, transparent);
   animation-duration: 90ms;
 }
 
@@ -371,7 +369,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: color-mix(in srgb, var(--pal-red-500) 18%, transparent);
+  background: color-mix(in srgb, var(--pal-red-600) 18%, transparent);
   opacity: 0.2;
   pointer-events: none;
   will-change: opacity;

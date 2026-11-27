@@ -139,6 +139,7 @@ pub fn tributes_of(action: &ActionBody) -> Vec<String> {
 
 pub mod activate_listed;
 pub mod after_resolution;
+pub mod aura_label;
 pub mod aura_table;
 pub mod balance_2521_a;
 pub mod balance_2521_b;
@@ -172,6 +173,7 @@ pub mod hidden_information;
 pub mod invariants;
 pub mod lasting_effects;
 pub mod lesson_pools;
+pub mod mana_ceiling;
 pub mod marketplace_table;
 pub mod my_pawn;
 pub mod params;

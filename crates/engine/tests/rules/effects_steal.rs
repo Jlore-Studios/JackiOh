@@ -1,10 +1,10 @@
-//! Steal (SPEC §6.3, BUILD M3-T1): R15's placement, R12's ownership, R33's face-down trap and
-//! #86's "steal all enemy units". Its fixture Trap is registered here, so no shared one grows (BUILD §0).
+//! Steal (SPEC §6.3, BUILD M3-T1): R15's placement, R12's ownership and R33's face-down trap. Its
+//! fixture Trap is registered here, so no shared one grows (BUILD §0).
 
 use jackioh_engine::testkit::*;
 
 use jackioh_engine::catalog::registered_catalog;
-use jackioh_engine::effects::{give_control, steal, steal_all};
+use jackioh_engine::effects::{give_control, steal};
 use jackioh_engine::layers::unit_view;
 use jackioh_engine::resolve::HookOptions;
 use jackioh_engine::state::{CardInstance, Exertion, GameState, find_instance_mut, new_instance};
@@ -313,92 +313,6 @@ mod r15_steal_s6_3_m3_t1 {
             vec![beneath.id.clone()]
         );
         assert_eq!(state.players.p1.units[1].as_ref().map(Vec::len), Some(1));
-    }
-
-    #[test]
-    fn r15_c86_steals_every_enemy_unit_in_lane_order_and_marks_the_excess_destroyed() {
-        let mut state = game();
-        put(
-            &mut state,
-            &plain.id,
-            slot(PlayerId::P1, Row::Units, 1),
-            json!({}),
-        );
-        put(
-            &mut state,
-            &plain.id,
-            slot(PlayerId::P1, Row::Units, 2),
-            json!({}),
-        );
-        let enemies: Vec<CardInstance> = (1..=5)
-            .map(|lane| {
-                put(
-                    &mut state,
-                    &plain.id,
-                    slot(PlayerId::P2, Row::Units, lane),
-                    json!({}),
-                )
-            })
-            .collect();
-
-        let events = run(&mut state, steal_all(Default::default()), as_p1());
-
-        // Lane 1 and 2 are taken, so the first two land in lanes 3 and 4; the third takes lane 5 and
-        // the last two find nothing free, so they are marked destroyed where they stand (R4205000).
-        assert_eq!(
-            id_at(&state, PlayerId::P1, Row::Units, 3),
-            Some(enemies[0].id.clone())
-        );
-        assert_eq!(
-            id_at(&state, PlayerId::P1, Row::Units, 4),
-            Some(enemies[1].id.clone())
-        );
-        assert_eq!(
-            id_at(&state, PlayerId::P1, Row::Units, 5),
-            Some(enemies[2].id.clone())
-        );
-        assert_eq!(
-            id_at(&state, PlayerId::P2, Row::Units, 4),
-            Some(enemies[3].id.clone())
-        );
-        assert_eq!(
-            id_at(&state, PlayerId::P2, Row::Units, 5),
-            Some(enemies[4].id.clone())
-        );
-        assert_eq!(
-            enemies
-                .iter()
-                .map(|card| live(&state, &card.id).controller)
-                .collect::<Vec<_>>(),
-            vec![
-                PlayerId::P1,
-                PlayerId::P1,
-                PlayerId::P1,
-                PlayerId::P2,
-                PlayerId::P2
-            ]
-        );
-        assert_eq!(
-            enemies
-                .iter()
-                .map(|card| live(&state, &card.id).unpreventable_destroy)
-                .collect::<Vec<_>>(),
-            vec![None, None, None, Some(true), Some(true)]
-        );
-        for excess in &enemies[3..] {
-            assert_eq!(live(&state, &excess.id).marked_destroyed, Some(true));
-        }
-        assert_eq!(
-            events_json(&events, "controlChanged")
-                .iter()
-                .map(|event| json!([event["instanceId"], event["lane"]]))
-                .collect::<Vec<_>>(),
-            vec![
-                json!([enemies[0].id, 3]),
-                json!([enemies[1].id, 4]),
-                json!([enemies[2].id, 5]),
-            ]
-        );
     }
 
     #[test]

@@ -295,15 +295,17 @@ mod r1420_a_set_the_catalog_holds_before_it_ships {
         }
 
         // Nested guards restore what was open before them: `preview_every_set` (every set the
-        // catalog orders) inside a narrower preview, then the narrower one, then nothing.
+        // catalog orders and, R4597001, every open single-player set, Boss-X among them) inside a
+        // narrower preview, then the narrower one, then nothing.
         {
             let _outer = preview_sets(&[SetName::Boss]);
             {
                 let _inner = preview_every_set();
                 assert!(set_is_open(SetName::Boss));
-                assert!(!set_is_open(SetName::BossX), "the catalog order names no Boss-X");
+                assert!(set_is_open(SetName::BossX), "an open single-player set");
             }
             assert!(set_is_open(SetName::Boss));
+            assert!(!set_is_open(SetName::BossX));
         }
         assert!(!set_is_open(SetName::Boss));
     }

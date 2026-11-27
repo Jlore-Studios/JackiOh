@@ -10,8 +10,8 @@
 
 use jackioh_ai::{
     AI_GATE_BUDGET, AiOptions, DUOS_GATE_GAMES_SMOKE, DUOS_GATE_GREEDY_WIN_FLOOR, DuosDecision, DuosGateGame,
-    DuosGateReport, DuosOpponent, SearchBudget, duos_decision, duos_gate_game, duos_gate_game_at,
-    duos_gate_game_with, duos_gate_report, duos_gate_subject,
+    DuosGateReport, DuosOpponent, SearchBudget, duos_decision, duos_gate_game, duos_gate_game_with,
+    duos_gate_report, duos_gate_subject,
 };
 use jackioh_engine::duos::{DuosState, duos_legal_actions};
 use jackioh_engine::wire::{DuosActionBody, DuosSeat};
@@ -216,7 +216,7 @@ fn b32_a_starved_ai_team_counts_its_fallbacks_and_fails_the_duos_gate() {
         lethal_nodes: 0,
         ..AI_GATE_BUDGET
     };
-    let game = duos_gate_game_at(1, "gate", DuosOpponent::Random, starved);
+    let game = duos_gate_game_with(1, "gate", DuosOpponent::Random, starved, duos_decision);
     assert!(game.fallbacks > 0, "{game:?}");
     let report = duos_gate_report(DuosOpponent::Random, std::slice::from_ref(&game));
     assert_eq!(report.fallbacks, game.fallbacks);

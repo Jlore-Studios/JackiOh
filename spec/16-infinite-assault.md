@@ -4,7 +4,7 @@ The Infinite Assault is a daily single-player gauntlet against the AI: every UTC
 
 Every level is an ordinary practice game ([[§9.9]], [[R187]]) whose setup the Assault writes: the enemy's deck, its handicap ([[R180]]) and its deck marks ([[R2702000]]). No card and no game rule knows about the Assault, as none knows about a dungeon run ([[§15]]), and sections two to eight hold inside each fight. A game without the Assault's setup hashes as before.
 
-It is a practice mode: it plays in the browser's practice worker, needs no account, records nothing on the server and earns nothing ([[R4582000]]). Its enemies' cards are the Infinite Assault set ([[§8.13]]), a single-player set held until the mode's release ([[R4577000]]); until then the mode deals stand-ins from shipped cards ([[§16.4]]).
+It is a practice mode: it plays in the browser's practice worker, needs no account, records nothing on the server and earns nothing ([[R4582000]]); its fights are kept on the device for replay as practice games are ([[R5125000]]). Its enemies' cards are the Infinite Assault set ([[§8.13]]), a single-player set, open since the mode's release (issue #4597, [[R4577000]]), whose cards an Assault enemy's seat holds by naming the set ([[R4597001]]).
 
 The rules are pure Rust in `crates/run`'s module `assault`, beside the dungeon run, sharing its seeds, its `Rng` use and its fight report, and `crates/run/README.md` is the contract. Every draw goes through the engine's `Rng` from the day's seed ([[§10.7]]). The plan is `docs/infinite-assault.md` (tracker #4576); where it and this section disagree, this section wins.
 
@@ -20,7 +20,8 @@ Every value is a constant of `crates/run/src/config.rs`, and every one is a stra
 | `ASSAULT_HISTORY_DAYS` | The days of records the device keeps: 30 | [[§16.6]], [[R4581001]] |
 | `ASSAULT_BASE_HANDICAP` | The resources every level starts from: Easy's ([[§9.9]]) | [[§16.2]], [[R4579000]] |
 | `ASSAULT_HERO_HEALTH` | A normal level's hero health, `(base, per level)`: 20 + the level | [[§16.2]], [[R4579000]] |
-| `ASSAULT_COMMANDER_HEALTH` | A Commander level's hero health, `(base, per level)`: 30 + five times the level (twice until issue #4783) | [[§16.2]], [[R4579000]] |
+| `ASSAULT_COMMANDER_HEALTH` | A Commander level's hero health, `(base, per level)`: 40 + five times the level (30 + twice the level until issue #4783, 30 + five times until the release) | [[§16.2]], [[R4579000]], [[R4597002]] |
+| `ASSAULT_COMMANDER_UPGRADES` | The upgrades a Commander level takes after its card step: 2 (1 until the release) | [[§16.2]], [[R4597002]] |
 | `ASSAULT_FEWER_OPENING` | The cards fewer in the opening draw on the first levels: 1 ([[R3582000]]) | [[§16.2]], [[R4579000]] |
 | `ASSAULT_FEWER_OPENING_LEVELS` | The last level dealing fewer opening cards: 3 | [[§16.2]], [[R4579000]] |
 | `ASSAULT_DECK_SIZE` | The deck's size before Bigger Dataset: `DECK_SIZE` (25) | [[§16.2]], [[R4579000]] |
@@ -43,7 +44,7 @@ Every value is a constant of `crates/run/src/config.rs`, and every one is a stra
 
 **The base row.** Every level starts from `ASSAULT_BASE_HANDICAP`, Easy's resources ([[§9.9]], [[R180]]), with:
 
-- hero health `ASSAULT_HERO_HEALTH` on a normal level (21 to 39) and `ASSAULT_COMMANDER_HEALTH` on a Commander's (55, 80, 105, 130), plus Redundancy's stacks ([[R290]]);
+- hero health `ASSAULT_HERO_HEALTH` on a normal level (21 to 39) and `ASSAULT_COMMANDER_HEALTH` on a Commander's (65, 90, 115, 140), plus Redundancy's stacks ([[R290]]);
 - `ASSAULT_FEWER_OPENING` card fewer in the opening draw on levels 1 to `ASSAULT_FEWER_OPENING_LEVELS` (`fewer_opening_cards`, [[R3582000]]);
 - a deck of `ASSAULT_DECK_SIZE` cards plus Bigger Dataset's, dealt from slots of each rarity, level 1's being `ASSAULT_START_SLOTS`.
 
@@ -52,7 +53,7 @@ Every value is a constant of `crates/run/src/config.rs`, and every one is a stra
 - **A card step** promotes `ASSAULT_CARD_STEP` of the deck's slots one rarity each, lowest rarity first, never past the level's `ASSAULT_RARITY_CEILING`.
 - **An upgrade** is one stack of one upgrade ([[§16.3]]), drawn by the upgrades' weights among those allowed at the level that hold fewer than their most stacks.
 
-A normal level's kind is the seed's, a card step at `ASSAULT_CARD_STEP_PERCENT`; a card step with nothing left to promote under the ceiling is an upgrade instead, and a level with no upgrade left takes a card step. A Commander level takes two escalations: a card step (or an upgrade when no slot can move) and then an upgrade (or a card step when no upgrade is left), and its Commander's cards join its deck ([[§16.4]]).
+A normal level's kind is the seed's, a card step at `ASSAULT_CARD_STEP_PERCENT`; a card step with nothing left to promote under the ceiling is an upgrade instead, and a level with no upgrade left takes a card step. A Commander level takes three escalations ([[R4597002]]): a card step (or an upgrade when no slot can move) and then `ASSAULT_COMMANDER_UPGRADES` upgrades (each a card step when no upgrade is left), and its Commander's cards join its deck ([[§16.4]]).
 
 **It never gets weaker** ([[R4579000]]). No handicap field but health and `fewer_opening_cards` falls from one level to the next; `fewer_opening_cards` drops off after level 3; no upgrade's stacks fall; and the count of slots at or above each rarity never falls (`AssaultLevel.rarities` holds the slots). Health is compared within a kind: a Commander's base is a peak, so the level after it goes back to the normal base and keeps every Redundancy stack. Each level's deck is dealt afresh from its own slots, never the previous level's deck plus a card.
 
@@ -84,7 +85,7 @@ Fine-Tuned's and Reinforced Weights' cards are each drawn by their own shuffle o
 
 **The deck** ([[R4579001]]). A Commander's cards join its deck first, each taking the lowest slot that holds one, so the deck keeps its level's size. The remaining slots are dealt rarest first: `ASSAULT_DOCTRINE_SHARE` percent of them, chosen by the seed, read the level's doctrine (any doctrine's when it has none), then the neutral cards, then any doctrine; the others read the neutral cards, then any doctrine; and a slot whose rarity is exhausted falls to the next rarity down. No other Commander's card is dealt. Each deck holds no card twice and is its handicap's `deck_size` ([[R184]]), so `createGame` takes it as it takes every practice deck.
 
-**Until the release** the browser deals from `assault_placeholder_content`: the file's twelve stand-in Commanders whose every card is deckable, three of each rank, and every other deckable shipped card dealt to the next group in turn, neutral, then the doctrines in the file's order, a stand-in's cards flagged with its doctrine ([[R4579001]]). The file names no real Commander yet: the set's Commander part writes them.
+**The browser deals** from `assault_catalog_content` since the release, a carried version too ([[R4597000]]): the set's cards and the file's twelve Commanders, IA #217 to IA #240, three of each rank, each its Commander card and signature card. `assault_placeholder_content`, which dealt shipped stand-ins until the release (the file's `standInCommanders`, and every other deckable shipped card dealt to the next group in turn, [[R4579001]]), stays a test fixture.
 
 ### 16.5 The player's deck
 
@@ -98,9 +99,10 @@ Fine-Tuned's and Reinforced Weights' cards are each drawn by their own shuffle o
 **An attempt** (`AssaultState`) is its setup (the day, the deck and its source, the start level and the attempt's number), the level it stands on, its phase (`briefing`, `fight`, `lost`, `repelled` or `abandoned`), the levels it beat and its turns ([[R4579002]]).
 
 - **It starts** at level 1, or at a checkpoint the day's record holds, as the attempt after the record's last. The checkpoints are each Commander level below the top plus one: 6, 11 and 16.
-- **A briefing** fights. **A fight's result** (`fightOver`, its win and turns) moves a win to the next level's briefing and ends the attempt `lost` on a loss; a draw at the turn cap is a loss. Beating level 20 ends it `repelled`. Abandoning from a briefing or a fight ends it `abandoned`, the page asking first.
+- **A briefing** fights. **A fight's result** (`fightOver`, its win and turns) moves a win to the next level's briefing and ends the attempt `lost` on a loss; a draw at the turn cap is a loss. A fight a Glitch voids never happened ([[R679]]): it reports nothing, and the attempt, still in its fight, deals it again fresh from the same setup ([[R4999000]]). Beating level 20 ends it `repelled`. Abandoning from a briefing or a fight ends it `abandoned`, the page asking first.
 - **Every other step is refused** with the state unchanged: another pair of phase and action, a negative turn count, another day's state, and every step of an ended attempt.
 - **A fight left unfinished** waits where it stood, in a slot of the worker's own, and resumes on its turn when the attempt is opened again, as a dungeon fight does ([[R4582001]], [[R3476000]]). A finished fight's result is held beside the attempt the moment it arrives, so leaving before Continue keeps it ([[R4733000]]).
+- **A finished fight is kept for replay** on the device, with the practice games and under their `PRACTICE_REPLAYS_KEPT`, its setup holding the enemy's marks and sets so it folds to its hash, and its summary its level and enemy; a fight a Glitch voided is not ([[R5125000]], [[R768]]).
 - **The attempt file** (`AssaultFile`) is the setup, the day's record at its start and the action log, with the catalog version it folds under; `assault_fold` replays it and names the first refused step, as a dungeon run's fold does.
 
 **The day's record** (`AssaultRecord`) is the highest level beaten, the checkpoints reached, the attempts started and the attempt that first repelled the Assault, if any. `assault_record` folds a running or finished attempt into it idempotently. The device keeps the records of the last `ASSAULT_HISTORY_DAYS` UTC days, and reads a malformed or differently versioned attempt or record as absent, one key at a time ([[R4581001]]).
@@ -109,19 +111,20 @@ Fine-Tuned's and Reinforced Weights' cards are each drawn by their own shuffle o
 
 All in `apps/web/src/assault/`, at `/assault`, its words through translations. Not a rule of the game (CLAUDE.md rule 7): the page sends intent and renders what the worker and the WebAssembly module answer.
 
-- **The Play hub** shows a card, Infinite Assault, in the Solo group after the dungeon run, and the command menu an entry. Until the release both are off behind `ASSAULT_OPEN`, and `/assault` is served only by a dev or e2e build.
+- **The Play hub** shows a card, Infinite Assault, in the Solo group after the dungeon run, and the command menu an entry. Both show since the release (`ASSAULT_OPEN` is true), and every build serves `/assault`.
 - **The day screen:** the date and the time to the next UTC day; the ladder of 20 levels, each with its enemy, doctrine and Commander badge, those beaten today and the checkpoints marked; the Assault's strength at the next level; the deck picker; Start, from level 1 or a checkpoint reached; the day's record and the last days' history.
 - **The briefing:** the level, the enemy and its doctrine's line, a Commander's name and its two cards, its upgrades with this level's new ones marked, its deck's size and rarity mix, and Fight.
-- **The fight:** a practice game on the board every game uses, its AI paced as practice's, with no Offer draw ([[R188]]) and the lethal hint ([[R2102000]]). The rail names the enemy and its level beside the live modifiers ([[R3912000]]), a Commander's name stands on its hero, and its upgrades sit in a tray beside it ([[R4582002]]). Menu asks before leaving mid-fight ([[R4582001]]), and the result offers Main menu after its own ways on ([[R4742000]]).
+- **The fight:** a practice game on the board every game uses, its AI paced as practice's, with no Offer draw ([[R188]]) and the lethal hint ([[R2102000]]). The rail names the enemy and its level beside the live modifiers ([[R3912000]]), a Commander's name stands on its hero, and its upgrades sit in a tray beside it ([[R4582002]]). Menu asks before leaving mid-fight ([[R4582001]]), and the result offers Main menu after its own ways on ([[R4742000]]), then Watch the replay, which plays the kept fight and returns to the result ([[R5125000]]).
 - **After a level** a win shows the next level's briefing; a loss shows the attempt's end, the record, and Try again from the highest checkpoint reached. Beating level 20 shows the day's victory, the attempt's turns and the record.
 
 ### 16.8 The AI
 
 - **The enemy is the practice AI** ([[§9.9]]), playing the level's deck through its search as it plays every card, and the human's lethal hint is every AI game's ([[R2102000]]).
-- **Hidden cards never change a decision** ([[R185]]). One gap is open: the AI and the lethal hint resample a seat's unseen cards from the cards of every set that ships, while an Assault enemy's deck is Infinite Assault cards, which the mode states openly. Once the set's cards can be dealt ([[§16.9]]), the AI part rules on it; the plan's default is that a game's setup may name, for a seat, the sets its deck is dealt from, and determinization resamples that seat's unseen cards from those sets, a game that names none sampling as today.
+- **Hidden cards never change a decision** ([[R185]]). An Assault enemy's deck is Infinite Assault cards, which the mode states openly, so its fight names the set for the enemy's seat, and the AI and the lethal hint resample that seat's unseen cards from it ([[R4595000]]); a game that names no set samples from the sets that ship.
 
 ### 16.9 What is built
 
-- **Built** (issues #4578 to #4582): the day, its deal and its escalation, the attempt, the record and the fold in `crates/run` ([[R4579000]], [[R4579001]], [[R4579002]]); the WebAssembly exports, the page, its device store and the fight in the practice worker ([[R4581000]], [[R4581001]], [[R4582000]], [[R4582001]], [[R4582002]]). The browser deals from the placeholder.
-- **Not yet:** the set's cards cannot start a game: `createGame` refuses a held set's cards in any deck ([[R4577000]]), so a day dealt from `assault_catalog_content` waits for the release to let an Assault enemy's seat hold them, and the tests run `createGame` on the placeholder's days. The release turns the set's row to `SinglePlayer`, deals from the catalog's content and opens `ASSAULT_OPEN`. The determinization gap ([[§16.8]]) is the AI part's.
+- **Built** (issues #4578 to #4582): the day, its deal and its escalation, the attempt, the record and the fold in `crates/run` ([[R4579000]], [[R4579001]], [[R4579002]]); the WebAssembly exports, the page, its device store and the fight in the practice worker ([[R4581000]], [[R4581001]], [[R4582000]], [[R4582001]], [[R4582002]]).
+- **Live** (issue #4597, the release): the set's row is `SinglePlayer` ([[R4577000]]), an Assault enemy's seat names the set and holds its cards ([[R4597001]]), the browser deals from `assault_catalog_content` with the twelve Commanders ([[R4597000]]), and `ASSAULT_OPEN` shows the Play hub's card and the command menu's entry. The AI resamples an Assault enemy's unseen cards from the sets its seat names ([[R4595000]], [[§16.8]]).
+- **Replays** (issue #5125): a finished fight is kept on the device with the practice games, listed by its level and enemy, and watched again from its result ([[R5125000]]).
 - **Tuning:** every constant here is a strawman, to be tuned against `cargo jackioh assault-sim`, which plays whole days with the AI in the player's seat on the day's Assault deck and holds wide bands per pull request: level 1 clearly winnable, level 20 clearly hard, each Commander harder than the level before it. A deliberate retune moves the bands in the same patch.

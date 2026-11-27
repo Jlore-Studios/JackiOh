@@ -18,11 +18,11 @@
   max-width: var(--tavern-content);
   margin: 0;
   padding: 12px 14px;
-  border: 1px solid rgba(201, 149, 63, 0.45);
-  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
+  border-radius: var(--radius-md);
   background:
-    linear-gradient(90deg, rgba(201, 149, 63, 0.14), rgba(201, 149, 63, 0.05)),
-    rgba(18, 11, 7, 0.82);
+    linear-gradient(90deg, color-mix(in srgb, var(--pal-brass-500) 14%, transparent), color-mix(in srgb, var(--pal-brass-500) 5%, transparent)),
+    color-mix(in srgb, var(--pal-wood-900) 82%, transparent);
   color: color-mix(in srgb, var(--tavern-parchment) 90%, transparent);
   line-height: 1.45;
   text-align: left;
@@ -61,7 +61,7 @@
   margin: 0;
   padding: 8px 20px;
   border-width: 2px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-family: var(--tavern-serif);
   font-size: 16px;
   font-weight: 700;
@@ -106,13 +106,13 @@
   margin: 0;
   padding: 12px 18px;
   border: 1px solid var(--tavern-gold);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background:
-    linear-gradient(90deg, rgba(201, 149, 63, 0.2), rgba(201, 149, 63, 0.08)),
-    rgba(18, 11, 7, 0.95);
+    linear-gradient(90deg, color-mix(in srgb, var(--pal-brass-500) 20%, transparent), color-mix(in srgb, var(--pal-brass-500) 8%, transparent)),
+    color-mix(in srgb, var(--pal-wood-900) 95%, transparent);
   color: var(--tavern-parchment);
   font-weight: 700;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--pal-black) 55%, transparent);
 }
 
 @media (prefers-reduced-motion: no-preference) {

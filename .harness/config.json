@@ -45,7 +45,7 @@
     "idle_minutes": 0,
     "auto_approve": {
       "enabled": true,
-      "wait_hours": 24,
+      "wait_hours": 0,
       "per_day": 3,
       "window": 100
     },

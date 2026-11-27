@@ -452,6 +452,13 @@ fn param_read<C: ParamContext + ?Sized>(ctx: &C, key: &str, printed: Option<i32>
     )
 }
 
+/// R5049000: a declared number's value on the face `radiant` names, as `tuning` (the view's
+/// `CardView.tuning`) moves it, by the formula `params_view` reads: for the face model, which fills each
+/// part of a fused text with that part's own number (R102) where the view's map holds one per key.
+pub fn tuned_value(param: &Param, radiant: bool, tuning: Option<&Tuning>) -> i32 {
+    value_with(param, radiant, tuning, None)
+}
+
 /// B3.4 rule 5, R386: every declared number on the card as it stands, by key, for `CardView.params`;
 /// a fused card's each on the face its ingredient went in on (R4334000), as its text reads it. `None`
 /// for a card that declares none, so its view carries no key.

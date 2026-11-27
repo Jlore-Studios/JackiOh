@@ -19,9 +19,9 @@ type GameProps = Parameters<typeof Game>[0];
 type View = GameProps["view"];
 type Legal = GameProps["legal"];
 
-/** S7: `--glow-ready: #4ade80` and `--glow-condition: #facc15`, as the browser computes them. */
-const GREEN = "rgb(74, 222, 128)";
-const YELLOW = "rgb(250, 204, 21)";
+/** S7's glows, `--glow-ready` (`--pal-jade-400`) and `--glow-condition` (`--pal-gold-400`), as the browser computes them. */
+const GREEN = "rgb(78, 201, 138)";
+const YELLOW = "rgb(240, 192, 74)";
 
 /** WCAG 2.5.5 / Apple HIG, the floor S11 sets for every touch target. */
 const TOUCH_PX = 44;
@@ -219,7 +219,7 @@ describe("B18 End turn turns green once nothing else is left", () => {
       cy.get(ts("end-turn")).should(($button) => {
         const win = $button[0]?.ownerDocument.defaultView;
         const image = win === null || win === undefined ? "" : win.getComputedStyle($button[0] as Element).backgroundImage;
-        expect(image, "the amber fill gave way to a green one").to.contain("rgb(34, 197, 94)");
+        expect(image, "the amber fill gave way to a green one").to.contain("rgb(62, 158, 110)");
       });
     });
   }

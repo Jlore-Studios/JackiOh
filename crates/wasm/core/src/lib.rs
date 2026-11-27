@@ -43,6 +43,14 @@ pub fn to_json<T: Serialize + ?Sized>(value: &T) -> Result<String, String> {
     serde_json::to_string(value).map_err(|error| format!("could not serialize the result: {error}"))
 }
 
+/// `{ <key>: value }` for what the call made, `{ error }` for its refusal.
+fn outcome<T: Serialize, E: Serialize>(key: &str, result: Result<T, E>) -> Result<String, String> {
+    match result {
+        Ok(value) => to_json(&json!({ key: value })),
+        Err(refusal) => to_json(&json!({ "error": refusal })),
+    }
+}
+
 /// `"p1"` or `"p2"`; anything else is refused with `PlayerId`'s own message.
 pub fn player(text: &str) -> Result<PlayerId, String> {
     PlayerId::from_str(text).map_err(|error| error.to_string())
@@ -218,10 +226,7 @@ pub fn run_create(setup_json: &str, unlocks_json: &str, content_json: &str) -> R
     let setup: RunSetup = parse("runCreate: the setup", setup_json)?;
     let unlocks: RunUnlocks = parse("runCreate: the unlocks", unlocks_json)?;
     let content: RunContent = parse("runCreate: the content", content_json)?;
-    match jackioh_run::run_create(&setup, &unlocks, &content) {
-        Ok(state) => to_json(&json!({ "state": state })),
-        Err(refusal) => to_json(&json!({ "error": refusal })),
-    }
+    outcome("state", jackioh_run::run_create(&setup, &unlocks, &content))
 }
 
 /// `{ state }` for the run after one action, `{ error }` for an action the run refuses.
@@ -229,20 +234,14 @@ pub fn run_reduce(state_json: &str, content_json: &str, action_json: &str) -> Re
     let state: RunState = parse("runReduce: the state", state_json)?;
     let content: RunContent = parse("runReduce: the content", content_json)?;
     let action: RunAction = parse("runReduce: the action", action_json)?;
-    match jackioh_run::run_reduce(&state, &content, &action) {
-        Ok(state) => to_json(&json!({ "state": state })),
-        Err(refusal) => to_json(&json!({ "error": refusal })),
-    }
+    outcome("state", jackioh_run::run_reduce(&state, &content, &action))
 }
 
 /// `{ state }` for a run file folded, `{ error }` naming the first refused step.
 pub fn run_fold(file_json: &str, content_json: &str) -> Result<String, String> {
     let file: RunFile = parse("runFold: the file", file_json)?;
     let content: RunContent = parse("runFold: the content", content_json)?;
-    match jackioh_run::run_fold(&file, &content) {
-        Ok(state) => to_json(&json!({ "state": state })),
-        Err(refusal) => to_json(&json!({ "error": refusal })),
-    }
+    outcome("state", jackioh_run::run_fold(&file, &content))
 }
 
 /// The fight being played, or `null` outside one.
@@ -256,10 +255,7 @@ pub fn run_fight_setup(state_json: &str, content_json: &str) -> Result<String, S
 pub fn run_fight_report(game_json: &str, human_json: &str) -> Result<String, String> {
     let game: ReplayInput = parse("runFightReport: the game", game_json)?;
     let human: PlayerId = parse("runFightReport: the human", human_json)?;
-    match jackioh_run::run_fight_report(&game, human) {
-        Ok(action) => to_json(&json!({ "action": action })),
-        Err(refusal) => to_json(&json!({ "error": refusal })),
-    }
+    outcome("action", jackioh_run::run_fight_report(&game, human))
 }
 
 /// The run's score so far.
@@ -334,25 +330,21 @@ pub fn assault_placeholder_content(catalog_json: &str) -> Result<String, String>
     to_json(&jackioh_run::assault_placeholder_content(&catalog))
 }
 
-/// The Assault's content for the browser: `assault_placeholder_content` until the release.
+/// R4597000: the Assault's content for the browser: `assault_catalog_content`, since the release.
 pub fn assault_content() -> Result<String, String> {
-    to_json(&jackioh_run::assault_placeholder_content(
-        engine::registered_catalog(),
-    ))
+    to_json(&jackioh_run::assault_catalog_content(engine::registered_catalog()))
 }
 
-/// R3496000: `AssaultContent` for a catalog version: the build's own answers `assault_content()`; a
-/// carried version answers `assault_placeholder_content` over its carried shipped catalog; any other
-/// version answers `null`.
+/// R3496000, R4597000: `AssaultContent` for a catalog version: the build's own answers
+/// `assault_content()`, and so does a carried version, since a patch's snapshot holds only the sets that
+/// ship (R1420) and the Assault's content is its own set's cards alone, so an open attempt deals the
+/// same day across a daily patch; any other version answers `null`.
 pub fn assault_content_at(version_json: &str) -> Result<String, String> {
     let version: String = parse("assaultContentAt: the version", version_json)?;
-    if version == jackioh_cards::catalog_version() {
+    if version == jackioh_cards::catalog_version() || jackioh_cards::shipped_catalog(&version).is_some() {
         return assault_content();
     }
-    match jackioh_cards::shipped_catalog(&version) {
-        Some(shipped) => to_json(&jackioh_run::assault_placeholder_content(shipped.defs())),
-        None => Ok("null".to_owned()),
-    }
+    Ok("null".to_owned())
 }
 
 /// The day's deal: 20 levels and their escalations, or refused.
@@ -367,10 +359,7 @@ pub fn assault_create(setup_json: &str, record_json: &str, day_json: &str) -> Re
     let setup: AssaultSetup = parse("assaultCreate: the setup", setup_json)?;
     let record: AssaultRecord = parse("assaultCreate: the record", record_json)?;
     let day: AssaultDay = parse("assaultCreate: the day", day_json)?;
-    match jackioh_run::assault_create(&setup, &record, &day) {
-        Ok(state) => to_json(&json!({ "state": state })),
-        Err(refusal) => to_json(&json!({ "error": refusal })),
-    }
+    outcome("state", jackioh_run::assault_create(&setup, &record, &day))
 }
 
 /// `{ state }` after one action, `{ error }` for an action the attempt refuses.
@@ -378,10 +367,7 @@ pub fn assault_reduce(state_json: &str, day_json: &str, action_json: &str) -> Re
     let state: AssaultState = parse("assaultReduce: the state", state_json)?;
     let day: AssaultDay = parse("assaultReduce: the day", day_json)?;
     let action: AssaultAction = parse("assaultReduce: the action", action_json)?;
-    match jackioh_run::assault_reduce(&state, &day, &action) {
-        Ok(state) => to_json(&json!({ "state": state })),
-        Err(refusal) => to_json(&json!({ "error": refusal })),
-    }
+    outcome("state", jackioh_run::assault_reduce(&state, &day, &action))
 }
 
 /// The fight being played (`AssaultFightSetup`), or `null` outside one.
@@ -395,10 +381,7 @@ pub fn assault_fight_setup(state_json: &str, day_json: &str) -> Result<String, S
 pub fn assault_fight_report(game_json: &str, human_json: &str) -> Result<String, String> {
     let game: ReplayInput = parse("assaultFightReport: the game", game_json)?;
     let human: PlayerId = parse("assaultFightReport: the human", human_json)?;
-    match jackioh_run::assault_fight_report(&game, human) {
-        Ok(action) => to_json(&json!({ "action": action })),
-        Err(refusal) => to_json(&json!({ "error": refusal })),
-    }
+    outcome("action", jackioh_run::assault_fight_report(&game, human))
 }
 
 /// The day's record folded with the attempt's progress.
@@ -412,10 +395,7 @@ pub fn assault_record(record_json: &str, state_json: &str) -> Result<String, Str
 pub fn assault_fold(file_json: &str, day_json: &str) -> Result<String, String> {
     let file: AssaultFile = parse("assaultFold: the file", file_json)?;
     let day: AssaultDay = parse("assaultFold: the day", day_json)?;
-    match jackioh_run::assault_fold(&file, &day) {
-        Ok(state) => to_json(&json!({ "state": state })),
-        Err(refusal) => to_json(&json!({ "error": refusal })),
-    }
+    outcome("state", jackioh_run::assault_fold(&file, &day))
 }
 
 /// The Assault's numbers the screens show, so the client states none (CLAUDE.md rule 9).
@@ -1709,6 +1689,40 @@ mod assault_body_tests {
         let unknown = "\"v0.0.0-unknown\"";
         let at_unknown = assault_content_at(unknown).unwrap();
         assert_eq!(at_unknown, "null");
+    }
+
+    // R4597000: since the release the browser deals from the set's real cards: `assault_content()` is
+    // `assault_catalog_content` over the build's catalog, its twelve Commanders among them, and a carried
+    // version answers the same content.
+    #[test]
+    fn r4597000_the_browser_deals_the_assault_from_the_catalog() {
+        jackioh_cards::register_all();
+        let catalog = engine::registered_catalog();
+        let expected = jackioh_run::assault_catalog_content(catalog);
+        assert_eq!(assault_content().unwrap(), to_json(&expected).unwrap());
+        assert_eq!(expected.commanders.len(), 12);
+        assert!(
+            expected
+                .cards
+                .iter()
+                .all(|card| card.id.starts_with("infiniteassault-"))
+        );
+        // A carried version's snapshot holds no Assault card (R1420: only the sets that ship), so it
+        // answers the build's own content, twelve Commanders and all, and an open attempt folds on.
+        let carried = jackioh_cards::carried_versions();
+        let version = carried.last().expect("the build carries a version");
+        let shipped = jackioh_cards::shipped_catalog(version).expect("a carried version's catalog");
+        assert!(
+            shipped
+                .defs()
+                .keys()
+                .all(|id| !id.starts_with("infiniteassault-"))
+        );
+        let at: jackioh_run::AssaultContent =
+            serde_json::from_str(&assault_content_at(&serde_json::to_string(version).unwrap()).unwrap())
+                .unwrap();
+        assert_eq!(at, expected);
+        assert_eq!(at.commanders.len(), 12);
     }
 }
 

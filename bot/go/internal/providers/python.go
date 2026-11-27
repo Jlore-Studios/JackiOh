@@ -6,7 +6,6 @@ package providers
 import (
 	"slices"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
@@ -206,29 +205,4 @@ func isoWeekDate(year, week, day int) (time.Time, bool) {
 	jan4 := time.Date(year, 1, 4, 0, 0, 0, 0, time.UTC)
 	monday := jan4.AddDate(0, 0, -weekday(jan4))
 	return monday.AddDate(0, 0, (week-1)*7+day-1), true
-}
-
-// purePath is str(PurePosixPath(*parts)): joined with "/", empty and "." parts dropped, ".."
-// kept, an absolute part starting afresh (two leading slashes kept, as POSIX allows).
-func purePath(parts ...string) string {
-	root := ""
-	var segments []string
-	for _, part := range parts {
-		if strings.HasPrefix(part, "/") {
-			segments = nil
-			root = "/"
-			if strings.HasPrefix(part, "//") && !strings.HasPrefix(part, "///") {
-				root = "//"
-			}
-		}
-		for _, s := range strings.Split(part, "/") {
-			if s != "" && s != "." {
-				segments = append(segments, s)
-			}
-		}
-	}
-	if path := root + strings.Join(segments, "/"); path != "" {
-		return path
-	}
-	return "."
 }

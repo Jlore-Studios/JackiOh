@@ -258,7 +258,7 @@ fn library_holders(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
     cards
 }
 
-/// The cards `trigger_holders_of` makes holders of, with their zones, in its order.
+/// One side's cards that hold triggers, with their zones, in R68's within-a-side order.
 fn holder_sites(state: &GameState, player: PlayerId) -> Vec<(&CardInstance, TriggerZone)> {
     let side = &state.players[player];
     let mut out: Vec<(&CardInstance, TriggerZone)> = Vec::new();
@@ -285,14 +285,6 @@ fn holder_sites(state: &GameState, player: PlayerId) -> Vec<(&CardInstance, Trig
         out.push((card, TriggerZone::Graveyard));
     }
     out
-}
-
-/// One side's holders in R68's within-a-side order (`holder_sites`).
-pub fn trigger_holders_of(state: &GameState, player: PlayerId) -> Vec<TriggerHolder> {
-    holder_sites(state, player)
-        .into_iter()
-        .map(|(card, zone)| holder_of(state, card, zone, player))
-        .collect()
 }
 
 /// `cards_in_trigger_order(state)` filtered by `keep(card, zone)`, building only the holders it keeps.
@@ -363,10 +355,7 @@ pub fn field_holders_where(state: &GameState, keep: impl Fn(&CardInstance) -> bo
 /// Every card that could answer, in R68's order, unfiltered (a card with no script keeps its place):
 /// filter with `triggers_on_event` or `trigger_holders_with_hook`.
 pub fn cards_in_trigger_order(state: &GameState) -> Vec<TriggerHolder> {
-    active_first(state)
-        .into_iter()
-        .flat_map(|player| trigger_holders_of(state, player))
-        .collect()
+    holders_where(state, |_, _| true)
 }
 
 /// The holder a card is right now, or `None` when its zone registers nothing: an exile or resolving
@@ -412,11 +401,6 @@ pub fn triggers_on_event(holder: &TriggerHolder, event_type: GameEventType) -> V
         .filter(|def| def.on.contains(&event_type))
         .cloned()
         .collect()
-}
-
-/// Every card that answers this event type, in R68's order. Traps included: they fire first.
-pub fn trigger_holders_for_event(state: &GameState, event_type: GameEventType) -> Vec<TriggerHolder> {
-    holders_answering(state, event_type)
 }
 
 /// The registry keyed by hook: every card whose zone lets it answer that hook (R153; a graveyard's only

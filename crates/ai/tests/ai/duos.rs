@@ -73,6 +73,8 @@ const MID: &str = "core-019";
 const STACK_UNIT: &str = "classicplus-004";
 /// Keymaster Keenus, a 4-cost 1/1 Unit with Equip (R1086): it may be played fused onto a Unit.
 const EQUIP_UNIT: &str = "meditative-065";
+/// Classic #28 Second Wind, a Field Spell: "You have +1 mana per turn" (R4440052).
+const SECOND_WIND: &str = "classic-028";
 
 fn cheap() -> Vec<String> {
     CHEAP.iter().map(|id| id.to_string()).collect()
@@ -1139,6 +1141,41 @@ fn r1127000_free_pass_next_turn_cards_keep_cost_order() {
     assert_eq!(duos_passes(&state, A1), vec![ids[1].clone(), ids[0].clone()]);
 }
 
+/// Stands a fresh `def_id` face up in `seat`'s first backrow zone.
+fn stand_in_backrow(state: &mut DuosState, seat: DuosSeat, def_id: &str) {
+    let player = seat.player();
+    let game = &mut state.duels[seat.duel()];
+    let (row, lane) = (Row::Backrow, 1);
+    let mut card = new_instance(game, def_id, player, Zone::Field { player, row, lane });
+    let slot = ZoneSlot { player, row, lane };
+    let placed = place_on_field(game, &mut card, slot, PlaceOnFieldOptions::default());
+    assert!(placed, "{seat}'s backrow zone {lane} takes {def_id}");
+}
+
+/// R1127000, R4440052 (#4795): the teammate's next refresh is read as its turn's start gives it,
+/// Classic #28 Second Wind's "+1 mana per turn" on its field included, so with free passes the Menace,
+/// costing one more than A2's plain next refresh, is a card A2 can afford next turn and A1 cannot.
+#[test]
+fn r1127000_free_pass_next_turn_counts_the_teammates_mana_per_turn() {
+    let free = DuosTeamRules {
+        pass_cost: 0,
+        ..DUOS_HUMAN_TEAM
+    };
+    let mut state = round_one("duos-ai-best-pass-later", team_a(free));
+    let ids = set_hand(&mut state, A1, &[MID, BIG]);
+    for seat in [A1, A2] {
+        set_mana(&mut state, seat, 0);
+        // Its next turn's start counts its turns to one short of the Menace.
+        side(&mut state, seat).turns_started = cost(MID) - 2;
+    }
+    assert!(
+        duos_passes(&state, A1).is_empty(),
+        "PREMISE: A2's plain refresh is short"
+    );
+    stand_in_backrow(&mut state, A2, SECOND_WIND);
+    assert_eq!(duos_passes(&state, A1), vec![ids[0].clone()]);
+}
+
 #[test]
 fn r1127000_the_passed_card_is_scored_under_the_teammates_next_id_not_the_one_it_held() {
     let seed = "duos-ai-best-pass-ids";
@@ -1231,6 +1268,32 @@ fn r1723000_a_card_the_teammate_can_play_after_its_own_best_play_is_passed() {
     let seed = "duos-ai-trade-both";
     let (mut state, big) = trade_state(seed, None, &[BIG]);
     set_mana(&mut state, A2, cost(BIG) + cost(BIG));
+    assert_eq!(duos_passes(&state, A1), vec![big]);
+}
+
+/// R1723000 (#4795): the card's play after the teammate's own best play is a real engine step when it
+/// is the first listed: with two of A2's unit zones open, its own BIG takes the first and the passed
+/// BIG has one play left, numbered as the baseline's own play was.
+#[test]
+fn r1723000_a_card_with_one_play_left_after_the_teammates_best_play_is_passed() {
+    let seed = "duos-ai-trade-both";
+    let (mut state, big) = trade_state(seed, None, &[BIG]);
+    set_mana(&mut state, A2, cost(BIG) + cost(BIG));
+    let player = A2.player();
+    for lane in 3..=UNIT_ZONES {
+        let slot = ZoneRef {
+            player,
+            row: Row::Units,
+            lane,
+        };
+        lock_zone(&mut state.duels[A2.duel()], slot);
+    }
+    let own = state.duels[A2.duel()].players[player].hand[0].id.clone();
+    assert_eq!(
+        plays_in(&state.duels[A2.duel()], player, &own).len(),
+        2,
+        "PREMISE: one play per open zone"
+    );
     assert_eq!(duos_passes(&state, A1), vec![big]);
 }
 

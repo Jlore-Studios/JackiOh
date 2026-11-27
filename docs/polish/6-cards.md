@@ -276,7 +276,7 @@ export type FaceCost = {
   /** `data-cost`: the live number when there is one (CardView.cost), else `text`. */
   value: string;
   tone: "base" | "down" | "up";
-  /** The embiggen price beside the gem while the gem shows the base price; null once the live cost moved off it. */
+  /** The embiggen price beside the gem: the view's `embiggenCost` wherever it gives one (R5109001), else the printed one while the gem shows the base price; null otherwise. */
   alt: string | null;
 };
 export type FaceStats = { attack: number; health: number; maxHealth: number; attackTone: StatTone; healthTone: StatTone };
@@ -897,9 +897,10 @@ The deck builder does the same for its own buttons by scoping every button rule 
   - an X card shows `text: "X"` while `value` is the live number;
   - an embiggen card with no live cost, or a live cost at its base, shows its base with `alt` set
     to the embiggen price;
-  - any other live cost is what the gem shows, with `alt: null` (the view's number, SPEC §10.10:
-    a /fullsend discount to 1 shows 1). A live cost equal to the embiggen price (paid on the
-    field) is toned `base`.
+  - any other live cost is what the gem shows (the view's number, SPEC §10.10: a /fullsend
+    discount to 1 shows 1), with `alt` set to the view's `embiggenCost` where it gives one (the
+    Embiggened version's realized price, R5109001), else `null`. A live cost equal to the embiggen
+    price (paid on the field) is toned `base`.
 
   `.cost-gem` renders `text`, `data-cost={value}` and `data-tone`.
 - **B9.** `faceModel` stat tones (vitest):

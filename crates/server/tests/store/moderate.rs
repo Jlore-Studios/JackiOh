@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use jackioh_server::admin::store::MODERATE_BAN_ROUTE;
+use jackioh_server::admin::store::{AdminActionFilter, MODERATE_BAN_ROUTE};
 use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
 use jackioh_server::api::crypto::{canonical_invite_code, hashes_for_pepper};
 use jackioh_server::cli::moderate::{
@@ -317,7 +317,7 @@ mod moderate_commands {
         fail_audit_rows(&db, false).await;
         let mut tx = db.begin(None).await.expect("a transaction opens");
         let routes: Vec<String> = tx
-            .admin_actions_recent(10)
+            .admin_actions_page(&AdminActionFilter::default(), 10)
             .await
             .expect("the audit reads")
             .into_iter()

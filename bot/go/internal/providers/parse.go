@@ -614,7 +614,7 @@ func Parse(raw any) *Pool {
 
 // Load is load.
 func Load(root string) *Pool {
-	path := purePath(root, ProvidersPath)
+	path := py.PurePath(root, ProvidersPath)
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		configError("%s does not exist", path)

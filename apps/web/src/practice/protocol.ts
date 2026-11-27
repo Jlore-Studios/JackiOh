@@ -141,7 +141,7 @@ export type PracticeRequest =
    */
   | { id: number; type: "claim" }
   /**
-   * DR14, R2706000: a finished dungeon run's fight as the run reads it: `runFightReport` over the
+   * DR14, R2706000: a finished dungeon run's fight as the run reads it: the module's `run_fight_report` over the
    * game's setup and log, for the seat the human ended in (R677). Refused before the end and for a
    * game that is no fight. Only the run's action crosses, never the log (CLAUDE.md rule 7).
    */

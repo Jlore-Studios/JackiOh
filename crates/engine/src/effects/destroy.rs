@@ -6,13 +6,15 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::targets::{BoardScope, TargetSpec, adjacent_to_aimed, cards_in_scope_aimed, instance_of};
+use super::targets::{
+    BoardScope, PlayerSpec, TargetSpec, adjacent_to_aimed, cards_in_scope_aimed, instance_of, player_of,
+};
 use crate::damage::already_killed;
 use crate::script::Effect;
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut};
 use crate::state_check::sacrifice_now;
-use crate::wire::TargetAim;
-use crate::wire::ZoneName;
+use crate::wire::{Row, TargetAim, ZoneName};
+use crate::zones::ZoneSlot;
 
 /// The mark every destroy leaves (§6.3, §4.5 step 1). A destroy is not a damage instance, so an earlier
 /// hit that did not kill must not be credited with this death (R42's lethal source and R89's `killerId`
@@ -106,6 +108,54 @@ pub fn destroy_adjacent_to(args: DestroyAdjacentToArgs) -> Effect {
     Effect::new("destroyAdjacentTo", move |ctx| {
         let DestroyAdjacentToArgs { target, scope } = &args;
         for card in adjacent_to_aimed(ctx, target, scope, TargetAim::Harm) {
+            mark_destroyed(&mut *ctx.state, &card);
+        }
+    })
+}
+
+/// `crush`'s arguments: the zone whose Units it destroys, its side relative to the controller.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct CrushArgs {
+    pub player: PlayerSpec,
+    /// The zone's row; absent is the unit row.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub row: Option<Row>,
+    pub lane: i32,
+}
+
+/// R5048000: the Units a crush of `slot` destroys: the zone's cards that are Units (a pile, a Unit
+/// standing in a backrow zone; R4665000: a card lying on a unit zone is none), else the GIGA Unit
+/// covering it. A set Trap, a Field Spell or any other card that is no Unit is not among them.
+pub fn crushed_in(state: &GameState, slot: ZoneSlot) -> Vec<CardInstance> {
+    let mut below = crate::zones::zone_contents(state, slot);
+    if below.is_empty()
+        && let Some(giga) = crate::giga::covering(state, slot)
+    {
+        below.push(giga.clone());
+    }
+    below
+        .into_iter()
+        .filter(|card| crate::zones::in_units_row_or_standing(state, card))
+        .collect()
+}
+
+/// R5048000 Crush (S+ #121 Toxopid's Legs): destroy every Unit in the named zone (`crushed_in`), as
+/// §6.3 Destroy does: a mark the next state check collects (R59), Indestructible ignoring it (R46), so
+/// a card summoned there once the check has run finds the zone free. No keyword: a card's text calls it.
+/// R5117000: a Spell's crush passes a Unit Immune to Spells by (R4453000), which keeps its zone.
+pub fn crush(args: CrushArgs) -> Effect {
+    Effect::new("crush", move |ctx| {
+        let slot = ZoneSlot {
+            player: player_of(ctx, args.player),
+            row: args.row.unwrap_or(Row::Units),
+            lane: args.lane,
+        };
+        for card in crushed_in(ctx.state, slot) {
+            if crate::restrictions::unaffected_by(ctx, &card) {
+                continue;
+            }
             mark_destroyed(&mut *ctx.state, &card);
         }
     })

@@ -35,17 +35,17 @@
   user-select: none;
 
   /* The layer's own palette, derived from the index.css tokens. */
-  --fx-gold: var(--radiant, #ffd24a);
-  --fx-gold-pale: color-mix(in srgb, var(--fx-gold) 35%, white);
-  --fx-gold-deep: color-mix(in srgb, var(--fx-gold) 55%, black);
-  --fx-damage: var(--opponent, #c0453f);
-  --fx-heal: var(--legal, #4ec98a);
-  --fx-loss: var(--plague, #8b5cf6);
-  --fx-arcane: var(--plague, #8b5cf6);
-  --fx-frost: var(--grade, #38bdf8);
-  --fx-ink: var(--bg-sunken, #0b0d13);
-  --fx-steel: var(--text-dim, #9aa1b8);
-  --fx-white: var(--text, #e8eaf2);
+  --fx-gold: var(--radiant, var(--pal-gold-300));
+  --fx-gold-pale: color-mix(in srgb, var(--fx-gold) 35%, var(--pal-white));
+  --fx-gold-deep: color-mix(in srgb, var(--fx-gold) 55%, var(--pal-black));
+  --fx-damage: var(--opponent, var(--pal-red-600));
+  --fx-heal: var(--legal, var(--pal-jade-400));
+  --fx-loss: var(--plague, var(--pal-amethyst-500));
+  --fx-arcane: var(--plague, var(--pal-amethyst-500));
+  --fx-frost: var(--grade, var(--pal-ink-400));
+  --fx-ink: var(--bg-sunken, var(--pal-wood-900));
+  --fx-steel: var(--text-dim, var(--pal-slate-400));
+  --fx-white: var(--text, var(--pal-slate-100));
 }
 
 .fx-layer * {
@@ -122,7 +122,7 @@
   display: grid;
   place-items: center;
   z-index: 3;
-  filter: drop-shadow(0 3px 2px rgb(0 0 0 / 55%));
+  filter: drop-shadow(0 3px 2px color-mix(in srgb, var(--pal-black) 55%, transparent));
   animation: fx-splat-pop var(--fx-ms) cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
 
@@ -133,10 +133,10 @@
   background:
     radial-gradient(
       circle at 46% 40%,
-      color-mix(in srgb, var(--fx-splat-color) 30%, white) 0%,
+      color-mix(in srgb, var(--fx-splat-color) 30%, var(--pal-white)) 0%,
       var(--fx-splat-color) 34%,
-      color-mix(in srgb, var(--fx-splat-color) 62%, black) 72%,
-      color-mix(in srgb, var(--fx-splat-color) 30%, black) 100%
+      color-mix(in srgb, var(--fx-splat-color) 62%, var(--pal-black)) 72%,
+      color-mix(in srgb, var(--fx-splat-color) 30%, var(--pal-black)) 100%
     );
   /* A thirteen-point starburst with uneven spikes, so it reads as a splat, not a badge. */
   clip-path: polygon(
@@ -157,15 +157,15 @@
     "Segoe UI",
     sans-serif;
   letter-spacing: -0.02em;
-  color: white;
+  color: var(--pal-white);
   font-variant-numeric: tabular-nums;
   text-shadow:
-    0 0 1px black,
-    1px 1px 0 black,
-    -1px 1px 0 black,
-    1px -1px 0 black,
-    -1px -1px 0 black,
-    0 2px 3px rgb(0 0 0 / 70%);
+    0 0 1px var(--pal-black),
+    1px 1px 0 var(--pal-black),
+    -1px 1px 0 var(--pal-black),
+    1px -1px 0 var(--pal-black),
+    -1px -1px 0 var(--pal-black),
+    0 2px 3px color-mix(in srgb, var(--pal-black) 70%, transparent);
   white-space: nowrap;
 }
 
@@ -183,7 +183,7 @@
 }
 
 .fx-splat[data-tone="heal"]::after {
-  color: color-mix(in srgb, var(--fx-heal) 18%, white);
+  color: color-mix(in srgb, var(--fx-heal) 18%, var(--pal-white));
 }
 
 .fx-splat[data-tone="loss"] {
@@ -242,7 +242,7 @@
   display: grid;
   place-items: center;
   z-index: 4;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--fx-steel) 30%, var(--fx-ink)) 0%, var(--fx-ink) 100%);
   border: 2px solid var(--fx-gold);
   box-shadow: 0 3px 4px color-mix(in srgb, var(--fx-ink) 80%, transparent);
@@ -307,7 +307,7 @@
   width: min(max(240px, calc(max(var(--fx-w, 0px), var(--fx-h, 0px)) * 2.8)), 100vmax);
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   z-index: 1;
   /* Two fans with different periods, each ray ramping in and out rather than hard-stopped, so the
      light reads as soft god rays of uneven width instead of a stamped starburst. */
@@ -326,39 +326,39 @@
       color-mix(in srgb, var(--fx-ray) 55%, transparent) 2deg,
       transparent 5deg 13deg
     );
-  -webkit-mask-image: radial-gradient(circle closest-side, black 6%, rgb(0 0 0 / 70%) 30%, rgb(0 0 0 / 22%) 66%, transparent 100%);
-  mask-image: radial-gradient(circle closest-side, black 6%, rgb(0 0 0 / 70%) 30%, rgb(0 0 0 / 22%) 66%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle closest-side, var(--pal-black) 6%, color-mix(in srgb, var(--pal-black) 70%, transparent) 30%, color-mix(in srgb, var(--pal-black) 22%, transparent) 66%, transparent 100%);
+  mask-image: radial-gradient(circle closest-side, var(--pal-black) 6%, color-mix(in srgb, var(--pal-black) 70%, transparent) 30%, color-mix(in srgb, var(--pal-black) 22%, transparent) 66%, transparent 100%);
   animation: fx-rays-spin var(--fx-ms) cubic-bezier(0.25, 0.7, 0.3, 1) both;
 }
 
 .fx-rays[data-tone="legendary"] {
-  --fx-ray: color-mix(in srgb, var(--fx-gold) 80%, var(--opponent, #c0453f));
+  --fx-ray: color-mix(in srgb, var(--fx-gold) 80%, var(--opponent, var(--pal-red-600)));
   --fx-ray-core: var(--fx-gold-pale);
 }
 
 /* Mythic: prismatic, every token hue in turn, each ray ramped like the gold ones. */
 .fx-rays[data-tone="mythic"] {
   background:
-    radial-gradient(circle closest-side, white 0%, rgb(255 255 255 / 45%) 14%, transparent 34%),
+    radial-gradient(circle closest-side, var(--pal-white) 0%, color-mix(in srgb, var(--pal-white) 45%, transparent) 14%, transparent 34%),
     repeating-conic-gradient(
       from 0deg,
       transparent 0deg,
-      var(--plague, #8b5cf6) 3deg,
+      var(--plague, var(--pal-amethyst-500)) 3deg,
       transparent 7deg 12deg,
-      var(--grade, #38bdf8) 15deg,
+      var(--grade, var(--pal-ink-400)) 15deg,
       transparent 19deg 24deg,
-      var(--radiant, #ffd24a) 27deg,
+      var(--radiant, var(--pal-gold-300)) 27deg,
       transparent 31deg 36deg,
-      var(--legal, #4ec98a) 39deg,
+      var(--legal, var(--pal-jade-400)) 39deg,
       transparent 43deg 48deg,
-      var(--opponent, #c0453f) 51deg,
+      var(--opponent, var(--pal-red-600)) 51deg,
       transparent 55deg 60deg
     );
 }
 
 .fx-rays[data-tone="radiant"] {
   --fx-ray: var(--fx-gold);
-  --fx-ray-core: white;
+  --fx-ray-core: var(--pal-white);
 }
 
 /* Holy light: a still shaft of warm light falling from above onto the target, feathered at both
@@ -373,28 +373,28 @@
   translate: -50% -80%;
   border-radius: 0;
   background:
-    radial-gradient(ellipse 48% 12% at 50% 80%, rgb(255 255 255 / 95%) 0%, color-mix(in srgb, var(--fx-gold-pale) 70%, transparent) 45%, transparent 100%),
+    radial-gradient(ellipse 48% 12% at 50% 80%, color-mix(in srgb, var(--pal-white) 95%, transparent) 0%, color-mix(in srgb, var(--fx-gold-pale) 70%, transparent) 45%, transparent 100%),
     repeating-linear-gradient(
       90deg,
       transparent 0 8px,
-      rgb(255 255 255 / 18%) 10px,
+      color-mix(in srgb, var(--pal-white) 18%, transparent) 10px,
       transparent 12px 19px
     ),
     radial-gradient(
       ellipse 34% 60% at 50% 60%,
-      rgb(255 255 255 / 80%) 0%,
+      color-mix(in srgb, var(--pal-white) 80%, transparent) 0%,
       color-mix(in srgb, var(--fx-gold-pale) 55%, transparent) 40%,
       color-mix(in srgb, var(--fx-gold) 14%, transparent) 75%,
       transparent 100%
     );
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 34%, black 86%, transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 34%, black 86%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, var(--pal-black) 34%, var(--pal-black) 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, var(--pal-black) 34%, var(--pal-black) 86%, transparent 100%);
 }
 
 /* Victory and "Your turn": a wide gold fan behind the center of the screen, kept soft so the board
    still reads through it. */
 .fx-rays[data-tone="victory"] {
-  --fx-ray: color-mix(in srgb, var(--fx-gold) 85%, white);
+  --fx-ray: color-mix(in srgb, var(--fx-gold) 85%, var(--pal-white));
   --fx-ray-core: color-mix(in srgb, var(--fx-gold-pale) 70%, transparent);
   --fx-rays-peak: 0.6;
   width: max(320px, 105vmin);
@@ -439,7 +439,7 @@
   top: var(--fx-y);
   width: var(--fx-w);
   height: var(--fx-h);
-  border-radius: var(--radius, 7px);
+  border-radius: var(--radius-sm);
   z-index: 2;
   overflow: hidden;
   animation: fx-sheen-glow var(--fx-ms) ease-in-out both;
@@ -459,7 +459,7 @@
     105deg,
     transparent 0%,
     color-mix(in srgb, var(--fx-gold) 45%, transparent) 30%,
-    color-mix(in srgb, var(--fx-gold-pale) 90%, white) 50%,
+    color-mix(in srgb, var(--fx-gold-pale) 90%, var(--pal-white)) 50%,
     color-mix(in srgb, var(--fx-gold) 45%, transparent) 70%,
     transparent 100%
   );
@@ -501,17 +501,17 @@
   height: calc(var(--card-h, 112px) * 0.72);
   translate: -50% -50%;
   z-index: 2;
-  border: 1px solid var(--line-bright, #454d66);
-  border-radius: var(--radius, 7px);
+  border: 1px solid var(--line-bright, var(--pal-slate-700));
+  border-radius: var(--radius-sm);
   background:
-    radial-gradient(circle at 50% 50%, transparent 0 18%, var(--line-bright, #454d66) 19% 21%, transparent 22%),
+    radial-gradient(circle at 50% 50%, transparent 0 18%, var(--line-bright, var(--pal-slate-700)) 19% 21%, transparent 22%),
     repeating-linear-gradient(
       135deg,
-      var(--bg-raised, #1a1d28) 0 6px,
-      var(--line, #2c3142) 6px 12px
+      var(--bg-raised, var(--pal-slate-900)) 0 6px,
+      var(--line, var(--pal-slate-800)) 6px 12px
     );
   box-shadow:
-    0 6px 14px rgb(0 0 0 / 55%),
+    0 6px 14px color-mix(in srgb, var(--pal-black) 55%, transparent),
     0 0 12px 2px color-mix(in srgb, var(--fx-arcane) 55%, transparent);
   animation: fx-ghost-fly var(--fx-ms) cubic-bezier(0.45, 0.05, 0.35, 1) both;
 }
@@ -568,9 +568,9 @@
   /* A dark outline and a colored glow, so the chevrons read over any card art (review: the old
      small, half-transparent ones were only visible in a 3x crop). Static: only transform and
      opacity animate. */
-  filter: drop-shadow(0 0 1px black) drop-shadow(0 0 1px black)
+  filter: drop-shadow(0 0 1px var(--pal-black)) drop-shadow(0 0 1px var(--pal-black))
     drop-shadow(0 0 7px color-mix(in srgb, var(--fx-arrow-color) 90%, transparent))
-    drop-shadow(0 2px 2px rgb(0 0 0 / 70%));
+    drop-shadow(0 2px 2px color-mix(in srgb, var(--pal-black) 70%, transparent));
   animation: fx-arrows-rise var(--fx-ms) cubic-bezier(0.3, 0.6, 0.4, 1) both;
 }
 
@@ -588,9 +588,9 @@
   aspect-ratio: 1.25;
   background: linear-gradient(
     to top,
-    color-mix(in srgb, var(--fx-arrow-color) 70%, black) 0%,
+    color-mix(in srgb, var(--fx-arrow-color) 70%, var(--pal-black)) 0%,
     var(--fx-arrow-color) 50%,
-    color-mix(in srgb, var(--fx-arrow-color) 35%, white) 100%
+    color-mix(in srgb, var(--fx-arrow-color) 35%, var(--pal-white)) 100%
   );
   /* An upward chevron; the down variant turns it over. */
   clip-path: polygon(50% 0%, 100% 52%, 100% 82%, 50% 36%, 0% 82%, 0% 52%);
@@ -660,16 +660,10 @@
   display: grid;
   place-items: center;
   max-width: 100vw;
-  /* Sized so the longest line ("Opponent's turn", uppercase) still fits a 360 px phone. */
+  /* Sized so the longest line ("Opponent's turn") still fits a 360 px phone. */
   padding: 0.3em 1em 0.36em;
   z-index: 4;
-  font:
-    900 clamp(24px, min(7vw, 12vh), 72px) / 1.05 ui-serif,
-    Georgia,
-    "Times New Roman",
-    serif;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font: 900 clamp(24px, min(7vw, 12vh), 72px) / 1.05 var(--font-display);
   white-space: nowrap;
   animation: fx-banner-in var(--fx-ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
@@ -700,13 +694,13 @@
     var(--fx-gold-pale) 0%,
     var(--fx-gold) 46%,
     var(--fx-gold-deep) 58%,
-    color-mix(in srgb, var(--fx-gold) 70%, white) 100%
+    color-mix(in srgb, var(--fx-gold) 70%, var(--pal-white)) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 85%)) drop-shadow(0 0 14px color-mix(in srgb, var(--fx-gold) 65%, transparent));
+  filter: drop-shadow(0 2px 0 color-mix(in srgb, var(--pal-black) 85%, transparent)) drop-shadow(0 0 14px color-mix(in srgb, var(--fx-gold) 65%, transparent));
 }
 
 .fx-banner[data-tone="opponent"]::before {
@@ -724,10 +718,10 @@
 }
 
 .fx-banner[data-tone="opponent"]::after {
-  background: linear-gradient(180deg, white 0%, var(--fx-steel) 52%, var(--line-bright, #454d66) 60%, var(--fx-white) 100%);
+  background: linear-gradient(180deg, var(--pal-white) 0%, var(--fx-steel) 52%, var(--line-bright, var(--pal-slate-700)) 60%, var(--fx-white) 100%);
   -webkit-background-clip: text;
   background-clip: text;
-  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 85%))
+  filter: drop-shadow(0 2px 0 color-mix(in srgb, var(--pal-black) 85%, transparent))
     drop-shadow(0 0 12px color-mix(in srgb, var(--fx-damage) 45%, transparent));
 }
 
@@ -749,7 +743,7 @@
   background: none;
   color: var(--fx-steel);
   -webkit-text-fill-color: var(--fx-steel);
-  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 80%));
+  filter: drop-shadow(0 2px 0 color-mix(in srgb, var(--pal-black) 80%, transparent));
 }
 
 /* ------------------------------------------------- result: Victory, Defeat and Draw screens --- */
@@ -825,24 +819,24 @@
   display: grid;
   place-items: center;
   z-index: 5;
-  background: radial-gradient(ellipse at 50% 45%, transparent 30%, rgb(0 0 0 / 55%) 100%);
+  background: radial-gradient(ellipse at 50% 45%, transparent 30%, color-mix(in srgb, var(--pal-black) 55%, transparent) 100%);
   animation: fx-result-in var(--fx-ms) ease-out both;
 }
 
 .fx-result[data-outcome="victory"] {
   background:
     radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--fx-gold) 30%, transparent) 0%, transparent 42%),
-    radial-gradient(ellipse at 50% 45%, transparent 35%, rgb(0 0 0 / 50%) 100%);
+    radial-gradient(ellipse at 50% 45%, transparent 35%, color-mix(in srgb, var(--pal-black) 50%, transparent) 100%);
 }
 
 .fx-result[data-outcome="defeat"] {
   background:
-    radial-gradient(ellipse at 50% 45%, rgb(0 0 0 / 30%) 15%, color-mix(in srgb, var(--fx-ink) 88%, transparent) 100%),
+    radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--pal-black) 30%, transparent) 15%, color-mix(in srgb, var(--fx-ink) 88%, transparent) 100%),
     linear-gradient(to top, color-mix(in srgb, var(--fx-damage) 35%, transparent) 0%, transparent 38%);
 }
 
 .fx-result[data-outcome="draw"] {
-  background: radial-gradient(ellipse at 50% 45%, rgb(0 0 0 / 15%) 20%, color-mix(in srgb, var(--fx-ink) 75%, transparent) 100%);
+  background: radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--pal-black) 15%, transparent) 20%, color-mix(in srgb, var(--fx-ink) 75%, transparent) 100%);
 }
 
 /* The flare behind the word. */
@@ -854,7 +848,7 @@
   width: min(92vw, 720px);
   aspect-ratio: 2.4;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(
     ellipse closest-side,
     color-mix(in srgb, var(--fx-gold-pale) 80%, transparent) 0%,
@@ -885,27 +879,21 @@
   content: attr(data-text);
   position: relative;
   margin-bottom: 10vh;
-  font:
-    900 clamp(44px, min(14vw, 24vh), 128px) / 1 ui-serif,
-    Georgia,
-    "Times New Roman",
-    serif;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font: 900 clamp(44px, min(14vw, 24vh), 128px) / 1 var(--font-display);
   white-space: nowrap;
   background: linear-gradient(
     180deg,
-    white 0%,
+    var(--pal-white) 0%,
     var(--fx-gold-pale) 22%,
     var(--fx-gold) 48%,
     var(--fx-gold-deep) 60%,
-    color-mix(in srgb, var(--fx-gold) 75%, white) 100%
+    color-mix(in srgb, var(--fx-gold) 75%, var(--pal-white)) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 3px 0 rgb(0 0 0 / 90%)) drop-shadow(0 0 22px color-mix(in srgb, var(--fx-gold) 70%, transparent));
+  filter: drop-shadow(0 3px 0 color-mix(in srgb, var(--pal-black) 90%, transparent)) drop-shadow(0 0 22px color-mix(in srgb, var(--fx-gold) 70%, transparent));
   animation: fx-result-word var(--fx-ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -914,19 +902,19 @@
     180deg,
     var(--fx-white) 0%,
     var(--fx-steel) 40%,
-    color-mix(in srgb, var(--fx-damage) 70%, black) 62%,
+    color-mix(in srgb, var(--fx-damage) 70%, var(--pal-black)) 62%,
     color-mix(in srgb, var(--fx-damage) 55%, var(--fx-steel)) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
-  filter: drop-shadow(0 3px 0 rgb(0 0 0 / 90%)) drop-shadow(0 0 20px color-mix(in srgb, var(--fx-damage) 60%, transparent));
+  filter: drop-shadow(0 3px 0 color-mix(in srgb, var(--pal-black) 90%, transparent)) drop-shadow(0 0 20px color-mix(in srgb, var(--fx-damage) 60%, transparent));
 }
 
 .fx-result[data-outcome="draw"]::after {
-  background: linear-gradient(180deg, white 0%, var(--fx-steel) 55%, var(--fx-white) 100%);
+  background: linear-gradient(180deg, var(--pal-white) 0%, var(--fx-steel) 55%, var(--fx-white) 100%);
   -webkit-background-clip: text;
   background-clip: text;
-  filter: drop-shadow(0 3px 0 rgb(0 0 0 / 90%)) drop-shadow(0 0 16px color-mix(in srgb, var(--fx-white) 40%, transparent));
+  filter: drop-shadow(0 3px 0 color-mix(in srgb, var(--pal-black) 90%, transparent)) drop-shadow(0 0 16px color-mix(in srgb, var(--fx-white) 40%, transparent));
 }
 
 /* ------------------------------------------------ hold: a stand-in carried to its zone --- */
@@ -1039,14 +1027,14 @@
 .fx-hold-glow {
   width: 100%;
   height: 100%;
-  border: 1px solid color-mix(in srgb, var(--fx-gold) 45%, white);
-  border-radius: var(--radius, 7px);
+  border: 1px solid color-mix(in srgb, var(--fx-gold) 45%, var(--pal-white));
+  border-radius: var(--radius-sm);
   background:
-    radial-gradient(ellipse at 50% 38%, rgb(255 255 255 / 70%), transparent 68%),
-    linear-gradient(160deg, color-mix(in srgb, var(--fx-gold) 40%, #2a3050), #171a24);
+    radial-gradient(ellipse at 50% 38%, color-mix(in srgb, var(--pal-white) 70%, transparent), transparent 68%),
+    linear-gradient(160deg, color-mix(in srgb, var(--fx-gold) 40%, var(--pal-slate-800)), var(--pal-slate-900));
   box-shadow:
     0 0 18px 4px color-mix(in srgb, var(--fx-gold) 55%, transparent),
-    inset 0 0 12px color-mix(in srgb, white 35%, transparent);
+    inset 0 0 12px color-mix(in srgb, var(--pal-white) 35%, transparent);
 }
 
 /* B47: a card the burst has taken away stays gone until the board shows the view it left.
@@ -1104,7 +1092,7 @@
    change under it restyle the whole board. The doubled `[data-fx-layer]` keeps the old specificity. */
 /* A focused card keeps its focus ring. */
 .game[data-fx-layer][data-fx-layer="on"] [data-testid^="card-"]:has([data-keyword="Divine Shield"]):not(:focus-visible) {
-  outline: 2px solid color-mix(in srgb, var(--radiant, #ffd24a) 80%, white);
+  outline: 2px solid color-mix(in srgb, var(--radiant, var(--pal-gold-300)) 80%, var(--pal-white));
   outline-offset: 2px;
 }
 
@@ -1116,16 +1104,16 @@
   border-radius: inherit;
   pointer-events: none;
   background:
-    linear-gradient(155deg, color-mix(in srgb, white 40%, transparent) 0%, transparent 32%),
+    linear-gradient(155deg, color-mix(in srgb, var(--pal-white) 40%, transparent) 0%, transparent 32%),
     radial-gradient(
       ellipse 70% 62% at 50% 50%,
       transparent 44%,
-      color-mix(in srgb, var(--radiant, #ffd24a) 32%, transparent) 72%,
-      color-mix(in srgb, var(--radiant, #ffd24a) 70%, transparent) 100%
+      color-mix(in srgb, var(--radiant, var(--pal-gold-300)) 32%, transparent) 72%,
+      color-mix(in srgb, var(--radiant, var(--pal-gold-300)) 70%, transparent) 100%
     );
   box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--radiant, #ffd24a) 95%, white),
-    inset 0 0 16px 4px color-mix(in srgb, var(--radiant, #ffd24a) 60%, transparent);
+    inset 0 0 0 2px color-mix(in srgb, var(--radiant, var(--pal-gold-300)) 95%, var(--pal-white)),
+    inset 0 0 16px 4px color-mix(in srgb, var(--radiant, var(--pal-gold-300)) 60%, transparent);
   animation: fx-shield-pulse 2.6s ease-in-out infinite alternate;
 }
 
@@ -1188,16 +1176,16 @@
   width: calc(var(--fx-w) * 2);
   height: calc(var(--fx-h) * 2);
   z-index: 3;
-  border-radius: 3px;
-  border: 1px solid color-mix(in srgb, var(--fx-frost) 60%, white);
+  border-radius: var(--radius-xs);
+  border: 1px solid color-mix(in srgb, var(--fx-frost) 60%, var(--pal-white));
   background:
-    linear-gradient(115deg, transparent 43%, rgb(236 252 255 / 95%) 45%, transparent 48%),
-    linear-gradient(28deg, transparent 50%, rgb(210 244 255 / 85%) 52%, transparent 55%),
-    linear-gradient(165deg, transparent 60%, rgb(210 244 255 / 70%) 62%, transparent 64%),
-    radial-gradient(circle at 45% 40%, rgb(16 22 40 / 94%) 0 50%, color-mix(in srgb, var(--fx-frost) 55%, transparent) 78%);
+    linear-gradient(115deg, transparent 43%, color-mix(in srgb, var(--pal-white) 95%, transparent) 45%, transparent 48%),
+    linear-gradient(28deg, transparent 50%, color-mix(in srgb, var(--pal-slate-100) 85%, transparent) 52%, transparent 55%),
+    linear-gradient(165deg, transparent 60%, color-mix(in srgb, var(--pal-slate-100) 70%, transparent) 62%, transparent 64%),
+    radial-gradient(circle at 45% 40%, color-mix(in srgb, var(--pal-slate-900) 94%, transparent) 0 50%, color-mix(in srgb, var(--fx-frost) 55%, transparent) 78%);
   box-shadow:
     0 0 12px 3px color-mix(in srgb, var(--fx-frost) 70%, transparent),
-    inset 0 0 6px rgb(236 252 255 / 60%);
+    inset 0 0 6px color-mix(in srgb, var(--pal-white) 60%, transparent);
   animation: fx-fracture-crack var(--fx-ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -1252,10 +1240,10 @@
   /* The spikes: one steel wedge per tile, its apex at the tile's inner edge, down the wall's face.
      Behind them the wall itself, dark stone in courses. */
   background:
-    conic-gradient(from 225deg at 100% 50%, rgb(226 232 240) 0deg, rgb(100 116 139) 45deg, rgb(51 65 85) 90deg, transparent 90deg)
+    conic-gradient(from 225deg at 100% 50%, var(--pal-slate-100) 0deg, rgb(100 116 139) 45deg, var(--pal-slate-700) 90deg, transparent 90deg)
       right top / var(--fx-spike) calc(var(--fx-spike) * 2) repeat-y,
-    repeating-linear-gradient(0deg, transparent 0 22px, rgb(0 0 0 / 38%) 22px 24px) left top / calc(100% - var(--fx-spike)) 100% no-repeat,
-    linear-gradient(90deg, rgb(28 25 23), rgb(68 64 60) 70%, rgb(120 113 108)) left top / calc(100% - var(--fx-spike)) 100% no-repeat;
+    repeating-linear-gradient(0deg, transparent 0 22px, color-mix(in srgb, var(--pal-black) 38%, transparent) 22px 24px) left top / calc(100% - var(--fx-spike)) 100% no-repeat,
+    linear-gradient(90deg, var(--pal-wood-800), rgb(68 64 60) 70%, rgb(120 113 108)) left top / calc(100% - var(--fx-spike)) 100% no-repeat;
   animation: fx-walls-close var(--fx-ms) cubic-bezier(0.55, 0, 0.35, 1) both;
 }
 
@@ -1284,7 +1272,7 @@
 
 .mana-crystal[data-fx-hindered] {
   position: relative;
-  border-color: color-mix(in srgb, var(--grade, #38bdf8) 55%, white);
+  border-color: color-mix(in srgb, var(--grade, var(--pal-ink-400)) 55%, var(--pal-white));
 }
 
 .mana-crystal[data-fx-hindered]::before {
@@ -1293,9 +1281,9 @@
   inset: -1px;
   border-radius: inherit;
   background:
-    linear-gradient(90deg, transparent 44%, rgb(236 252 255 / 95%) 46%, transparent 52%),
-    linear-gradient(0deg, transparent 56%, rgb(210 244 255 / 80%) 58%, transparent 63%),
-    rgb(12 18 34 / 72%);
+    linear-gradient(90deg, transparent 44%, color-mix(in srgb, var(--pal-white) 95%, transparent) 46%, transparent 52%),
+    linear-gradient(0deg, transparent 56%, color-mix(in srgb, var(--pal-slate-100) 80%, transparent) 58%, transparent 63%),
+    color-mix(in srgb, var(--pal-slate-900) 72%, transparent);
   pointer-events: none;
 }
 
@@ -1303,7 +1291,7 @@
   content: "";
   position: absolute;
   inset: -3px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: radial-gradient(circle, rgb(190 238 255 / 55%), transparent 70%);
   pointer-events: none;
   animation: fx-hindered-glint 1.6s ease-in-out infinite alternate;
@@ -1359,7 +1347,7 @@
   z-index: 3;
   display: grid;
   place-items: center;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle, color-mix(in srgb, var(--fx-mark-glow) 55%, transparent) 0%, transparent 68%);
   animation: fx-brand-slam var(--fx-ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
@@ -1368,7 +1356,7 @@
   content: "";
   position: absolute;
   inset: 8%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   border: 3px dashed var(--fx-mark-rim);
   box-shadow:
     0 0 14px 3px color-mix(in srgb, var(--fx-mark-glow) 80%, transparent),
@@ -1435,8 +1423,8 @@
   width: max(64px, calc(min(var(--fx-w, 0px), var(--fx-h, 0px)) * 0.95));
   background:
     radial-gradient(ellipse at 50% 32%, var(--fx-white) 0 14%, transparent 50%),
-    radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--fx-frost) 85%, white) 0 40%, transparent 75%),
-    linear-gradient(160deg, color-mix(in srgb, var(--fx-frost) 70%, white) 0%, color-mix(in srgb, var(--fx-steel) 60%, transparent) 80%);
+    radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--fx-frost) 85%, var(--pal-white)) 0 40%, transparent 75%),
+    linear-gradient(160deg, color-mix(in srgb, var(--fx-frost) 70%, var(--pal-white)) 0%, color-mix(in srgb, var(--fx-steel) 60%, transparent) 80%);
 }
 
 /* ------------------------------------------------ chaos: what Call to Chaos rolled (R436) --- */
@@ -1504,19 +1492,15 @@
   width: max-content;
   max-width: 94vw;
   padding: 0.45em 1em 0.6em;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 2px solid transparent;
   background:
     linear-gradient(color-mix(in srgb, var(--fx-ink) 92%, transparent), color-mix(in srgb, var(--fx-ink) 92%, transparent)) padding-box,
-    linear-gradient(120deg, #ff7aa8, #ffd36b, #7dffb2, #6bc7ff, #c28bff) border-box;
+    linear-gradient(120deg, #ff7aa8, var(--pal-gold-300), #7dffb2, #6bc7ff, #c28bff) border-box;
   box-shadow:
-    0 12px 40px rgb(0 0 0 / 65%),
+    0 12px 40px color-mix(in srgb, var(--pal-black) 65%, transparent),
     0 0 26px color-mix(in srgb, var(--fx-arcane) 55%, transparent);
-  font:
-    800 clamp(13px, min(3.4vw, 5vh), 28px) / 1.3 ui-serif,
-    Georgia,
-    "Times New Roman",
-    serif;
+  font: 800 clamp(13px, min(3.4vw, 5vh), 28px) / 1.3 var(--font-display);
   animation: fx-chaos-in var(--fx-ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
@@ -1524,8 +1508,6 @@
   content: attr(data-text);
   color: var(--fx-gold);
   font-size: 0.72em;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .fx-chaos-line {
@@ -1534,8 +1516,8 @@
   min-width: min(22em, 90vw);
   height: 1.3em;
   overflow: hidden;
-  border-radius: 8px;
-  background: linear-gradient(180deg, rgb(0 0 0 / 55%), rgb(255 255 255 / 6%) 50%, rgb(0 0 0 / 55%));
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 55%, transparent), color-mix(in srgb, var(--pal-white) 6%, transparent) 50%, color-mix(in srgb, var(--pal-black) 55%, transparent));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fx-gold) 45%, transparent);
   text-align: center;
 }
@@ -1680,7 +1662,7 @@
   width: max-content;
   max-width: 94vw;
   padding: 0.45em 1em 0.7em;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 2px solid transparent;
   background:
     linear-gradient(color-mix(in srgb, var(--fx-ink) 92%, transparent), color-mix(in srgb, var(--fx-ink) 92%, transparent)) padding-box,
@@ -1699,8 +1681,6 @@
   content: attr(data-text);
   color: var(--fx-gold);
   font-size: var(--type-sm-em);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .fx-roll-tray {
@@ -1723,23 +1703,23 @@
   width: 3.2em;
   height: 1.6em;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(180deg, var(--fx-gold-deep), var(--fx-ink));
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--fx-gold) 70%, transparent);
   text-align: center;
-  font-size: var(--type-2xs-em);
+  font-size: var(--type-xs-em);
 }
 
 .fx-roll-item[data-kind="coin"] .fx-roll-face {
   width: 3.4em;
   height: 1.6em;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: radial-gradient(circle at 35% 30%, var(--fx-gold-pale), var(--fx-gold) 55%, var(--fx-gold-deep));
   animation: fx-roll-spin var(--fx-land-ms, 0ms) cubic-bezier(0.2, 0.6, 0.3, 1) both;
 }
 
 .fx-roll-item[data-kind="die"] .fx-roll-face {
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(160deg, var(--fx-white), var(--fx-steel));
   animation: fx-roll-tumble var(--fx-land-ms, 0ms) ease-out both;
 }
@@ -1748,7 +1728,7 @@
   content: "";
   position: absolute;
   inset: -0.15em;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow:
     0 0 0 2px var(--fx-gold),
     0 0 14px color-mix(in srgb, var(--fx-gold) 70%, transparent);
@@ -1779,14 +1759,14 @@
 .fx-roll-draws {
   display: flex;
   gap: 0.2em;
-  font-size: var(--type-3xs-em);
+  font-size: var(--type-xs-em);
   animation: fx-roll-reveal 300ms ease-out var(--fx-land-ms, 0ms) both;
 }
 
 .fx-roll-kept,
 .fx-roll-extra {
   padding: 0 0.35em;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 
@@ -1866,7 +1846,7 @@
   width: var(--fx-w);
   height: var(--fx-h);
   z-index: 2;
-  border-radius: 45% / 50%;
+  border-radius: var(--radius-fog);
   background: radial-gradient(
     ellipse 65% 75% at 50% 55%,
     color-mix(in srgb, var(--fx-tint-glow) 40%, transparent) 0%,
@@ -1882,7 +1862,7 @@
   left: calc(var(--fx-puff) / var(--fx-puffs) * 88%);
   width: 34%;
   height: 84%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(
     closest-side,
     color-mix(in srgb, var(--fx-tint-core) 70%, transparent) 0%,
@@ -1900,7 +1880,7 @@
 .fx-fog[data-tone="heal"] .fx-fog-puff {
   background: radial-gradient(
     closest-side,
-    color-mix(in srgb, var(--fx-tint-core) 85%, white) 0%,
+    color-mix(in srgb, var(--fx-tint-core) 85%, var(--pal-white)) 0%,
     color-mix(in srgb, var(--fx-tint-glow) 40%, transparent) 60%,
     transparent 100%
   );
@@ -2003,7 +1983,7 @@
   height: var(--fx-h);
   z-index: 3;
   overflow: hidden;
-  border-radius: var(--radius, 7px);
+  border-radius: var(--radius-sm);
   box-shadow:
     inset 0 0 0 2px var(--fx-tint-rim),
     inset 0 0 14px 3px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent),
@@ -2019,7 +1999,7 @@
     90deg,
     transparent 0%,
     color-mix(in srgb, var(--fx-tint-glow) 55%, transparent) 35%,
-    color-mix(in srgb, var(--fx-tint-core) 90%, white) 50%,
+    color-mix(in srgb, var(--fx-tint-core) 90%, var(--pal-white)) 50%,
     color-mix(in srgb, var(--fx-tint-glow) 55%, transparent) 65%,
     transparent 100%
   );
@@ -2032,7 +2012,7 @@
     0deg,
     transparent 0%,
     color-mix(in srgb, var(--fx-tint-glow) 55%, transparent) 35%,
-    color-mix(in srgb, var(--fx-tint-core) 90%, white) 50%,
+    color-mix(in srgb, var(--fx-tint-core) 90%, var(--pal-white)) 50%,
     color-mix(in srgb, var(--fx-tint-glow) 55%, transparent) 65%,
     transparent 100%
   );
@@ -2051,12 +2031,12 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  color: var(--fx-white, #fff);
+  color: var(--fx-white, var(--pal-white));
   font: 900 clamp(13px, 1.1em, 20px) / 1 ui-sans-serif, system-ui, sans-serif;
   white-space: nowrap;
   text-shadow:
     0 0 6px var(--fx-tint-glow),
-    0 2px 3px rgb(0 0 0 / 0.8);
+    0 2px 3px color-mix(in srgb, var(--pal-black) 80%, transparent);
   animation: fx-zone-count var(--fx-ms) ease-out both;
 }
 
@@ -2597,7 +2577,7 @@
   width: min(42vmin, 320px);
   aspect-ratio: 5 / 7;
   translate: -50% -50%;
-  border-radius: 6%;
+  border-radius: var(--radius-sweep);
   background: linear-gradient(
     160deg,
     color-mix(in srgb, var(--fx-tint-rim) 85%, var(--pal-white)) 0%,
@@ -2939,7 +2919,7 @@
   width: 92vmax;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: repeating-conic-gradient(
     from 0deg,
     color-mix(in srgb, var(--fx-tint-core) 55%, transparent) 0deg 4deg,
@@ -2978,7 +2958,7 @@
   width: 23vmax;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   box-shadow:
     0 0 0 6px color-mix(in srgb, var(--fx-tint-rim) 80%, var(--pal-white)),
     0 0 30px 14px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent),
@@ -3261,8 +3241,8 @@
   aspect-ratio: 3 / 4;
   border-radius: var(--radius-pill) var(--radius-pill) 0 0;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 83% 88%, 66% 100%, 50% 88%, 33% 100%, 16% 88%, 0 100%);
-  background: color-mix(in srgb, var(--pal-cyan-400) 55%, var(--pal-white));
-  box-shadow: 0 0 26px color-mix(in srgb, var(--pal-cyan-400) 70%, transparent);
+  background: color-mix(in srgb, var(--pal-verdigris-400) 55%, var(--pal-white));
+  box-shadow: 0 0 26px color-mix(in srgb, var(--pal-verdigris-400) 70%, transparent);
   animation: fx-figure-rise var(--fx-ms) var(--ease-out) both;
 }
 
@@ -3284,7 +3264,7 @@
 .fx-figure[data-figure="dusk"]::before {
   inset: 0;
   translate: 0 0;
-  background: color-mix(in srgb, var(--pal-violet-700) 55%, color-mix(in srgb, var(--pal-black) 40%, transparent));
+  background: color-mix(in srgb, var(--pal-amethyst-700) 55%, color-mix(in srgb, var(--pal-black) 40%, transparent));
 }
 
 /* Tutorial Master: a chalkboard swings down behind his zone, his pointer rapping it twice. */
@@ -3296,8 +3276,8 @@
   border-radius: var(--radius-xs);
   background: repeating-linear-gradient(
     170deg,
-    color-mix(in srgb, var(--pal-green-900) 75%, var(--pal-black)) 0 18%,
-    color-mix(in srgb, var(--pal-green-900) 60%, var(--pal-black)) 18% 19%
+    color-mix(in srgb, var(--pal-jade-900) 75%, var(--pal-black)) 0 18%,
+    color-mix(in srgb, var(--pal-jade-900) 60%, var(--pal-black)) 18% 19%
   );
   opacity: 0.85;
   animation: fx-figure-swing var(--fx-ms) var(--ease-overshoot) both;
@@ -3572,7 +3552,7 @@
   height: calc(var(--fx-fig) * 0.3);
   rotate: 30deg;
   clip-path: polygon(0 0, 100% 0, 100% 80%, 50% 100%, 0 80%);
-  background: var(--pal-yellow-400);
+  background: var(--pal-gold-400);
   animation: fx-figure-wipe var(--fx-ms) steps(5, end) both;
 }
 
@@ -5059,7 +5039,7 @@
   background: repeating-linear-gradient(
     180deg,
     color-mix(in srgb, var(--pal-white) 45%, transparent) 0 48%,
-    color-mix(in srgb, var(--pal-green-400) 75%, var(--fx-tint-glow)) 48% 100%
+    color-mix(in srgb, var(--pal-jade-400) 75%, var(--fx-tint-glow)) 48% 100%
   );
   animation: fx-figure-flick var(--fx-ms) var(--ease-overshoot) both;
 }
@@ -5071,9 +5051,9 @@
   top: calc(34% + var(--fx-fig) * 0.34);
   left: calc(50% + var(--fx-fig) * 0.08);
   background:
-    repeating-radial-gradient(circle at 50% 12%, var(--pal-green-400) 0 var(--fx-drop), transparent var(--fx-drop) 300%),
-    repeating-radial-gradient(circle at 30% 48%, var(--pal-green-400) 0 var(--fx-drop), transparent var(--fx-drop) 300%),
-    repeating-radial-gradient(circle at 64% 82%, var(--pal-green-400) 0 var(--fx-drop), transparent var(--fx-drop) 300%);
+    repeating-radial-gradient(circle at 50% 12%, var(--pal-jade-400) 0 var(--fx-drop), transparent var(--fx-drop) 300%),
+    repeating-radial-gradient(circle at 30% 48%, var(--pal-jade-400) 0 var(--fx-drop), transparent var(--fx-drop) 300%),
+    repeating-radial-gradient(circle at 64% 82%, var(--pal-jade-400) 0 var(--fx-drop), transparent var(--fx-drop) 300%);
   animation: fx-figure-drip var(--fx-ms) var(--ease-in) both;
 }
 
@@ -5301,7 +5281,7 @@
   background: repeating-radial-gradient(
     circle,
     color-mix(in srgb, var(--fx-tint-core) 55%, transparent) 0 35%,
-    color-mix(in srgb, var(--pal-violet-700) 35%, transparent) 55%,
+    color-mix(in srgb, var(--pal-amethyst-700) 35%, transparent) 55%,
     transparent 72% 1000%
   );
   animation: fx-figure-draw var(--fx-ms) var(--ease-out) both;
@@ -5390,8 +5370,8 @@
   border-radius: var(--radius-round);
   background: repeating-conic-gradient(
     var(--pal-blue-600) 0 72deg,
-    var(--pal-green-500) 72deg 144deg,
-    var(--pal-red-500) 144deg 216deg,
+    var(--pal-jade-500) 72deg 144deg,
+    var(--pal-red-600) 144deg 216deg,
     var(--pal-slate-100) 216deg 288deg,
     var(--pal-gold-400) 288deg 360deg
   );
@@ -5458,11 +5438,11 @@
   aspect-ratio: 1;
   background:
     repeating-radial-gradient(circle at 50% 50%, var(--pal-gold-300) 0 10%, transparent 11% 1000%),
-    repeating-radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--pal-red-300) 70%, var(--pal-white)) 0 19%, transparent 20% 1000%),
-    repeating-radial-gradient(circle at 80% 40%, color-mix(in srgb, var(--pal-red-300) 70%, var(--pal-white)) 0 19%, transparent 20% 1000%),
-    repeating-radial-gradient(circle at 69% 76%, color-mix(in srgb, var(--pal-red-300) 70%, var(--pal-white)) 0 19%, transparent 20% 1000%),
-    repeating-radial-gradient(circle at 31% 76%, color-mix(in srgb, var(--pal-red-300) 70%, var(--pal-white)) 0 19%, transparent 20% 1000%),
-    repeating-radial-gradient(circle at 20% 40%, color-mix(in srgb, var(--pal-red-300) 70%, var(--pal-white)) 0 19%, transparent 20% 1000%);
+    repeating-radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--pal-lacquer-300) 70%, var(--pal-white)) 0 19%, transparent 20% 1000%),
+    repeating-radial-gradient(circle at 80% 40%, color-mix(in srgb, var(--pal-lacquer-300) 70%, var(--pal-white)) 0 19%, transparent 20% 1000%),
+    repeating-radial-gradient(circle at 69% 76%, color-mix(in srgb, var(--pal-lacquer-300) 70%, var(--pal-white)) 0 19%, transparent 20% 1000%),
+    repeating-radial-gradient(circle at 31% 76%, color-mix(in srgb, var(--pal-lacquer-300) 70%, var(--pal-white)) 0 19%, transparent 20% 1000%),
+    repeating-radial-gradient(circle at 20% 40%, color-mix(in srgb, var(--pal-lacquer-300) 70%, var(--pal-white)) 0 19%, transparent 20% 1000%);
   animation: fx-figure-fengBlossom-bloom var(--fx-ms) var(--ease-overshoot) both;
 }
 
@@ -5486,7 +5466,7 @@
   border-radius: var(--radius-pill);
   background:
     repeating-linear-gradient(180deg, transparent 0 22%, var(--pal-wood-700) 22% 24%),
-    repeating-linear-gradient(90deg, var(--pal-lime-400), var(--pal-gold-300) 45%, var(--pal-lime-400) 100% 300%);
+    repeating-linear-gradient(90deg, var(--pal-jade-400), var(--pal-gold-300) 45%, var(--pal-jade-400) 100% 300%);
   box-shadow:
     0 0 10px color-mix(in srgb, var(--fx-tint-glow) 90%, transparent),
     0 0 24px color-mix(in srgb, var(--fx-tint-rim) 70%, transparent);
@@ -5499,7 +5479,7 @@
   left: 58%;
   top: 20%;
   transform-origin: 50% 0;
-  border: 2px solid var(--pal-red-500);
+  border: 2px solid var(--pal-red-600);
   border-top: none;
   border-radius: 0 0 var(--radius-pill) var(--radius-pill);
   animation: fx-figure-bambooCane-sway var(--fx-ms) var(--ease-in-out) both;
@@ -5801,10 +5781,10 @@
     repeating-linear-gradient(var(--pal-slate-800), var(--pal-slate-800) 100% 300%) 50% 8% / 26% 8% no-repeat,
     repeating-linear-gradient(90deg, var(--pal-slate-900) 0 12%, color-mix(in srgb, var(--fx-tint-core) 30%, transparent) 12% 88%, var(--pal-slate-900) 88% 300%) 50% 40% / 34% 50% no-repeat,
     repeating-linear-gradient(var(--pal-slate-800), var(--pal-slate-800) 100% 300%) 50% 68% / 40% 7% no-repeat,
-    repeating-linear-gradient(var(--pal-red-900), var(--pal-red-900) 100% 300%) 6% 86% / 28% 10% no-repeat,
+    repeating-linear-gradient(var(--pal-lacquer-900), var(--pal-lacquer-900) 100% 300%) 6% 86% / 28% 10% no-repeat,
     repeating-linear-gradient(var(--pal-blue-800), var(--pal-blue-800) 100% 300%) 10% 97% / 34% 11% no-repeat,
     repeating-linear-gradient(var(--pal-brass-800), var(--pal-brass-800) 100% 300%) 88% 86% / 22% 10% no-repeat,
-    repeating-linear-gradient(var(--pal-green-900), var(--pal-green-900) 100% 300%) 92% 97% / 30% 11% no-repeat;
+    repeating-linear-gradient(var(--pal-jade-900), var(--pal-jade-900) 100% 300%) 92% 97% / 30% 11% no-repeat;
   animation: fx-figure-lantern-land var(--fx-ms) var(--ease-in) both;
 }
 
@@ -6259,7 +6239,7 @@
   top: 30%;
   border: 2px solid var(--pal-slate-400);
   border-radius: var(--radius-round);
-  background: repeating-radial-gradient(circle at 35% 30%, var(--pal-white) 0 18%, var(--pal-slate-100) 40%, var(--pal-grey-500) 100% 1000%);
+  background: repeating-radial-gradient(circle at 35% 30%, var(--pal-white) 0 18%, var(--pal-slate-100) 40%, var(--pal-stone-500) 100% 1000%);
   box-shadow: 0 0 16px color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
   animation: fx-figure-silverCoin-flip var(--fx-ms) var(--ease-in-out) both;
 }
@@ -6269,7 +6249,7 @@
   height: calc(var(--fx-fig) * 0.5);
   top: 62%;
   clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  background: repeating-linear-gradient(180deg, var(--pal-red-500) 0 50%, var(--pal-slate-100) 50% 300%);
+  background: repeating-linear-gradient(180deg, var(--pal-red-600) 0 50%, var(--pal-slate-100) 50% 300%);
   animation: fx-figure-silverCoin-needle var(--fx-ms) var(--ease-out) both;
 }
 
@@ -6377,7 +6357,7 @@
   top: 36%;
   border: 2px solid var(--pal-gold-300);
   border-radius: var(--radius-xs);
-  background: repeating-linear-gradient(90deg, var(--pal-red-600) 0 30%, var(--pal-red-900) 30% 34%);
+  background: repeating-linear-gradient(90deg, var(--pal-red-600) 0 30%, var(--pal-lacquer-900) 30% 34%);
   box-shadow: 0 0 12px color-mix(in srgb, var(--fx-tint-glow) 60%, transparent);
   animation: fx-figure-golemBlocks-panel var(--fx-ms) var(--ease-overshoot) both;
 }
@@ -6525,8 +6505,8 @@
   height: calc(var(--fx-fig) * 0.08);
   top: 26%;
   background:
-    repeating-radial-gradient(circle at 6% 50%, var(--pal-red-400) 0 35%, transparent 40% 1000%),
-    repeating-radial-gradient(circle at 94% 50%, var(--pal-red-400) 0 35%, transparent 40% 1000%);
+    repeating-radial-gradient(circle at 6% 50%, var(--pal-lacquer-400) 0 35%, transparent 40% 1000%),
+    repeating-radial-gradient(circle at 94% 50%, var(--pal-lacquer-400) 0 35%, transparent 40% 1000%);
   animation: fx-figure-fortress-beacon var(--fx-ms) steps(6, end) both;
 }
 
@@ -6678,7 +6658,7 @@
   border-radius: var(--radius-pill) var(--radius-pill) 0 0;
   background:
     repeating-radial-gradient(circle farthest-side at 50% 100%, transparent 0 92%, var(--fx-tint-core) 93% 1000%),
-    repeating-conic-gradient(from -90deg at 50% 100%, var(--fx-tint-rim) 0 2deg, color-mix(in srgb, var(--pal-red-300) 45%, var(--fx-tint-glow)) 2deg 15deg);
+    repeating-conic-gradient(from -90deg at 50% 100%, var(--fx-tint-rim) 0 2deg, color-mix(in srgb, var(--pal-lacquer-300) 45%, var(--fx-tint-glow)) 2deg 15deg);
   mask-image: radial-gradient(circle at 50% 100%, transparent 0 18%, var(--pal-black) 19%);
   transform-origin: 50% 100%;
   animation: fx-figure-b-fan-open var(--fx-ms) var(--ease-out) both;
@@ -6995,7 +6975,7 @@
   height: calc(var(--fx-fig) * 0.85);
   clip-path: polygon(40% 0, 60% 0, 64% 6%, 58% 8%, 60% 20%, 54% 24%, 70% 30%, 96% 22%, 100% 26%, 74% 40%, 72% 56%, 86% 100%, 14% 100%, 28% 56%, 26% 32%, 46% 24%, 40% 20%, 42% 8%, 36% 6%);
   background:
-    repeating-linear-gradient(115deg, transparent 0 14%, color-mix(in srgb, var(--pal-blue-900) 50%, transparent) 14% 17%),
+    repeating-linear-gradient(115deg, transparent 0 14%, color-mix(in srgb, var(--pal-ink-900) 50%, transparent) 14% 17%),
     repeating-linear-gradient(180deg, var(--fx-tint-glow), color-mix(in srgb, var(--fx-tint-rim) 75%, transparent) 55%, color-mix(in srgb, var(--fx-tint-core) 45%, transparent) 100% 300%);
   animation: fx-figure-b-step-fold var(--fx-ms) var(--ease-out) both;
 }
@@ -7007,7 +6987,7 @@
   rotate: -12deg;
   border-radius: var(--radius-pill);
   background:
-    repeating-linear-gradient(90deg, transparent, var(--pal-red-500), transparent 100% 300%) 0 0 / 100% 40% no-repeat,
+    repeating-linear-gradient(90deg, transparent, var(--pal-red-600), transparent 100% 300%) 0 0 / 100% 40% no-repeat,
     repeating-linear-gradient(90deg, transparent, var(--fx-tint-rim), transparent 100% 300%) 0 100% / 100% 40% no-repeat;
   animation: fx-figure-wipe var(--fx-ms) var(--ease-out) both;
 }
@@ -7041,7 +7021,7 @@
   aspect-ratio: 1;
   border-radius: var(--radius-round) 0 var(--radius-round) var(--radius-round);
   background: repeating-radial-gradient(circle at 40% 60%, var(--fx-tint-glow) 0 10%, var(--fx-tint-rim) 35%, var(--fx-tint-core) 80% 1000%);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--pal-cyan-400) 60%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--pal-verdigris-400) 60%, transparent);
   animation: fx-figure-b-ink-fall var(--fx-ms) steps(8, end) both;
 }
 
@@ -7051,9 +7031,9 @@
   top: 56%;
   background: repeating-linear-gradient(
     180deg,
-    color-mix(in srgb, var(--pal-cyan-400) 65%, transparent) 0 10%,
+    color-mix(in srgb, var(--pal-verdigris-400) 65%, transparent) 0 10%,
     transparent 10% 22%,
-    color-mix(in srgb, var(--pal-red-500) 55%, transparent) 22% 30%,
+    color-mix(in srgb, var(--pal-red-600) 55%, transparent) 22% 30%,
     transparent 30% 44%
   );
   animation: fx-figure-b-glitch var(--fx-ms) steps(4, end) both;
@@ -7713,7 +7693,7 @@
   border-top: 2px solid var(--pal-wood-700);
   background:
     repeating-linear-gradient(90deg, transparent 0 calc(50% - 1px), var(--pal-wood-700) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px) 100%) 0 0 / 10% 30% repeat-x,
-    repeating-radial-gradient(ellipse 34% 32% at 50% 60%, var(--pal-gold-300) 0 30%, var(--pal-red-500) 55%, var(--pal-red-900) 92%, transparent 100% 400%) 0 0 / 10% 100% repeat-x;
+    repeating-radial-gradient(ellipse 34% 32% at 50% 60%, var(--pal-gold-300) 0 30%, var(--pal-red-600) 55%, var(--pal-lacquer-900) 92%, transparent 100% 400%) 0 0 / 10% 100% repeat-x;
   animation: fx-figure-s-lanterns var(--fx-ms) var(--ease-overshoot) both;
 }
 
@@ -7756,7 +7736,7 @@
   clip-path: polygon(3% 0, 97% 0, 100% 100%, 0 100%);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 25%, transparent), transparent 40%),
-    repeating-linear-gradient(90deg, var(--pal-red-500) 0 5%, color-mix(in srgb, var(--pal-white) 80%, var(--fx-tint-glow)) 5% 10%);
+    repeating-linear-gradient(90deg, var(--pal-red-600) 0 5%, color-mix(in srgb, var(--pal-white) 80%, var(--fx-tint-glow)) 5% 10%);
   animation: fx-figure-s-unfurl var(--fx-ms) var(--ease-out) both;
 }
 
@@ -7766,7 +7746,7 @@
   top: 24%;
   transform-origin: 50% 0;
   background:
-    repeating-radial-gradient(ellipse 25% 100% at 25% 0, var(--pal-red-500) 0 96%, transparent 100% 400%) 0 0 / 10% 100% repeat-x,
+    repeating-radial-gradient(ellipse 25% 100% at 25% 0, var(--pal-red-600) 0 96%, transparent 100% 400%) 0 0 / 10% 100% repeat-x,
     repeating-radial-gradient(ellipse 25% 100% at 75% 0, color-mix(in srgb, var(--pal-white) 80%, var(--fx-tint-glow)) 0 96%, transparent 100% 400%) 0 0 / 10% 100% repeat-x;
   animation: fx-figure-s-valance var(--fx-ms) var(--ease-out) both;
 }
@@ -7856,7 +7836,7 @@
   background:
     linear-gradient(180deg, transparent 8%, var(--pal-red-600) 8% 13%, transparent 13%),
     repeating-linear-gradient(180deg, transparent 0 18%, var(--pal-wood-800) 18% 21%),
-    linear-gradient(90deg, var(--pal-wood-600), var(--pal-gold-200) 50%, var(--pal-wood-600));
+    linear-gradient(90deg, var(--pal-wood-600), var(--pal-brass-200) 50%, var(--pal-wood-600));
   box-shadow: 0 0 12px 2px color-mix(in srgb, var(--fx-tint-glow) 80%, transparent);
   animation: fx-figure-s-whip var(--fx-ms) var(--ease-in) both;
 }
@@ -7990,7 +7970,7 @@
   background:
     repeating-linear-gradient(90deg, color-mix(in srgb, var(--fx-tint-rim) 60%, transparent) 0 1px, transparent 1px 10%),
     repeating-linear-gradient(180deg, color-mix(in srgb, var(--fx-tint-rim) 60%, transparent) 0 1px, transparent 1px 7%),
-    color-mix(in srgb, var(--pal-blue-900) 85%, transparent);
+    color-mix(in srgb, var(--pal-ink-900) 85%, transparent);
   box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent);
 }
 
@@ -8111,7 +8091,7 @@
   width: 4.5vmin;
   height: 7vmin;
   clip-path: polygon(0 0, 100% 22%, 10% 44%, 10% 100%, 0 100%);
-  background: var(--pal-red-500);
+  background: var(--pal-red-600);
 }
 
 .fx-takeover .takeover-art-arrow {
@@ -8166,7 +8146,7 @@
   width: 0.8vmin;
   height: 6vmin;
   translate: -50% -50%;
-  background: var(--pal-cyan-400);
+  background: var(--pal-verdigris-400);
 }
 
 .takeover-art-rows {
@@ -8232,7 +8212,7 @@
   height: 100%;
   translate: -50% 0;
   clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
-  background: color-mix(in srgb, var(--pal-gold-200) 35%, transparent);
+  background: color-mix(in srgb, var(--pal-brass-200) 35%, transparent);
   mask-image: linear-gradient(180deg, var(--pal-black), transparent 90%);
 }
 
@@ -8255,7 +8235,7 @@
   height: 14vmin;
   rotate: 35deg;
   clip-path: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%);
-  background: repeating-linear-gradient(180deg, var(--pal-yellow-400) 0 78%, var(--pal-wood-600) 78% 92%, var(--pal-slate-800) 92% 100%);
+  background: repeating-linear-gradient(180deg, var(--pal-gold-400) 0 78%, var(--pal-wood-600) 78% 92%, var(--pal-slate-800) 92% 100%);
 }
 
 .takeover-art-spiral {
@@ -8267,9 +8247,9 @@
   border-radius: var(--radius-round);
   background: repeating-conic-gradient(
     from 0deg,
-    color-mix(in srgb, var(--pal-violet-300) 55%, transparent) 0 7deg,
+    color-mix(in srgb, var(--pal-amethyst-300) 55%, transparent) 0 7deg,
     transparent 7deg 30deg,
-    color-mix(in srgb, var(--pal-cyan-400) 50%, transparent) 30deg 37deg,
+    color-mix(in srgb, var(--pal-verdigris-400) 50%, transparent) 30deg 37deg,
     transparent 37deg 60deg
   );
   mask-image: radial-gradient(circle, transparent 0 40%, var(--pal-black) 42% 62%, transparent 64%);
@@ -8337,7 +8317,7 @@
   width: 7vmin;
   height: 96vmin;
   translate: -50% -50%;
-  background: color-mix(in srgb, var(--pal-green-400) 65%, var(--pal-white));
+  background: color-mix(in srgb, var(--pal-jade-400) 65%, var(--pal-white));
   mask-image: linear-gradient(90deg, transparent, var(--pal-black), transparent);
   opacity: 0.85;
 }
@@ -8413,7 +8393,7 @@
 
 .takeover-art-gulf {
   inset: 0;
-  background: color-mix(in srgb, var(--pal-violet-700) 16%, var(--pal-black));
+  background: color-mix(in srgb, var(--pal-amethyst-700) 16%, var(--pal-black));
   opacity: 0.95;
 }
 
@@ -8439,7 +8419,7 @@
   background: repeating-linear-gradient(
     0deg,
     transparent 0 6.6%,
-    color-mix(in srgb, var(--pal-sky-300) 75%, var(--pal-white)) 6.6% 8.33%
+    color-mix(in srgb, var(--pal-ink-300) 75%, var(--pal-white)) 6.6% 8.33%
   );
 }
 
@@ -8480,7 +8460,7 @@
   background:
     repeating-linear-gradient(0deg, color-mix(in srgb, var(--pal-blue-600) 30%, transparent) 0 1px, transparent 1px 6vmin),
     repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-blue-600) 30%, transparent) 0 1px, transparent 1px 6vmin),
-    color-mix(in srgb, var(--pal-blue-900) 82%, var(--pal-black));
+    color-mix(in srgb, var(--pal-ink-900) 82%, var(--pal-black));
   opacity: 0.93;
 }
 
@@ -8559,7 +8539,7 @@
   translate: -50% -50%;
   border-radius: var(--radius-round);
   background: var(--pal-white);
-  box-shadow: 0 0 64px color-mix(in srgb, var(--pal-sky-300) 70%, transparent);
+  box-shadow: 0 0 64px color-mix(in srgb, var(--pal-ink-300) 70%, transparent);
 }
 
 .takeover-art-flare {
@@ -8575,7 +8555,7 @@
   aspect-ratio: 1;
   translate: -50% -50%;
   border-radius: var(--radius-round);
-  border: 0.8vmin solid color-mix(in srgb, var(--pal-white) 80%, var(--pal-sky-300));
+  border: 0.8vmin solid color-mix(in srgb, var(--pal-white) 80%, var(--pal-ink-300));
 }
 
 .takeover-art-cut {
@@ -8651,7 +8631,7 @@
 
 .takeover-art-sphere {
   background: var(--pal-red-600);
-  box-shadow: inset 0 0 96px color-mix(in srgb, var(--pal-red-900) 80%, var(--pal-black)), inset 0 0 24px color-mix(in srgb, var(--pal-orange-400) 70%, transparent);
+  box-shadow: inset 0 0 96px color-mix(in srgb, var(--pal-lacquer-900) 80%, var(--pal-black)), inset 0 0 24px color-mix(in srgb, var(--pal-copper-400) 70%, transparent);
 }
 
 .takeover-art-magma {
@@ -8660,7 +8640,7 @@
   height: 70vmin;
   rotate: 10deg;
   border-radius: var(--radius-pill);
-  background: var(--pal-gold-200);
+  background: var(--pal-brass-200);
 }
 
 .takeover-art-convoy {
@@ -8764,7 +8744,7 @@
   right: 0;
   top: 0;
   height: 55%;
-  background: var(--pal-gold-200);
+  background: var(--pal-brass-200);
   mask-image:
     radial-gradient(circle at 30% 40%, var(--pal-black) 0 0.24vmin, transparent 0.42vmin),
     radial-gradient(circle at 70% 70%, var(--pal-black) 0 0.16vmin, transparent 0.32vmin);
@@ -8791,7 +8771,7 @@
   width: 4vmin;
   height: 7vmin;
   clip-path: polygon(40% 0, 60% 0, 62% 18%, 72% 26%, 100% 34%, 100% 46%, 70% 42%, 66% 70%, 74% 100%, 56% 100%, 50% 78%, 40% 100%, 24% 100%, 34% 66%, 32% 34%, 38% 18%);
-  background: var(--pal-red-500);
+  background: var(--pal-red-600);
 }
 
 .takeover-art-ascent-clouds {
@@ -8864,7 +8844,7 @@
   clip-path: polygon(40% 0, 60% 0, 66% 10%, 64% 26%, 58% 32%, 84% 42%, 100% 70%, 100% 100%, 0 100%, 0 70%, 16% 42%, 42% 32%, 36% 26%, 34% 10%);
   background: repeating-linear-gradient(
     180deg,
-    color-mix(in srgb, var(--pal-sky-400) 50%, var(--pal-blue-900)) 0 32%,
+    color-mix(in srgb, var(--pal-ink-400) 50%, var(--pal-ink-900)) 0 32%,
     color-mix(in srgb, var(--pal-blue-800) 50%, var(--pal-slate-900)) 32% 100%
   );
   mask-image: linear-gradient(180deg, var(--pal-black) 60%, transparent);
@@ -8877,7 +8857,7 @@
   aspect-ratio: 1;
   translate: -50% -50%;
   border-radius: var(--radius-round);
-  background: repeating-conic-gradient(from 4deg, color-mix(in srgb, var(--pal-cyan-400) 75%, transparent) 0 1.5deg, transparent 1.5deg 15deg);
+  background: repeating-conic-gradient(from 4deg, color-mix(in srgb, var(--pal-verdigris-400) 75%, transparent) 0 1.5deg, transparent 1.5deg 15deg);
   mask-image: radial-gradient(circle, transparent 0 20%, var(--pal-black) 28% 56%, transparent 70%);
 }
 
@@ -8887,10 +8867,10 @@
   width: min(26vmin, 200px);
   aspect-ratio: 5 / 7;
   translate: -50% -50%;
-  border: 2px solid var(--pal-cyan-400);
+  border: 2px solid var(--pal-verdigris-400);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--pal-slate-100) 85%, var(--pal-sky-300));
-  box-shadow: 0 0 24px color-mix(in srgb, var(--pal-cyan-400) 60%, transparent);
+  background: color-mix(in srgb, var(--pal-slate-100) 85%, var(--pal-ink-300));
+  box-shadow: 0 0 24px color-mix(in srgb, var(--pal-verdigris-400) 60%, transparent);
 }
 
 .fx-takeover .takeover-art-workshop-threads {
@@ -8937,7 +8917,7 @@
   translate: -50% -50%;
   border-inline: 2.6vmin solid var(--pal-wood-800);
   border-radius: var(--radius-xs);
-  background: color-mix(in srgb, var(--pal-parchment) 75%, var(--pal-grey-500));
+  background: color-mix(in srgb, var(--pal-parchment) 75%, var(--pal-stone-500));
 }
 
 .takeover-art-brush-wash {
@@ -8960,7 +8940,7 @@
   background: repeating-linear-gradient(
     90deg,
     var(--pal-gold-300) 0 33.3%,
-    color-mix(in srgb, var(--pal-red-300) 60%, var(--pal-violet-300)) 33.3% 66.6%,
+    color-mix(in srgb, var(--pal-lacquer-300) 60%, var(--pal-amethyst-300)) 33.3% 66.6%,
     var(--pal-red-600) 66.6% 100%
   );
   mask-image:
@@ -9051,7 +9031,7 @@
   translate: -50% -50%;
   rotate: -12deg;
   clip-path: polygon(0 50%, 12% 30%, 22% 56%, 34% 22%, 46% 48%, 58% 10%, 68% 46%, 80% 26%, 90% 54%, 100% 40%, 100% 62%, 90% 78%, 80% 50%, 68% 80%, 58% 44%, 46% 84%, 34% 58%, 22% 90%, 12% 64%, 0 70%);
-  background: repeating-linear-gradient(90deg, var(--pal-red-600) 0 5%, var(--pal-red-400) 5% 7%, var(--pal-red-900) 7% 11%);
+  background: repeating-linear-gradient(90deg, var(--pal-red-600) 0 5%, var(--pal-lacquer-400) 5% 7%, var(--pal-lacquer-900) 7% 11%);
 }
 
 .takeover-art-mine-lamp {
@@ -9075,7 +9055,7 @@
   border-radius: var(--radius-round);
   background: repeating-conic-gradient(
     from 8deg,
-    color-mix(in srgb, var(--pal-red-400) 80%, transparent) 0 4deg,
+    color-mix(in srgb, var(--pal-lacquer-400) 80%, transparent) 0 4deg,
     transparent 4deg 26deg,
     color-mix(in srgb, var(--pal-red-600) 70%, transparent) 26deg 29deg,
     transparent 29deg 45deg
@@ -9144,7 +9124,7 @@
     circle at 36% 30%,
     color-mix(in srgb, var(--pal-jade-400) 80%, var(--pal-white)) 0 4%,
     var(--pal-jade-400) 4% 14%,
-    color-mix(in srgb, var(--pal-jade-400) 55%, var(--pal-green-900)) 14% 26%
+    color-mix(in srgb, var(--pal-jade-400) 55%, var(--pal-jade-900)) 14% 26%
   );
 }
 
@@ -9156,7 +9136,7 @@
   translate: -50% -50%;
   transform-origin: 50% 0;
   clip-path: polygon(48% 0, 52% 0, 46% 22%, 58% 40%, 70% 44%, 71% 47%, 57% 44%, 50% 62%, 56% 82%, 52% 100%, 49% 100%, 52% 82%, 46% 62%, 54% 41%, 42% 22%);
-  background: color-mix(in srgb, var(--pal-lime-200) 80%, var(--pal-white));
+  background: color-mix(in srgb, var(--pal-jade-200) 80%, var(--pal-white));
 }
 
 .takeover-art-quarry-dust {
@@ -9165,7 +9145,7 @@
   width: 70vmin;
   height: 70vmin;
   translate: -50% 0;
-  background: color-mix(in srgb, var(--pal-parchment) 85%, var(--pal-gold-200));
+  background: color-mix(in srgb, var(--pal-parchment) 85%, var(--pal-brass-200));
   mask-image:
     radial-gradient(circle at 30% 20%, var(--pal-black) 0 0.3vmin, transparent 0.5vmin),
     radial-gradient(circle at 70% 60%, var(--pal-black) 0 0.22vmin, transparent 0.4vmin);
@@ -9220,7 +9200,7 @@
   width: 50vmin;
   height: 80vmin;
   translate: -50% -50%;
-  background: repeating-linear-gradient(180deg, transparent 0 0.8vmin, color-mix(in srgb, var(--pal-cyan-400) 24%, transparent) 0.8vmin 1.1vmin);
+  background: repeating-linear-gradient(180deg, transparent 0 0.8vmin, color-mix(in srgb, var(--pal-verdigris-400) 24%, transparent) 0.8vmin 1.1vmin);
 }
 
 .takeover-art-ai-strokes {
@@ -9231,8 +9211,8 @@
   translate: -50% -50%;
   rotate: -24deg;
   border: 1.2vmin solid transparent;
-  border-top-color: var(--pal-cyan-400);
-  border-bottom-color: var(--pal-red-500);
+  border-top-color: var(--pal-verdigris-400);
+  border-bottom-color: var(--pal-red-600);
   border-radius: var(--radius-round);
 }
 
@@ -9267,7 +9247,7 @@
   clip-path: polygon(0 24%, 10% 16%, 26% 10%, 50% 0, 74% 10%, 90% 16%, 100% 24%, 86% 26%, 86% 32%, 84% 32%, 84% 100%, 80% 100%, 80% 32%, 62% 32%, 62% 100%, 58% 100%, 58% 32%, 42% 32%, 42% 100%, 38% 100%, 38% 32%, 20% 32%, 20% 100%, 16% 100%, 16% 32%, 14% 32%, 14% 26%);
   background: repeating-linear-gradient(
     180deg,
-    color-mix(in srgb, var(--pal-red-900) 70%, var(--pal-black)) 0 8%,
+    color-mix(in srgb, var(--pal-lacquer-900) 70%, var(--pal-black)) 0 8%,
     color-mix(in srgb, var(--pal-wood-900) 80%, var(--pal-black)) 8% 12%
   );
 }
@@ -9293,8 +9273,8 @@
   clip-path: polygon(44% 0, 56% 0, 60% 6%, 60% 13%, 56% 18%, 74% 22%, 82% 34%, 88% 60%, 100% 100%, 0 100%, 12% 60%, 18% 34%, 26% 22%, 44% 18%, 40% 13%, 40% 6%);
   background: repeating-linear-gradient(
     180deg,
-    color-mix(in srgb, var(--pal-slate-900) 80%, var(--pal-cyan-400)) 0 6%,
-    color-mix(in srgb, var(--pal-cyan-400) 45%, var(--pal-slate-900)) 6% 6.8%
+    color-mix(in srgb, var(--pal-slate-900) 80%, var(--pal-verdigris-400)) 0 6%,
+    color-mix(in srgb, var(--pal-verdigris-400) 45%, var(--pal-slate-900)) 6% 6.8%
   );
 }
 
@@ -9334,7 +9314,7 @@
       90deg,
       color-mix(in srgb, var(--pal-white) 22%, transparent) 0 0.8vmin,
       transparent 0.8vmin 2.1vmin,
-      color-mix(in srgb, var(--pal-lime-400) 16%, transparent) 2.1vmin 2.6vmin,
+      color-mix(in srgb, var(--pal-jade-400) 16%, transparent) 2.1vmin 2.6vmin,
       transparent 2.6vmin 3.7vmin
     ),
     repeating-linear-gradient(
@@ -9354,11 +9334,11 @@
   width: 62vmin;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border: 1.4vmin solid var(--pal-red-500);
+  border: 1.4vmin solid var(--pal-red-600);
   border-radius: var(--radius-md);
   background:
-    repeating-linear-gradient(90deg, var(--pal-red-500) 0 12%, transparent 12% 20%) 50% 76% / 50% 12% no-repeat,
-    repeating-linear-gradient(180deg, color-mix(in srgb, var(--pal-lime-400) 30%, var(--pal-slate-900)) 0 3%, color-mix(in srgb, var(--pal-lime-400) 18%, var(--pal-slate-900)) 3% 6%);
+    repeating-linear-gradient(90deg, var(--pal-red-600) 0 12%, transparent 12% 20%) 50% 76% / 50% 12% no-repeat,
+    repeating-linear-gradient(180deg, color-mix(in srgb, var(--pal-jade-400) 30%, var(--pal-slate-900)) 0 3%, color-mix(in srgb, var(--pal-jade-400) 18%, var(--pal-slate-900)) 3% 6%);
 }
 
 .takeover-art-virus-eyes {
@@ -9367,7 +9347,7 @@
   width: 36vmin;
   height: 12vmin;
   translate: -50% -50%;
-  background: repeating-linear-gradient(90deg, var(--pal-red-400) 0 30%, transparent 30% 70%, var(--pal-red-400) 70% 100%);
+  background: repeating-linear-gradient(90deg, var(--pal-lacquer-400) 0 30%, transparent 30% 70%, var(--pal-lacquer-400) 70% 100%);
 }
 
 .fx-takeover .takeover-art-virus-snow {
@@ -9423,9 +9403,9 @@
   bottom: 0;
   height: 56%;
   background:
-    repeating-conic-gradient(from 0deg at 50% -80%, color-mix(in srgb, var(--pal-cyan-400) 60%, transparent) 0 0.4deg, transparent 0.4deg 4deg),
-    repeating-linear-gradient(180deg, transparent 0 11%, color-mix(in srgb, var(--pal-cyan-400) 50%, transparent) 11% 12%);
-  background-color: color-mix(in srgb, var(--pal-blue-900) 60%, transparent);
+    repeating-conic-gradient(from 0deg at 50% -80%, color-mix(in srgb, var(--pal-verdigris-400) 60%, transparent) 0 0.4deg, transparent 0.4deg 4deg),
+    repeating-linear-gradient(180deg, transparent 0 11%, color-mix(in srgb, var(--pal-verdigris-400) 50%, transparent) 11% 12%);
+  background-color: color-mix(in srgb, var(--pal-ink-900) 60%, transparent);
   mask-image: linear-gradient(0deg, var(--pal-black) 30%, transparent);
 }
 
@@ -9436,7 +9416,7 @@
   height: 20vmin;
   translate: -50% 0;
   clip-path: polygon(14% 0, 86% 0, 100% 100%, 0 100%);
-  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-blue-800) 70%, transparent) 0 24%, var(--pal-cyan-400) 24% 25%);
+  background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-blue-800) 70%, transparent) 0 24%, var(--pal-verdigris-400) 24% 25%);
 }
 
 .takeover-art-dojo-beams {
@@ -9446,8 +9426,8 @@
   height: 70%;
   transform-origin: 50% 0;
   background:
-    repeating-linear-gradient(90deg, transparent 0 15.6%, color-mix(in srgb, var(--pal-cyan-400) 55%, transparent) 15.6% 16.6%),
-    repeating-linear-gradient(180deg, color-mix(in srgb, var(--pal-cyan-400) 45%, transparent) 0 1.2%, transparent 1.2% 24%);
+    repeating-linear-gradient(90deg, transparent 0 15.6%, color-mix(in srgb, var(--pal-verdigris-400) 55%, transparent) 15.6% 16.6%),
+    repeating-linear-gradient(180deg, color-mix(in srgb, var(--pal-verdigris-400) 45%, transparent) 0 1.2%, transparent 1.2% 24%);
   mask-image: linear-gradient(180deg, var(--pal-black), transparent);
 }
 
@@ -9538,10 +9518,10 @@
   width: 90vmin;
   height: 30vmin;
   translate: -50% 0;
-  border-inline: 3vmin solid color-mix(in srgb, var(--pal-red-900) 60%, var(--pal-black));
+  border-inline: 3vmin solid color-mix(in srgb, var(--pal-lacquer-900) 60%, var(--pal-black));
   background: repeating-linear-gradient(
     180deg,
-    color-mix(in srgb, var(--pal-red-900) 85%, var(--pal-black)) 0 14%,
+    color-mix(in srgb, var(--pal-lacquer-900) 85%, var(--pal-black)) 0 14%,
     var(--pal-gold-400) 14% 15.5%,
     transparent 15.5% 50%
   );
@@ -9567,7 +9547,7 @@
   clip-path: polygon(30% 0, 70% 0, 66% 56%, 74% 62%, 80% 76%, 78% 92%, 70% 100%, 30% 100%, 22% 90%, 20% 72%, 28% 60%, 34% 56%);
   background: repeating-linear-gradient(
     180deg,
-    color-mix(in srgb, var(--pal-blue-900) 70%, var(--pal-slate-900)) 0 56%,
+    color-mix(in srgb, var(--pal-ink-900) 70%, var(--pal-slate-900)) 0 56%,
     color-mix(in srgb, var(--pal-parchment) 75%, var(--pal-wood-600)) 56% 100%
   );
 }
@@ -9643,8 +9623,8 @@
   transform-origin: 0 50%;
   clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%);
   background:
-    repeating-linear-gradient(90deg, transparent 0 4.6%, color-mix(in srgb, var(--pal-cyan-400) 70%, transparent) 4.6% 5%),
-    repeating-linear-gradient(180deg, transparent 0 9.4%, color-mix(in srgb, var(--pal-cyan-400) 70%, transparent) 9.4% 10%);
+    repeating-linear-gradient(90deg, transparent 0 4.6%, color-mix(in srgb, var(--pal-verdigris-400) 70%, transparent) 4.6% 5%),
+    repeating-linear-gradient(180deg, transparent 0 9.4%, color-mix(in srgb, var(--pal-verdigris-400) 70%, transparent) 9.4% 10%);
   background-color: var(--pal-blue-800);
 }
 
@@ -9654,7 +9634,7 @@
   width: 150%;
   height: 100%;
   transform-origin: 50% 0;
-  background: repeating-conic-gradient(from 155deg at 50% 0, color-mix(in srgb, var(--pal-red-500) 30%, transparent) 0 10deg, transparent 10deg 60deg);
+  background: repeating-conic-gradient(from 155deg at 50% 0, color-mix(in srgb, var(--pal-red-600) 30%, transparent) 0 10deg, transparent 10deg 60deg);
   mask-image: linear-gradient(180deg, var(--pal-black), transparent 95%);
 }
 
@@ -9721,7 +9701,7 @@
   width: 40vmin;
   height: 4vmin;
   translate: -50% 0;
-  background: var(--pal-red-500);
+  background: var(--pal-red-600);
   mask-image:
     radial-gradient(circle at 9% 50%, var(--pal-black) 0 1.2vmin, transparent 1.6vmin),
     radial-gradient(circle at 50% 50%, var(--pal-black) 0 1.2vmin, transparent 1.6vmin),
@@ -9900,7 +9880,7 @@
   width: 70vmax;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   /* Soft arms that blend into one another, so the turning spiral reads as a swirl, not a starburst. */
   background: repeating-conic-gradient(
     from 0deg,
@@ -9941,7 +9921,7 @@
   width: 28vmin;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(
     circle,
     var(--pal-white) 0,
@@ -10002,7 +9982,7 @@
   width: 46vmin;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(
     circle,
     color-mix(in srgb, var(--fx-tint-glow) 70%, var(--pal-white)) 0,
@@ -10070,7 +10050,7 @@
   translate: -50% -50%;
   border-radius: var(--radius-round);
   background: var(--pal-black);
-  box-shadow: 0 0 28px 10px color-mix(in srgb, var(--fx-tint-rim) 70%, var(--pal-violet-500));
+  box-shadow: 0 0 28px 10px color-mix(in srgb, var(--fx-tint-rim) 70%, var(--pal-amethyst-500));
   animation: fx-terminus-tear var(--fx-ms) var(--ease-standard) both;
 }
 
@@ -10196,7 +10176,7 @@
   translate: -50% -50%;
   border-radius: var(--radius-round);
   background: var(--pal-white);
-  box-shadow: 0 0 40px 18px color-mix(in srgb, var(--pal-gold-200) 70%, transparent);
+  box-shadow: 0 0 40px 18px color-mix(in srgb, var(--pal-brass-200) 70%, transparent);
   animation: fx-terminus-exhale var(--fx-ms) var(--ease-in-out) both;
 }
 
@@ -10223,8 +10203,8 @@
 .fx-setPiece-slate {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, color-mix(in srgb, var(--pal-green-900) 40%, var(--pal-black)) 88%, transparent);
-  box-shadow: inset 0 0 160px 40px color-mix(in srgb, color-mix(in srgb, var(--pal-green-900) 25%, var(--pal-black)) 92%, transparent);
+  background: color-mix(in srgb, color-mix(in srgb, var(--pal-jade-900) 40%, var(--pal-black)) 88%, transparent);
+  box-shadow: inset 0 0 160px 40px color-mix(in srgb, color-mix(in srgb, var(--pal-jade-900) 25%, var(--pal-black)) 92%, transparent);
   animation: fx-terminus-fade var(--fx-ms) var(--ease-out) both;
 }
 
@@ -10328,8 +10308,8 @@
   aspect-ratio: 1;
   translate: -50% -50%;
   border-radius: var(--radius-round);
-  border: 1vmin solid color-mix(in srgb, var(--pal-purple-400) 85%, var(--pal-white));
-  background: color-mix(in srgb, var(--pal-purple-400) 18%, transparent);
+  border: 1vmin solid color-mix(in srgb, var(--pal-amethyst-300) 85%, var(--pal-white));
+  background: color-mix(in srgb, var(--pal-amethyst-300) 18%, transparent);
   animation: fx-terminus-stamp calc(var(--fx-ms) - var(--fx-hold)) var(--ease-overshoot) var(--fx-hold) both;
 }
 
@@ -10447,8 +10427,8 @@
 .fx-setPiece-frost {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--pal-blue-200) 10%, transparent);
-  box-shadow: inset 0 0 180px 60px color-mix(in srgb, var(--pal-sky-300) 55%, transparent);
+  background: color-mix(in srgb, var(--pal-ink-200) 10%, transparent);
+  box-shadow: inset 0 0 180px 60px color-mix(in srgb, var(--pal-ink-300) 55%, transparent);
   animation: fx-terminus-frost var(--fx-ms) var(--ease-out) both;
 }
 
@@ -10586,7 +10566,7 @@
   translate: -50% -50%;
   border-radius: var(--radius-round);
   background: var(--pal-white);
-  box-shadow: 0 0 24px 10px color-mix(in srgb, var(--pal-gold-200) 80%, transparent);
+  box-shadow: 0 0 24px 10px color-mix(in srgb, var(--pal-brass-200) 80%, transparent);
   animation: fx-terminus-point calc(var(--fx-ms) - var(--fx-hold)) var(--ease-in-out) var(--fx-hold) both;
 }
 
@@ -10634,7 +10614,7 @@
   font-size: clamp(var(--type-lg), 5vw, var(--type-3xl));
   box-shadow:
     var(--shadow-3),
-    0 0 42px color-mix(in srgb, var(--pal-violet-500) 55%, transparent);
+    0 0 42px color-mix(in srgb, var(--pal-amethyst-500) 55%, transparent);
 }
 
 .fx-roll[data-look="doom"] .fx-roll-item {
@@ -10644,8 +10624,8 @@
 .fx-roll[data-look="doom"] .fx-roll-face {
   width: 4.2em;
   height: 1.8em;
-  background: color-mix(in srgb, color-mix(in srgb, var(--pal-violet-700) 25%, var(--pal-black)) 70%, var(--fx-ink));
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--pal-purple-400) 80%, transparent);
+  background: color-mix(in srgb, color-mix(in srgb, var(--pal-amethyst-700) 25%, var(--pal-black)) 70%, var(--fx-ink));
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--pal-amethyst-300) 80%, transparent);
 }
 
 .fx-roll[data-look="doom"] .fx-roll-cell {
@@ -10763,7 +10743,7 @@
   height: calc(55% * var(--fx-launch-reach));
   translate: -50% 0;
   transform-origin: 50% 0;
-  border-radius: 50% 50% 45% 45% / 30% 30% 70% 70%;
+  border-radius: var(--radius-flame);
   background: radial-gradient(
     ellipse 50% 80% at 50% 10%,
     var(--fx-tint-glow) 0%,
@@ -10802,7 +10782,7 @@
   height: calc(150% * var(--fx-launch-reach));
   translate: -50% 0;
   transform-origin: 50% 100%;
-  border-radius: 50% 50% 0 0 / 20% 20% 0 0;
+  border-radius: var(--radius-trail);
   background: linear-gradient(
     to top,
     color-mix(in srgb, var(--fx-tint-core) 70%, transparent) 0%,

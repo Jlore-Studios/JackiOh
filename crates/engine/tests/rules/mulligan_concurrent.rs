@@ -563,7 +563,7 @@ mod r269_a_draw_offer_s_lifetime {
             &playing("r269-json"),
             input(json!({ "type": "offerDraw", "playerId": "p1" })),
         );
-        let copy = clone_state(&state);
+        let copy = state.clone();
         assert_eq!(view_for(&copy, P2).draw_offer, Some(DrawOfferView { by: P1 }));
         let accepted = act(
             &copy,

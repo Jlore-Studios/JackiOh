@@ -38,6 +38,7 @@ function playVersion(card: string, name: string, first: string, last: string, li
     last,
     live,
     patches: 1,
+    iteration: "v1",
     games: 0,
     adjustedWinRate: null,
     adjustedLow: null,
@@ -67,8 +68,9 @@ const VERSIONS = {
   minSample: 20,
   versions: [
     playVersion(CARD, "Ember Pup", "v0.1.0", "v0.1.4", false, figures(900, 0.61, "S")),
-    playVersion(CARD, "Spark Pup", "v0.1.5", "v0.1.9", false, { ...figures(300, 0.52, "B"), patches: 2 }),
-    playVersion(CARD, "Spark Pup", "v0.2.0", "v0.2.0", true, { ...figures(140, 0.512, "B"), patches: 3 }),
+    // R5035000: each renamed and recosted, so each a new number.
+    playVersion(CARD, "Spark Pup", "v0.1.5", "v0.1.9", false, { ...figures(300, 0.52, "B"), patches: 2, iteration: "v2" }),
+    playVersion(CARD, "Spark Pup", "v0.2.0", "v0.2.0", true, { ...figures(140, 0.512, "B"), patches: 3, iteration: "v3" }),
     playVersion("core-003", "Aqua Warden", "v0.2.0", "v0.2.0", true, figures(60, 0.455, "F")),
     // A card the Cards tab does not list: none of its versions is a row.
     playVersion("core-099", "Unlisted", "v0.0.1", "v0.0.1", false, figures(50, 0.5, "C")),
@@ -168,24 +170,36 @@ describe("R4680000 the Experimental tab's Versions view", () => {
     const { source, asked } = notingSource();
     renderStats(source);
     await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
-    expect(screen.getByTestId(statsTestid.experimentalLine)).toHaveTextContent(/^Every card's current version, over every patch since it last changed$/);
+    expect(screen.getByTestId(statsTestid.experimentalLine)).toHaveTextContent(
+      /^Every card's current version, over this major's patches since it last changed$/,
+    );
 
     fireEvent.click(screen.getByTestId(statsTestid.experimentalVersions));
     const table = await screen.findByTestId(statsTestid.versionsTable, undefined, SLOW);
     await waitFor(() => expect(address().get("experimental")).toBe("versions"), SLOW);
     expect(screen.getByTestId(statsTestid.experimentalVersions)).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId(statsTestid.experimentalLine)).toHaveTextContent(/^Every version of every card, each over the patches it was played on$/);
-    expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Since"]);
+    expect(within(table).getAllByRole("columnheader").map((th) => th.textContent)).toEqual([
+      "Card",
+      "Name",
+      "Games",
+      "Tier",
+      "Adjusted ↓",
+      "Decisiveness",
+      "Win rate",
+      "Play rate",
+      "Since",
+      "Iteration",]);
 
     // Adjusted best first, on one scale across the versions; the old ones' cost is their own catalog's once it loads.
     await waitFor(() => expect(rowsOf(table).cells[0]?.[0]).toBe(String(LIVE_COST + 2)), SLOW);
     expect(rowsOf(table)).toEqual({
       ids: [`${CARD}~v0.1.0`, `${CARD}~v0.1.5`, `${CARD}~v0.2.0`, "core-003~v0.2.0"],
       cells: [
-        [String(LIVE_COST + 2), "Ember Pup", "900", "S", "61.0%", "v0.1.0 – v0.1.4 across 1 patch"],
-        [String(LIVE_COST + 1), "Spark Pup", "300", "B", "52.0%", "v0.1.5 – v0.1.9 across 2 patches"],
-        ["1", "Spark Pup", "140", "B", "51.2%", "v0.2.0 – live across 3 patches"],
-        ["2", "Aqua Warden", "60", "F", "45.5%", "v0.2.0 – live across 1 patch"],
+        [String(LIVE_COST + 2), "Ember Pup", "900", "S", "61.0%", "—", "—", "—", "v0.1.0 – v0.1.4 across 1 patch", "v1"],
+        [String(LIVE_COST + 1), "Spark Pup", "300", "B", "52.0%", "—", "—", "—", "v0.1.5 – v0.1.9 across 2 patches", "v2"],
+        ["1", "Spark Pup", "140", "B", "51.2%", "—", "—", "—", "v0.2.0 – live across 3 patches", "v3"],
+        ["2", "Aqua Warden", "60", "F", "45.5%", "—", "—", "—", "v0.2.0 – live across 1 patch", "v1"],
       ],
     });
     // The live ones are marked, read the Cards tab's cost and rarity, and load no catalog; the old ones wear their own rarity.
@@ -231,6 +245,32 @@ describe("R4680000 the Experimental tab's Versions view", () => {
     renderStats();
     const again = await screen.findByTestId(statsTestid.versionsTable, undefined, SLOW);
     expect(rowsOf(again).ids).toEqual([`${CARD}~v0.1.0`, `${CARD}~v0.1.5`]);
+  });
+
+  it("R5035000 Versions shows each play version's Iteration right of its span in the table and grid, and Past versions only moves no number", async () => {
+    at("/stats?tab=experimental&experimental=versions");
+    serve();
+    renderStats();
+    const table = await screen.findByTestId(statsTestid.versionsTable, undefined, SLOW);
+    const iterations = (root: HTMLElement): (string | null)[] =>
+      within(root)
+        .getAllByTestId(statsTestid.versionsIteration)
+        .map((cell) => cell.textContent);
+    expect(
+      within(table)
+        .getAllByRole("columnheader")
+        .map((th) => th.textContent)
+        .slice(-2),
+    ).toEqual(["Since", "Iteration"]);
+    expect(iterations(table)).toEqual(["v1", "v2", "v3", "v1"]);
+    expect(within(row(`${CARD}~v0.1.5`)).getByTestId(statsTestid.versionsIteration)).toHaveTextContent(/^v2$/);
+
+    // Past versions only leaves the live rows out; the old ones keep their numbers.
+    fireEvent.click(screen.getByTestId(statsTestid.versionsPastOnly));
+    expect(iterations(table)).toEqual(["v1", "v2"]);
+    fireEvent.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.versionsGrid, undefined, SLOW);
+    expect(iterations(grid)).toEqual(["v1", "v2"]);
   });
 
   it("R4680000 the rows load only the catalogs of the rows on screen, and a version the browser's history lacks from GET /api/catalog/:version", async () => {

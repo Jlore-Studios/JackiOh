@@ -8,6 +8,7 @@ import { t } from "../i18n/i18n.ts";
 import { getDecks, type DecksResponse } from "../net/api.ts";
 import { readFailureOf, useAccount, type Account } from "../net/gate.ts";
 import type { SavedDecks } from "../practice/PracticeSetup.tsx";
+import { savedDecksFor } from "../practice/savedDecks.ts";
 import { Briefing } from "./day/Briefing.tsx";
 import { DayScreen } from "./day/DayScreen.tsx";
 import {
@@ -65,20 +66,7 @@ function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<D
     setAttempt((before) => before + 1);
   }, []);
 
-  switch (account.kind) {
-    case "loading":
-      return { kind: "checking" };
-    case "anonymous":
-      return { kind: "anonymous" };
-    case "error":
-      return account.retry === undefined
-        ? { kind: "unavailable" }
-        : { kind: "unavailable", retry: account.retry, retryAfterMs: account.retryAfterMs };
-    case "ready":
-      if (token === null) return { kind: "inactive" };
-      if (loaded === null || loaded.token !== token) return { kind: "checking" };
-      return loaded.saved.kind === "unavailable" ? { ...loaded.saved, retry } : loaded.saved;
-  }
+  return savedDecksFor(account, token, loaded, retry);
 }
 
 export default function AssaultPage(): ReactElement {

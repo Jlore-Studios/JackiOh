@@ -23,7 +23,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-065";
 
-/// "Embiggened (4): GIGA, 0/40": the embiggened stats are this many times the face.
+/// "Embiggened (+3): GIGA, 0/40": the embiggened stats are this many times the face.
 pub const EMBIGGENED_SCALE: i32 = 4;
 
 /// R3555001: the Walls' shared text. Embiggened, the card is GIGA at `EMBIGGENED_SCALE` times its printed

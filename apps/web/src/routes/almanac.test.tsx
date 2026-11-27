@@ -19,6 +19,7 @@ import { INSPECT_CLOSE, INSPECT_DETAIL, closeInspect } from "../cards/index.ts";
 import { flavourNow, loadFlavour } from "../cards/flavour.ts";
 import { INSPECT_FLAVOUR, INSPECT_STATS } from "../cards/inspect/testids.ts";
 import { ALMANAC_CHIP_TAGS, DEFAULT_FILTER, DEFAULT_SORT, almanacPool, costBucket } from "../game/deckbuilder/filters.ts";
+import { almanacShows } from "../game/deckbuilder/shelf.ts";
 import { poolCardLabel } from "../game/deckbuilder/PoolGrid.tsx";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import {
@@ -55,7 +56,7 @@ const SLOW = { timeout: 10_000 } as const;
 
 /** R674, R1420: every card the almanac shows: the catalog's from the sets that ship, Glitch excepted. */
 const CARDS: readonly CardDef[] = Object.values(currentCatalog().cards).filter(
-  (def) => def.id !== GLITCH_DEF_ID && setShips(def.set),
+  (def) => def.id !== GLITCH_DEF_ID && almanacShows(def.set),
 );
 const TOKENS: readonly CardDef[] = CARDS.filter((def) => def.token);
 
@@ -269,14 +270,16 @@ describe("R630 the almanac's browse pane", SLOW_GRID, () => {
     expect([...shownIds()].sort()).toEqual(TOKENS.map((def) => def.id).sort());
   });
 
-  it("R1380 R1381 the set chips are the sets that ship and the tag chips the tags their cards carry", () => {
+  it("R1380 R1381 R5131000 the set chips are the sets that ship, then the Infinite Assault's, and the tag chips the tags their cards carry", () => {
     render(<AlmanacRoute />);
     const chips = (group: string): string[] =>
       within(within(screen.getByTestId(DB_FILTERS)).getByRole("group", { name: group }))
         .getAllByRole("button")
         .map((chip) => chip.textContent ?? "");
-    // A set the catalog holds before it ships has no chip; Meditative's arrives with its patch.
-    expect(chips("Set")).toEqual([...SHIPPED_SETS]);
+    // A set the catalog holds before it ships has no chip; Meditative's arrives with its patch. The
+    // Infinite Assault's single-player set has one after them, and Boss and Boss-X none (R5131000).
+    expect(chips("Set")).toEqual([...SHIPPED_SETS, "Infinite Assault"]);
+    expect(chips("Set")).not.toContain("Boss");
     expect(chips("Set").includes("Meditative")).toBe(setShips("Meditative"));
     expect(chips("Tag")).toEqual([...ALMANAC_CHIP_TAGS]);
     // Wincon has a chip only if a card on the shelf carries it.

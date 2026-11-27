@@ -1,5 +1,5 @@
 // Downloading a replay as JSON (#1141, R1141000): every step of a replay, as its seat saw it, in one
-// file a player attaches to a bug report. Nothing but each step's view leaves (R768, CLAUDE.md rule 7)
+// file a player attaches to a bug report, packed and gzipped where the browser can (`pack.ts`, R5124000). Nothing but each step's view leaves (R768, CLAUDE.md rule 7)
 // and no account (as a GIF names none, R513000), and nothing is uploaded or kept. A file the page wrote
 // opens again (#1160); a co-op replay's file is another shape, `duos/download.ts`'s (R1242000).
 
@@ -10,6 +10,7 @@ import type { SeatPortraits } from "../game/contract.ts";
 import type { OnlineReplayListing } from "../net/api.ts";
 import type { PracticeReplaySummary } from "../practice/protocol.ts";
 import { REPLAY_GIF_REVOKE_MS, REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "./config.ts";
+import { NOT_A_REPLAY, TOO_BIG, UNSUPPORTED, canPack, packedReplay, replayText, unpackedReplay } from "./pack.ts";
 import { ReplayFailure, seatPortraitsOf } from "./source.ts";
 import type { ReplaySource } from "./source.ts";
 import { createStepCache, loadClip } from "./steps.ts";
@@ -63,8 +64,18 @@ export async function replayJsonFile(game: ReplayJsonGame, source: ReplaySource,
     game,
     steps: await allSteps(source),
   };
-  const name = game.kind === "practice" ? `jackioh-replay-practice-${String(game.game)}.json` : `jackioh-replay-${game.matchId}.json`;
-  return new File([JSON.stringify(json)], name, { type: "application/json" });
+  return replayFile(json, game.kind === "practice" ? `jackioh-replay-practice-${String(game.game)}` : `jackioh-replay-${game.matchId}`);
+}
+
+/**
+ * A replay file of `json` named `name`: its steps packed and gzipped, `.json.gz`, where the browser
+ * can gzip, and plain JSON, `.json`, where it cannot or the gzip fails. Either opens again
+ * (`readReplayJsonFile`), and the promise never rejects.
+ */
+export function replayFile(json: { steps: readonly unknown[] }, name: string): Promise<File> {
+  const plain = (): File => new File([JSON.stringify(json)], `${name}.json`, { type: "application/json" });
+  if (!canPack()) return Promise.resolve(plain());
+  return packedReplay(json).then((bytes) => new File([bytes], `${name}.json.gz`, { type: "application/gzip" }), plain);
 }
 
 export function downloadFile(file: File): void {
@@ -78,14 +89,17 @@ export function downloadFile(file: File): void {
   }, REPLAY_GIF_REVOKE_MS);
 }
 
-export const TOO_BIG = "This replay file is too big to open.";
-export const NOT_A_REPLAY = "This file is not a JackiOh replay file.";
-export const UNSUPPORTED = "This replay file uses an unsupported format.";
+export { NOT_A_REPLAY, TOO_BIG, UNSUPPORTED };
 export const OTHER_PATCH = "This replay file is from another patch and cannot be opened here.";
 
+/**
+ * The JSON object a replay file holds, a packed file's steps rebuilt under `steps` (`pack.ts`), so a
+ * packed file and a plain one read alike from here on. Held to `REPLAY_JSON_MAX_BYTES` before it is
+ * read and again once unzipped.
+ */
 export async function readReplayJsonFile(file: File): Promise<Record<string, unknown>> {
   if (file.size > REPLAY_JSON_MAX_BYTES) throw new ReplayFailure("error", TOO_BIG);
-  const text = await file.text();
+  const text = await replayText(new Uint8Array(await file.arrayBuffer()));
   if (text.length > REPLAY_JSON_MAX_BYTES) throw new ReplayFailure("error", TOO_BIG);
   let json: unknown;
   try {
@@ -94,7 +108,7 @@ export async function readReplayJsonFile(file: File): Promise<Record<string, unk
     throw new ReplayFailure("error", NOT_A_REPLAY);
   }
   if (!isRecord(json)) throw new ReplayFailure("error", NOT_A_REPLAY);
-  return json;
+  return unpackedReplay(json);
 }
 
 /**
@@ -142,8 +156,4 @@ export function replayStepsOf(json: Record<string, unknown>): ReplayStep[] {
  */
 export function replayPortraitsOf(json: Record<string, unknown>): SeatPortraits | null {
   return isRecord(json.game) ? seatPortraitsOf(json.game.portraits) : null;
-}
-
-export async function parseReplayJsonFile(file: File): Promise<ReplayStep[]> {
-  return replayStepsOf(await readReplayJsonFile(file));
 }

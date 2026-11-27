@@ -1,15 +1,18 @@
 //! SPEC §8.12 S+ #121.1 Toxopid Leg, a card of the Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
 //! 2/8
+//! **Flexible**
 //! **Crater**
 //! **Can’t attack**
 //! **Taunt**
 //! \~\~\~
 //! 4/16
+//! **Flexible**
 //! **Crater**
 //! **Can’t attack**
 //! **Taunt**
 //!
-//! Crater, Can't attack and Taunt are catalog data. Since issue #4154 both faces are also "Immune to
+//! Flexible, Crater, Can't attack and Taunt are catalog data; since issue #5048 it is Flexible, so S+ #121
+//! Toxopid's Cry may stand it in a backrow zone (R5048000). Since issue #4154 both faces are also "Immune to
 //! Toxic", a static flag (`immuneToToxic`, R4154001): no Toxic goes on it, so the Toxopid's own
 //! end-of-turn Toxic spares a Leg on its controller's opponent's side.
 

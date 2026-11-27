@@ -8,19 +8,29 @@ export const statsTestid = {
   tabSets: "stats-tab-sets",
   /** R4279001: the Tokens tab, the cards made during a game. */
   tabTokens: "stats-tab-tokens",
-  /** R4678000: the Experimental tab, the line above its panel, and R4678001 its Running table, grid and Since. */
+  /** R4678000: the Experimental tab, the line above its panel, and R4678001 its Running table, grid and Since; R5035000 its Iteration. */
   tabExperimental: "stats-tab-experimental",
   experimentalLine: "stats-experimental-line",
   runningTable: "stats-running-table",
   runningGrid: "stats-running-grid",
   runningSince: "stats-running-since",
-  /** R4680000: the tab's Segmented of views (Running, Versions), Versions' table, grid, span and Past versions only. */
+  runningIteration: "stats-running-iteration",
+  /** R4680000: the tab's Segmented of views (R5040000: Major patch running, Historical, Versions), Versions' table, grid, span and Past versions only; R5035000 its Iteration. */
   experimentalRunning: "stats-experimental-running",
+  experimentalHistorical: "stats-experimental-historical",
   experimentalVersions: "stats-experimental-versions",
   versionsTable: "stats-versions-table",
   versionsGrid: "stats-versions-grid",
   versionsSpan: "stats-versions-span",
+  versionsIteration: "stats-versions-iteration",
   versionsPastOnly: "stats-versions-past-only",
+  /** R4681001: the Experimental tab's Hall of Fame view: its four sections, each entry's faces and balance line. */
+  experimentalHall: "stats-experimental-hall",
+  hallSection: "stats-hall-section",
+  hallEntry: "stats-hall-entry",
+  hallBefore: "stats-hall-before",
+  hallAfter: "stats-hall-after",
+  hallBalance: "stats-hall-balance",
   /** R4680001: an old version's drill-down: its faces, figures, the versions before and after it and a neighbour's open button. */
   versionDrillDown: "stats-version-drilldown",
   versionFaces: "stats-version-faces",
@@ -90,6 +100,9 @@ export const statsTestid = {
   modeSelect: "stats-mode-select",
   /** R2777000: a card row's adjusted win rate. */
   adjustedCell: "stats-adjusted-cell",
+  /** R5037000: a Running or Versions row's win rate and play rate. */
+  winRateCell: "stats-win-rate-cell",
+  playRateCell: "stats-play-rate-cell",
   /** R3185000: the card detail's Statistics panel's tier chip and adjusted win rate (beside `INSPECT_STATS`). */
   cardStatsTier: "inspect-stats-tier",
   cardStatsAdjusted: "inspect-stats-adjusted",
@@ -128,6 +141,13 @@ export const statsTestid = {
   extendedKind: "stats-extended-kind",
   extendedRow: "stats-extended-row",
   extendedTier: "stats-extended-tier",
+  // R4679001: the panel's Outputs: its segment, its table and each row, which opens that output.
+  extendedOutputsTab: "stats-extended-outputs-tab",
+  extendedOutputs: "stats-extended-outputs",
+  extendedOutputRow: "stats-extended-output-row",
+  // R4707002: the Outputs segment's rolled outcomes: a table per kind (its `data-kind`) and each row.
+  extendedRolled: "stats-extended-rolled",
+  extendedRolledRow: "stats-extended-rolled-row",
   /** R3887000: the Cards tab's Plain text button, a card as plain text, and the breakdown's plain text and Reference cards. */
   plainTextToggle: "stats-plain-text-toggle",
   plainCard: "stats-plain-card",

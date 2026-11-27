@@ -8,7 +8,7 @@ use jackioh_engine::wire::{
 };
 
 use crate::face::chinese::{chinese_name, is_glitch};
-use crate::face::fused::{DORMANT_STARSHIP_NAME, holds_dormant_starship};
+use crate::face::fused::{DORMANT_STARSHIP_NAME, equipped_host, holds_dormant_starship};
 use crate::face::glitch::glitch_words;
 use crate::face::live::{HIDDEN_CARD, NamedCard};
 use crate::face::types::DefMap;
@@ -76,6 +76,44 @@ pub fn find_card<'a>(view: &'a PlayerView, instance_id: &str, resolving: bool) -
     None
 }
 
+/// The card an event about a public zone names by instance and definition: what `public_names` notes
+/// and `Names::card_of` opens.
+fn moved_card(event: &GameEvent) -> Option<(&str, &str)> {
+    match event {
+        GameEvent::CardPlayed {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Summoned {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Destroyed {
+            instance_id, def_id, ..
+        }
+        | GameEvent::EnteredGraveyard {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Exiled {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Bounced {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Burned {
+            instance_id, def_id, ..
+        }
+        | GameEvent::LibraryOverflow {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Discarded {
+            instance_id, def_id, ..
+        }
+        | GameEvent::TrapFired {
+            instance_id, def_id, ..
+        } => Some((instance_id.as_str(), def_id.as_str())),
+        _ => None,
+    }
+}
+
 /// Instance to definition, from the window's events about public zones, so a unit that has since left the
 /// board is still named. The hand's own events (`drawn`, `addedToHand`, `shuffledIn`) are not read, and
 /// neither is the sentinel.
@@ -87,41 +125,15 @@ pub fn public_names(events: &[GameEvent]) -> IndexMap<String, String> {
         }
     };
     for event in events {
+        if let Some((instance_id, def_id)) = moved_card(event) {
+            note(instance_id, def_id);
+            continue;
+        }
         match event {
-            GameEvent::CardPlayed {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Summoned {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Destroyed {
-                instance_id, def_id, ..
-            }
-            | GameEvent::EnteredGraveyard {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Exiled {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Bounced {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Burned {
-                instance_id, def_id, ..
-            }
-            | GameEvent::LibraryOverflow {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Discarded {
-                instance_id, def_id, ..
-            }
-            | GameEvent::RadiantSet {
+            GameEvent::RadiantSet {
                 instance_id, def_id, ..
             }
             | GameEvent::Deradianted {
-                instance_id, def_id, ..
-            }
-            | GameEvent::TrapFired {
                 instance_id, def_id, ..
             }
             | GameEvent::Held {
@@ -196,7 +208,8 @@ impl<'a> Names<'a> {
 
     /// A card's printed name, or its def id when nothing names it; Glitch's, corrupted as a lookup answers for
     /// it (`face/glitch.rs`); a fusion holding the Dormant Starship, the hull's (R3045000: the engine joins the
-    /// pieces' names onto the hull's, and the card is named for the hull, as its face is, `face/model.rs`).
+    /// pieces' names onto the hull's, and the card is named for the hull, as its face is, `face/model.rs`); a
+    /// unit holding gear, the card it was equipped into (R5050000).
     fn english(&self, def_id: &str) -> (String, Option<&'a CardDef>) {
         let def = self.definition(def_id);
         let name = if is_glitch(def_id) {
@@ -204,7 +217,8 @@ impl<'a> Names<'a> {
         } else {
             match def {
                 Some(def) if holds_dormant_starship(def) => DORMANT_STARSHIP_NAME.to_string(),
-                Some(def) => def.name.clone(),
+                // R5050000: a unit holding gear is named for the card it was equipped into.
+                Some(def) => equipped_host(def).map_or_else(|| def.name.clone(), |host| host.name),
                 None => def_id.to_string(),
             }
         };
@@ -368,43 +382,14 @@ impl<'a> Names<'a> {
             let def_id = self.def_id_of(instance_id)?;
             by_def(&def_id, Some(instance_id))
         };
+        if let Some((instance_id, def_id)) = moved_card(event) {
+            return if instance_id == HIDDEN_CARD {
+                None
+            } else {
+                by_def(def_id, Some(instance_id))
+            };
+        }
         match event {
-            GameEvent::CardPlayed {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Summoned {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Destroyed {
-                instance_id, def_id, ..
-            }
-            | GameEvent::EnteredGraveyard {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Exiled {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Bounced {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Burned {
-                instance_id, def_id, ..
-            }
-            | GameEvent::LibraryOverflow {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Discarded {
-                instance_id, def_id, ..
-            }
-            | GameEvent::TrapFired {
-                instance_id, def_id, ..
-            } => {
-                if instance_id == HIDDEN_CARD {
-                    None
-                } else {
-                    by_def(def_id, Some(instance_id))
-                }
-            }
             GameEvent::RadiantSet {
                 instance_id, def_id, ..
             } => {
@@ -440,6 +425,8 @@ impl<'a> Names<'a> {
             GameEvent::Damage { target_id, .. }
             | GameEvent::DamageAbsorbed { target_id, .. }
             | GameEvent::Healed { target_id, .. } => by_instance(target_id),
+            // R5045000: the line opens with the pool card.
+            GameEvent::DamageNullified { instance_id, .. } => by_instance(instance_id),
             GameEvent::DivineShieldLost { instance_id }
             | GameEvent::Buffed { instance_id, .. }
             | GameEvent::KeywordGranted { instance_id, .. }

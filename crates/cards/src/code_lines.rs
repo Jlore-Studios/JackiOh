@@ -109,9 +109,24 @@ fn is_ident_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
+/// A raw string opening at `i` (`r"`, `r#"`, `br"`, `cr##"` …): its length up to and including
+/// the quote, and its `#` count.
+fn raw_string_open(chars: &[char], i: usize) -> Option<(usize, usize)> {
+    if i > 0 && is_ident_char(chars[i - 1]) {
+        return None;
+    }
+    let r_at = match (chars.get(i), chars.get(i + 1)) {
+        (Some('r'), _) => i,
+        (Some('b' | 'c'), Some('r')) => i + 1,
+        _ => return None,
+    };
+    let hashes = chars[r_at + 1..].iter().take_while(|c| **c == '#').count();
+    (chars.get(r_at + 1 + hashes) == Some(&'"')).then_some((r_at + 2 + hashes - i, hashes))
+}
+
 /// The lines of a script's code: above its `#[cfg(test)]` (its tests are not its code), without
-/// comments, each trimmed, blank ones left out.
-fn script_code(source: &str) -> impl Iterator<Item = String> {
+/// comments, each trimmed, blank ones left out (`crates/tools`' `code_lines_with_uses` too).
+pub fn script_code(source: &str) -> impl Iterator<Item = String> {
     without_comments(source)
         .into_iter()
         .map(|code| code.trim().to_string())
@@ -126,9 +141,9 @@ pub fn code_lines(source: &str) -> usize {
     script_code(source).count()
 }
 
-/// Each line of `source` with its comments taken out (`crates/tools`' `count_loc` scanner): `//` to
-/// the line's end and nested `/* */` blocks, while a string (plain or raw) or a character literal is
-/// read as such, so a `//` inside one is code.
+/// Each line of `source` with its comments taken out (the one `crates/tools`' `count_loc` and
+/// `classify` read): `//` to the line's end and nested `/* */` blocks, while a string (plain or raw)
+/// or a character literal is read as such, so a `//` inside one is code.
 pub fn without_comments(source: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     let mut block_depth = 0usize;
@@ -200,17 +215,14 @@ pub fn without_comments(source: &str) -> Vec<String> {
                 i += 1;
                 continue;
             }
-            // A raw string, `r"…"` or `r#"…"#`; a `br` or `cr` one's `b` or `c` is read as code
-            // first. Since Rust 2021 a name run into a quote or a `#` is reserved, so in code that
-            // compiles no `r` ending a name meets one (#3836).
-            if ch == 'r' {
-                let hashes = chars[i + 1..].iter().take_while(|c| **c == '#').count();
-                if chars.get(i + 1 + hashes) == Some(&'"') {
-                    code.extend(&chars[i..=i + 1 + hashes]);
-                    quote = Some(hashes + 1);
-                    i += 2 + hashes;
-                    continue;
-                }
+            // A raw string (`r"…"`, `r#"…"#`, `br"…"`, `cr"…"`), never one a name runs into: Rust 2021
+            // reserves that, but `classify` reads TypeScript through here too (R2050000), where `bar"…"`
+            // is a name and a string.
+            if let Some((length, hashes)) = raw_string_open(&chars, i) {
+                code.extend(&chars[i..i + length]);
+                quote = Some(hashes + 1);
+                i += length;
+                continue;
             }
             if ch == '\'' {
                 // A character literal (`'x'`, `'\n'`) is one token; a lifetime is a quote and a name.

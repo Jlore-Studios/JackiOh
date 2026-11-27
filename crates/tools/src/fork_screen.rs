@@ -40,8 +40,8 @@ use serde::{Deserialize, Serialize};
 use crate::agent::AgentInfo;
 use crate::arena::{
     AgentSpec, ArenaGame, ArenaOutcome, Entrant, FinishCtx, Live, SCREEN_EXTEND_DEALS, SCREEN_MAX_GAMES,
-    SCREEN_MIN_DECIDED, accept, append_records, choose_for, duel_line, entrant_at, finish_from, game_setup,
-    paired_interval, play_game_probed, records_of, records_path, replays, round_share, screen_done, won_by,
+    SCREEN_MIN_DECIDED, accept, choose_for, duel_line, entrant_at, finish_from, game_setup, paired_interval,
+    play_game_probed, replays, round_share, screen_done, won_by, write_duel_output,
 };
 
 /// R4397000: the most forks one trunk game keeps, its first ones.
@@ -944,10 +944,16 @@ fn tally_from_lines(header: &SaveHeader, lines: &[&DealLine]) -> anyhow::Result<
     ))
 }
 
+/// R4607000: the live forks (edge not 0) of one saved deal.
+fn live_forks(line: &DealLine) -> usize {
+    edges_of(&[line]).iter().filter(|edge| edge.edge != 0.0).count()
+}
+
 /// R4607000: the next batch after `games_done` games with `live` live forks, matching the live
 /// screen's stops: the first batch plays `initial_deals`, later batches only with `--extend`,
-/// none once the screen is decided or capped. `--extend` totals count the saved deals and the
-/// new ones together, since `games_done` covers both.
+/// none once the screen is decided or capped. `live` counts the live forks of the deals up to
+/// `games_done` only, as the uncut loop reads them after each batch; `save_plan` walks a save's
+/// batches with it.
 fn next_batch(games_done: i32, live: usize, extend: bool, initial_deals: i32) -> Option<(i32, i32)> {
     if games_done == 0 {
         return Some((1, initial_deals));
@@ -963,6 +969,23 @@ fn next_batch(games_done: i32, live: usize, extend: bool, initial_deals: i32) ->
         return None;
     }
     Some((games_done + 1, len))
+}
+
+/// R4607000: which deals a rerun plays next, decided as the uncut run decides them. Walks the
+/// batches from `initial_deals`, then `next_batch`'s, and at each boundary counts only the live
+/// forks of the deals up to it, never those of a cut batch past it. `Some(target)` is the
+/// boundary of the first batch the save leaves incomplete (play every deal up to `target` the
+/// save lacks); `None` is a finished save, whose boundary the screen stops at.
+fn save_plan(map: &BTreeMap<i32, DealLine>, extend: bool, initial_deals: i32) -> Option<i32> {
+    let mut target = initial_deals;
+    loop {
+        if !(1..=target).all(|deal| map.contains_key(&deal)) {
+            return Some(target);
+        }
+        let live: usize = map.range(..=target).map(|(_, line)| live_forks(line)).sum();
+        let (_, len) = next_batch(target, live, extend, initial_deals)?;
+        target += len;
+    }
 }
 
 /// R4607000: resumes a save file: refuses a foreign file by field name, replays nothing when the
@@ -1013,20 +1036,12 @@ pub(crate) fn resume_save(
             .with_context(|| format!("arena: cannot write {}", path.display()))?;
         BTreeMap::new()
     };
-    let live_of = |map: &BTreeMap<i32, DealLine>| {
-        edges_of(&map.values().collect::<Vec<_>>())
-            .iter()
-            .filter(|edge| edge.edge != 0.0)
-            .count()
-    };
-    let mut target = initial_deals;
-    // A finished save plays nothing and reprints its tally, without even the identity game.
-    if (1..=target).all(|deal| map.contains_key(&deal))
-        && next_batch(target, live_of(&map), extend, initial_deals).is_none()
-    {
+    // R4607000: where the uncut run stands over the saved deals. A finished save plays nothing
+    // and reprints its tally, without even the identity game.
+    let Some(mut target) = save_plan(&map, extend, initial_deals) else {
         let (tally, duels) = tally_from_lines(expected, &map.values().collect::<Vec<_>>())?;
         return Ok(SaveReport { tally, duels });
-    }
+    };
     if let Some(first) = map.keys().next().copied() {
         let mut game = trunk_setups(b, base, first, 1)?
             .into_iter()
@@ -1064,11 +1079,9 @@ pub(crate) fn resume_save(
                 map.insert(deal, line);
             }
         }
-        match next_batch(target, live_of(&map), extend, initial_deals) {
+        match save_plan(&map, extend, initial_deals) {
             None => break,
-            Some((_, len)) => {
-                target += len;
-            }
+            Some(next) => target = next,
         }
     }
     let (tally, duels) = tally_from_lines(expected, &map.values().collect::<Vec<_>>())?;
@@ -1204,37 +1217,7 @@ pub fn run(args: crate::arena::Args) -> anyhow::Result<()> {
         }
     }
     let tally = fork_tally(&a.label, &b.label, trunk.len(), &edges, rollouts, faults);
-    let records = records_of(&trunk)?;
-
-    let path = records_path(args.out.as_deref());
-    let mut lines = Vec::new();
-    for outcome in &trunk {
-        lines.push(duel_line(outcome, replays(outcome)?)?);
-    }
-    let totals = serde_json::to_string(&tally)?;
-
-    match &path {
-        Some(path) => {
-            append_records(path, &records)?;
-            let mut stdout = std::io::stdout().lock();
-            for line in &lines {
-                writeln!(stdout, "{line}")?;
-            }
-            writeln!(stdout, "{totals}")?;
-            writeln!(stdout, "{} records appended to {}", records.len(), path.display())?;
-        }
-        None => {
-            let mut stdout = std::io::stdout().lock();
-            for record in &records {
-                writeln!(stdout, "{}", jackioh_cards::versions::game_record_line(record))?;
-            }
-            for line in &lines {
-                eprintln!("{line}");
-            }
-            eprintln!("{totals}");
-        }
-    }
-    Ok(())
+    write_duel_output(args.out.as_deref(), &trunk, &tally)
 }
 
 #[cfg(test)]
@@ -2091,6 +2074,84 @@ mod tests {
         // The cap is respected: 10 deals left, then nothing.
         assert_eq!(next_batch(1990, 0, true, 200), Some((1991, 10)));
         assert_eq!(next_batch(2000, 0, true, 200), None);
+    }
+
+    /// R4607000: a hand-written save's deals: each of `deals` holds one live fork when `live`
+    /// says so, else one dead fork.
+    fn hand_map(deals: impl IntoIterator<Item = i32>, live: impl Fn(i32) -> bool) -> BTreeMap<i32, DealLine> {
+        deals
+            .into_iter()
+            .map(|deal| (deal, hand_line(deal, usize::from(live(deal)), 0)))
+            .collect()
+    }
+
+    #[test]
+    fn r4607000_a_cut_inside_an_extended_batch_plays_the_rest_of_it() {
+        // Deals 1-200 hold 18 live forks, so the screen extends; the cut batch's 15 saved deals
+        // hold 2 more, which made the old plan read 20 live forks and call the save finished.
+        let mut map = hand_map(1..=215, |deal| deal <= 18 || deal == 201 || deal == 202);
+        assert_eq!(save_plan(&map, true, 200), Some(300));
+        // Once the batch is whole its 20 live forks stop the screen at deal 300, as the uncut run.
+        map.extend(hand_map(216..=300, |_| false));
+        assert_eq!(save_plan(&map, true, 200), None);
+        // Without `--extend` the first batch is the whole screen, the cut deals notwithstanding.
+        let cut = hand_map(1..=215, |deal| deal <= 18 || deal == 201 || deal == 202);
+        assert_eq!(save_plan(&cut, false, 200), None);
+    }
+
+    #[test]
+    fn r4607000_a_cut_batch_without_live_forks_plans_as_before() {
+        // A part-played batch with no live fork plans the same batch as before: the rest of it.
+        let mut map = hand_map(1..=215, |deal| deal <= 18);
+        assert_eq!(save_plan(&map, true, 200), Some(300));
+        // Whole, it still leaves 18 live forks, so the screen goes on to the next batch.
+        map.extend(hand_map(216..=300, |_| false));
+        assert_eq!(save_plan(&map, true, 200), Some(400));
+        // The first batch: nothing saved, or one deal short of it.
+        assert_eq!(save_plan(&BTreeMap::new(), true, 200), Some(200));
+        assert_eq!(save_plan(&hand_map(1..=199, |_| false), true, 200), Some(200));
+        // Twenty live forks stop the screen at its first batch; so does a missing `--extend`.
+        assert_eq!(save_plan(&hand_map(1..=200, |deal| deal <= 20), true, 200), None);
+        assert_eq!(save_plan(&hand_map(1..=200, |_| false), false, 200), None);
+        assert_eq!(save_plan(&hand_map(1..=150, |_| false), false, 200), Some(200));
+    }
+
+    #[test]
+    fn r4607000_a_save_stopped_at_the_cap_plays_no_game() {
+        // 2000 deals short of 20 live forks stop at the cap; one deal fewer is not finished.
+        assert_eq!(save_plan(&hand_map(1..=1999, |_| false), true, 200), Some(2000));
+        assert_eq!(save_plan(&hand_map(1..=2000, |_| false), true, 200), None);
+
+        jackioh_cards::register_all();
+        let control = entrant(&AgentSpec::SelfAi).unwrap();
+        let mut header = test_header(200);
+        header.extend = true;
+        let base = "r4607000-capped";
+        let path = save_path("capped");
+        let _ = std::fs::remove_file(&path);
+        let lines: Vec<DealLine> = (1..=2000).map(|deal| hand_line(deal, 0, 0)).collect();
+        write_save(&path, &header, &lines);
+        let file = std::fs::read(&path).unwrap();
+
+        // The old finished check stopped at deal 200 with no live fork, planned a next batch and
+        // played the identity game before reprinting.
+        let calls = std::sync::atomic::AtomicUsize::new(0);
+        let report = resume_save(
+            &path,
+            &header,
+            base,
+            &control,
+            200,
+            true,
+            &scripted_factory(&calls, late_fork),
+        )
+        .unwrap();
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
+        assert_eq!(report.duels.len(), 2000);
+        assert!(report.tally.contains("\"forks\":2000"), "{}", report.tally);
+        assert_eq!(std::fs::read(&path).unwrap(), file);
+
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]

@@ -109,7 +109,7 @@
   padding: 0 14px;
   border: 0;
   border-bottom: 3px solid transparent;
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   background: none;
   color: var(--text-dim);
   font: inherit;
@@ -124,12 +124,12 @@
 }
 
 .settings-tab[aria-selected="true"] {
-  border-bottom-color: #7dd3fc;
+  border-bottom-color: var(--pal-ink-300);
   color: var(--text);
 }
 
 .settings-tab:focus-visible {
-  outline: 2px solid #7dd3fc;
+  outline: 2px solid var(--pal-ink-300);
   outline-offset: -2px;
 }
 
@@ -205,7 +205,7 @@
   min-height: 44px;
   padding: 0 10px;
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text);
   font: inherit;
@@ -214,7 +214,7 @@
 }
 
 .settings-select:focus-visible {
-  outline: 2px solid #7dd3fc;
+  outline: 2px solid var(--pal-ink-300);
   outline-offset: 0;
 }
 
@@ -230,7 +230,7 @@
   min-width: 4ch;
   padding: 2px 8px;
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
@@ -247,30 +247,30 @@
   margin: 0;
   background: transparent;
   cursor: var(--cursor-glove-point, pointer);
-  accent-color: #7dd3fc;
+  accent-color: var(--pal-ink-300);
   appearance: none;
 }
 
 .settings-slider::-webkit-slider-runnable-track {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: linear-gradient(
     90deg,
-    #7dd3fc calc(var(--fx-speed-fill) * 100%),
+    var(--pal-ink-300) calc(var(--fx-speed-fill) * 100%),
     var(--line-bright) calc(var(--fx-speed-fill) * 100%)
   );
 }
 
 .settings-slider::-moz-range-track {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
 .settings-slider::-moz-range-progress {
   height: 6px;
-  border-radius: 3px;
-  background: #7dd3fc;
+  border-radius: var(--radius-xs);
+  background: var(--pal-ink-300);
 }
 
 .settings-slider::-webkit-slider-thumb {
@@ -278,9 +278,9 @@
   height: 22px;
   margin-top: -8px;
   border: 2px solid var(--bg);
-  border-radius: 50%;
-  background: #e0f2fe;
-  box-shadow: 0 0 0 1px #7dd3fc, 0 1px 3px rgb(0 0 0 / 0.5);
+  border-radius: var(--radius-round);
+  background: var(--pal-slate-100);
+  box-shadow: 0 0 0 1px var(--pal-ink-300), 0 1px 3px color-mix(in srgb, var(--pal-black) 50%, transparent);
   appearance: none;
 }
 
@@ -288,13 +288,13 @@
   width: 20px;
   height: 20px;
   border: 2px solid var(--bg);
-  border-radius: 50%;
-  background: #e0f2fe;
-  box-shadow: 0 0 0 1px #7dd3fc, 0 1px 3px rgb(0 0 0 / 0.5);
+  border-radius: var(--radius-round);
+  background: var(--pal-slate-100);
+  box-shadow: 0 0 0 1px var(--pal-ink-300), 0 1px 3px color-mix(in srgb, var(--pal-black) 50%, transparent);
 }
 
 .settings-slider:focus-visible {
-  outline: 2px solid #7dd3fc;
+  outline: 2px solid var(--pal-ink-300);
   outline-offset: 2px;
 }
 
@@ -346,7 +346,7 @@
   margin: 0;
   padding: 7px 0;
   border: 0;
-  border-radius: 15px / 22px;
+  border-radius: var(--radius-switch);
   background-color: var(--line-bright);
   background-image: radial-gradient(circle closest-side, var(--text-dim) 0 calc(100% - 4px), transparent calc(100% - 3px));
   background-repeat: no-repeat;
@@ -362,19 +362,19 @@
 
 .settings-slot .settings-audio .audio-controls__row--check > input[type="checkbox"]:checked {
   background-color: color-mix(in srgb, var(--legal) 78%, var(--bg));
-  background-image: radial-gradient(circle closest-side, #fff 0 calc(100% - 4px), transparent calc(100% - 3px));
+  background-image: radial-gradient(circle closest-side, var(--pal-white) 0 calc(100% - 4px), transparent calc(100% - 3px));
   background-position: right center;
 }
 
 .settings-slot .settings-audio .audio-controls__row--check > input[type="checkbox"]:focus-visible {
-  outline: 2px solid #7dd3fc;
+  outline: 2px solid var(--pal-ink-300);
   outline-offset: 0;
 }
 
 /* The switch: a 44 px tall input whose visible track is the 30 px content box. The asymmetric
-   radius (15px horizontal, 22px vertical) leaves the content box a true pill once the 7 px of
-   vertical padding is taken off, and the knob is a background layer, so no pseudo-element is
-   needed on the <input>. */
+   radius (--radius-switch: 15px horizontal, 22px vertical) leaves the content box a true pill once
+   the 7 px of vertical padding is taken off, and the knob is a background layer, so no
+   pseudo-element is needed on the <input>. */
 .settings-switch {
   appearance: none;
   -webkit-appearance: none;
@@ -385,7 +385,7 @@
   margin: 0;
   padding: 7px 0;
   border: 0;
-  border-radius: 15px / 22px;
+  border-radius: var(--radius-switch);
   background-color: var(--line-bright);
   background-image: radial-gradient(
     circle closest-side,
@@ -407,7 +407,7 @@
   background-color: color-mix(in srgb, var(--legal) 78%, var(--bg));
   background-image: radial-gradient(
     circle closest-side,
-    #fff 0 calc(100% - 4px),
+    var(--pal-white) 0 calc(100% - 4px),
     transparent calc(100% - 3px)
   );
   background-position: right center;
@@ -415,7 +415,7 @@
 
 /* Ice blue, the board's selection color: gold would read as the yellow of a met condition. */
 .settings-switch:focus-visible {
-  outline: 2px solid #7dd3fc;
+  outline: 2px solid var(--pal-ink-300);
   outline-offset: 0;
 }
 

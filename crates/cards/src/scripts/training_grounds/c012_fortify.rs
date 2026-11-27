@@ -164,13 +164,17 @@ mod tests {
             assert_eq!(keyword_count(&s, &unit, KeywordKind::Taunt), 1);
         }
 
+        /// R347, R5113000: an Indestructible Unit is Immutable (R4353000), so it may be aimed at and
+        /// takes none of it: no Health, no Armor and, as ever, no Taunt.
         #[test]
-        fn never_taunt_on_an_indestructible_unit() {
+        fn r5113000_never_taunt_on_an_indestructible_unit_and_none_of_the_rest() {
             let mut s = board(false, json!([ROCK]), json!([]));
             let rock = s.unit_at(P1, 1);
+            let health = s.stats(&rock).max_health;
             s.play(FORTIFY, pick::targets(pick::instance(&rock)));
             assert_eq!(keyword_count(&s, &rock, KeywordKind::Taunt), 0, "R347");
-            assert_eq!(armor(&s, &rock), 1);
+            assert_eq!(armor(&s, &rock), 0);
+            assert_eq!(s.stats(&rock).max_health, health);
         }
 
         #[test]

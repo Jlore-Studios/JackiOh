@@ -9,8 +9,9 @@ import type { CSSProperties, ReactElement } from "react";
 
 import type { CardMark } from "@jackioh/shared";
 
+import { Icon } from "../icons/Icon.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
-import { MARK_GLYPH, MARK_MOTES, markColorOf, markWords, paletteFor, type MarkColor } from "./marks.ts";
+import { MARK_MOTES, markColorOf, markWords, paletteFor, type MarkColor } from "./marks.ts";
 import "./marks.css";
 
 /** The aura's testid: `marks-<instanceId>` (never `card-…`, so no board selector resolves to it). */
@@ -76,7 +77,7 @@ export default function CardMarks({ marks, instanceId, bareAura }: CardMarksProp
               style={paletteStyle(entry.color)}
             >
               <span className="card-mark-badge__glyph" aria-hidden="true">
-                {MARK_GLYPH}
+                <Icon name="spark" />
               </span>
               <span className="card-mark-badge__text">{t(words.text)}</span>
             </span>

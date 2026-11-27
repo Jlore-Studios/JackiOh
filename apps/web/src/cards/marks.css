@@ -22,7 +22,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  border-radius: var(--radius, 7px);
+  border-radius: var(--radius-sm);
   pointer-events: none;
 }
 
@@ -60,7 +60,7 @@
   left: 50%;
   width: 5px;
   height: 5px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle, var(--mark-core) 0 30%, var(--mark-rim) 55%, transparent 72%);
   opacity: 0;
   animation: marks-drift 3.2s ease-in infinite;
@@ -112,8 +112,8 @@
   width: 20px;
   height: 20px;
   border: 2px solid var(--mark-rim);
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--mark-glow) 70%, black) 0%, #0b0d13 100%);
+  border-radius: var(--radius-round);
+  background: radial-gradient(circle, color-mix(in srgb, var(--mark-glow) 70%, var(--pal-black)) 0%, #0b0d13 100%);
   box-shadow: 0 0 8px 1px color-mix(in srgb, var(--mark-glow) 85%, transparent);
   color: var(--mark-core);
   font: 900 12px / 1 ui-sans-serif, system-ui, sans-serif;

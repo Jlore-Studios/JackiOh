@@ -185,35 +185,9 @@ pub fn hand_index(state: &GameState, id: &str) -> Option<(PlayerId, usize)> {
     None
 }
 
-/// R3558000: the leftmost card of `player`'s hand (index 0), or `None` for an empty hand.
-pub fn hand_leftmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
-    state.players[player].hand.first()
-}
-
-/// R3558000: the rightmost card of `player`'s hand, or `None` for an empty hand.
-pub fn hand_rightmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
-    state.players[player].hand.last()
-}
-
-/// R3558000: the card beside `id` in its hand, on `side` of it, or `None` when `id` is in no hand
-/// or has no neighbour there.
-pub fn hand_neighbor<'a>(state: &'a GameState, id: &str, side: HandSide) -> Option<&'a CardInstance> {
-    let (player, at) = hand_index(state, id)?;
-    let hand = &state.players[player].hand;
-    match side {
-        HandSide::Left => at.checked_sub(1).and_then(|left| hand.get(left)),
-        HandSide::Right => hand.get(at + 1),
-    }
-}
-
 /// R3558000: whether `id` is the leftmost card of its hand.
 pub fn is_leftmost_in_hand(state: &GameState, id: &str) -> bool {
     hand_index(state, id).is_some_and(|(_, at)| at == 0)
-}
-
-/// R3558000: whether `id` is the rightmost card of its hand.
-pub fn is_rightmost_in_hand(state: &GameState, id: &str) -> bool {
-    hand_index(state, id).is_some_and(|(player, at)| at + 1 == state.players[player].hand.len())
 }
 
 /// R1881007: whether a card of one of these definitions is mid-resolution (§10.5's `resolving`) for this
@@ -691,6 +665,30 @@ pub fn enemy_unit_arrival(state: &GameState, controller: PlayerId, event: &GameE
             (unit.zone.z() == ZoneName::Field && unit.controller != controller).then(|| instance_id.clone())
         }
         _ => None,
+    }
+}
+
+/// R781004, R4991000: whether `event` brings the running card onto the field: a `summoned` naming it
+/// (played, summoned, Flickered, back through Reborn), or the `transformed` of a Transform whose new card
+/// it is, acting on the field (R4816000). A Vanilla's or a copied text's `transformed` names one card on
+/// both sides and brings nothing, and a Transform in a hand or a library makes no card on the field.
+/// Meditative #65's and Stinkyscape #111's Aura of random combat keywords draws on it.
+pub fn self_arrived_on_field(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+    let Some(me) = ctx.live_self() else {
+        return false;
+    };
+    match event {
+        GameEvent::Summoned { instance_id, .. } => *instance_id == me.id,
+        GameEvent::Transformed {
+            instance_id,
+            new_instance_id,
+            ..
+        } => {
+            *new_instance_id == me.id
+                && instance_id != new_instance_id
+                && crate::zones::acts_on_field(ctx.state, me)
+        }
+        _ => false,
     }
 }
 

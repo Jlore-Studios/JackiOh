@@ -588,7 +588,7 @@ describe("R1044 setting by drag asks its timing", () => {
     sourceTestid: "hand-card-s1",
     lifted: liftedS1,
     dropTestids: ["zone-you-backrow-2"],
-    freeDrop: false,
+    freeDrop: true,
     arrow: false,
   });
 
@@ -609,5 +609,15 @@ describe("R1044 setting by drag asks its timing", () => {
     expect(need?.kind).toBe("faceDown");
     if (need?.kind !== "faceDown") return;
     expect(need.options).toEqual(["endOfThisTurn", "startOfNextTurn", "endOfNextTurn"]);
+  });
+
+  it("R1044 the plan planDrag builds for a Spell that may be set is a free drop: face-up on the board, the timing asked on the backrow", () => {
+    const built = planDrag(view(), legal, IDLE, hand("s1"));
+    if (built === null) throw new Error("no plan");
+
+    expect(built.freeDrop).toBe(true);
+    expect([...built.dropTestids].sort()).toEqual(["zone-you-backrow-2"]);
+    expect(resolveDrop(view(), legal, built, BOARD).action).toEqual(S1);
+    expect(resolveDrop(view(), legal, built, at(yourZone("backrow", 2), "zone-you-backrow-2")).action).toBeUndefined();
   });
 });

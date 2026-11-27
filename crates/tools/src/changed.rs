@@ -1,5 +1,7 @@
 //! The cards a pull request changes, for `cargo jackioh fuzz`'s gate (#3113): the ids the gate deals
 //! into both decks of a forced wave (#2387's `--cards`) and whose fused pairs it plays (#2381).
+//! It also serves `cargo jackioh changed-cards` (#5099): the subcommand `shard-specs.mjs --smoke` reads
+//! to add the e2e specs whose seeded games deal or name those cards.
 //!
 //! `classify` names "the cards that play differently" (R1365000), but it needs the base's build and the
 //! base's history, and the `rust (checks, fuzz 200)` job has a one-commit checkout and only the head's
@@ -19,12 +21,14 @@
 
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+use serde::Serialize;
 
 use crate::claims::{PENDING_DIR, fragments_at};
 use crate::classify::{CATALOG_PATH, WORDING_FIELDS, code_changed, script_id, show};
-use crate::patches::git;
 use crate::patches::patches_io::{Catalog, ChangeKind, NamedFragment, PendingFragment, diff_catalogs};
+use crate::patches::{git, repo_root};
 
 /// Where the card scripts live, whose diff names a card.
 const SCRIPTS_DIR: &str = "crates/cards/src/scripts";
@@ -33,7 +37,7 @@ const SCRIPTS_DIR: &str = "crates/cards/src/scripts";
 const SHORT_SHA: usize = 7;
 
 /// What a pull request changed, as the gate reads it.
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Serialize)]
 pub(crate) struct Changed {
     /// The changed catalog ids, sorted, none twice. Some may be no card a deck can hold (a token, a
     /// card the change removed): `Forcing::from_changed` leaves those out.
@@ -83,6 +87,64 @@ pub(crate) fn changed_cards(root: &Path) -> Changed {
     ids.extend(claimed);
     changed.ids = ids.into_iter().collect();
     changed
+}
+
+const NOT_A_MERGE: &str = "HEAD is not a two-parent merge commit (a pull request's), so no card is named";
+
+#[derive(clap::Args, Debug)]
+pub struct Args {
+    /// The repository root (default: the workspace this binary was built from).
+    #[arg(long)]
+    root: Option<PathBuf>,
+    /// Print the cards, notes and warning as one JSON object.
+    #[arg(long)]
+    json: bool,
+}
+
+/// The cards a pull request changes, none unless `HEAD` is its merge commit and its base reads:
+/// `changed_cards` alone falls back to every pending fragment's cards, which in the merge queue's
+/// one-parent commit and on `main` no pull request changed (#5099).
+pub(crate) fn pull_request_cards(root: &Path) -> Changed {
+    if merge_base(root).is_none() {
+        return Changed {
+            notes: vec![NOT_A_MERGE.to_string()],
+            ..Changed::default()
+        };
+    }
+    let changed = changed_cards(root);
+    if changed.warning.is_some() {
+        return Changed {
+            warning: changed.warning,
+            ..Changed::default()
+        };
+    }
+    changed
+}
+
+fn render(changed: &Changed, json: bool) -> anyhow::Result<String> {
+    if json {
+        return Ok(serde_json::to_string_pretty(changed)?);
+    }
+    let mut lines = vec![if changed.ids.is_empty() {
+        "changed cards: none".to_string()
+    } else {
+        format!("changed cards: {}", changed.ids.join(", "))
+    }];
+    lines.extend(changed.notes.iter().cloned());
+    lines.extend(
+        changed
+            .warning
+            .iter()
+            .map(|warning| format!("warning: {warning}")),
+    );
+    Ok(lines.join("\n"))
+}
+
+/// `jackioh changed-cards`: prints and exits 0 whatever it finds; shard-specs.mjs reads its `--json`.
+pub fn run(args: Args) -> anyhow::Result<()> {
+    let root = args.root.unwrap_or_else(repo_root);
+    println!("{}", render(&pull_request_cards(&root), args.json)?);
+    Ok(())
 }
 
 /// The pending fragments in the work tree, by file name. A file that is no fragment is passed over:
@@ -432,19 +494,16 @@ mod tests {
         assert_eq!(none, Changed::default());
     }
 
-    #[test]
-    fn a_base_the_clone_lacks_and_cannot_fetch_is_reported_not_fatal() {
-        let (repo, _base) = base_repo();
-        assert!(ensure_commit(repo.path(), ZEROS).is_err());
-        let held = repo.git(&["rev-parse", "HEAD"]);
-        assert!(
-            ensure_commit(repo.path(), held.trim()).is_ok(),
-            "a commit held needs no fetch"
-        );
+    fn core_077(health: i32) -> String {
+        format!(
+            r#""core-077": {{ "id": "core-077", "name": "Professor Curvature", "cost": 3, "health": {health} }}"#
+        )
+    }
 
-        // A merge commit whose first parent is a commit the repo does not hold, planted by hand.
+    fn plant_merge_over_missing_base(repo: &TempRepo) {
         let tree = repo.git(&["rev-parse", "HEAD^{tree}"]);
-        let head = held.trim();
+        let head = repo.git(&["rev-parse", "HEAD"]);
+        let head = head.trim();
         let planted = Command::new("git")
             .args(["hash-object", "-t", "commit", "-w", "--stdin", "--literally"])
             .current_dir(repo.path())
@@ -463,11 +522,100 @@ mod tests {
             .expect("git hash-object runs");
         let planted = String::from_utf8(planted.stdout).expect("a name");
         repo.git(&["checkout", "-q", "--detach", planted.trim()]);
+    }
+
+    #[test]
+    fn a_base_the_clone_lacks_and_cannot_fetch_is_reported_not_fatal() {
+        let (repo, _base) = base_repo();
+        assert!(ensure_commit(repo.path(), ZEROS).is_err());
+        let held = repo.git(&["rev-parse", "HEAD"]);
+        assert!(
+            ensure_commit(repo.path(), held.trim()).is_ok(),
+            "a commit held needs no fetch"
+        );
+
+        plant_merge_over_missing_base(&repo);
         assert_eq!(merge_base(repo.path()).as_deref(), Some(ZEROS));
         let changed = changed_cards(repo.path());
         let warning = changed.warning.expect("a warning");
         assert!(warning.contains(ZEROS), "{warning}");
         assert!(warning.contains("only the pending patches' cards"), "{warning}");
         assert!(changed.ids.is_empty());
+    }
+
+    #[test]
+    fn a_pull_requests_merge_names_the_card_whose_health_its_second_parent_changed() {
+        let repo = TempRepo::new();
+        repo.write(CATALOG, &catalog(&[entry("core-001", 1, "a"), core_077(3)]));
+        repo.write(SCRIPT, &script("core-001", "one()"));
+        repo.commit("base");
+        repo.git(&["checkout", "-q", "-b", "topic"]);
+        repo.write(CATALOG, &catalog(&[entry("core-001", 1, "a"), core_077(5)]));
+        repo.commit("topic");
+        repo.git(&["checkout", "-q", "main"]);
+        repo.write("main.txt", "main");
+        repo.commit("main moves on");
+        repo.git(&["merge", "-q", "--no-ff", "-m", "merge", "topic"]);
+
+        let cards = pull_request_cards(repo.path());
+        assert_eq!(cards.ids, ["core-077"]);
+        assert_eq!(cards.warning, None);
+
+        let rendered = render(&cards, true).expect("renders json");
+        let parsed: serde_json::Value = serde_json::from_str(&rendered).expect("valid json");
+        assert_eq!(parsed["ids"], serde_json::json!(["core-077"]));
+        assert!(parsed["warning"].is_null());
+    }
+
+    #[test]
+    fn a_commit_that_is_no_merge_names_no_card_even_with_pending_patches() {
+        let (repo, _base) = base_repo();
+        repo.write(&pending("a.json"), &fragment(r#""core-002""#, ""));
+        repo.commit("pending patch");
+
+        assert_eq!(changed_cards(repo.path()).ids, ["core-002"]);
+        assert_eq!(
+            pull_request_cards(repo.path()),
+            Changed {
+                ids: vec![],
+                notes: vec![NOT_A_MERGE.to_string()],
+                warning: None,
+            }
+        );
+        assert!(
+            run(Args {
+                root: Some(repo.path().to_path_buf()),
+                json: true,
+            })
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn an_unreadable_base_names_no_card_even_with_pending_patches() {
+        let (repo, _base) = base_repo();
+        repo.write(&pending("a.json"), &fragment(r#""core-002""#, ""));
+        repo.commit("pending patch");
+
+        plant_merge_over_missing_base(&repo);
+        let cards = pull_request_cards(repo.path());
+        assert!(cards.ids.is_empty());
+        assert!(cards.notes.is_empty());
+        let warning = cards.warning.expect("a warning");
+        assert!(warning.contains(ZEROS), "{warning}");
+    }
+
+    #[test]
+    fn plain_output_lists_the_ids_the_notes_and_the_warning() {
+        let changed = Changed {
+            ids: vec!["core-077".to_string()],
+            notes: vec!["n".to_string()],
+            warning: Some("w".to_string()),
+        };
+        assert_eq!(
+            render(&changed, false).unwrap(),
+            "changed cards: core-077\nn\nwarning: w"
+        );
+        assert_eq!(render(&Changed::default(), false).unwrap(), "changed cards: none");
     }
 }

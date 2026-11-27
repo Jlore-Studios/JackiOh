@@ -7,6 +7,7 @@ import { useLayoutEffect, useState, type ReactElement } from "react";
 
 import { aimKey, type Aim, type PlayerView } from "@jackioh/shared";
 
+import { arrowCurve } from "../arrowCurve.ts";
 import { aimEndElement } from "./aim.ts";
 import "./opponentAim.css";
 
@@ -78,24 +79,7 @@ export default function OpponentAim(props: { view: PlayerView; aim: Aim | null }
 }
 
 function Arrow({ from, to }: { from: Point; to: Point }): ReactElement {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const bend = Math.min(BEND_MAX_PX, length * BEND_SHARE);
-  // Bow the shaft upward on screen, whichever way it points.
-  let nx = -dy / length;
-  let ny = dx / length;
-  if (ny > 0) {
-    nx = -nx;
-    ny = -ny;
-  }
-  const cx = (from.x + to.x) / 2 + nx * bend;
-  const cy = (from.y + to.y) / 2 + ny * bend;
-  const tx = to.x - cx;
-  const ty = to.y - cy;
-  const tangent = Math.hypot(tx, ty) || 1;
-  const ux = tx / tangent;
-  const uy = ty / tangent;
+  const { length, cx, cy, ux, uy } = arrowCurve(from, to, BEND_SHARE, BEND_MAX_PX);
   const head = Math.min(HEAD_PX, length);
   const baseX = to.x - ux * head;
   const baseY = to.y - uy * head;

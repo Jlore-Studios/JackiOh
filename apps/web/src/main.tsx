@@ -134,7 +134,7 @@ const SeriesRoute = routeChunks.series.Screen;
 const PracticeRoute = routeChunks.practice.Screen;
 const DungeonRoute = routeChunks.dungeon.Screen;
 const DungeonStatsRoute = routeChunks.dungeonStats.Screen;
-// IA7: until the release opens the Infinite Assault (ASSAULT_OPEN), only a dev or e2e build serves it.
+// IA7: a dev or e2e build serves the Infinite Assault whatever ASSAULT_OPEN says; production since the release.
 const AssaultRoute = ASSAULT_OPEN || import.meta.env.MODE !== "production" ? routeChunks.assault.Screen : null;
 const PrivacyRoute = routeChunks.privacy.Screen;
 const TermsRoute = routeChunks.terms.Screen;

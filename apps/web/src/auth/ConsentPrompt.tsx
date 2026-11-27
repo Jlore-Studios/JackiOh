@@ -11,10 +11,10 @@ import { ApiRequestError, postConsent, type MeResponse } from "../net/api.ts";
 import { announceAccountChange, callWithRenewal } from "../net/gate.ts";
 import { loginPath, navigate } from "../net/navigate.ts";
 import { clearSession, forgetPendingAddresses } from "../net/session.ts";
-import { signOut, signOutLabel, useSigningOut } from "./signOut.ts";
 import { PageTitle } from "../routes/PageTitle.tsx";
 import { Wordmark } from "../routes/Wordmark.tsx";
 import MoveToExisting from "./MoveToExisting.tsx";
+import { SignOutButton } from "./SignOutButton.tsx";
 import { forgetSignUpConsent, heldSignUpConsent, refuseSignUpHere, signUpRefusedHere } from "./consent.ts";
 import {
   BirthMonthYear,
@@ -25,7 +25,7 @@ import {
   birthOf,
   type BirthAnswer,
 } from "./ConsentFields.tsx";
-import { consentTestid, shellTestid } from "./testids.ts";
+import { consentTestid } from "./testids.ts";
 
 import "./tavern.css";
 import "./consent.css";
@@ -46,7 +46,6 @@ type Outcome = "asking" | "posting" | "refused";
 
 export default function ConsentPrompt({ token, me, onAnswered }: ConsentPromptProps): ReactElement {
   const ageOwed = me.ageCheckOwed === true;
-  const leaving = useSigningOut();
   // Read once: whether this device refused a sign-up before, and the sign-up form's held answer.
   const [lockedHere] = useState(() => ageOwed && signUpRefusedHere());
   const [held] = useState(() => (ageOwed ? heldSignUpConsent(me.email) : null));
@@ -121,21 +120,7 @@ export default function ConsentPrompt({ token, me, onAnswered }: ConsentPromptPr
     send(ageOwed && born !== null ? born : {});
   };
 
-  const signOutButton =
-    outcome === "refused" && !lockedHere ? null : (
-      <button
-        type="button"
-        className="link-button"
-        data-testid={shellTestid.signOut}
-        disabled={leaving}
-        aria-busy={leaving}
-        onClick={() => {
-          signOut();
-        }}
-      >
-        {signOutLabel(leaving)}
-      </button>
-    );
+  const signOutButton = outcome === "refused" && !lockedHere ? null : <SignOutButton />;
 
   return (
     <div className="app-shell tavern shell-panel" data-testid={consentTestid.prompt} data-outcome={outcome}>

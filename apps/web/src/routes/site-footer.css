@@ -27,7 +27,7 @@
   position: relative;
   color: var(--tavern-gold);
   text-decoration: none;
-  border-bottom: 1px solid rgba(201, 149, 63, 0.55);
+  border-bottom: 1px solid color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
 }
 
 /* A 44 px target for a thumb, without moving the hairline away from the words. */
@@ -45,5 +45,5 @@
 .tavern .site-footer a:focus-visible {
   outline: 2px solid var(--tavern-gold-pale);
   outline-offset: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }

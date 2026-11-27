@@ -404,7 +404,7 @@ pub extern "C" fn assault_placeholder_content(catalog_json_ptr: *const u8, catal
     })
 }
 
-/// The Assault's content for the browser: `assault_placeholder_content` until the release.
+/// R4597000: the Assault's content for the browser: `assault_catalog_content`, since the release.
 #[unsafe(no_mangle)]
 pub extern "C" fn assault_content() -> i32 {
     boundary(wasm_core::assault_content)

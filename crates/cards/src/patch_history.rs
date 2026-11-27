@@ -16,11 +16,19 @@
 //! R4675000: the same history read as each card's play versions (`play_versions`), the runs of shipped
 //! versions over which it plays the same, which no major or patch ends: only a change line that moves a
 //! field that plays, or a claim in a version's own `plays`.
+//!
+//! R5035000: each play version's iteration, counted over its card's whole shipped history: `v1` its
+//! first, a new number where a line on the card moves a field its face shows (`FACE_FIELDS`), and the
+//! next letters (R3631000's, b to z, then aa) where only its play changed.
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::config::PATCH_MIN_CARDS;
-use jackioh_engine::wire::stats::{PatchStep, PatchTier, PlayVersion, card_family, play_version_id};
+use jackioh_engine::wire::stats::{
+    FIRST_ITERATION, PatchStep, PatchTier, PlayVersion, card_family, play_version_id,
+};
 use serde::Deserialize;
+
+use crate::versions::next_letters;
 
 /// R1365000: the catalog fields a player reads and no game does. Every other field plays.
 pub const WORDING_FIELDS: &[&str] = &[
@@ -40,10 +48,32 @@ pub const PRE_TIER_MAJORS: &[&str] = &["v0.1.0", "v0.2.0", "v0.2.5f", "v0.4.0"];
 /// which other cards read but which never moves its own play.
 pub const PLAY_VERSION_QUIET_FIELDS: &[&str] = &["loc"];
 
+/// R5035000: the catalog fields a card's face shows. A play version whose first version has a change
+/// line on the card moving one of them takes a new iteration number; any other its number's next letters.
+pub const FACE_FIELDS: &[&str] = &[
+    "name",
+    "cost",
+    "type",
+    "rarity",
+    "base.text",
+    "radiant.text",
+    "base.attack",
+    "base.health",
+    "radiant.attack",
+    "radiant.health",
+    "base.keywords",
+    "radiant.keywords",
+    "base.xStats",
+    "radiant.xStats",
+];
+
 /// The fields of a `patches.json` entry the window reads.
 #[derive(Deserialize)]
 struct Entry {
     version: String,
+    /// R4681000, R4681001: when the patch shipped, for the Hall of Fame's dates.
+    #[serde(default)]
+    date: String,
     #[serde(default)]
     tier: Option<PatchTier>,
     #[serde(default)]
@@ -53,8 +83,18 @@ struct Entry {
     /// R3944000: the micros a major or a patch rolls up.
     #[serde(default)]
     includes: Vec<String>,
+    /// R4681001: the player-facing notes, whose `balance` lines the Hall of Fame reads.
+    #[serde(default)]
+    player: PlayerNotes,
     #[serde(default)]
     changes: Vec<Change>,
+}
+
+/// R4681001: a `patches.json` entry's player-facing notes; the Hall of Fame reads `balance` alone.
+#[derive(Deserialize, Default)]
+struct PlayerNotes {
+    #[serde(default)]
+    balance: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -130,6 +170,16 @@ fn starts_a_play_version(change: &Change) -> bool {
             }))
 }
 
+/// R5035000: whether a change line moves a field its card's face shows (`FACE_FIELDS`). A line that adds
+/// the card is none: its first play version is `v1` whatever it shows.
+fn changes_the_face(change: &Change) -> bool {
+    change.kind == "changed"
+        && change
+            .fields
+            .iter()
+            .any(|field| FACE_FIELDS.contains(&field.as_str()))
+}
+
 /// R4675000: whether a change line moves only quiet fields (`loc` alone).
 fn quiet(change: &Change) -> bool {
     change.kind == "changed"
@@ -170,6 +220,9 @@ fn own_claims(entry: &Entry) -> IndexSet<String> {
 /// claim it (`own_claims`): its family (`card_family`), or its id for a set's own token, which the
 /// classifier reads as a family of its own (R1365000). A tier ends none: a rule every game meets claims
 /// no family, so it starts none. The newest version of each card the last entry still holds is live.
+/// R5035000: each is numbered over the whole list: its card's first `v1` (`FIRST_ITERATION`), then a new
+/// number where the version it starts at has a line on the card that moves its face (`changes_the_face`),
+/// the letters starting over, and else its number's next letters (`next_letters`): v1, v1b, v1c, v2, v2b.
 pub fn play_versions_of(patches_json: &str) -> Result<IndexMap<String, Vec<PlayVersion>>, serde_json::Error> {
     let entries: Vec<Entry> = serde_json::from_str(patches_json)?;
     let mut present: IndexSet<String> = IndexSet::new();
@@ -178,6 +231,7 @@ pub fn play_versions_of(patches_json: &str) -> Result<IndexMap<String, Vec<PlayV
     for entry in &entries {
         let claims = own_claims(entry);
         let mut starts: IndexSet<&str> = IndexSet::new();
+        let mut faces: IndexSet<&str> = IndexSet::new();
         for change in &entry.changes {
             match change.kind.as_str() {
                 "added" => {
@@ -190,6 +244,9 @@ pub fn play_versions_of(patches_json: &str) -> Result<IndexMap<String, Vec<PlayV
             }
             if starts_a_play_version(change) {
                 starts.insert(&change.id);
+            }
+            if changes_the_face(change) {
+                faces.insert(&change.id);
             }
             if let Some(name) = &change.name {
                 names.insert(change.id.clone(), name.clone());
@@ -206,13 +263,26 @@ pub fn play_versions_of(patches_json: &str) -> Result<IndexMap<String, Vec<PlayV
                     open.versions.push(entry.version.clone());
                     open.name = name;
                 }
-                _ => versions.push(PlayVersion {
-                    id: play_version_id(id, &entry.version),
-                    card: id.clone(),
-                    name,
-                    versions: vec![entry.version.clone()],
-                    live: false,
-                }),
+                previous => {
+                    // R5035000: v1 first; a new number where a line on the card moves its face, else the
+                    // next letters.
+                    let (iteration, iteration_letters) = match previous {
+                        None => (FIRST_ITERATION, String::new()),
+                        Some(previous) if faces.contains(id.as_str()) => {
+                            (previous.iteration + 1, String::new())
+                        }
+                        Some(previous) => (previous.iteration, next_letters(&previous.iteration_letters)),
+                    };
+                    versions.push(PlayVersion {
+                        id: play_version_id(id, &entry.version),
+                        card: id.clone(),
+                        name,
+                        versions: vec![entry.version.clone()],
+                        live: false,
+                        iteration,
+                        iteration_letters,
+                    });
+                }
             }
         }
     }
@@ -227,6 +297,65 @@ pub fn play_versions_of(patches_json: &str) -> Result<IndexMap<String, Vec<PlayV
 /// R4675000: the play versions of the shipped history this build compiles in, by card id.
 pub fn play_versions() -> IndexMap<String, Vec<PlayVersion>> {
     play_versions_of(include_str!("../patches/patches.json")).expect("patches.json reads as play versions")
+}
+
+/// R4681001: each shipped version's ship date, in `patches.json`'s order.
+pub fn patch_ship_dates() -> IndexMap<String, String> {
+    let entries: Vec<Entry> = serde_json::from_str(include_str!("../patches/patches.json"))
+        .expect("patches.json reads for ship dates");
+    entries
+        .into_iter()
+        .map(|entry| (entry.version, entry.date))
+        .collect()
+}
+
+/// R4681001: the player-facing balance lines of `version`, oldest first; none where it ships none.
+pub fn patch_balance_lines(version: &str) -> Vec<String> {
+    let entries: Vec<Entry> = serde_json::from_str(include_str!("../patches/patches.json"))
+        .expect("patches.json reads for balance lines");
+    entries
+        .into_iter()
+        .find(|entry| entry.version == version)
+        .map(|entry| entry.player.balance)
+        .unwrap_or_default()
+}
+
+/// R4681000: every named card's change lines, and its summed `fields` lengths, in shipped versions
+/// strictly after its first version's first (`after_firsts`), in one pass over the compiled history.
+/// A card whose first version is missing from the history counts nothing.
+pub fn change_totals_since(after_firsts: &IndexMap<String, String>) -> IndexMap<String, (usize, usize)> {
+    let entries: Vec<Entry> = serde_json::from_str(include_str!("../patches/patches.json"))
+        .expect("patches.json reads for change totals");
+    let mut passed: IndexSet<String> = IndexSet::new();
+    let mut out: IndexMap<String, (usize, usize)> =
+        after_firsts.keys().map(|card| (card.clone(), (0, 0))).collect();
+    for entry in &entries {
+        for (card, first) in after_firsts {
+            if entry.version == *first {
+                passed.insert(card.clone());
+            } else if passed.contains(card) {
+                for change in &entry.changes {
+                    if change.id == *card
+                        && let Some(held) = out.get_mut(card)
+                    {
+                        held.0 += 1;
+                        held.1 += change.fields.len();
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+/// R4681000: one card's change lines, and its summed `fields` lengths, in shipped versions strictly
+/// after `after_first` in file order: the changes between its first version and today.
+pub fn card_change_totals(card: &str, after_first: &str) -> (usize, usize) {
+    let mut after_firsts = IndexMap::new();
+    after_firsts.insert(card.to_string(), after_first.to_string());
+    change_totals_since(&after_firsts)
+        .shift_remove(card)
+        .unwrap_or((0, 0))
 }
 
 /// R4675000: the play versions of every card a deck can hold, in catalog order: the catalog's cards that
@@ -504,6 +633,135 @@ mod tests {
         // The branch's deck cards are the shipped ones and its own: the new card has none, and every card
         // the history holds still has contiguous versions.
         assert_every_held_card_contiguous(&deck_play_versions(), &branch, newest);
+    }
+
+    /// Each card's play versions over `json`, as their iterations' labels.
+    fn labels(json: &str) -> IndexMap<String, Vec<String>> {
+        play_versions_of(json)
+            .expect("reads")
+            .into_iter()
+            .map(|(id, versions)| (id, versions.iter().map(PlayVersion::iteration_label).collect()))
+            .collect()
+    }
+
+    #[test]
+    fn r5035000_a_cards_iterations_count_face_changes_and_letter_the_rest() {
+        let json = r#"[
+          { "version": "v1", "tier": "major", "plays": [], "changes": [
+            { "id": "core-001", "kind": "added" },
+            { "id": "core-001-2", "kind": "added" }
+          ] },
+          { "version": "v2", "tier": "micro", "plays": ["core-001"], "changes": [] },
+          { "version": "v3", "tier": "micro", "plays": [], "changes": [
+            { "id": "core-001", "kind": "changed", "fields": ["params"] }
+          ] },
+          { "version": "v4", "tier": "micro", "plays": [], "changes": [
+            { "id": "core-001", "kind": "changed", "fields": ["base.text"] }
+          ] },
+          { "version": "v5", "tier": "micro", "plays": ["core-001"], "changes": [
+            { "id": "core-001", "kind": "changed", "fields": ["cost"] }
+          ] },
+          { "version": "v6", "tier": "micro", "plays": ["core-001"], "changes": [
+            { "id": "core-001", "kind": "changed", "fields": ["tags", "dealsDamage"] }
+          ] },
+          { "version": "v7", "tier": "micro", "plays": ["core-001"], "changes": [
+            { "id": "core-001", "kind": "changed", "fields": ["radiant.text"] }
+          ] }
+        ]"#;
+        // A claim alone and a `params` line start play versions; the wording of v4 starts none.
+        assert_eq!(
+            spans(json)["core-001"],
+            runs(&[&["v1"], &["v2"], &["v3", "v4"], &["v5"], &["v6"], &["v7"]])
+        );
+        let labels = labels(json);
+        // v1 first; the claim and the `params` line letters; the cost a new number, the letters starting
+        // over; `tags` and `dealsDamage` a letter; Radiant text, claimed with it, a new number again.
+        assert_eq!(labels["core-001"], ["v1", "v1b", "v1c", "v2", "v2b", "v3"]);
+        // The token restarts with its card's family, but no line on the token moves its face.
+        assert_eq!(labels["core-001-2"], ["v1", "v1b", "v1c", "v1d", "v1e"]);
+    }
+
+    #[test]
+    fn r5035000_letters_run_past_z_to_aa() {
+        let claims: Vec<String> = (2..=27)
+            .map(|n| {
+                format!(r#"{{ "version": "v{n}", "tier": "micro", "plays": ["core-001"], "changes": [] }}"#)
+            })
+            .collect();
+        let json = format!(
+            r#"[
+              {{ "version": "v1", "tier": "major", "plays": [], "changes": [{{ "id": "core-001", "kind": "added" }}] }},
+              {}
+            ]"#,
+            claims.join(",")
+        );
+        let labels = &labels(&json)["core-001"];
+        assert_eq!(labels.len(), 27);
+        assert_eq!((labels[1].as_str(), labels[2].as_str()), ("v1b", "v1c"));
+        assert_eq!((labels[25].as_str(), labels[26].as_str()), ("v1z", "v1aa"));
+    }
+
+    #[test]
+    fn r5035000_every_shipped_deck_cards_first_iteration_is_v1_and_each_next_one_rises() {
+        let mut by_card: IndexMap<&str, Vec<&PlayVersion>> = IndexMap::new();
+        let versions = deck_play_versions();
+        for version in &versions {
+            by_card.entry(&version.card).or_default().push(version);
+        }
+        assert!(!by_card.is_empty());
+        for (card, versions) in &by_card {
+            let first = versions[0];
+            assert_eq!(
+                (first.iteration, first.iteration_letters.as_str()),
+                (FIRST_ITERATION, ""),
+                "{card}"
+            );
+            for pair in versions.windows(2) {
+                let (before, after) = (pair[0], pair[1]);
+                let expected = if after.iteration_letters.is_empty() {
+                    (before.iteration + 1, String::new())
+                } else {
+                    (before.iteration, next_letters(&before.iteration_letters))
+                };
+                assert_eq!(
+                    (after.iteration, after.iteration_letters.clone()),
+                    expected,
+                    "{card} at {}",
+                    after.first()
+                );
+            }
+            let labels: IndexSet<String> = versions.iter().map(|version| version.iteration_label()).collect();
+            assert_eq!(labels.len(), versions.len(), "{card}: {labels:?}");
+        }
+        // The history holds both kinds: a face changed, and a play alone.
+        assert!(versions.iter().any(|version| version.iteration > FIRST_ITERATION));
+        assert!(
+            versions
+                .iter()
+                .any(|version| !version.iteration_letters.is_empty())
+        );
+    }
+
+    // R4681000, R4681001: the Hall of Fame's dates, balance lines and change counts, read off the
+    // compiled `patches.json`.
+    #[test]
+    fn hall_dates_balance_and_totals_read_the_compiled_history() {
+        let dates = patch_ship_dates();
+        assert_eq!(dates.len(), crate::shipped_versions().len());
+        assert_eq!(dates.get("v0.1.0").map(String::as_str), Some("2026-09-18"));
+        let lines = patch_balance_lines("v0.1.0b");
+        assert!(
+            lines.iter().any(|line| line.contains("Taunt")),
+            "v0.1.0b names a balance change: {lines:?}"
+        );
+        assert!(patch_balance_lines("v0.0.0-made-up").is_empty());
+        // core-003 shipped in v0.1.0 and changed since (its wording among it), but nothing ships
+        // after the newest version.
+        let (lines, fields) = card_change_totals("core-003", "v0.1.0");
+        assert!(lines > 0, "core-003 changed since v0.1.0");
+        assert!(fields > 0, "its counted lines name fields");
+        assert_eq!(card_change_totals("core-003", crate::CATALOG_VERSION), (0, 0));
+        assert_eq!(card_change_totals("core-003", "v0.0.0-made-up"), (0, 0));
     }
 
     // R2529000: a patch a named system alone made one restarts no card's window but its own families'.

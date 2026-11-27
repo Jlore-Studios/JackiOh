@@ -126,11 +126,11 @@ const DATA_ONLY_FIELDS: ReadonlySet<string> = new Set(Object.entries(CARD_KEYS).
 
 const KNOWN_KEYS: ReadonlySet<string> = new Set(Object.keys(CARD_KEYS));
 
-/** A price in R432's words, an embiggen card's included (R1175000). */
+/** A price in R432's words, an embiggen card's included (R1175000), its Embiggened version by its premium (R5109001). */
 export function costText(cost: CardCost): string {
   if (typeof cost === "number") return `(${String(cost)}) Cost`;
   if (cost === "X") return "(X) Cost";
-  return `(${String(cost.base)}) Cost, Embiggened (${String(cost.embiggen)})`;
+  return `(${String(cost.base)}) Cost, Embiggened (+${String(cost.embiggen - cost.base)})`;
 }
 
 export function statsText(face: CardFace): string {

@@ -3,7 +3,7 @@
 // gravel bed, cracked earth, a tatami floor, a still lake), a needle of rock standing on its anchor; and the ink
 // world's buildings and garden stones, each standing on its anchor (a pagoda, a pavilion, a moon bridge, a shoji
 // panel, a vermilion gate, a well, a village house, a stone lantern) but the moon window, centred on it.
-// sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a palette.css name, none in Radiant's gold window; a
+// sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a SCENE_PALETTE name, none in Radiant's gold window; a
 // glow is a stack of translucent shapes, never a gradient; shapes are filled even-odd, so a hole is a second
 // sub-path and no two sub-paths of one shape overlap otherwise.
 

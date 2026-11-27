@@ -264,14 +264,14 @@ function stopsOf(body: string): Decls[] {
 type Selector = { base: string; pseudo: Pseudo };
 type Compiled = { selectors: Selector[]; decls: Decls; text: string };
 type Computed = { decls: Decls; inline: Decls };
-/** A sheet's rules, and by each class a selector names, the rules that name it (in sheet order). */
-type Index = { rules: Compiled[]; byClass: Map<string, number[]>; always: number[] };
+/** A sheet's rules, by each class a selector names the rules that name it (in sheet order), and its keyframes' bodies by name. */
+type Index = { rules: Compiled[]; byClass: Map<string, number[]>; always: number[]; bodies: ReadonlyMap<string, string> };
 
 const INDEXES = new WeakMap<Sheet, Index>();
 
 /**
  * A rule may apply to an element when it names one of the element's classes, a `data-fx` attribute or every child of
- * `.fx-dom`: the sheet's rules indexed that way, read once a sheet.
+ * `.fx-dom`: the sheet's rules indexed that way, and its keyframes' bodies, read once a sheet.
  */
 function indexOf(sheet: Sheet): Index {
   const known = INDEXES.get(sheet);
@@ -287,7 +287,7 @@ function indexOf(sheet: Sheet): Index {
       byClass.set(name, list);
     }
   });
-  const index = { rules, byClass, always };
+  const index = { rules, byClass, always, bodies: keyframeBodies(sheet) };
   INDEXES.set(sheet, index);
   return index;
 }
@@ -358,7 +358,7 @@ function lineage(el: Element): Element[] {
  */
 export function estimateLayers(sheet: Sheet, root: HTMLElement, view: LayerView): LayerPart[] {
   const index = indexOf(sheet);
-  const bodies = keyframeBodies(sheet);
+  const { bodies } = index;
   const cache = new Map<string, Computed>();
   const ids = new Map<Element, number>();
   const idOf = (el: Element): number => {

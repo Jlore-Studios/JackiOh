@@ -40,7 +40,7 @@
   min-height: 46px;
   padding: 8px 4px;
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   color: var(--text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -58,7 +58,7 @@
   top: 50%;
   width: 6px;
   height: 2px;
-  border-radius: 1px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
@@ -95,7 +95,7 @@
   content: "";
   width: 4px;
   height: 4px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--line-bright);
 }
 
@@ -106,7 +106,7 @@
   top: 5%;
   bottom: 5%;
   width: 2px;
-  border-radius: 1px;
+  border-radius: var(--radius-xs);
   background: var(--radiant);
   animation: code-field-blink 1s steps(1, end) infinite;
 }
@@ -122,7 +122,7 @@
 /* A selection: the input's own highlight is transparent (its text is), so the cells draw it, and
    the next keystroke visibly replaces what is marked. */
 .code-field__cell[data-selected="true"] {
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--you) 45%, transparent);
   color: var(--text);
 }
@@ -144,7 +144,7 @@
   margin: 0;
   padding: 0 12px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: transparent;
   -webkit-text-fill-color: transparent;
@@ -173,7 +173,7 @@
 
 /* Focus is shown on the segments instead, since the input draws nothing. */
 .code-field:focus-within .code-field__segments {
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   outline: 2px solid color-mix(in srgb, var(--radiant) 55%, transparent);
   outline-offset: 4px;
 }
@@ -195,7 +195,7 @@
 .code-field__hint {
   border-left: 3px solid var(--opponent);
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--opponent) 10%, var(--bg-sunken));
   color: var(--text);
   font-size: 13px;
@@ -353,12 +353,12 @@
 
 .tavern .code-field__segment {
   min-height: 54px;
-  border: 1px solid rgba(201, 149, 63, 0.45);
-  border-radius: 10px;
-  background: linear-gradient(180deg, #0b0704, var(--tavern-well));
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--pal-wood-950), var(--tavern-well));
   color: var(--tavern-gold-pale);
   font-size: clamp(16px, 4.4vw, 21px);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(251, 231, 176, 0.05);
+  box-shadow: inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent), 0 1px 0 color-mix(in srgb, var(--pal-brass-200) 5%, transparent);
   transition: border-color 140ms, box-shadow 140ms, background-color 140ms;
 }
 
@@ -368,35 +368,35 @@
 }
 
 .tavern .code-field__segment[data-state="partial"] {
-  border-color: rgba(243, 201, 105, 0.65);
+  border-color: color-mix(in srgb, var(--pal-brass-300) 65%, transparent);
 }
 
 .tavern .code-field__segment[data-state="complete"] {
-  border-color: color-mix(in srgb, var(--tavern-teal) 85%, black);
+  border-color: color-mix(in srgb, var(--tavern-teal) 85%, var(--pal-black));
   background:
-    linear-gradient(180deg, rgba(63, 182, 168, 0.18), rgba(63, 182, 168, 0.05)),
+    linear-gradient(180deg, color-mix(in srgb, var(--pal-verdigris-400) 18%, transparent), color-mix(in srgb, var(--pal-verdigris-400) 5%, transparent)),
     var(--tavern-well);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5), 0 0 12px rgba(63, 182, 168, 0.25);
+  box-shadow: inset 0 2px 6px color-mix(in srgb, var(--pal-black) 50%, transparent), 0 0 12px color-mix(in srgb, var(--pal-verdigris-400) 25%, transparent);
 }
 
 .tavern .code-field__segment[data-active="true"] {
   border-color: var(--tavern-gold);
   box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.65),
-    0 0 0 2px rgba(243, 201, 105, 0.3),
-    0 0 16px rgba(243, 201, 105, 0.25);
+    inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--pal-brass-300) 30%, transparent),
+    0 0 16px color-mix(in srgb, var(--pal-brass-300) 25%, transparent);
 }
 
 .tavern .code-field[data-problem] .code-field__segment[data-active="true"] {
   border-color: var(--tavern-danger);
   box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.65),
-    0 0 0 2px rgba(232, 102, 79, 0.3),
-    0 0 16px rgba(232, 102, 79, 0.25);
+    inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--pal-lacquer-400) 30%, transparent),
+    0 0 16px color-mix(in srgb, var(--pal-lacquer-400) 25%, transparent);
 }
 
 .tavern .code-field__cell[data-filled="false"]::before {
-  background: rgba(201, 149, 63, 0.5);
+  background: color-mix(in srgb, var(--pal-brass-500) 50%, transparent);
 }
 
 .tavern .code-field__cell[data-caret]::after {
@@ -404,7 +404,7 @@
 }
 
 .tavern .code-field__cell[data-selected="true"] {
-  background: rgba(243, 201, 105, 0.35);
+  background: color-mix(in srgb, var(--pal-brass-300) 35%, transparent);
   color: var(--tavern-parchment);
 }
 
@@ -419,8 +419,8 @@
 
 .tavern.app-shell .code-field__hint {
   border-left-color: var(--tavern-danger);
-  border-radius: 8px;
-  background: linear-gradient(90deg, rgba(232, 102, 79, 0.16), rgba(232, 102, 79, 0.05));
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pal-lacquer-400) 16%, transparent), color-mix(in srgb, var(--pal-lacquer-400) 5%, transparent));
   color: var(--tavern-parchment);
 }
 
@@ -454,7 +454,7 @@
 
 .tavern.app-shell .invite-screen__where {
   padding-top: 14px;
-  border-top: 1px solid rgba(201, 149, 63, 0.22);
+  border-top: 1px solid color-mix(in srgb, var(--pal-brass-500) 22%, transparent);
   color: color-mix(in srgb, var(--tavern-parchment) 66%, transparent);
 }
 
@@ -509,9 +509,9 @@
   width: 9px;
   height: 9px;
   transform: rotate(45deg);
-  border: 1px solid #1d3b37;
-  background: radial-gradient(circle at 35% 30%, #c6fff6, var(--tavern-teal) 55%, #1d5b54);
-  box-shadow: 0 0 8px rgba(63, 182, 168, 0.5);
+  border: 1px solid var(--pal-jade-900);
+  background: radial-gradient(circle at 35% 30%, #c6fff6, var(--tavern-teal) 55%, var(--pal-jade-700));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--pal-verdigris-400) 50%, transparent);
 }
 
 .tavern.app-shell .invite-screen__attempts[data-remaining="0"] {
@@ -519,9 +519,9 @@
 }
 
 .tavern.app-shell .invite-screen__attempts[data-remaining="0"]::before {
-  border-color: #5a1d14;
-  background: radial-gradient(circle at 35% 30%, #ffc2b2, var(--tavern-danger) 55%, #6d1a16);
-  box-shadow: 0 0 8px rgba(232, 102, 79, 0.5);
+  border-color: var(--pal-lacquer-900);
+  background: radial-gradient(circle at 35% 30%, #ffc2b2, var(--tavern-danger) 55%, var(--pal-lacquer-900));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--pal-lacquer-400) 50%, transparent);
 }
 
 /* A refusal and its wait read as one message: what happened, then how long. */
@@ -534,10 +534,10 @@
 .tavern.app-shell .invite-screen__refusal {
   gap: 4px;
   padding: 11px 14px;
-  border: 1px solid rgba(232, 102, 79, 0.35);
+  border: 1px solid color-mix(in srgb, var(--pal-lacquer-400) 35%, transparent);
   border-left: 3px solid var(--tavern-danger);
-  border-radius: 10px;
-  background: linear-gradient(90deg, rgba(232, 102, 79, 0.16), rgba(232, 102, 79, 0.05));
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pal-lacquer-400) 16%, transparent), color-mix(in srgb, var(--pal-lacquer-400) 5%, transparent));
 }
 
 .tavern.app-shell .invite-screen__refusal > .notice {

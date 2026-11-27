@@ -6,7 +6,7 @@ import type { PracticeReplaySetup } from "./PracticeReplaySetup";
 import type { PracticeReplaySummary } from "./PracticeReplaySummary";
 
 /**
- * R768: a finished free game, kept on the device.
+ * R768: a finished free game, or R5125000's Assault fight, kept on the device.
  */
 export type PracticeReplay = { catalog: string, versions?: number, config: PracticeConfig, 
 /**

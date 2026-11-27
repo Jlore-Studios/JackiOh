@@ -143,13 +143,13 @@
 }
 
 .cf[data-frame="border-filigree"] {
-  --cf-edge: linear-gradient(135deg, var(--trim-3), var(--trim-1) 16%, var(--trim-2) 30%, #ffffff 44%, var(--trim-3) 58%, #e6e9f0 76%, #9aa1b0);
+  --cf-edge: linear-gradient(135deg, var(--trim-3), var(--trim-1) 16%, var(--trim-2) 30%, var(--pal-white) 44%, var(--trim-3) 58%, #e6e9f0 76%, #9aa1b0);
   --cf-bezel: #e6e9f0;
 }
 
 .cf[data-frame="border-celestial"] {
   --cf-edge:
-    repeating-conic-gradient(from 2deg at 50% 50%, #ffffff 0 0.6deg, transparent 0.6deg 9deg),
+    repeating-conic-gradient(from 2deg at 50% 50%, var(--pal-white) 0 0.6deg, transparent 0.6deg 9deg),
     linear-gradient(160deg, var(--trim-1), var(--trim-2) 38%, var(--trim-3) 70%, #8f74ff);
   --cf-bezel: #b7a4ff;
 }
@@ -167,9 +167,9 @@
   padding: 1.7cqmin;
   border-radius: inherit;
   background-image: var(--cf-edge);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask: linear-gradient(var(--pal-black) 0 0) content-box, linear-gradient(var(--pal-black) 0 0);
   -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(var(--pal-black) 0 0) content-box, linear-gradient(var(--pal-black) 0 0);
   mask-composite: exclude;
   pointer-events: none;
 }
@@ -185,35 +185,35 @@
   inset: 0;
   padding: 2.4cqmin;
   border-radius: inherit;
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask: linear-gradient(var(--pal-black) 0 0) content-box, linear-gradient(var(--pal-black) 0 0);
   -webkit-mask-composite: xor;
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(var(--pal-black) 0 0) content-box, linear-gradient(var(--pal-black) 0 0);
   mask-composite: exclude;
   pointer-events: none;
 }
 
 .cf[data-frame="border-filigree"] .cf-scale::after {
   background:
-    radial-gradient(circle at 0 0, #ffffff 0 4cqmin, transparent 9cqmin),
-    radial-gradient(circle at 100% 0, #ffffff 0 4cqmin, transparent 9cqmin),
-    radial-gradient(circle at 0 100%, #ffffff 0 4cqmin, transparent 9cqmin),
-    radial-gradient(circle at 100% 100%, #ffffff 0 4cqmin, transparent 9cqmin),
+    radial-gradient(circle at 0 0, var(--pal-white) 0 4cqmin, transparent 9cqmin),
+    radial-gradient(circle at 100% 0, var(--pal-white) 0 4cqmin, transparent 9cqmin),
+    radial-gradient(circle at 0 100%, var(--pal-white) 0 4cqmin, transparent 9cqmin),
+    radial-gradient(circle at 100% 100%, var(--pal-white) 0 4cqmin, transparent 9cqmin),
     repeating-conic-gradient(from 0deg at 50% 50%, #ffffffcc 0 1.2deg, transparent 1.2deg 5deg),
-    linear-gradient(135deg, #e6e9f0, #9aa1b0 30%, #ffffff 50%, #7c8496 72%, #f4f6fb);
-  box-shadow: inset 0 0 0 0.5cqmin #ffffff;
+    linear-gradient(135deg, #e6e9f0, #9aa1b0 30%, var(--pal-white) 50%, #7c8496 72%, #f4f6fb);
+  box-shadow: inset 0 0 0 0.5cqmin var(--pal-white);
 }
 
 .cf[data-frame="border-celestial"] .cf-scale::after {
   background:
-    radial-gradient(circle at 50% 0, #ffffff 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
-    radial-gradient(circle at 0 50%, #ffffff 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
-    radial-gradient(circle at 100% 50%, #ffffff 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
-    radial-gradient(circle at 50% 100%, #ffffff 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
-    radial-gradient(circle at 0 0, #ffffff 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
-    radial-gradient(circle at 100% 0, #ffffff 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
-    radial-gradient(circle at 0 100%, #ffffff 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
-    radial-gradient(circle at 100% 100%, #ffffff 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
-    repeating-conic-gradient(from 7deg at 50% 50%, #ffffff 0 0.7deg, transparent 0.7deg 13deg),
+    radial-gradient(circle at 50% 0, var(--pal-white) 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
+    radial-gradient(circle at 0 50%, var(--pal-white) 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
+    radial-gradient(circle at 100% 50%, var(--pal-white) 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
+    radial-gradient(circle at 50% 100%, var(--pal-white) 0 0.8cqmin, #c9b8ff 1.4cqmin, transparent 3.2cqmin),
+    radial-gradient(circle at 0 0, var(--pal-white) 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
+    radial-gradient(circle at 100% 0, var(--pal-white) 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
+    radial-gradient(circle at 0 100%, var(--pal-white) 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
+    radial-gradient(circle at 100% 100%, var(--pal-white) 0 1.2cqmin, #b7a4ff 2.4cqmin, transparent 6cqmin),
+    repeating-conic-gradient(from 7deg at 50% 50%, var(--pal-white) 0 0.7deg, transparent 0.7deg 13deg),
     linear-gradient(160deg, #8f74ff, #2b1d6e 45%, #6a4bd6 75%, #c9b8ff);
   box-shadow: inset 0 0 0 0.4cqmin #c9b8ff;
 }
@@ -231,8 +231,8 @@
 
 .cf[data-finish="finish-linen"]::before {
   background:
-    repeating-linear-gradient(0deg, #ffffff14 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(90deg, #00000014 0 1px, transparent 1px 3px);
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--pal-white) 7.8%, transparent) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-black) 7.8%, transparent) 0 1px, transparent 1px 3px);
   mix-blend-mode: soft-light;
 }
 
@@ -243,7 +243,7 @@
 .cf[data-finish="finish-gilded-edge"]::before {
   box-shadow:
     inset 0 0 0 1px #e0b84f,
-    inset 0 0 0 2px #0000004d;
+    inset 0 0 0 2px color-mix(in srgb, var(--pal-black) 30.2%, transparent);
 }
 
 /* Parchment warms the print, its fibres faint and its edge aged; brushed steel lays fine lines and
@@ -262,8 +262,8 @@
 
 .cf[data-finish="finish-brushed-steel"]::before {
   background:
-    repeating-linear-gradient(0deg, #ffffff12 0 1px, transparent 1px 2px, #0000001a 2px 3px, transparent 3px 4px),
-    linear-gradient(100deg, transparent 25%, #ffffff26 42%, transparent 58%);
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--pal-white) 7.1%, transparent) 0 1px, transparent 1px 2px, color-mix(in srgb, var(--pal-black) 10.2%, transparent) 2px 3px, transparent 3px 4px),
+    linear-gradient(100deg, transparent 25%, color-mix(in srgb, var(--pal-white) 14.9%, transparent) 42%, transparent 58%);
   mix-blend-mode: overlay;
 }
 
@@ -293,7 +293,7 @@
     linear-gradient(8deg, transparent 70.2%, #120c18 70.4% 71.4%, transparent 71.6%),
     linear-gradient(-82deg, transparent 22.2%, #120c18 22.4% 23.4%, transparent 23.6%),
     linear-gradient(28deg, transparent 84.2%, #120c18 84.4% 85.4%, transparent 85.6%),
-    radial-gradient(120% 70% at 50% 18%, #ffffff40, transparent 70%),
+    radial-gradient(120% 70% at 50% 18%, color-mix(in srgb, var(--pal-white) 25.1%, transparent), transparent 70%),
     conic-gradient(from 20deg at 46% 54%, #b8304a 0 70deg, #d0902c 0 140deg, #2f8f50 0 200deg, #2a5cb0 0 270deg, #7a36b0 0);
 }
 
@@ -323,13 +323,13 @@
 
 .cf[data-finish="finish-obsidian"] .cf-scale {
   box-shadow:
-    inset 0 0 0 1px #000000,
+    inset 0 0 0 1px var(--pal-black),
     inset 0 0 0 2px #d8ceff66,
-    inset 0 3px 0 2px #ffffff26,
-    inset 0 -12px 18px #00000080;
+    inset 0 3px 0 2px color-mix(in srgb, var(--pal-white) 14.9%, transparent),
+    inset 0 -12px 18px color-mix(in srgb, var(--pal-black) 50.2%, transparent);
   background:
-    linear-gradient(118deg, transparent 6.5%, #ffffff59 8%, #ffffff1a 9.5%, transparent 11%),
-    linear-gradient(118deg, transparent 16%, #ffffff2e 21%, transparent 27%, transparent 63%, #ffffff1a 67%, transparent 72%),
+    linear-gradient(118deg, transparent 6.5%, color-mix(in srgb, var(--pal-white) 34.9%, transparent) 8%, color-mix(in srgb, var(--pal-white) 10.2%, transparent) 9.5%, transparent 11%),
+    linear-gradient(118deg, transparent 16%, color-mix(in srgb, var(--pal-white) 18%, transparent) 21%, transparent 27%, transparent 63%, color-mix(in srgb, var(--pal-white) 10.2%, transparent) 67%, transparent 72%),
     radial-gradient(90% 60% at 28% 0%, #7b5ce047, transparent 70%),
     radial-gradient(80% 50% at 82% 100%, #2a7bd633, transparent 70%),
     linear-gradient(172deg, #2e2838, #0a0810 45%, #020203);
@@ -339,7 +339,7 @@
   inset: 0 auto 0 -100%;
   width: 300%;
   border-radius: 0;
-  background: linear-gradient(90deg, transparent 41%, #b9a6ff14 44%, #ffffff38 49%, #9fe3ff12 52%, transparent 56%);
+  background: linear-gradient(90deg, transparent 41%, #b9a6ff14 44%, color-mix(in srgb, var(--pal-white) 22%, transparent) 49%, #9fe3ff12 52%, transparent 56%);
   transform: skewX(-18deg);
 }
 
@@ -351,9 +351,9 @@
 
 .cf[data-finish="finish-starlit"] .cf-scale {
   background:
-    radial-gradient(circle, #ffffffd9 0 0.5px, transparent 1px) 0 0 / 13px 17px,
+    radial-gradient(circle, color-mix(in srgb, var(--pal-white) 85.1%, transparent) 0 0.5px, transparent 1px) 0 0 / 13px 17px,
     radial-gradient(circle, #cfdcffb3 0 0.6px, transparent 1.2px) 6px 9px / 19px 23px,
-    radial-gradient(circle, #ffffff 0 0.8px, transparent 1.6px) 3px 4px / 31px 37px,
+    radial-gradient(circle, var(--pal-white) 0 0.8px, transparent 1.6px) 3px 4px / 31px 37px,
     radial-gradient(70% 45% at 72% 30%, #6a4bd640, transparent 70%),
     radial-gradient(60% 40% at 25% 75%, #2f6bd833, transparent 70%),
     linear-gradient(172deg, #2a3878, #141c48 40%, #070a20);
@@ -361,13 +361,13 @@
 
 .cf[data-finish="finish-starlit"]::before {
   background:
-    radial-gradient(circle at 5% 24%, #ffffff 0 0.8px, #c9d6ff99 1.4px, transparent 3.4px),
-    radial-gradient(circle at 95% 38%, #ffffff 0 0.8px, #c9d6ff99 1.4px, transparent 3.4px),
-    radial-gradient(circle at 4% 62%, #ffffff 0 0.7px, #e3d6ff99 1.2px, transparent 3px),
-    radial-gradient(circle at 96% 79%, #ffffff 0 0.9px, #c9d6ff99 1.6px, transparent 3.8px),
-    radial-gradient(circle at 12% 96%, #ffffff 0 0.7px, #e3d6ff99 1.2px, transparent 3px),
-    radial-gradient(circle at 88% 4%, #ffffff 0 0.9px, #c9d6ff99 1.6px, transparent 3.8px),
-    radial-gradient(circle at 50% 98%, #ffffff 0 0.7px, #c9d6ff99 1.2px, transparent 3px);
+    radial-gradient(circle at 5% 24%, var(--pal-white) 0 0.8px, #c9d6ff99 1.4px, transparent 3.4px),
+    radial-gradient(circle at 95% 38%, var(--pal-white) 0 0.8px, #c9d6ff99 1.4px, transparent 3.4px),
+    radial-gradient(circle at 4% 62%, var(--pal-white) 0 0.7px, #e3d6ff99 1.2px, transparent 3px),
+    radial-gradient(circle at 96% 79%, var(--pal-white) 0 0.9px, #c9d6ff99 1.6px, transparent 3.8px),
+    radial-gradient(circle at 12% 96%, var(--pal-white) 0 0.7px, #e3d6ff99 1.2px, transparent 3px),
+    radial-gradient(circle at 88% 4%, var(--pal-white) 0 0.9px, #c9d6ff99 1.6px, transparent 3.8px),
+    radial-gradient(circle at 50% 98%, var(--pal-white) 0 0.7px, #c9d6ff99 1.2px, transparent 3px);
   box-shadow:
     inset 0 0 0 1px #c9d6ff40,
     inset 0 0 1.2em #5b6cff2e;
@@ -421,7 +421,7 @@
 }
 
 .cf[data-full-art="true"][data-finish="finish-gilded-edge"] .cf-scale::before {
-  background: linear-gradient(135deg, var(--pal-brass-600), var(--pal-gold-400) 28%, var(--pal-gold-200) 48%, var(--pal-brass-500) 68%, var(--pal-brass-600));
+  background: linear-gradient(135deg, var(--pal-brass-600), var(--pal-gold-400) 28%, #fde68a 48%, var(--pal-brass-500) 68%, var(--pal-brass-600));
 }
 
 /* ------------------------------------------------------------------------------ foils --- */
@@ -439,7 +439,7 @@
 }
 
 .cf[data-cosmetic-foil="foil-holo-sweep"] .cf-art::after {
-  background: linear-gradient(90deg, transparent 0%, #dff4ff59 35%, #ffffff80 50%, #c8fff059 65%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, #dff4ff59 35%, color-mix(in srgb, var(--pal-white) 50.2%, transparent) 50%, #c8fff059 65%, transparent 100%);
 }
 
 .cf[data-cosmetic-foil="foil-rainbow"] .cf-art::after {
@@ -451,15 +451,15 @@
   background:
     linear-gradient(32deg, transparent 47%, #e6f6ffb3 48%, transparent 49%),
     linear-gradient(-58deg, transparent 61%, #e6f6ff99 62%, transparent 63%),
-    linear-gradient(160deg, #bfe8ff33, #ffffff14);
+    linear-gradient(160deg, #bfe8ff33, color-mix(in srgb, var(--pal-white) 7.8%, transparent));
 }
 
 /* Glitter is three grids of white flecks; sunburst warm rays from below the window; aurora green
    and violet curtains, fading downward, one period of which drifts by. */
 .cf[data-cosmetic-foil="foil-glitter"] .cf-art::after {
   background:
-    radial-gradient(circle, #ffffff 0 0.9px, #ffffff66 1.4px, transparent 2.6px) 19px 9px / 41px 37px,
-    radial-gradient(circle, #ffffff 0 0.6px, transparent 1.2px) 3px 5px / 17px 23px,
+    radial-gradient(circle, var(--pal-white) 0 0.9px, color-mix(in srgb, var(--pal-white) 40%, transparent) 1.4px, transparent 2.6px) 19px 9px / 41px 37px,
+    radial-gradient(circle, var(--pal-white) 0 0.6px, transparent 1.2px) 3px 5px / 17px 23px,
     radial-gradient(circle, #e6f2ffd9 0 0.5px, transparent 1.1px) 11px 2px / 23px 13px,
     radial-gradient(circle, #fff3d1d9 0 0.7px, transparent 1.4px) 7px 13px / 29px 19px,
     radial-gradient(circle, #f0e6ffcc 0 0.5px, transparent 1px) 2px 17px / 13px 31px;
@@ -474,8 +474,8 @@
 .cf[data-cosmetic-foil="foil-aurora"] .cf-art::after {
   width: 200%;
   background: repeating-linear-gradient(90deg, #3dffb000 0%, #3dffb059 5%, #46d9ff47 10%, #a66bff40 16%, #3dffb000 25%);
-  -webkit-mask-image: linear-gradient(180deg, #000 10%, #0009 55%, transparent 95%);
-  mask-image: linear-gradient(180deg, #000 10%, #0009 55%, transparent 95%);
+  -webkit-mask-image: linear-gradient(180deg, var(--pal-black) 10%, color-mix(in srgb, var(--pal-black) 60%, transparent) 55%, transparent 95%);
+  mask-image: linear-gradient(180deg, var(--pal-black) 10%, color-mix(in srgb, var(--pal-black) 60%, transparent) 55%, transparent 95%);
 }
 
 /* Galaxy and void shimmer turn, so their layer is a square wider than the window's diagonal on any
@@ -489,13 +489,13 @@
   aspect-ratio: 1;
   translate: -50% -50%;
   background:
-    radial-gradient(circle, #ffffff 0 0.8px, transparent 1.6px) 13px 7px / 53px 47px,
-    radial-gradient(circle, #ffffffd9 0 0.6px, transparent 1.2px) 3px 11px / 23px 19px,
+    radial-gradient(circle, var(--pal-white) 0 0.8px, transparent 1.6px) 13px 7px / 53px 47px,
+    radial-gradient(circle, color-mix(in srgb, var(--pal-white) 85.1%, transparent) 0 0.6px, transparent 1.2px) 3px 11px / 23px 19px,
     radial-gradient(circle, #d8c8ffb3 0 0.5px, transparent 1.1px) 17px 2px / 37px 31px,
     radial-gradient(circle closest-side, #fff0fa66 0 4%, #c86bff40 12%, transparent 30%),
     repeating-conic-gradient(from 0deg, #7b5cff40 0 30deg, #ff5fd22e 60deg, #3fb2ff2e 90deg, #7b5cff40 120deg);
-  -webkit-mask-image: radial-gradient(circle closest-side, #000 18%, #0008 50%, transparent 100%);
-  mask-image: radial-gradient(circle closest-side, #000 18%, #0008 50%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle closest-side, var(--pal-black) 18%, color-mix(in srgb, var(--pal-black) 53.3%, transparent) 50%, transparent 100%);
+  mask-image: radial-gradient(circle closest-side, var(--pal-black) 18%, color-mix(in srgb, var(--pal-black) 53.3%, transparent) 50%, transparent 100%);
 }
 
 /* Molten gold is gold flowing down the window in bands, one period of which the motion gate moves,
@@ -519,8 +519,8 @@
   aspect-ratio: 1;
   translate: -50% -50%;
   background: conic-gradient(from 0deg, #00e5ff80, #7b2cff33 25%, #ff3dc880 50%, #2a00ff33 75%, #00e5ff80);
-  -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, #000 44%);
-  mask-image: radial-gradient(circle closest-side, transparent 20%, #000 44%);
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 20%, var(--pal-black) 44%);
+  mask-image: radial-gradient(circle closest-side, transparent 20%, var(--pal-black) 44%);
 }
 
 .cf[data-cosmetic-foil="foil-molten-gold"] .cf-art::before,
@@ -551,19 +551,19 @@
 .cf-back[data-card-back="card-back-lacquer"],
 .pile[data-card-back="card-back-lacquer"] {
   --card-back-look:
-    radial-gradient(circle at 30% 20%, rgb(255 255 255 / 0.22), transparent 42%),
+    radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--pal-white) 22%, transparent), transparent 42%),
     repeating-linear-gradient(45deg, #7a1420 0 4px, #5e0f19 4px 8px), #5e0f19;
 }
 
 .cf-back[data-card-back="card-back-starfield"],
 .pile[data-card-back="card-back-starfield"] {
   --card-back-look:
-    radial-gradient(2px 2px at 20% 28%, #ffffff, transparent),
+    radial-gradient(2px 2px at 20% 28%, var(--pal-white), transparent),
     radial-gradient(1.5px 1.5px at 72% 18%, #cfe3ff, transparent),
-    radial-gradient(2px 2px at 38% 72%, #ffffff, transparent),
+    radial-gradient(2px 2px at 38% 72%, var(--pal-white), transparent),
     radial-gradient(1.5px 1.5px at 84% 64%, #cfe3ff, transparent),
-    radial-gradient(1.5px 1.5px at 12% 82%, #ffffff, transparent),
-    radial-gradient(1.5px 1.5px at 60% 44%, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 12% 82%, var(--pal-white), transparent),
+    radial-gradient(1.5px 1.5px at 60% 44%, var(--pal-white), transparent),
     radial-gradient(2px 2px at 90% 90%, #cfe3ff, transparent),
     radial-gradient(circle at 50% 50%, #2a3f94, #060a20);
 }
@@ -574,22 +574,22 @@
 .pile[data-card-back="card-back-stinkyscape"] {
   --card-back-look:
     radial-gradient(2px 2px at 20% 28%, var(--pal-white), transparent),
-    radial-gradient(1.5px 1.5px at 72% 18%, var(--pal-violet-300), transparent),
+    radial-gradient(1.5px 1.5px at 72% 18%, #c4b5fd, transparent),
     radial-gradient(2px 2px at 38% 72%, var(--pal-white), transparent),
-    radial-gradient(1.5px 1.5px at 84% 64%, var(--pal-sky-300), transparent),
+    radial-gradient(1.5px 1.5px at 84% 64%, #7dd3fc, transparent),
     radial-gradient(1.5px 1.5px at 12% 82%, var(--pal-white), transparent),
-    radial-gradient(1.5px 1.5px at 60% 44%, var(--pal-orange-400), transparent),
-    radial-gradient(2px 2px at 90% 90%, var(--pal-violet-300), transparent),
+    radial-gradient(1.5px 1.5px at 60% 44%, #fb923c, transparent),
+    radial-gradient(2px 2px at 90% 90%, #c4b5fd, transparent),
     radial-gradient(60% 45% at 30% 30%, color-mix(in srgb, var(--pal-blue-600) 45%, transparent), transparent 70%),
-    radial-gradient(55% 50% at 72% 66%, color-mix(in srgb, var(--pal-violet-500) 40%, transparent), transparent 70%),
+    radial-gradient(55% 50% at 72% 66%, color-mix(in srgb, #8b5cf6 40%, transparent), transparent 70%),
     radial-gradient(circle at 50% 50%, var(--pal-slate-900), var(--pal-black));
 }
 
 .cf-back[data-card-back="card-back-blueprint"],
 .pile[data-card-back="card-back-blueprint"] {
   --card-back-look:
-    linear-gradient(rgb(255 255 255 / 0.18) 1px, transparent 1px) 0 0 / 10px 10px,
-    linear-gradient(90deg, rgb(255 255 255 / 0.18) 1px, transparent 1px) 0 0 / 10px 10px, #1f5fa8;
+    linear-gradient(color-mix(in srgb, var(--pal-white) 18%, transparent) 1px, transparent 1px) 0 0 / 10px 10px,
+    linear-gradient(90deg, color-mix(in srgb, var(--pal-white) 18%, transparent) 1px, transparent 1px) 0 0 / 10px 10px, #1f5fa8;
 }
 
 /* Crimson damask: tone-on-tone medallions on a diamond ground. Tidal: rows of wave scallops. Tarot:
@@ -597,7 +597,7 @@
 .cf-back[data-card-back="card-back-crimson-damask"],
 .pile[data-card-back="card-back-crimson-damask"] {
   --card-back-look:
-    radial-gradient(circle at 30% 20%, #ffffff1f, transparent 45%),
+    radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--pal-white) 12.2%, transparent), transparent 45%),
     radial-gradient(ellipse 6px 9px at 50% 50%, #c23a52 0 35%, #9a1c34 40% 75%, transparent 80%) 0 0 / 24px 30px,
     radial-gradient(ellipse 3px 4px at 50% 50%, #b02a44 0 60%, transparent 75%) 12px 15px / 24px 30px,
     conic-gradient(from 45deg at 50% 50%, #7a1024 0 25%, #680c1e 0 50%, #7a1024 0 75%, #680c1e 0) 0 0 / 24px 30px,
@@ -623,10 +623,10 @@
     repeating-conic-gradient(from 0deg at 50% 50%, #e2c27a66 0 6deg, transparent 6deg 30deg) 50% 2% / 30% 20% no-repeat,
     radial-gradient(circle at 44% 50%, #1d1145 0 13%, transparent 14%) 50% 98% / 30% 20% no-repeat,
     radial-gradient(circle at 50% 50%, #ece4cc 0 14%, transparent 15%) 50% 98% / 30% 20% no-repeat,
-    radial-gradient(1.5px 1.5px at 22% 30%, #ffffff, transparent),
-    radial-gradient(1px 1px at 76% 26%, #ffffff, transparent),
-    radial-gradient(1.5px 1.5px at 18% 70%, #ffffff, transparent),
-    radial-gradient(1px 1px at 82% 74%, #ffffff, transparent),
+    radial-gradient(1.5px 1.5px at 22% 30%, var(--pal-white), transparent),
+    radial-gradient(1px 1px at 76% 26%, var(--pal-white), transparent),
+    radial-gradient(1.5px 1.5px at 18% 70%, var(--pal-white), transparent),
+    radial-gradient(1px 1px at 82% 74%, var(--pal-white), transparent),
     linear-gradient(180deg, #2d1b5c, #170d36 60%, #1f1247);
 }
 
@@ -656,7 +656,7 @@
 .cf-back[data-card-back="card-back-nebula"],
 .pile[data-card-back="card-back-nebula"] {
   --card-back-look:
-    radial-gradient(circle, #ffffffe6 0 0.7px, transparent 1.3px) 0 0 / 17px 19px,
+    radial-gradient(circle, color-mix(in srgb, var(--pal-white) 90.2%, transparent) 0 0.7px, transparent 1.3px) 0 0 / 17px 19px,
     radial-gradient(circle, #cfe3ffb3 0 0.6px, transparent 1.2px) 8px 11px / 23px 29px,
     radial-gradient(60% 45% at 28% 30%, #ff5fd259, transparent 70%),
     radial-gradient(55% 50% at 74% 62%, #3fc8ff4d, transparent 70%),
@@ -719,7 +719,7 @@
     [data-card-back="card-back-jlorious"]
   ) {
   background:
-    linear-gradient(rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.5)),
+    linear-gradient(color-mix(in srgb, var(--pal-black) 50%, transparent), color-mix(in srgb, var(--pal-black) 50%, transparent)),
     var(--card-back-look);
 }
 
@@ -776,7 +776,7 @@
 }
 
 .cf-back[data-card-back="card-back-nebula"] .cf-back-emblem circle:last-of-type {
-  fill: #ffffff;
+  fill: var(--pal-white);
 }
 
 .cf-back[data-card-back="card-back-nebula"] .cf-back-emblem circle:not(:last-of-type) {

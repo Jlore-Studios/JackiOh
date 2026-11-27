@@ -31,7 +31,8 @@ use jackioh_engine::{
 };
 
 use crate::candidates::{
-    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of, wall_switches,
+    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, front_value, side_of,
+    wall_switches,
 };
 use crate::config::{AI_EVAL, AI_GUESS_SEED, AI_REPLY};
 use crate::evaluate::{
@@ -41,7 +42,7 @@ use crate::evaluate::{
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
     AnswersTried, LineStatus, SimStep, best_auto_answer, charge_announced, line_status, note_sim_panic,
-    simulate, static_score, surcharge_nodes,
+    simulate, surcharge_nodes,
 };
 use crate::types::NodeCounter;
 
@@ -336,28 +337,18 @@ fn ranked_attacks(
     face_is_lethal: bool,
     prices: &Prices,
 ) -> Vec<ActionBody> {
-    let hero = format!("hero-{}", seat.as_str());
-    let mut ranked: Vec<(ActionBody, f64)> = Vec::new();
-    for action in legal.iter().cloned() {
-        let ActionBody::Attack {
-            attacker_id,
-            target_id,
-        } = &action
-        else {
-            continue;
-        };
-        let Some(attacker) = find_instance(state, attacker_id) else {
-            continue;
-        };
-        let value = if *target_id == hero {
-            face_value(state, attacker, seat, face_is_lethal)
-        } else {
-            trade_value(state, attacker, target_id, prices).value
-        };
-        if value > 0.0 {
-            ranked.push((action, value));
-        }
-    }
+    // The attacker's own read of each hit (`front_value`): anything else, and a hit worth nothing, is left out.
+    let attacker_side = seat.opponent();
+    let mut ranked: Vec<(ActionBody, f64)> = legal
+        .iter()
+        .map(|action| {
+            (
+                action.clone(),
+                front_value(state, attacker_side, action, face_is_lethal, prices),
+            )
+        })
+        .filter(|(_, value)| *value > 0.0)
+        .collect();
     ranked.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     ranked.into_iter().map(|(action, _)| action).collect()
 }
@@ -561,7 +552,7 @@ fn best_try(
 }
 
 /// Where a visible activation is aimed, in the order a reply step tries them.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum Aim {
     /// At the seat's hero, where a lethal one is.
     SeatHero,
@@ -651,7 +642,7 @@ fn aimed_worth(worths: &[(&str, f64)], action: &ActionBody) -> f64 {
 /// The order a reply step tries `tries` (the visible activations, in `legal_actions` order) in, before
 /// the cut. `legal_actions` lists the activating side's own targets first and each source's targets
 /// lane by lane, so a cut of that order would leave the seat's hero, its fifth lane and a second source
-/// or ability out of reach. R4515000, with `spread`:
+/// or ability out of reach. R4515000:
 /// 1. every try aimed at the seat's hero, in legal order, each of its Tribute sets included;
 /// 2. then the tries aimed at a card of the seat's, one per pick (`pick_of`), dealt round-robin over
 ///    each source and ability (`source_of`) in legal order: each one's best target, then each one's
@@ -660,20 +651,13 @@ fn aimed_worth(worths: &[(&str, f64)], action: &ActionBody) -> f64 {
 /// 3. then the later Tribute sets of those picks, in legal order;
 /// 4. then every other try, in legal order.
 ///
-/// Without `spread` they are sorted by `aim_of` alone, as before R4515000. Either reads only the tries'
-/// targets and the seat's own Units (R185).
+/// It reads only the tries' targets and the seat's own Units (R185).
 fn ordered_tries(
     state: &GameState,
     seat: PlayerId,
-    mut tries: Vec<ActionBody>,
-    spread: bool,
+    tries: Vec<ActionBody>,
     prices: &Prices,
 ) -> Vec<ActionBody> {
-    if !spread {
-        // Stable, so each aim keeps legal_actions order.
-        tries.sort_by_key(|action| aim_of(state, seat, action));
-        return tries;
-    }
     // Built at the first try aimed at a card of the seat's, so a step with none reads no unit.
     let mut worths: Option<Vec<(&str, f64)>> = None;
     let mut ordered: Vec<ActionBody> = Vec::with_capacity(tries.len());
@@ -727,7 +711,6 @@ fn visible_tries(
     seat: PlayerId,
     legal: &[ActionBody],
     hidden: &IndexSet<String>,
-    spread: bool,
     prices: &Prices,
 ) -> Vec<ActionBody> {
     let tries: Vec<ActionBody> = legal
@@ -735,7 +718,7 @@ fn visible_tries(
         .filter(|action| visible_source(state, hidden, action))
         .cloned()
         .collect();
-    let mut tries = ordered_tries(state, seat, tries, spread, prices);
+    let mut tries = ordered_tries(state, seat, tries, prices);
     tries.truncate(AI_REPLY.visible_activations.max(0) as usize);
     tries
 }
@@ -750,7 +733,7 @@ pub(crate) fn visible_activation(
     counter: &dyn NodeCounter,
     prices: &Prices,
 ) -> Known {
-    let tries = visible_tries(state, seat, legal, hidden, AI_REPLY.spread_activations, prices);
+    let tries = visible_tries(state, seat, legal, hidden, prices);
     best_try(state, seat.opponent(), &tries, false, counter, prices)
 }
 
@@ -909,19 +892,6 @@ pub fn simulate_reply(
     hidden: &IndexSet<String>,
     prices: &Prices,
 ) -> Option<GameState> {
-    simulate_reply_with(state, seat, counter, hidden, AI_REPLY.open_lethal, prices)
-}
-
-/// `simulate_reply` with the open-lethal switch given (`AI_REPLY.open_lethal`, #1634), for tests and
-/// screens.
-pub fn simulate_reply_with(
-    state: &GameState,
-    seat: PlayerId,
-    counter: &dyn NodeCounter,
-    hidden: &IndexSet<String>,
-    open_lethal: bool,
-    prices: &Prices,
-) -> Option<GameState> {
     let opp = seat.opponent();
     let mut current = state.clone();
     // R4810000: the known plays and visible Activates made so far, held to `AI_REPLY.play_steps`.
@@ -966,37 +936,31 @@ pub fn simulate_reply_with(
         let legal = legal_actions(&current, opp);
         // R4810000: past `AI_REPLY.play_steps` known plays and Activates a step tries neither, so the
         // attacks keep the rest of the turn's steps.
+        let mut tried = Known::Nothing;
         if plays < AI_REPLY.play_steps {
-            match known_play(&current, seat, &legal, hidden, counter, prices) {
-                Known::Cut => return None,
-                Known::Played(played) => {
-                    current = *played;
-                    plays += 1;
-                    continue;
-                }
-                Known::Nothing => {}
+            tried = known_play(&current, seat, &legal, hidden, counter, prices);
+            if matches!(tried, Known::Nothing) {
+                tried = visible_activation(&current, seat, &legal, hidden, counter, prices);
             }
-            match visible_activation(&current, seat, &legal, hidden, counter, prices) {
-                Known::Cut => return None,
-                Known::Played(played) => {
-                    current = *played;
-                    plays += 1;
-                    continue;
-                }
-                Known::Nothing => {}
+            if matches!(tried, Known::Played(_)) {
+                plays += 1;
             }
         }
-        match deft_switch(&current, seat, &legal, counter, prices) {
+        if matches!(tried, Known::Nothing) {
+            tried = deft_switch(&current, seat, &legal, counter, prices);
+        }
+        match tried {
             Known::Cut => return None,
-            Known::Played(switched) => {
-                current = *switched;
+            Known::Played(played) => {
+                current = *played;
                 continue;
             }
             Known::Nothing => {}
         }
 
-        // #1634: one board read per step: do the attacks left reach the face together?
-        let face_is_lethal = open_lethal && ready_gap(&current, opp) <= 0.0;
+        // #1634, R5027000: one board read per step: do the attacks left reach the face together? Then
+        // every hit on the hero is the win, so the face goes first.
+        let face_is_lethal = ready_gap(&current, opp) <= 0.0;
         let attack = ranked_attacks(&current, seat, &legal, face_is_lethal, prices)
             .into_iter()
             .next();
@@ -1049,11 +1013,9 @@ pub fn reply_score(
     prices: &Prices,
 ) -> Option<f64> {
     let status = line_status(end, seat, root_turn);
-    if status == LineStatus::Over {
-        return Some(static_score(end, seat, root_turn, prices));
-    }
-    // A line that stopped on the seat's own prompt keeps its static score, the hand eval's.
-    if status == LineStatus::Open {
+    // A line that ended the game, or stopped on the seat's own prompt, keeps its static score, the
+    // hand eval's.
+    if matches!(status, LineStatus::Over | LineStatus::Open) {
         return Some(evaluate_priced(end, seat, NextSwing::Enemy, &AI_EVAL, prices));
     }
     let unspent = if status == LineStatus::Passed {
@@ -1227,6 +1189,43 @@ mod tests {
         let expected = unit_worth(s.state(), vanilla, &AI_EVAL, Prices::NONE)
             - (unit_worth(s.state(), barker, &AI_EVAL, Prices::NONE) - barker_return());
         assert!((trade.value - expected).abs() < 1e-9, "{}", trade.value);
+    }
+
+    /// M #86 Mayor Medinamogger, a 5/4 whose aura draws every target, an attack's among them (R1200).
+    const MAYOR: &str = "meditative-086";
+
+    /// R4792000: p2's ready Mayor facing p1 at 5 health with no unit. `legal_actions` lists its attack
+    /// with the target the engine draws, which can only be p1's hero: the static trader takes it, so the
+    /// reply ends the game, where it used to price the attack at nothing and end its turn.
+    #[test]
+    fn r4792000_the_reply_swings_a_drawn_attack_and_ends_the_game() {
+        jackioh_cards::register_all();
+        let s = scenario(json!({
+            "active": "p2",
+            "p1": { "health": 5 },
+            "p2": { "field": [MAYOR] },
+        }));
+        let state = s.state();
+        let legal = legal_actions(state, PlayerId::P2);
+        let drawn = ActionBody::Attack {
+            attacker_id: s.card(MAYOR).id.clone(),
+            target_id: jackioh_engine::config::RANDOM_ATTACK_TARGET.to_string(),
+        };
+        assert!(legal.contains(&drawn), "{legal:?}");
+        let ranked = ranked_attacks(state, PlayerId::P1, &legal, false, Prices::NONE);
+        assert_eq!(ranked, vec![drawn]);
+        let after = simulate_reply(
+            state,
+            PlayerId::P1,
+            &create_node_counter(200, None),
+            &IndexSet::new(),
+            Prices::NONE,
+        )
+        .expect("the reply is not cut");
+        assert_eq!(
+            after.result.and_then(|result| result.winner.player()),
+            Some(PlayerId::P2)
+        );
     }
 
     #[test]
@@ -1762,14 +1761,13 @@ mod tests {
             .unwrap_or_else(|| panic!("{source} at {target:?} paid by {tributes:?} is legal: {legal:?}"))
     }
 
-    /// `p2`'s visible tries at the seat p1, `spread` or not.
-    fn tries_of(state: &GameState, spread: bool) -> Vec<ActionBody> {
+    /// `p2`'s visible tries at the seat p1.
+    fn tries_of(state: &GameState) -> Vec<ActionBody> {
         visible_tries(
             state,
             PlayerId::P1,
             &legal_actions(state, PlayerId::P2),
             &hidden_card_ids(state, PlayerId::P1),
-            spread,
             Prices::NONE,
         )
     }
@@ -1778,7 +1776,7 @@ mod tests {
     /// the first Cannon's at lanes 1 to 4; now each Cannon's is at the Greaser first, then each one's at
     /// lane 1 (equal worths keep legal order).
     #[test]
-    fn r4515000_spread_deals_both_cannons_at_the_lane_5_unit_and_off_keeps_the_first_cannons_lanes() {
+    fn r4515000_both_cannons_are_dealt_at_the_lane_5_unit_first() {
         let s = p2_to_act(
             json!({ "field": row(json!({ "def": VANILLA, "statsOverride": { "attack": 3, "health": 6 } })) }),
             json!({ "field": [{ "def": CANNON_V3, "lane": 1 }, { "def": CANNON_V4, "lane": 2 }] }),
@@ -1805,11 +1803,7 @@ mod tests {
             )
         };
         assert_eq!(
-            tries_of(state, false),
-            vec![at(&v3, 1), at(&v3, 2), at(&v3, 3), at(&v3, 4)]
-        );
-        assert_eq!(
-            tries_of(state, true),
+            tries_of(state),
             vec![at(&v3, 5), at(&v4, 5), at(&v3, 1), at(&v4, 1)]
         );
     }
@@ -1873,7 +1867,7 @@ mod tests {
             )
         };
 
-        let ordered = ordered_tries(state, PlayerId::P1, tries, true, Prices::NONE);
+        let ordered = ordered_tries(state, PlayerId::P1, tries, Prices::NONE);
         assert_eq!(ordered[..2], at_hero[..]);
         assert_eq!(ordered[2..5], [at(3, &first), at(2, &first), at(1, &first)]);
         let waits = ordered
@@ -1882,43 +1876,33 @@ mod tests {
             .expect("the second set's hit on the Greaser is still tried");
         assert!(waits > 4, "{waits}");
 
-        assert_eq!(tries_of(state, true), ordered[..4]);
-        let mut off = at_hero.clone();
-        off.extend([at(1, &first), at(2, &first)]);
-        assert_eq!(tries_of(state, false), off);
+        assert_eq!(tries_of(state), ordered[..4]);
     }
 
-    /// R4515000: a Cannon v5 facing four 4/4s and a Greaser in lane 5 is tried four times either way, one
-    /// node each; only the spread tries the lane-5 Greaser, so only then does the reply destroy it. (A
+    /// R4515000: a Cannon v5 facing four 4/4s and a Greaser in lane 5 is tried four times, one node each,
+    /// and the reply destroys the lane-5 Greaser. (A
     /// Cannon v4 until issue #4783 took its damage to 6, which leaves a 7/7 standing.)
     #[test]
-    fn r4515000_a_step_spends_the_same_nodes_on_and_off_and_only_the_spread_reaches_the_lane_5_unit() {
+    fn r4515000_a_step_tries_four_uses_and_destroys_the_lane_5_unit() {
         let s = p2_to_act(
             json!({ "field": row(json!(VANILLA)) }),
             json!({ "field": [CANNON_V5] }),
         );
         let state = s.state();
         let greaser = s.card(GREASER).id.clone();
-        let mut spent: Vec<usize> = Vec::new();
-        for spread in [true, false] {
-            let tries = tries_of(state, spread);
-            assert_eq!(tries.len(), AI_REPLY.visible_activations as usize, "{spread}");
-            let counter = create_node_counter(20, None);
-            let Known::Played(after) = best_try(state, PlayerId::P2, &tries, false, &counter, Prices::NONE)
-            else {
-                panic!("{spread}: the Cannon fires");
-            };
-            spent.push(counter.used());
-            let left = active_units_of(&after, PlayerId::P1);
-            let stands = left.iter().any(|unit| unit.id == greaser);
-            if spread {
-                assert!(!stands, "the spread destroys the Greaser");
-            } else {
-                assert!(stands, "the first four lanes leave the Greaser");
-                assert_eq!(left.len(), 4);
-            }
-        }
-        assert_eq!(spent[0], spent[1]);
+        let tries = tries_of(state);
+        assert_eq!(tries.len(), AI_REPLY.visible_activations as usize);
+        let counter = create_node_counter(20, None);
+        let Known::Played(after) = best_try(state, PlayerId::P2, &tries, false, &counter, Prices::NONE)
+        else {
+            panic!("the Cannon fires");
+        };
+        assert_eq!(counter.used(), tries.len(), "one node a try");
+        let left = active_units_of(&after, PlayerId::P1);
+        assert!(
+            !left.iter().any(|unit| unit.id == greaser),
+            "the Greaser is destroyed"
+        );
     }
 
     /// R4515000, R185: the tries read only the visible sources and the seat's own Units, so a hand card
@@ -1933,8 +1917,6 @@ mod tests {
         let mut twin = state.clone();
         twin.players[PlayerId::P2].hand[0].def_id = CANNON_V3.to_string();
         assert!(hidden_card_ids(state, PlayerId::P1).contains(&state.players[PlayerId::P2].hand[0].id));
-        for spread in [true, false] {
-            assert_eq!(tries_of(state, spread), tries_of(&twin, spread), "{spread}");
-        }
+        assert_eq!(tries_of(state), tries_of(&twin));
     }
 }

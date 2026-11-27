@@ -210,11 +210,11 @@
 
 /* The badge's glyph draws in `currentColor` (NodeIcon.tsx), colored by node kind (#3229). */
 .dungeon-run-map__node[data-kind="fight"] {
-  --node-color: var(--pal-red-400);
+  --node-color: var(--pal-lacquer-400);
 }
 
 .dungeon-run-map__node[data-kind="elite"] {
-  --node-color: var(--pal-orange-400);
+  --node-color: var(--pal-copper-400);
 }
 
 .dungeon-run-map__node[data-kind="ghost"] {
@@ -230,15 +230,15 @@
 }
 
 .dungeon-run-map__node[data-kind="shop"] {
-  --node-color: var(--pal-green-400);
+  --node-color: var(--pal-jade-400);
 }
 
 .dungeon-run-map__node[data-kind="campfire"] {
-  --node-color: var(--pal-yellow-400);
+  --node-color: var(--pal-gold-400);
 }
 
 .dungeon-run-map__node[data-kind="event"] {
-  --node-color: var(--pal-purple-400);
+  --node-color: var(--pal-amethyst-300);
 }
 
 .dungeon-run-map__node[data-kind="chest"] {
@@ -246,7 +246,7 @@
 }
 
 .dungeon-run-map__node[data-kind="shrine"] {
-  --node-color: var(--pal-cyan-400);
+  --node-color: var(--pal-verdigris-400);
 }
 
 .dungeon-run-map__label {

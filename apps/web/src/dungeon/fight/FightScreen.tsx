@@ -23,7 +23,6 @@ import {
   useRef,
   useState,
   type ReactElement,
-  type ReactNode,
 } from "react";
 
 import type { ActionBody } from "@jackioh/shared";
@@ -43,10 +42,10 @@ import { usePracticeEmotes } from "../../practice/emotes.ts";
 import { createPracticeHost, type PracticeHost } from "../../practice/host.ts";
 import type { PracticeStartConfig } from "../../practice/protocol.ts";
 import { ThinkIndicator } from "../../practice/ThinkIndicator.tsx";
-import { guardLeaving, navigate, paths } from "../../net/navigate.ts";
+import { FightMenuButton, FightShell, fightNoSetup, fightShuffling, fightStopped } from "../../practice/FightStages.tsx";
+import { navigate, paths, useLeaveGuard } from "../../net/navigate.ts";
 import { messageOf } from "../../net/errors.ts";
 import "../../practice/practice.css";
-import { PageTitle } from "../../routes/PageTitle.tsx";
 import { useSetting } from "../../settings/store.ts";
 import { runFightSetup } from "../../wasm/index.ts";
 import type { Dungeon } from "../store.ts";
@@ -70,16 +69,6 @@ type Report = { controller: PracticeController } & ({ action: RunAction } | { er
 
 function defaultHostFactory(): PracticeHost {
   return createPracticeHost();
-}
-
-/** The setup, loading and failure screens are practice's reading column; the fight is its full-width board. */
-function Shell({ variant, children }: { variant: "lobby" | "game"; children: ReactNode }): ReactElement {
-  const shell = variant === "game" ? "app-shell app-shell--wide" : "app-shell tavern one-screen";
-  return (
-    <div className={`${shell} practice practice--${variant}`} data-testid={variant === "game" ? fightTestid.screen : undefined}>
-      {children}
-    </div>
-  );
 }
 
 export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps): ReactElement {
@@ -226,64 +215,15 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   // its seed (R3476000), so there is no kept fight to pick up. The cleanup releases the guard when the store
   // moves screens on its own (Continue sends the report and unmounts this screen), and `!over`
   // releases it once the fight has its result.
-  const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
   const atStake =
     setup !== null && controller !== null && snapshot !== null && !over && state.phase !== "failed";
-  useEffect(() => {
-    if (!atStake) return;
-    const release = guardLeaving((leave) => {
-      setLeaving({ leave });
-    });
-    return () => {
-      release();
-      setLeaving(null);
-    };
-  }, [atStake]);
+  const [leaving, setLeaving] = useLeaveGuard(atStake);
 
-  if (setup === null) {
-    return (
-      <Shell variant="lobby">
-        <div className="practice-stage">
-          <p className="notice" data-testid={fightTestid.noSetup} role="alert">
-            {t("This fight could not be set up.")}
-          </p>
-        </div>
-      </Shell>
-    );
-  }
+  if (setup === null) return fightNoSetup(fightTestid);
 
-  if (state.phase === "failed") {
-    return (
-      <Shell variant="lobby">
-        <div className="practice-stage">
-          <PageTitle>{t("The fight stopped")}</PageTitle>
-          <p className="notice" data-testid={fightTestid.failed} role="alert">
-            {t(state.failure ?? "Something went wrong while the game was running.")}
-          </p>
-          <button type="button" className="practice-play button-primary" data-testid={fightTestid.retry} onClick={onRetryFight}>
-            {t("Try again")}
-          </button>
-        </div>
-      </Shell>
-    );
-  }
+  if (state.phase === "failed") return fightStopped(fightTestid, state.failure, onRetryFight);
 
-  if (controller === null || snapshot === null) {
-    return (
-      <Shell variant="lobby">
-        <div className="practice-stage">
-          <div className="practice-shuffle" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-          <p className="practice-stage__status" data-testid={fightTestid.loading} role="status">
-            {t("Shuffling the decks…")}
-          </p>
-        </div>
-      </Shell>
-    );
-  }
+  if (controller === null || snapshot === null) return fightShuffling(fightTestid);
 
   const enemy = t(setup.enemy.name);
   // B23: the run's relics, then its blessings, beside the player's hero; the enemy's beside its own.
@@ -342,19 +282,7 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
 
   // R3932000, R4733000: out to Play; mid-fight it asks first, and leaves once the fight has its
   // result, sending the report first.
-  const menuButton = (
-    <button
-      type="button"
-      className="control control-practice-menu"
-      data-testid={fightTestid.menu}
-      aria-haspopup={!over ? "dialog" : undefined}
-      aria-label={t("Main menu")}
-      title={t("Main menu")}
-      onClick={onMenu}
-    >
-      {t("Menu")}
-    </button>
-  );
+  const menuButton = <FightMenuButton testids={fightTestid} over={over} onClick={onMenu} />;
 
   const board = (
     <Game
@@ -406,7 +334,7 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   );
 
   return (
-    <Shell variant="game">
+    <FightShell variant="game" testids={fightTestid}>
       {/* The board has no heading of its own; this names the screen for a screen reader, and draws nothing. */}
       <h1 className="tutorial-sr-only">{t("Fight against {enemy}", { enemy })}</h1>
       {/* The wrapper hands the board the screen's height (practice.css) and is the root `useBoardBusy` watches. */}
@@ -421,6 +349,6 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
           onLeave={leaving.leave}
         />
       )}
-    </Shell>
+    </FightShell>
   );
 }

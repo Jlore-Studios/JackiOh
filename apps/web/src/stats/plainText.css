@@ -36,7 +36,6 @@
   color: var(--radiant);
   font-size: var(--type-sm);
   font-weight: 700;
-  text-transform: uppercase;
 }
 
 .plain-card__text {

@@ -27,7 +27,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     CardStatsFilter, CardTotal, GameRecord, GameSummary, Outcome, RecordsKey, SparsePart, StatsTotals,
-    TotalsKey, made_by_the_rules, outcome_for, pilot_counts, random_effects, sources_of, table, to_fixed,
+    TotalsKey, format_delta, made_by_the_rules, outcome_for, pilot_counts, random_effects, sources_of, table,
+    to_fixed,
 };
 use crate::config::{
     ADJUSTED_FIELD_MIN_CARDS, DECISIVENESS_PRIOR_CENTER, DECISIVENESS_PRIOR_SPREAD, SWING_EVAL_SCALE,
@@ -74,16 +75,6 @@ pub struct CreatedActing {
     pub card: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub maker: Option<String>,
-}
-
-impl ActingCard {
-    /// Its catalog id.
-    pub fn card(&self) -> &str {
-        match self {
-            ActingCard::Dealt(card) => card,
-            ActingCard::Created(made) => &made.card,
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -684,13 +675,6 @@ pub struct SwingReport {
     pub created: IndexMap<String, SwingFigures>,
 }
 
-impl SwingReport {
-    /// A deck card's figures, or for a card only a rule makes (R3070000) its Created ones.
-    pub fn of(&self, card: &str) -> Option<&SwingFigures> {
-        self.cards.get(card)
-    }
-}
-
 /// One card's terms before the fields of Decisiveness are read.
 struct Terms {
     plays: i64,
@@ -897,15 +881,32 @@ pub fn swing_report<'a>(
     }
 }
 
-/// A fraction of win chance in points with its sign, "+3.2", or "—".
-fn points(value: Option<f64>) -> String {
-    match value {
-        None => "—".to_string(),
-        Some(value) => {
-            let shown = to_fixed(value * 100.0, 1);
-            if value > 0.0 { format!("+{shown}") } else { shown }
-        }
-    }
+/// R5036000: a row Decisiveness is read for that is no card's own (a play version's, R4675001): its turns,
+/// and whether they are the Created copies' of a card a rule makes, read as `swing_report` reads such a
+/// card (R4552002): against the other rows' term spreads and field, counting toward neither.
+#[derive(Clone, Copy, Debug)]
+pub struct DecisivenessRow<'a> {
+    pub tally: &'a SwingTally,
+    pub made: bool,
+}
+
+/// R5036000: each row's Decisiveness in order, and the field read over the rows a rule does not make, as
+/// `swing_report` reads its deck cards' (R4552001).
+pub fn decisiveness_rows(
+    rows: &[DecisivenessRow<'_>],
+    baseline: &SwingBaseline,
+) -> (DecisivenessField, Vec<Option<f64>>) {
+    let spreads = term_spreads(rows.iter().filter(|row| !row.made).map(|row| row.tally), baseline);
+    let terms: Vec<(bool, Terms)> = rows
+        .iter()
+        .map(|row| (row.made, terms_of(row.tally, baseline, &spreads, row.made)))
+        .collect();
+    let field = decisiveness_field(terms.iter().filter(|(made, _)| !made).map(|(_, terms)| terms));
+    let read = terms
+        .iter()
+        .map(|(_, terms)| decisiveness_of(terms, &field))
+        .collect();
+    (field, read)
 }
 
 /// R4552001: Decisiveness as the page shows it, "±14.2%", or "—".
@@ -951,9 +952,9 @@ pub fn format_swing(report: &SwingReport, name_of: impl Fn(&str) -> Option<Strin
                     named(card),
                     figures.plays.to_string(),
                     figures.acting.to_string(),
-                    points(figures.play),
-                    points(figures.board),
-                    points(figures.swing),
+                    format_delta(figures.play),
+                    format_delta(figures.board),
+                    format_delta(figures.swing),
                     format_decisiveness(figures.rms),
                     format_decisiveness(figures.decisiveness),
                 ]

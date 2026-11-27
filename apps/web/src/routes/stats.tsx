@@ -5,7 +5,9 @@
 // over every patch since it last changed, under the Cards tab's filters, sort, view and ranges, with no patch bar,
 // games tile or Face, a line naming what it shows in their place, and a drill-down on All and the newest patch; R4680000:
 // its Segmented's Versions view is every play version of those cards as its own row, Past versions only one button, and
-// R4680001 a version's row opens its own drill-down, `?card=<id>&version=<first>`, drawn from its own catalog). No
+// R4680001 a version's row opens its own drill-down, `?card=<id>&version=<first>`, drawn from its own catalog;
+// R5040000: Running is now Historical, the second view, and the first, Major patch running, is the same over the
+// newest major's line alone, which the server cuts, `GET /api/stats/versions?scope=major`). No
 // provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661).
 // Below the per-row floor a row reads "not enough games". The Adjusted win rate leads (R2777000), so the table
 // shows no When drawn, Drawn vs not drawn, Radiant or Normal (R3184000); with the ranges shown, a tier says how
@@ -26,9 +28,11 @@
 // own field and band, and the drill-down on the page's face and patch, with each face's rate and the Radiant gap.
 // R4676000, R4676001: the drill-down's Extended stats toggle swaps its details for one panel, kept in the address as
 // `extended`: a Segmented of the sections the card has, Choices (each choice's share, tier and Adjusted) and Radiant
-// vs normal (each face's figures and the gap).
+// vs normal (each face's figures and the gap). R4679000, R4679001: and between them Outputs, each card the card made
+// or offered with its share, tier and Adjusted against its siblings and a pick's offers and pick rate, a row opening
+// that card's drill-down; while the panel is open, "Tokens this card makes" gives way as the details do.
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { KEYWORD_KINDS, SHIPPED_SETS, fillParams, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
@@ -44,19 +48,24 @@ import { currentCatalog } from "../game/currentCatalog.ts";
 import { useFaceModel } from "../game/faces.ts";
 import { modeText } from "../game/modeText.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
+import { Icon } from "../icons/Icon.tsx";
 import {
   ApiRequestError,
   cardStatsPath,
   getCardDrillDown,
   getCardStats,
+  getHallOfFame,
   getPublicPlayers,
   getStatsVersions,
   type CardDrillDownResponse,
   type CardFaces,
+  type PublicOutputRow,
+  type PublicRolledGroup,
   type PublicVariantGroup,
   type PublicVariantRow,
   type CardStatsOptions,
   type PublicFaceFigures,
+  type PublicHallOfFameResponse,
   type PublicPlayVersion,
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
@@ -65,17 +74,20 @@ import {
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
 import { readSession } from "../net/session.ts";
+import { PatchFace } from "../patches/PatchFace.tsx";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import {
   ADJUSTED_RANGE_DIGITS,
   CARD_STATS_MIN_SAMPLE,
   PLAYER_SEARCH_DEBOUNCE_MS,
+  ROLLED_SHARE_DIGITS,
   SET_STATS_DIGITS,
   SET_STATS_OUTLIER_Z,
   WIN_RATE_RANGE_DIGITS,
 } from "../stats/config.ts";
 import { CREATED_SORT_COLUMNS, CreatedPanel, createdSortOf, type CreatedSort } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
+import { HallPanel } from "../stats/HallPanel.tsx";
 import { FindPatchIcon, PatchSearch, olderPatchesLine } from "../stats/PatchSearch.tsx";
 import {
   currentVersion,
@@ -245,13 +257,23 @@ function setPercent(rate: number, signed = false): string {
 type TabKey = "cards" | "tokens" | "sets" | "players" | "experimental";
 const TAB_KEYS: readonly TabKey[] = ["cards", "tokens", "sets", "players", "experimental"];
 type ViewKey = "table" | "grid";
-/** R4678000, R4680000: the Experimental tab's views, in the order they landed; `?experimental=` names any but the first. */
-type ExperimentalView = "running" | "versions";
-const EXPERIMENTAL_VIEWS: readonly ExperimentalView[] = ["running", "versions"];
-type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "winRate" | "playRate";
+/**
+ * R4678000, R4680000, R4681001, R5040000: the Experimental tab's views, in the Segmented's order; `?experimental=`
+ * names any but the first. `running` is Major patch running, so an old link to Running opens it; `historical` is
+ * R4678001's view, every patch since a card last changed.
+ */
+type ExperimentalView = "running" | "historical" | "versions" | "hall";
+const EXPERIMENTAL_VIEWS: readonly ExperimentalView[] = ["running", "historical", "versions", "hall"];
+type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "winRate" | "playRate" | "date";
 type SortDirection = "asc" | "desc";
 
 const SORT_COLUMNS: readonly SortColumn[] = ["name", "games", "tier", "adjustedWinRate", "decisiveness", "winRate", "playRate"] as const;
+
+/**
+ * R5033000: the columns an address may sort by: the Cards tab's and Date, which only Running and Versions offer.
+ * The Cards and Tokens tabs read Date as Adjusted, so `?sort=date` survives a switch of tab (R4083000).
+ */
+const ADDRESS_SORT_COLUMNS: readonly SortColumn[] = [...SORT_COLUMNS, "date"];
 
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
@@ -261,6 +283,7 @@ const SORT_LABELS: Record<SortColumn, string> = {
   decisiveness: "Decisiveness",
   winRate: "Win rate",
   playRate: "Play rate",
+  date: "Date",
 };
 
 function defaultDirection(col: SortColumn): SortDirection {
@@ -268,7 +291,7 @@ function defaultDirection(col: SortColumn): SortDirection {
 }
 
 /** R2777000: the table's default order, the adjusted win rate descending. */
-const DEFAULT_SORT: SortColumn = "adjustedWinRate";
+const DEFAULT_SORT = "adjustedWinRate" satisfies SortColumn;
 
 /**
  * R2446000: the sort an address asks for. One the table no longer offers (an old address's `cost`, `rarity` or
@@ -277,7 +300,7 @@ const DEFAULT_SORT: SortColumn = "adjustedWinRate";
  */
 function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection } {
   const asked = params.get("sort");
-  const col = asked === null ? DEFAULT_SORT : SORT_COLUMNS.find((known) => known === asked);
+  const col = asked === null ? DEFAULT_SORT : ADDRESS_SORT_COLUMNS.find((known) => known === asked);
   if (col === undefined) return { col: DEFAULT_SORT, dir: "desc" };
   return { col, dir: params.get("dir") === "asc" ? "asc" : "desc" };
 }
@@ -354,9 +377,21 @@ function gapPercent(share: number): string {
   });
 }
 
-/** R4676001: the Extended stats panel's sections, in its Segmented's order. S3 adds Outputs. */
-type ExtendedSection = "choices" | "faces";
-const EXTENDED_SECTIONS: readonly ExtendedSection[] = ["choices", "faces"];
+/** R4676001, R4679001: the Extended stats panel's sections, in its Segmented's order. */
+type ExtendedSection = "choices" | "outputs" | "faces";
+const EXTENDED_SECTIONS: readonly ExtendedSection[] = ["choices", "outputs", "faces"];
+
+/** R4676001, R4679001: a section's segment, its name and its test id. */
+function sectionOption(section: ExtendedSection): { label: string; testId: string } {
+  switch (section) {
+    case "choices":
+      return { label: t("Choices"), testId: statsTestid.extendedChoicesTab };
+    case "outputs":
+      return { label: t("Outputs"), testId: statsTestid.extendedOutputsTab };
+    case "faces":
+      return { label: t("Radiant vs normal"), testId: statsTestid.extendedFacesTab };
+  }
+}
 
 /** R4676001: the panel an address opens beside `card`; none, or a section the page does not know, is closed. */
 function extendedOf(params: URLSearchParams): ExtendedSection | null {
@@ -445,6 +480,160 @@ function ChoicesTables({
           </tbody>
         </table>
       ))}
+    </section>
+  );
+}
+
+/**
+ * R4679001: the panel's Outputs: one row per card the card made or offered, in the server's order, best adjusted
+ * first, each with the deck table's Card cell, its name, share, games, tier chip and Adjusted (its 95% range with the
+ * ranges shown), and a Discover-like card's Offered and Pick rate. A row opens that card's own drill-down.
+ */
+function OutputsTable({
+  outputs,
+  showRanges,
+  onOpen,
+}: {
+  outputs: PublicOutputRow[];
+  showRanges: boolean;
+  onOpen: (id: string) => void;
+}): ReactElement {
+  const titleId = useId();
+  const picks = outputs.some((row) => row.offered !== undefined);
+  return (
+    <section className="stats-drilldown-section" data-testid={statsTestid.extendedOutputs}>
+      {outputs.length === 0 ? (
+        <p className="stats-empty-sub">{t("No outputs recorded yet.")}</p>
+      ) : (
+        <TableScroll labeledBy={titleId}>
+          <table className="stats-table stats-extended-table">
+            <caption id={titleId}>{t("Outputs")}</caption>
+            <thead>
+              <tr>
+                <th className="stats-th--thumb" scope="col">
+                  {t("Card")}
+                </th>
+                <th scope="col">{t("Name")}</th>
+                <th scope="col">{t("Share")}</th>
+                <th scope="col">{t("Games")}</th>
+                <th scope="col">{t("Tier")}</th>
+                <th scope="col">{t("Adjusted")}</th>
+                {picks && <th scope="col">{t("Offered")}</th>}
+                {picks && <th scope="col">{t("Pick rate")}</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {outputs.map((row) => (
+                <tr
+                  key={row.key}
+                  className="stats-tr"
+                  data-key={row.key}
+                  data-testid={statsTestid.extendedOutputRow}
+                  onClick={() => onOpen(row.key)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onOpen(row.key);
+                    }
+                  }}
+                >
+                  <td className="stats-td stats-td--thumb">
+                    <span className="stats-card-thumb-badge" data-rarity={row.rarity}>
+                      {row.cost}
+                    </span>
+                  </td>
+                  <th scope="row">
+                    <span className="stats-card-name-link">{shownName(row.key, row.label)}</span>
+                  </th>
+                  <td>{shareText(row.share)}</td>
+                  <td>{formatNumber(row.games)}</td>
+                  <td>
+                    <TierChip tier={row.hasEnoughGames ? row.tier : null} testid={statsTestid.extendedTier} />
+                  </td>
+                  <td>
+                    {row.hasEnoughGames ? adjustedText(row.adjustedWinRate) : t("not enough games")}
+                    {showRanges && row.hasEnoughGames && (
+                      <RangeText low={row.adjustedLow} high={row.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                    )}
+                  </td>
+                  {picks && <td>{row.offered === undefined ? "—" : formatNumber(row.offered)}</td>}
+                  {picks && <td>{row.pickRate === undefined ? "—" : shareText(row.pickRate)}</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
+      )}
+    </section>
+  );
+}
+
+/** R4707002: the heading of a kind of rolled outcome's table. */
+function rolledHeading(kind: PublicRolledGroup["kind"]): string {
+  switch (kind) {
+    case "effect":
+      return t("Rolled effects");
+    case "coin":
+      return t("Coin flips");
+    case "die":
+      return t("Dice");
+  }
+}
+
+/** R4707002: a rolled outcome's Expected or Share, a percent to a tenth of a point. */
+function rolledShareText(share: number): string {
+  return formatNumber(share, {
+    style: "percent",
+    minimumFractionDigits: ROLLED_SHARE_DIGITS,
+    maximumFractionDigits: ROLLED_SHARE_DIGITS,
+  });
+}
+
+/**
+ * R4707002: one kind of the card's rolled outcomes under its Outputs, in the server's order, best adjusted first: each
+ * outcome in the server's words, its expected share beside the share it was rolled, its games, the deck table's tier
+ * chip and Adjusted (its 95% range with the ranges shown). A row opens nothing.
+ */
+function RolledTable({ group, showRanges }: { group: PublicRolledGroup; showRanges: boolean }): ReactElement {
+  const titleId = useId();
+  return (
+    <section className="stats-drilldown-section" data-kind={group.kind} data-testid={statsTestid.extendedRolled}>
+      <TableScroll labeledBy={titleId}>
+        <table className="stats-table stats-extended-table">
+          <caption id={titleId}>{rolledHeading(group.kind)}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t("Outcome")}</th>
+              <th scope="col">{t("Expected")}</th>
+              <th scope="col">{t("Share")}</th>
+              <th scope="col">{t("Games")}</th>
+              <th scope="col">{t("Tier")}</th>
+              <th scope="col">{t("Adjusted")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.rows.map((row) => (
+              <tr key={row.key} data-key={row.key} data-testid={statsTestid.extendedRolledRow}>
+                <th scope="row">{row.label}</th>
+                <td>{rolledShareText(row.expected)}</td>
+                <td>{rolledShareText(row.share)}</td>
+                <td>{formatNumber(row.games)}</td>
+                <td>
+                  <TierChip tier={row.hasEnoughGames ? row.tier : null} testid={statsTestid.extendedTier} />
+                </td>
+                <td>
+                  {row.hasEnoughGames ? adjustedText(row.adjustedWinRate) : t("not enough games")}
+                  {showRanges && row.hasEnoughGames && (
+                    <RangeText low={row.adjustedLow} high={row.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableScroll>
     </section>
   );
 }
@@ -629,6 +818,20 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const [versionsData, setVersionsData] = useState<PublicStatsVersionsResponse | null>(null);
   const [versionsError, setVersionsError] = useState(false);
   const [versionsAttempt, setVersionsAttempt] = useState(0);
+  // R4681001: the Hall of Fame's four lists on the match type, which the Hall of Fame view reads; Retry bumps the attempt.
+  // R4681001: the Hall of Fame's answer, kept with the request it answers (the match type and the retry),
+  // so a new request reads as loading until its own answer lands, with no reset inside the effect.
+  const [hall, setHall] = useState<{ key: string; data: PublicHallOfFameResponse | null; error: boolean } | null>(null);
+  const [hallAttempt, setHallAttempt] = useState(0);
+  const hallKey = `${mode}:${String(hallAttempt)}`;
+  const hallData = hall?.key === hallKey ? hall.data : null;
+  const hallError = hall?.key === hallKey && hall.error;
+  // R5040000: Major patch running's table, the live play versions cut to the newest major's line, kept with the
+  // request it answers (the match type and the retry) as the Hall of Fame's is; Retry bumps `versionsAttempt`.
+  const [major, setMajor] = useState<{ key: string; data: PublicStatsVersionsResponse | null; error: boolean } | null>(null);
+  const majorKey = `${mode}:${String(versionsAttempt)}`;
+  const majorData = major?.key === majorKey ? major.data : null;
+  const majorError = major?.key === majorKey && major.error;
 
   const updateUrl = useCallback(() => {
     const params = new URLSearchParams();
@@ -820,9 +1023,10 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
   // R4678001: Running reads every play version's figures on the page's match type once the Experimental tab is
   // open; a pooled view is no patch query, so it is open to everyone (R4677000) and sends no token. R4680001: so does
-  // a play version's drill-down, from any tab.
+  // a play version's drill-down, from any tab. R5040000: every view but Major patch running, which reads its own.
   const versionOpen = cardDrillDownId !== null && drillDownVersion !== null;
-  const wantVersions = experimental || versionOpen;
+  const majorRunning = experimental && experimentalView === "running";
+  const wantVersions = (experimental && !majorRunning) || versionOpen;
   useEffect(() => {
     if (!wantVersions) return;
     setVersionsData(null);
@@ -837,6 +1041,39 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       });
     return () => controller.abort();
   }, [wantVersions, mode, versionsAttempt]);
+
+  // R5040000: Major patch running asks the route for the newest major's line on the page's match type; the server
+  // cuts each span, so the client reads no version.
+  useEffect(() => {
+    if (!majorRunning) return;
+    const key = `${mode}:${String(versionsAttempt)}`;
+    const controller = new AbortController();
+    getStatsVersions({ mode, scope: "major", signal: controller.signal })
+      .then((res) => {
+        if (!controller.signal.aborted) setMajor({ key, data: res, error: false });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setMajor({ key, data: null, error: true });
+      });
+    return () => controller.abort();
+  }, [majorRunning, mode, versionsAttempt]);
+
+  // R4681001: the Hall of Fame's lists on the page's match type once its view is open; a pooled view is
+  // no patch query, so it is open to everyone (R4677000) and sends no token.
+  const wantHall = experimental && experimentalView === "hall";
+  useEffect(() => {
+    if (!wantHall) return;
+    const key = `${mode}:${String(hallAttempt)}`;
+    const controller = new AbortController();
+    getHallOfFame({ mode, signal: controller.signal })
+      .then((res) => {
+        if (!controller.signal.aborted) setHall({ key, data: res, error: false });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setHall({ key, data: null, error: true });
+      });
+    return () => controller.abort();
+  }, [wantHall, mode, hallAttempt]);
 
   // R4673001: a card's details on the page's match type, face and patch (none asked for the newest patch).
   // R4678001: from the Experimental tab, which shows neither, on All and the newest patch.
@@ -885,6 +1122,16 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     setDrillDownVersion(null);
     setExtended(null);
   };
+  // R4679001: an output row opens its card in the same dialog, its details shown. The row is gone with the panel, so
+  // the focus moves to the Extended stats toggle, which the new card keeps, and still comes back to whatever opened
+  // the dialog once it closes.
+  const extendedToggle = useRef<HTMLButtonElement | null>(null);
+  const openOutput = (id: string): void => {
+    extendedToggle.current?.focus({ preventScroll: true });
+    setCardDrillDownId(id);
+    setDrillDownVersion(null);
+    setExtended(null);
+  };
   const closeDrillDown = (): void => {
     setCardDrillDownId(null);
     setDrillDownVersion(null);
@@ -924,8 +1171,11 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     return KEYWORD_KINDS.filter((kind) => present.has(kind));
   }, []);
 
+  // R5033000: the Cards tab offers no Date, so it reads one as Adjusted in its direction, as Tokens does; the state
+  // keeps `date` for the address and the other tabs.
+  const cardsCol: Exclude<SortColumn, "date"> = sortCol === "date" ? DEFAULT_SORT : sortCol;
   const handleSort = (col: SortColumn) => {
-    if (sortCol === col) {
+    if (cardsCol === col) {
       setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortCol(col);
@@ -936,14 +1186,15 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R4083000: the Tokens tab sorts by the Cards tab's one sort, kept in the address, a column its tables lack read as
   // Adjusted; a Created header sets it as a deck header does.
   const createdSort = createdSortOf(sortCol, sortDir);
-  // R4678001: Running sorts by it too, with no Decisiveness.
+  // R4678001: Running sorts by it too; R5036000: Decisiveness among its columns, and R5033000 Date.
   const runningSort = runningSortOf(sortCol, sortDir);
   const sortCreatedBy = (next: CreatedSort): void => {
     setSortCol(next.col);
     setSortDir(next.dir);
   };
 
-  const filteredCards = useMemo(() => {
+  // The cards the shared filters keep, before any sort.
+  const unsortedCards = useMemo(() => {
     if (!cardStatsData) return [];
     let list = [...cardStatsData.cards];
 
@@ -954,61 +1205,75 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     if (keywordFilter) {
       list = list.filter((c) => keywordKinds(c.id).includes(keywordFilter as KeywordKind));
     }
-
-    const flip = sortDir === "desc" ? -1 : 1;
-    const language = locale === "en" ? undefined : locale;
-    const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
-      shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
-    list.sort((a, b) => {
-      if (sortCol === "tier") {
-        // R3022000: by tier, S first descending; a card without one after those with one, then by its adjusted rate.
-        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
-        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        const aRank = tierRank(a.tier);
-        const bRank = tierRank(b.tier);
-        if (aRank >= 0 && bRank < 0) return -1;
-        if (aRank < 0 && bRank >= 0) return 1;
-        if (aRank !== bRank) return (aRank - bRank) * flip;
-        // R3184001: within a tier, by how much of the card's range is in it, a card with no range after; then by its adjusted rate.
-        const aFit = cardTierFit(a, tiers);
-        const bFit = cardTierFit(b, tiers);
-        if (aFit !== null && bFit === null) return -1;
-        if (aFit === null && bFit !== null) return 1;
-        if (aFit !== null && bFit !== null && aFit !== bFit) return (aFit - bFit) * flip;
-        const aRate = a.adjustedWinRate ?? null;
-        const bRate = b.adjustedWinRate ?? null;
-        if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
-      } else if (sortCol === "adjustedWinRate" || sortCol === "decisiveness") {
-        // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one;
-        // R4552001: Decisiveness sorts the same way.
-        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
-        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        const aRate = (sortCol === "decisiveness" ? a.decisiveness : a.adjustedWinRate) ?? null;
-        const bRate = (sortCol === "decisiveness" ? b.decisiveness : b.adjustedWinRate) ?? null;
-        if (aRate !== null && bRate === null) return -1;
-        if (aRate === null && bRate !== null) return 1;
-        if (aRate !== null && bRate !== null && aRate !== bRate) {
-          return (aRate - bRate) * flip;
-        }
-      } else if (sortCol === "winRate") {
-        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
-        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        if (a.winRate !== null && b.winRate !== null && a.winRate !== b.winRate) {
-          return (a.winRate - b.winRate) * flip;
-        }
-      } else if (sortCol === "games") {
-        if (a.games !== b.games) return (a.games - b.games) * flip;
-      } else if (sortCol === "playRate") {
-        if (a.playRate !== b.playRate) return (a.playRate - b.playRate) * flip;
-      } else if (sortCol === "name") {
-        const diff = compareNames(a, b);
-        if (diff !== 0) return diff * flip;
-      }
-      return a.games - b.games || compareNames(a, b);
-    });
-
     return list;
-  }, [cardStatsData, search, keywordFilter, sortCol, sortDir, locale, tiers]);
+  }, [cardStatsData, search, keywordFilter]);
+
+  const sortCards = useCallback(
+    (cards: readonly (typeof unsortedCards)[number][], cardsCol: Exclude<SortColumn, "date">, sortDir: SortDirection) => {
+      const list = [...cards];
+      const flip = sortDir === "desc" ? -1 : 1;
+      const language = locale === "en" ? undefined : locale;
+      const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
+        shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
+      list.sort((a, b) => {
+        if (cardsCol === "tier") {
+          // R3022000: by tier, S first descending; a card without one after those with one, then by its adjusted rate.
+          if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+          if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+          const aRank = tierRank(a.tier);
+          const bRank = tierRank(b.tier);
+          if (aRank >= 0 && bRank < 0) return -1;
+          if (aRank < 0 && bRank >= 0) return 1;
+          if (aRank !== bRank) return (aRank - bRank) * flip;
+          // R3184001: within a tier, by how much of the card's range is in it, a card with no range after; then by its adjusted rate.
+          const aFit = cardTierFit(a, tiers);
+          const bFit = cardTierFit(b, tiers);
+          if (aFit !== null && bFit === null) return -1;
+          if (aFit === null && bFit !== null) return 1;
+          if (aFit !== null && bFit !== null && aFit !== bFit) return (aFit - bFit) * flip;
+          const aRate = a.adjustedWinRate ?? null;
+          const bRate = b.adjustedWinRate ?? null;
+          if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
+        } else if (cardsCol === "adjustedWinRate" || cardsCol === "decisiveness") {
+          // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one;
+          // R4552001: Decisiveness sorts the same way.
+          if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+          if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+          const aRate = (cardsCol === "decisiveness" ? a.decisiveness : a.adjustedWinRate) ?? null;
+          const bRate = (cardsCol === "decisiveness" ? b.decisiveness : b.adjustedWinRate) ?? null;
+          if (aRate !== null && bRate === null) return -1;
+          if (aRate === null && bRate !== null) return 1;
+          if (aRate !== null && bRate !== null && aRate !== bRate) {
+            return (aRate - bRate) * flip;
+          }
+        } else if (cardsCol === "winRate") {
+          if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+          if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+          if (a.winRate !== null && b.winRate !== null && a.winRate !== b.winRate) {
+            return (a.winRate - b.winRate) * flip;
+          }
+        } else if (cardsCol === "games") {
+          if (a.games !== b.games) return (a.games - b.games) * flip;
+        } else if (cardsCol === "playRate") {
+          if (a.playRate !== b.playRate) return (a.playRate - b.playRate) * flip;
+        } else if (cardsCol === "name") {
+          const diff = compareNames(a, b);
+          if (diff !== 0) return diff * flip;
+        }
+        return a.games - b.games || compareNames(a, b);
+      });
+
+      return list;
+    },
+    [locale, tiers],
+  );
+  const filteredCards = useMemo(() => sortCards(unsortedCards, cardsCol, sortDir), [sortCards, unsortedCards, cardsCol, sortDir]);
+  // R5033000: Running and Versions take the Cards tab's order as the order their ties keep. Under a Date sort that is
+  // Adjusted in its default direction whatever the sort's own, so a row tied on Date keeps one place both ways.
+  const rowsInput = useMemo(
+    () => (sortCol === "date" ? sortCards(unsortedCards, DEFAULT_SORT, defaultDirection(DEFAULT_SORT)) : filteredCards),
+    [sortCol, sortCards, unsortedCards, filteredCards],
+  );
 
   // R2089000: the Created cards the search box asks for, as it asks for the deck rows, and R4083000 the keyword;
   // R3324002: the tokens among them in a section of their own, and every other in its own, so no card is in both.
@@ -1019,10 +1284,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const tokenCards = createdCards.filter((card) => catalog()[card.id]?.token === true);
   const otherCreatedCards = createdCards.filter((card) => catalog()[card.id]?.token !== true);
 
-  // R4678001: the cards the Cards tab lists under the shared filters, each on its live play version.
+  // R4678001: the cards the Cards tab lists under the shared filters, each on its live play version. R5040000: Major
+  // patch running reads the cut table, Historical and the other views the whole one.
+  const experimentalData = majorRunning ? majorData : versionsData;
+  const experimentalError = majorRunning ? majorError : versionsError;
   const running = useMemo(
-    () => (versionsData ? runningRows(filteredCards, versionsData.versions) : []),
-    [filteredCards, versionsData],
+    () => (experimentalData ? runningRows(rowsInput, experimentalData.versions) : []),
+    [rowsInput, experimentalData],
   );
 
   // R4680000: each old version's definition, from its catalog once a row on screen or its drill-down asks for it; a
@@ -1048,13 +1316,17 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const versionsShown = useMemo(
     () =>
       versionsData
-        ? versionRows(filteredCards, versionsData.versions, pastOnly, (version) => {
+        ? versionRows(rowsInput, versionsData.versions, pastOnly, (version) => {
             const read = readVersion(version);
             return read === undefined ? undefined : (read?.def ?? null);
           })
         : [],
-    [filteredCards, versionsData, pastOnly, readVersion],
+    [rowsInput, versionsData, pastOnly, readVersion],
   );
+  // R4681001: whether the Hall of Fame's four lists are all empty.
+  const hallEmpty =
+    hallData !== null &&
+    (["broken", "nerfed", "buffed", "changed"] as const).every((key) => hallData[key].length === 0);
   const versionFaceOf = (id: string): ReactNode => {
     const version = versionById.get(id);
     if (version === undefined) return null;
@@ -1075,6 +1347,20 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     setDrillDownVersion(version.first);
     setExtended(null);
   };
+  // R4681001: a Hall of Fame entry side's face from its own catalog, as the drill-down draws it; the
+  // version's name stands in for it until that catalog loads.
+  const hallFaceOf = (version: PublicPlayVersion): ReactNode => {
+    const read = readVersion(version);
+    return read ? (
+      <span className="hall-face-card">
+        <PatchFace def={read.def} face="base" />
+      </span>
+    ) : (
+      <span className="hall-face-card hall-face-card--empty">{version.name}</span>
+    );
+  };
+  const hallNeedOf = (version: PublicPlayVersion): string | undefined =>
+    version.live || readVersion(version) ? undefined : version.last;
   // R4680001: the open play version, and its card's versions either side of it.
   const versionsOfOpen = cardDrillDownId && versionsData ? versionsData.versions.filter((version) => version.card === cardDrillDownId) : [];
   const openAt = versionsOfOpen.findIndex((version) => version.first === drillDownVersion);
@@ -1097,14 +1383,24 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R4673001: the open card's face line, never the card before's while its details load or after they fail;
   // none from a server deployed before it.
   const drillDownFaces = drillDownLoading || drillDownError ? undefined : drillDownData?.faces;
-  // R4676001: the panel's sections the open card has, Choices only when it offers a choice; the one shown is the one
-  // asked for, or the first the card has.
-  const drillDownVariants = drillDownLoading || drillDownError ? [] : (drillDownData?.variants ?? []);
-  const extendedSections = EXTENDED_SECTIONS.filter((section) =>
-    section === "choices" ? drillDownVariants.length > 0 : drillDownFaces !== undefined,
-  );
-  const extendedShown = extended !== null && extendedSections.includes(extended) ? extended : extendedSections[0];
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
+  // R4676001: the panel's sections the open card has, Choices only when it offers a choice, R4679001 Outputs only when
+  // it made or offered a card, R4707002 rolled an outcome, or its text names a token; the one shown is the one asked
+  // for, or the first the card has.
+  const drillDownVariants = drillDownLoading || drillDownError ? [] : (drillDownData?.variants ?? []);
+  const drillDownOutputs = drillDownLoading || drillDownError ? [] : (drillDownData?.outputs ?? []);
+  const drillDownRolled = drillDownLoading || drillDownError ? [] : (drillDownData?.rolled ?? []);
+  const extendedSections = EXTENDED_SECTIONS.filter((section) => {
+    switch (section) {
+      case "choices":
+        return drillDownVariants.length > 0;
+      case "outputs":
+        return drillDownOutputs.length > 0 || drillDownRolled.length > 0 || drillDownTokens.length > 0;
+      case "faces":
+        return drillDownFaces !== undefined;
+    }
+  });
+  const extendedShown = extended !== null && extendedSections.includes(extended) ? extended : extendedSections[0];
   // R3887000: every card its text names, for the breakdown's Reference cards while Plain text is on.
   const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
 
@@ -1202,10 +1498,29 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // Tokens tab shows the same row, its sort select offering only the columns its tables have and no Play rate column.
   // R4678001: so does Running, with no Face, which it does not read (R4678000).
   // R4680000: and Versions, as Running, with its Past versions only.
-  const cardOptions = (shown: "cards" | "tokens" | "running" | "versions"): ReactElement => {
+  // R5037000: Running and Versions have the Cards tab's Win rate column and Play rate behind the Columns toggle.
+  // R4681001: the Hall of Fame keeps only the ranges, which its entries read; its ranks are the order.
+  const cardOptions = (shown: "cards" | "tokens" | "running" | "versions" | "hall"): ReactElement => {
+    if (shown === "hall") {
+      return (
+        <div className="stats-options">
+          <div className="segmented">
+            <button
+              type="button"
+              className={`segmented__item stats-view-btn ${showRanges ? "segmented__item--selected" : ""}`}
+              data-testid={statsTestid.rangesToggle}
+              aria-pressed={showRanges}
+              onClick={() => setShowRanges((shown) => !shown)}
+            >
+              {t("Show 95% ranges")}
+            </button>
+          </div>
+        </div>
+      );
+    }
     const columns: readonly SortColumn[] =
       shown === "cards" ? SORT_COLUMNS : shown === "tokens" ? CREATED_SORT_COLUMNS : RUNNING_SORT_COLUMNS;
-    const sortShown = shown === "cards" ? sortCol : shown === "tokens" ? createdSort.col : runningSort.col;
+    const sortShown = shown === "cards" ? cardsCol : shown === "tokens" ? createdSort.col : runningSort.col;
     return (
       <div className="stats-options">
         <div className="stats-sort">
@@ -1322,7 +1637,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               >
                 {t("Games")}
               </button>
-              {shown === "cards" && (
+              {shown !== "tokens" && (
                 <button
                   type="button"
                   className={`segmented__item stats-view-btn ${visibleCols.playRate ? "segmented__item--selected" : ""}`}
@@ -1358,7 +1673,11 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
           <p className="stats-experimental-line" data-testid={statsTestid.experimentalLine}>
             {experimentalView === "versions"
               ? t("Every version of every card, each over the patches it was played on")
-              : t("Every card's current version, over every patch since it last changed")}
+              : experimentalView === "hall"
+                ? t("The most broken, nerfed, buffed and changed versions of all time")
+                : experimentalView === "historical"
+                  ? t("Every card's current version, over every patch since it last changed")
+                  : t("Every card's current version, over this major's patches since it last changed")}
           </p>
         )}
 
@@ -1554,7 +1873,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
-                        aria-sort={sortCol === "name" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        aria-sort={cardsCol === "name" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("name")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1564,13 +1883,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        {t("Name")} {sortCol === "name" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Name")} {cardsCol === "name" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       {visibleCols.games && (
                         <th
                           scope="col"
                           className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "games" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                          aria-sort={cardsCol === "games" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                           onClick={() => handleSort("games")}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
@@ -1580,14 +1899,14 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                           }}
                           tabIndex={0}
                         >
-                          {t("Games")} {sortCol === "games" && (sortDir === "asc" ? "↑" : "↓")}
+                          {t("Games")} {cardsCol === "games" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
                         title={t("S needs a nerf and F a buff: S is above the band and sure of it, F below it and sure of it, and A to D are the band's quarters")}
-                        aria-sort={sortCol === "tier" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        aria-sort={cardsCol === "tier" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("tier")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1597,13 +1916,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        {t("Tier")} {sortCol === "tier" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Tier")} {cardsCol === "tier" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
                         title={t("50% plus how far drawing the card moves its deck's win rate beyond the average card's, counted only as far as its games bear out")}
-                        aria-sort={sortCol === "adjustedWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        aria-sort={cardsCol === "adjustedWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("adjustedWinRate")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1613,7 +1932,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        {t("Adjusted")} {sortCol === "adjustedWinRate" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Adjusted")} {cardsCol === "adjustedWinRate" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
                         scope="col"
@@ -1622,7 +1941,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                           "Decisiveness: how far playing a card typically moves your chance of winning, one way or the other; ± is the swing itself, not a margin of error. A typical card: {typical}.",
                           { typical: decisivenessText(tiers?.decisiveness) },
                         )}
-                        aria-sort={sortCol === "decisiveness" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        aria-sort={cardsCol === "decisiveness" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("decisiveness")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1632,12 +1951,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        {t("Decisiveness")} {sortCol === "decisiveness" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Decisiveness")} {cardsCol === "decisiveness" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
-                        aria-sort={sortCol === "winRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        aria-sort={cardsCol === "winRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("winRate")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1647,13 +1966,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        {t("Win rate")} {sortCol === "winRate" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Win rate")} {cardsCol === "winRate" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       {visibleCols.playRate && (
                         <th
                           scope="col"
                           className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "playRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                          aria-sort={cardsCol === "playRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                           onClick={() => handleSort("playRate")}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
@@ -1663,7 +1982,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                           }}
                           tabIndex={0}
                         >
-                          {t("Play rate")} {sortCol === "playRate" && (sortDir === "asc" ? "↑" : "↓")}
+                          {t("Play rate")} {cardsCol === "playRate" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
                     </tr>
@@ -1783,36 +2102,29 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               <EmptyState text={t("No tokens or created cards match the selected filters.")} />
             ) : (
               <>
-                <CreatedPanel
-                  kind="tokens"
-                  created={tokenCards}
-                  sort={createdSort}
-                  onSort={sortCreatedBy}
-                  view={view}
-                  showRanges={showRanges}
-                  tiers={tiers}
-                  nameOf={shownName}
-                  faceOf={gridFaceOf}
-                  plainCardOf={plain.shown ? plainCardOf : undefined}
-                  visibleThumbnail={visibleCols.thumbnail}
-                  visibleGames={visibleCols.games}
-                  onOpen={(id, opener) => openDrillDown(id, opener)}
-                />
-                <CreatedPanel
-                  kind="other"
-                  created={otherCreatedCards}
-                  sort={createdSort}
-                  onSort={sortCreatedBy}
-                  view={view}
-                  showRanges={showRanges}
-                  tiers={tiers}
-                  nameOf={shownName}
-                  faceOf={gridFaceOf}
-                  plainCardOf={plain.shown ? plainCardOf : undefined}
-                  visibleThumbnail={visibleCols.thumbnail}
-                  visibleGames={visibleCols.games}
-                  onOpen={(id, opener) => openDrillDown(id, opener)}
-                />
+                {(
+                  [
+                    ["tokens", tokenCards],
+                    ["other", otherCreatedCards],
+                  ] as const
+                ).map(([kind, created]) => (
+                  <CreatedPanel
+                    key={kind}
+                    kind={kind}
+                    created={created}
+                    sort={createdSort}
+                    onSort={sortCreatedBy}
+                    view={view}
+                    showRanges={showRanges}
+                    tiers={tiers}
+                    nameOf={shownName}
+                    faceOf={gridFaceOf}
+                    plainCardOf={plain.shown ? plainCardOf : undefined}
+                    visibleThumbnail={visibleCols.thumbnail}
+                    visibleGames={visibleCols.games}
+                    onOpen={(id, opener) => openDrillDown(id, opener)}
+                  />
+                ))}
               </>
             )}
           </>
@@ -1902,7 +2214,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                               {t(row.set)}
                               {row.set === setLeaders.pooled && (
                                 <span className="stats-sets-leader" aria-hidden="true">
-                                  {" ★"}
+                                  {" "}<Icon name="star" />
                                 </span>
                               )}
                             </th>
@@ -2091,40 +2403,89 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         label: t("Experimental"),
         testId: statsTestid.tabExperimental,
         panelClassName: "stats-panel one-screen__body",
-        // R4678000: figures that span patches, in a Segmented of its views now that it has two (R4680000). R4678001:
-        // Running, each card the Cards tab's filters list, on its live play version; R4680000: Versions, every play
-        // version of those cards; each sorted, viewed and ranged by the page's one state.
+        // R4678000: figures that span patches, in a Segmented of its views, now four (R4680000, R4681001, R5040000).
+        // R5040000: Major patch running and Historical (R4678001's Running), each card the Cards tab's filters list, on
+        // its live play version, over the newest major's line or every patch; R4680000: Versions, every play version
+        // of those cards; R4681001: Hall of Fame, the four all-time lists, which read no filter.
         panel: (
           <>
             <Segmented
               label={t("Experimental views")}
+              className="stats-experimental-views"
               value={experimentalView}
               onChange={setExperimentalView}
               options={[
-                { value: "running", label: t("Running"), testId: statsTestid.experimentalRunning, className: "stats-view-btn" },
+                {
+                  value: "running",
+                  label: t("Major patch running"),
+                  title: t(
+                    "Each card's current version, over the patches since the newest major or since it last changed, whichever is later. Every row starts again at each major, so it has too few games for a tier until games accrue.",
+                  ),
+                  testId: statsTestid.experimentalRunning,
+                  className: "stats-view-btn",
+                },
+                {
+                  value: "historical",
+                  label: t("Historical"),
+                  title: t("Each card's current version, over every patch since it last changed, across majors."),
+                  testId: statsTestid.experimentalHistorical,
+                  className: "stats-view-btn",
+                },
                 { value: "versions", label: t("Versions"), testId: statsTestid.experimentalVersions, className: "stats-view-btn" },
+                { value: "hall", label: t("Hall of fame"), testId: statsTestid.experimentalHall, className: "stats-view-btn" },
               ]}
             />
             <div className="stats-filter-bar">
               {cardFilters()}
-              {cardOptions(experimentalView)}
+              {cardOptions(experimentalView === "historical" ? "running" : experimentalView)}
             </div>
 
-            {versionsError || cardStatsError ? (
+            {/* R4681001: the Hall of Fame's four lists, which read no filter and open the before version. */}
+            {experimentalView === "hall" ? (
+              hallError || cardStatsError ? (
+                <div className="stats-error">
+                  <p>{t("The card statistics didn't load.")}</p>
+                  <button
+                    type="button"
+                    className="stats-retry-btn"
+                    onClick={() => {
+                      if (hallError) setHallAttempt((n) => n + 1);
+                      if (cardStatsError) setCardStatsAttempt((n) => n + 1);
+                    }}
+                  >
+                    {t("Retry")}
+                  </button>
+                </div>
+              ) : hallData === null || versionsData === null || cardStatsLoading ? (
+                <Skeleton variant="table" label={t("Loading card statistics…")} />
+              ) : hallEmpty ? (
+                <EmptyState text={t("No cards match the selected filters.")} />
+              ) : (
+                <HallPanel
+                  hall={hallData}
+                  showRanges={showRanges}
+                  band={hallData}
+                  faceOf={hallFaceOf}
+                  needOf={hallNeedOf}
+                  onNeed={needSnapshot}
+                  onOpen={openVersion}
+                />
+              )
+            ) : experimentalError || cardStatsError ? (
               <div className="stats-error">
                 <p>{t("The card statistics didn't load.")}</p>
                 <button
                   type="button"
                   className="stats-retry-btn"
                   onClick={() => {
-                    if (versionsError) setVersionsAttempt((n) => n + 1);
+                    if (experimentalError) setVersionsAttempt((n) => n + 1);
                     if (cardStatsError) setCardStatsAttempt((n) => n + 1);
                   }}
                 >
                   {t("Retry")}
                 </button>
               </div>
-            ) : versionsData === null || cardStatsLoading ? (
+            ) : experimentalData === null || cardStatsLoading ? (
               <Skeleton variant={view === "grid" ? "grid" : "table"} label={t("Loading card statistics…")} />
             ) : (experimentalView === "versions" ? versionsShown : running).length === 0 ? (
               <EmptyState text={t("No cards match the selected filters.")} />
@@ -2136,13 +2497,15 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 onSort={sortCreatedBy}
                 view={view}
                 showRanges={showRanges}
-                band={versionsData}
+                band={experimentalData}
+                typical={experimentalData.decisiveness}
                 labeledBy="stats-tab-experimental"
                 nameOf={shownName}
                 faceOf={versionFaceOf}
                 plainCardOf={plain.shown ? versionPlainOf : undefined}
                 visibleThumbnail={visibleCols.thumbnail}
                 visibleGames={visibleCols.games}
+                visiblePlayRate={visibleCols.playRate}
                 onOpen={openVersion}
                 onNeed={needSnapshot}
               />
@@ -2153,13 +2516,15 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 onSort={sortCreatedBy}
                 view={view}
                 showRanges={showRanges}
-                band={versionsData}
+                band={experimentalData}
+                typical={experimentalData.decisiveness}
                 labeledBy="stats-tab-experimental"
                 nameOf={shownName}
                 faceOf={gridFaceOf}
                 plainCardOf={plain.shown ? plainCardOf : undefined}
                 visibleThumbnail={visibleCols.thumbnail}
                 visibleGames={visibleCols.games}
+                visiblePlayRate={visibleCols.playRate}
                 onOpen={(id, opener) => openDrillDown(id, opener)}
               />
             )}
@@ -2261,6 +2626,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         type="button"
                         className="stats-drilldown-action"
                         data-testid={statsTestid.extendedToggle}
+                        ref={extendedToggle}
                         aria-pressed={extended !== null}
                         onClick={() => setExtended((open) => (open === null ? (extendedSections[0] ?? "choices") : null))}
                       >
@@ -2282,7 +2648,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         className="stats-drilldown-action"
                       />
                     </div>
-                    {!plain.shown && drillDownTokens.length > 0 && (
+                    {/* R4679001: it gives way while the Extended stats panel is open, as the details do */}
+                    {!plain.shown && extended === null && drillDownTokens.length > 0 && (
                       <section className="stats-drilldown-section stats-drilldown-tokens" data-testid={statsTestid.drillDownTokens}>
                         <h3>{t("Tokens this card makes")}</h3>
                         <ul className="stats-drilldown-token-list">
@@ -2364,8 +2731,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                           onChange={setExtended}
                           options={extendedSections.map((section) => ({
                             value: section,
-                            label: section === "choices" ? t("Choices") : t("Radiant vs normal"),
-                            testId: section === "choices" ? statsTestid.extendedChoicesTab : statsTestid.extendedFacesTab,
+                            ...sectionOption(section),
                             className: "stats-view-btn",
                           }))}
                         />
@@ -2378,6 +2744,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                           showRanges={showRanges}
                         />
                       )}
+                      {/* R4707002: a card that rolled but made nothing shows its rolled tables alone. */}
+                      {extendedShown === "outputs" && (drillDownOutputs.length > 0 || drillDownRolled.length === 0) && (
+                        <OutputsTable outputs={drillDownOutputs} showRanges={showRanges} onOpen={openOutput} />
+                      )}
+                      {extendedShown === "outputs" &&
+                        drillDownRolled.map((group) => <RolledTable key={group.kind} group={group} showRanges={showRanges} />)}
                       {extendedShown === "faces" && drillDownFaces && <FacesTable faces={drillDownFaces} showRanges={showRanges} />}
                       {extendedShown === undefined && <p className="stats-empty-sub">{t("Details unavailable.")}</p>}
                     </div>

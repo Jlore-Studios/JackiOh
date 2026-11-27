@@ -7,10 +7,11 @@
 // It is a route's slot (`Game`'s `heroAside`), as `boardRail` is: it reads the run, never a game, so
 // it can show nothing the view does not (CLAUDE.md rule 7).
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactElement } from "react";
+import type { ReactElement } from "react";
 
 import type { RunPassiveDef, RunTier } from "@jackioh/run";
 
+import { useAsideList } from "../../game/useAsideList.ts";
 import { t } from "../../i18n/i18n.ts";
 import { BackLayer } from "../../net/backLayers.ts";
 import { fightTestid, type TraySide } from "./testids.ts";
@@ -37,29 +38,7 @@ type ArtifactTrayProps = {
 
 /** A side's tray; nothing when the side holds no relic or blessing. */
 export function ArtifactTray({ side, items, passives }: ArtifactTrayProps): ReactElement | null {
-  const [open, setOpen] = useState(false);
-  const listId = useId();
-  const root = useRef<HTMLDivElement>(null);
-  const button = useRef<HTMLButtonElement>(null);
-
-  /** Escape and Back close the list and put the focus back on the button that opened it. */
-  const close = useCallback(() => {
-    setOpen(false);
-    button.current?.focus();
-  }, []);
-
-  // A press anywhere else closes the list, as the board's other menus do (ModifierList.tsx).
-  useEffect(() => {
-    if (!open) return;
-    function onPointer(event: PointerEvent): void {
-      if (event.target instanceof Node && root.current?.contains(event.target) === true) return;
-      setOpen(false);
-    }
-    window.addEventListener("pointerdown", onPointer);
-    return () => {
-      window.removeEventListener("pointerdown", onPointer);
-    };
-  }, [open]);
+  const { open, setOpen, listId, root, button, close } = useAsideList();
 
   if (items.length === 0) return null;
 

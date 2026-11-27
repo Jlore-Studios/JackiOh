@@ -540,7 +540,7 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
         assert_eq!(mod_ids(sink.state), vec![echo.id.clone()]);
 
         // It goes the moment it applies.
-        consume_modifier(&mut sink, P1, &echo.id);
+        remove_modifier(&mut sink, P1, &echo.id);
         assert!(sink.state.players.p1.mods.is_empty());
         let changes = modifier_changes(sink.events);
         assert!(matches_object(
@@ -576,7 +576,7 @@ mod player_modifiers_and_their_three_expiries_2_2_10_1 {
         assert_eq!(cost(sink.state, &unit), 3);
 
         // Consumed on use, so the Spell after it pays full: the next Spell *only*.
-        consume_modifier(&mut sink, P1, &applied.id);
+        remove_modifier(&mut sink, P1, &applied.id);
         assert_eq!(cost(sink.state, &second), 2);
 
         // Unused, it expires at cleanup instead (§2.2 names it there by name).
@@ -658,7 +658,7 @@ mod delayed_effects_10_1_r62_r68 {
         );
         assert!(due_delayed(sink.state, Phase::End, P2).is_empty());
 
-        drop_delayed(sink.state, &start_a.id);
+        sink.state.delayed.retain(|effect| effect.id != start_a.id);
         assert_eq!(
             effect_ids(due_delayed(sink.state, Phase::Start, P1)),
             vec![start_d.id.clone()]

@@ -8,7 +8,9 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 
 use jackioh_engine::config::Difficulty;
-use jackioh_engine::duos::{DuosReplayInput, DuosState, duos_seats_to_act};
+use jackioh_engine::duos::{
+    DuosReplayInput, DuosState, duos_hash, duos_legal_actions, duos_seats_to_act, duos_view_for,
+};
 use jackioh_engine::wire::{DUOS_SEATS, DuosAction, DuosActionBody, DuosSeat};
 use jackioh_engine::{Rng, fnv1a32_utf16};
 use jackioh_server::actor::checkpoint::RULES_FINGERPRINT;
@@ -109,7 +111,8 @@ fn policy_log(row: &DuosMatch, length: usize) -> Option<Vec<DuosAction>> {
 /// the AI may not make (R188).
 fn policy_move(state: &DuosState, policy: &mut Rng, seq: usize) -> Option<DuosAction> {
     let seat = *duos_seats_to_act(state).first()?;
-    let legal: Vec<DuosActionBody> = engine::legal(Pinned::default(), state, seat)
+    let legal: Vec<DuosActionBody> = Pinned::default()
+        .run(|| duos_legal_actions(state, seat))
         .into_iter()
         .filter(|body| !ai_forbidden(body))
         .collect();
@@ -198,7 +201,7 @@ fn folded(row: &DuosMatch, actions: &[DuosAction]) -> DuosState {
 }
 
 fn folded_hash(row: &DuosMatch, actions: &[DuosAction]) -> String {
-    engine::hash(&folded(row, actions))
+    duos_hash(&folded(row, actions))
 }
 
 /// Everything a rebuilt actor shows: its state's hash, the log's next seq and every seat's view.
@@ -225,11 +228,11 @@ async fn seen(actor: &DuosActor) -> Seen {
 fn seen_folded(row: &DuosMatch, actions: &[DuosAction]) -> Seen {
     let state = folded(row, actions);
     Seen {
-        hash: engine::hash(&state),
+        hash: duos_hash(&state),
         next_seq: i64::try_from(actions.len() + 1).expect("a small seq"),
         views: DUOS_SEATS
             .iter()
-            .map(|seat| to_json(&engine::view(Pinned::default(), &state, *seat)))
+            .map(|seat| to_json(&Pinned::default().run(|| duos_view_for(&state, *seat))))
             .collect(),
     }
 }
@@ -272,7 +275,7 @@ async fn a_drained_coop_match_rebuilds_from_its_checkpoint_as_a_full_fold_rebuil
     assert_eq!(checkpoint.checkpoint_version, MATCH_CHECKPOINT_VERSION);
     assert_eq!(checkpoint.body_hash, fnv1a32_utf16(&checkpoint.body));
     let body: DuosCheckpointBody = serde_json::from_str(&checkpoint.body).expect("the body reads");
-    assert_eq!(engine::hash(&body.state), folded_hash(&row, &actions[..LOGGED]));
+    assert_eq!(duos_hash(&body.state), folded_hash(&row, &actions[..LOGGED]));
     assert_eq!(logs.named("duos.checkpoint.written").len(), 1);
 
     append(&app, &rows_of(&row, LOGGED + 1, &actions[LOGGED..LOGGED + TAIL])).await;
@@ -619,8 +622,8 @@ async fn a_whole_coop_games_states_checkpoint_and_pass_their_checks() {
             panic!("{} at seq {seq}: refused for its {}", row.seed, refusal.as_str())
         });
         assert_eq!(
-            engine::hash(&read.state),
-            engine::hash(&state),
+            duos_hash(&read.state),
+            duos_hash(&state),
             "{} at seq {seq}",
             row.seed
         );

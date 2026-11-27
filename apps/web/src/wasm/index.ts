@@ -33,7 +33,6 @@ import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { PendingPromptView } from "../wire/generated/PendingPromptView.ts";
 import type { DeckMark } from "../wire/generated/DeckMark.ts";
 import type { WinRateTable } from "../wire/generated/WinRateTable.ts";
-import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { CombatForecast } from "../wire/generated/CombatForecast.ts";
 import type {
   AssaultAction,
@@ -239,7 +238,7 @@ export type ReduceResult = { state: GameState; events: GameEvent[]; error?: stri
 
 export type FoldInput = CreateGameArgs & { log: readonly Action[] };
 
-/** A finished or unfinished game's record, as `runFightReport` reads it. */
+/** A finished or unfinished game's record, as a replay and the run's fight report read it. */
 export type ReplayInput = FoldInput;
 
 /** `fold`'s answer: the state the log folds to, and every action the engine refused on the way. */
@@ -311,10 +310,6 @@ export function lastBoardFor(state: GameState, seat: PlayerId): LastBoardCard[] 
 /** R677: the seat the player who began in `home` plays now. */
 export function seatPlayedBy(state: GameState, home: PlayerId): PlayerId {
   return call("seatPlayedBy", () => normal.seat_played_by(stateJson(state), home) as PlayerId);
-}
-
-export function findInstance(state: GameState, instanceId: string): CardInstance | undefined {
-  return call("findInstance", () => parsed<CardInstance | null>(normal.find_instance(stateJson(state), instanceId)) ?? undefined);
 }
 
 /**
@@ -422,13 +417,6 @@ export function runFightSetup(state: RunState, content: RunContent): RunFightSet
   );
 }
 
-/** The `FightOver` a finished fight sends, or why the game reports none. */
-export function runFightReport(game: ReplayInput, human: PlayerId): { action: RunAction } | { error: string } {
-  return call("runFightReport", () =>
-    parsed<{ action: RunAction } | { error: string }>(normal.run_fight_report(json(game), json(human))),
-  );
-}
-
 /** The run's score so far. */
 export function runScore(state: RunState, content: RunContent): number {
   return call("runScore", () => parsed<number>(normal.run_score(json(state), json(content))));
@@ -500,7 +488,7 @@ export function assaultPlaceholderContent(catalog: CardDefs): AssaultContent {
   );
 }
 
-/** The Assault's content for the browser: `assault_placeholder_content` until the release. */
+/** R4597000: the Assault's content for the browser: `assault_catalog_content`, since the release. */
 export function assaultContent(): AssaultContent {
   return call("assaultContent", () => parsed<AssaultContent>(normal.assault_content()));
 }

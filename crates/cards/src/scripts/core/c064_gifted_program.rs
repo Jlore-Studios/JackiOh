@@ -1,5 +1,5 @@
 //! #64 Gifted Program (SPEC §8.3, §10.1, §10.5 step 3, §5.2, R56, R70, R74, R213, R214).
-//! Base: "The first card costing 1 or less you play each turn becomes Radiant as it is played".
+//! Base: "Aura: The first card costing 1 or less you play each turn becomes Radiant as it is played".
 //! Radiant: "2 or less" (§8 Conventions).
 //! Trigger fires in §10.5 step 3 (before resolution; R213, R214, R119). Cost paid checked (R56, R70). Makes instance Radiant (§5.2, R74, §10.1).
 

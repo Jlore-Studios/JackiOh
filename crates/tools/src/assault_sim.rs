@@ -38,14 +38,9 @@
 use std::collections::BTreeMap;
 
 use anyhow::bail;
-use jackioh_ai::{
-    AI_BUDGET, AI_SKILL_MAX, MatchConfig, MatchHooks, MatchSetup, SearchBudget, SeatController, play_match,
-};
+use jackioh_ai::{AI_SKILL_MAX, MatchConfig, SearchBudget};
 use jackioh_engine::config::PERCENT;
-use jackioh_engine::{
-    CreateGameOptions, PerPlayer, PerPlayerOpt, PlayerId, SetupKind, fold, hash_state, registered_catalog,
-    validate_setup,
-};
+use jackioh_engine::{PerPlayerOpt, PlayerId};
 use jackioh_run::assault::{
     AssaultAction, AssaultContent, AssaultDay, AssaultDeckSource, AssaultFightSetup, AssaultFile,
     AssaultPhase, AssaultRecord, AssaultSetup, AssaultState, AssaultUpgradeKind,
@@ -57,7 +52,7 @@ use jackioh_run::{
 };
 use rayon::prelude::*;
 
-use crate::arena::TEST_BUDGET;
+use crate::run_sim::{ai_fight_config, budget_of, mean, play_clean_match};
 
 /// The first day a sweep plays when `--from` names none: the day the plan was written (IA0).
 const DEFAULT_FROM: &str = "2026-11-23";
@@ -111,15 +106,6 @@ fn levels_of(all_levels: bool, levels: &[u8]) -> Option<Vec<u8>> {
     all_levels.then(|| (1..=ASSAULT_LEVELS).collect())
 }
 
-/// The search budget `--budget` names: `tiny` is the tests' (`arena.rs`'s `TEST_BUDGET`), `full` the
-/// practice AI's.
-fn budget_of(name: &str) -> SearchBudget {
-    match name {
-        "tiny" => TEST_BUDGET,
-        _ => AI_BUDGET,
-    }
-}
-
 /// The day after `date` (a date `assault_day_seed` accepts), or why it is refused.
 fn next_date(date: &str) -> Result<String, String> {
     assault_day_seed(date)?;
@@ -167,32 +153,26 @@ fn day_deck(date: &str) -> Result<Vec<String>, String> {
 /// The match a fight's setup plays: the human (P1) is the AI at `skill`, the enemy (P2) the AI at full
 /// skill, both at `budget`, and the enemy's marks dealt (R2702000).
 fn fight_config(setup: &AssaultFightSetup, skill: f64, budget: SearchBudget) -> MatchConfig {
-    MatchConfig {
-        seed: setup.seed.clone(),
-        decks: (setup.human_deck.clone(), setup.enemy_deck.clone()),
-        handicaps: Some(PerPlayerOpt {
+    let mut config = ai_fight_config(
+        setup.seed.clone(),
+        (setup.human_deck.clone(), setup.enemy_deck.clone()),
+        PerPlayerOpt {
             p1: Some(setup.human_handicap),
             p2: Some(setup.enemy_handicap),
-        }),
-        controllers: PerPlayer::new(
-            SeatController::Ai {
-                budget: Some(budget),
-                skill: Some(skill),
-            },
-            SeatController::Ai {
-                budget: Some(budget),
-                skill: None,
-            },
-        ),
-        max_actions: None,
-        setup: MatchSetup {
-            deck_marks: Some(PerPlayerOpt {
-                p1: None,
-                p2: Some(setup.enemy_marks.clone()),
-            }),
-            ..MatchSetup::default()
         },
-    }
+        PerPlayerOpt {
+            p1: None,
+            p2: Some(setup.enemy_marks.clone()),
+        },
+        skill,
+        budget,
+    );
+    // R4597001: the enemy's seat names the Assault's set, so its deck may hold the set's cards.
+    config.setup.deck_sets = (!setup.enemy_sets.is_empty()).then(|| PerPlayerOpt {
+        p1: None,
+        p2: Some(setup.enemy_sets.clone()),
+    });
+    config
 }
 
 /// One fight played: its level's facts and how it went.
@@ -218,49 +198,7 @@ fn play_fight(
     budget: SearchBudget,
 ) -> Result<(FightRow, AssaultAction), String> {
     let setup = assault_fight_setup(state, day).ok_or("the fight has no setup")?;
-    let config = fight_config(&setup, skill, budget);
-    // `create_game` panics on a setup it refuses, outside the match's `catch_unwind`: refuse it here.
-    let options = CreateGameOptions {
-        seed: config.seed.clone(),
-        decks: config.decks.clone(),
-        handicaps: config.handicaps.clone(),
-        deck_marks: config.setup.deck_marks.clone(),
-        ..CreateGameOptions::default()
-    };
-    validate_setup(&options, registered_catalog(), SetupKind::New)
-        .map_err(|e| format!("the engine refuses the setup: {e}"))?;
-    let record = play_match(&config, &mut MatchHooks::default());
-    if let Some(thrown) = record.thrown.first() {
-        return Err(format!("{} threw: {}", thrown.seat.as_str(), thrown.message));
-    }
-    if let Some(rejected) = record.rejected.first() {
-        return Err(format!(
-            "{}'s \"{}\" was refused: {}",
-            rejected.seat.as_str(),
-            rejected.action.action_type().as_str(),
-            rejected.error
-        ));
-    }
-    if record.fallbacks > 0 {
-        return Err(format!("{} decisions fell back", record.fallbacks));
-    }
-    if record.sim_panics > 0 {
-        return Err(format!("the searches caught {} panics", record.sim_panics));
-    }
-    if record.result.is_none() {
-        return Err(format!(
-            "the game had no result after {} actions",
-            record.log.len()
-        ));
-    }
-    let game = config.fold_args(record.log);
-    let replayed = fold(&game);
-    if let Some(error) = replayed.errors.first() {
-        return Err(format!("the fold refuses {}: {}", error.nonce, error.error));
-    }
-    if hash_state(&replayed.state) != record.hash {
-        return Err("the record folds to another hash".to_string());
-    }
+    let (game, replayed) = play_clean_match(&fight_config(&setup, skill, budget))?;
     let action = assault_fight_report(&game, PlayerId::P1)?;
     let AssaultAction::FightOver { won, turns } = action else {
         return Err("the report is no fightOver".to_string());
@@ -371,15 +309,6 @@ impl Sums {
         self.hp_left += i64::from(row.hp_left);
         self.enemy_hp_left += i64::from(row.enemy_hp_left);
     }
-}
-
-/// `sum / n` to one decimal place, or a dash for none.
-fn mean(sum: i64, n: usize) -> String {
-    if n == 0 {
-        return "-".to_string();
-    }
-    let n = n as f64;
-    format!("{:.1}", sum as f64 / n)
 }
 
 /// `won of fights (percent)`, or a dash for none.
@@ -557,15 +486,17 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arena::TEST_BUDGET;
 
     /// The days, from `DEFAULT_FROM`, whose fights the bands play.
     const BAND_DAYS: u32 = 6;
     /// R4583000: the fewest level-1 fights, in percent, the day's Assault deck may win before level 1 is
-    /// no longer clearly winnable (an AI mirror at one skill is about even; measured at `TEST_BUDGET`:
-    /// 3 of 6, 4 of 12 and 7 of 16 from `DEFAULT_FROM`, 18 of 32 from 2027-01-01; at full budget 5 of 8).
+    /// no longer clearly winnable (measured at `TEST_BUDGET` from `DEFAULT_FROM` on the set's real cards
+    /// since the release, R4597002: 6 of 6; on the placeholder before it, 3 of 6).
     const LEVEL_ONE_WIN_PERCENT_MIN: usize = 25;
     /// R4583000: the most level-20 fights, in percent, it may win before level 20 is no longer clearly
-    /// hard (measured: none of 12, none of 8 at full budget).
+    /// hard (measured at `TEST_BUDGET` from `DEFAULT_FROM` since the release, R4597002: 1 of 6, from 2 of
+    /// 6 before its re-tune; on the placeholder before it, none of 12).
     const LEVEL_TWENTY_WIN_PERCENT_MAX: usize = 20;
     /// The days the daily sweep walks, at full budget.
     const DAILY_DAYS: u32 = 4;

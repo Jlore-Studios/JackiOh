@@ -5,7 +5,7 @@
 // Redo of the deck (#2099), whose steps were taken on the deck it replaced. The server decides what a
 // version is and whether a restore stands (CLAUDE.md rule 7); this shows its list and its refusal.
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactElement } from "react";
+import { useEffect, useId, useState, type ReactElement } from "react";
 
 import type { CatalogSnapshot } from "@jackioh/validator";
 
@@ -15,6 +15,7 @@ import { BackLayer } from "../../net/backLayers.ts";
 import { versionChange, type VersionChange } from "./deckHistory.ts";
 import type { DeckStore } from "./sync.ts";
 import { DECK_HISTORY_BUTTON, DECK_HISTORY_PANEL, DECK_HISTORY_ROW, deckHistoryRestoreId } from "./testids.ts";
+import { useWorkshopPopover } from "./useWorkshopPopover.ts";
 import { cardNames } from "./workshop.ts";
 
 /** A clock face: the deck's history, drawn like the cosmetics sparkle (24 px, current color), in strokes. */
@@ -95,35 +96,11 @@ export default function DeckHistory({
   onRestored: () => void;
 }): ReactElement {
   useLocale();
-  const [open, setOpen] = useState(false);
+  // Outside press and Escape close the panel, like the cosmetics picker's; Back does too (R2127000, the panel's BackLayer).
+  const { open, setOpen, close, buttonRef, root } = useWorkshopPopover();
   const [listing, setListing] = useState<Listing>({ kind: "loading" });
   const [restoring, setRestoring] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const root = useRef<HTMLDivElement>(null);
-
-  // Focus moves before the panel unmounts, so it never falls back to <body> on the way.
-  const close = useCallback((): void => {
-    setOpen(false);
-    buttonRef.current?.focus();
-  }, []);
-
-  // Outside press and Escape close the panel, like the cosmetics picker's; Back does too (R2127000, the panel's BackLayer).
-  useEffect(() => {
-    if (!open) return undefined;
-    const onPointerDown = (event: PointerEvent): void => {
-      if (root.current !== null && !root.current.contains(event.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") close();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [close, open]);
 
   // Each open reads the list again: a save since the last look may have kept a version.
   useEffect(() => {

@@ -31,7 +31,7 @@
   --frame-trap: #8e3a4c;
   --frame-field-trap: #6e3a8e;
 
-  --foil-gold: #ffd24a;
+  --foil-gold: var(--pal-gold-300);
 }
 
 /* ------------------------------------------------------------------------------ the root --- */
@@ -72,9 +72,9 @@
   translate: -50% 0;
   z-index: 2;
   padding: 0 3px;
-  border-radius: 3px;
-  background: linear-gradient(180deg, #c9d2e3, #6b7891);
-  color: #0d1220;
+  border-radius: var(--radius-xs);
+  background: linear-gradient(180deg, var(--pal-ink-200), #6b7891);
+  color: var(--pal-slate-900);
   font-size: 0.55em;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -180,12 +180,12 @@
     150deg,
     color-mix(in srgb, var(--cf-rarity) 55%, #fff),
     var(--cf-rarity) 40%,
-    color-mix(in srgb, var(--cf-rarity) 45%, #000)
+    color-mix(in srgb, var(--cf-rarity) 45%, var(--pal-black))
   );
-  --cf-ink: #fbf6ea;
+  --cf-ink: var(--pal-white);
   /* The metal rim around the art window: bronze, warmed toward the rarity color. */
-  --cf-bezel: color-mix(in srgb, var(--cf-rarity) 28%, #b8965a);
-  --cf-outline: 0 0 0.35cqh #000, 0 0.2cqh 0.25cqh #000, 0 0 0.12cqh #000;
+  --cf-bezel: color-mix(in srgb, var(--cf-rarity) 28%, var(--pal-brass-500));
+  --cf-outline: 0 0 0.35cqh var(--pal-black), 0 0.2cqh 0.25cqh var(--pal-black), 0 0 0.12cqh var(--pal-black);
 
   position: relative;
   display: block;
@@ -195,7 +195,7 @@
   aspect-ratio: 5 / 7;
   max-width: 100%;
   margin-inline: auto;
-  border-radius: 7% / 5%;
+  border-radius: var(--radius-card);
   background: var(--cf-edge);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
   color: var(--cf-ink);
@@ -312,20 +312,20 @@
   overflow: hidden;
   container-type: size;
   container-name: cardface;
-  border-radius: 6% / 4.3%;
+  border-radius: var(--radius-card-scale);
   /* The panel's bevel: a dark inner rim, a lit upper edge and a shaded foot, so the frame reads as
      a raised plate rather than a flat fill. */
   box-shadow:
-    inset 0 0 0 0.5cqw rgb(0 0 0 / 0.42),
-    inset 0 0.45cqh 0 0.5cqw rgb(255 255 255 / 0.12),
-    inset 0 -2cqh 3cqh rgb(0 0 0 / 0.3);
+    inset 0 0 0 0.5cqw color-mix(in srgb, var(--pal-black) 42%, transparent),
+    inset 0 0.45cqh 0 0.5cqw color-mix(in srgb, var(--pal-white) 12%, transparent),
+    inset 0 -2cqh 3cqh color-mix(in srgb, var(--pal-black) 30%, transparent);
   background:
     radial-gradient(120% 55% at 50% 28%, color-mix(in srgb, var(--cf-frame) 70%, #fff 30%), transparent 72%),
     linear-gradient(
       172deg,
       color-mix(in srgb, var(--cf-frame) 85%, #fff),
       var(--cf-frame) 38%,
-      color-mix(in srgb, var(--cf-frame) 50%, #000)
+      color-mix(in srgb, var(--cf-frame) 50%, var(--pal-black))
     );
 }
 
@@ -353,7 +353,7 @@
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  text-shadow: 0 0 0.6cqw #000, 0 0.4cqw 0.5cqw #000;
+  text-shadow: 0 0 0.6cqw var(--pal-black), 0 0.4cqw 0.5cqw var(--pal-black);
   isolation: isolate;
 }
 
@@ -364,9 +364,9 @@
   z-index: -1;
   clip-path: polygon(50% 0, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%);
   background:
-    radial-gradient(circle at 36% 28%, #d8ecff 0 10%, transparent 34%),
-    radial-gradient(circle at 45% 40%, #6aa7ff, var(--mana, #3d7bd4) 50%, #173a80 85%);
-  filter: drop-shadow(0 0.4cqw 0.6cqw rgb(0 0 0 / 0.7));
+    radial-gradient(circle at 36% 28%, var(--pal-slate-100) 0 10%, transparent 34%),
+    radial-gradient(circle at 45% 40%, #6aa7ff, var(--mana, var(--pal-blue-600)) 50%, #173a80 85%);
+  filter: drop-shadow(0 0.4cqw 0.6cqw color-mix(in srgb, var(--pal-black) 70%, transparent));
 }
 
 /* A three-digit price (Ceaseless Void's 100) steps down so it stays inside the crystal. */
@@ -416,7 +416,7 @@
 
 /* The surface: a thin line on the layer's top edge, moved down to the level (a percentage of its own height). */
 .cf .cost-gem .cf-cost-drain::after {
-  border-top: 0.5cqw solid color-mix(in srgb, var(--pal-sky-300) 75%, transparent);
+  border-top: 0.5cqw solid color-mix(in srgb, var(--pal-ink-300) 75%, transparent);
   transform: translateY(calc(var(--cost-drain, 0) * 100%));
 }
 
@@ -428,9 +428,9 @@
   place-items: center;
   width: 9.5cqw;
   height: 9.5cqw;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle at 38% 32%, #d7a8ff, #7a2fb3 60%, #3d1060);
-  box-shadow: 0 0 0 0.5cqw #1a1030;
+  box-shadow: 0 0 0 0.5cqw var(--pal-slate-900);
   color: #fff;
   font-size: 5.6cqw;
   font-weight: 800;
@@ -447,7 +447,7 @@
   width: 52cqw;
   height: 13cqh;
   translate: -50% 0;
-  filter: drop-shadow(0 0.3cqh 0.4cqh rgb(0 0 0 / 0.6));
+  filter: drop-shadow(0 0.3cqh 0.4cqh color-mix(in srgb, var(--pal-black) 60%, transparent));
 }
 
 .cf[data-rarity="Mythic"] .cf-crest {
@@ -466,9 +466,9 @@
   place-items: center;
   width: 52cqw;
   height: 13cqh;
-  border-radius: 50%;
-  background: rgb(20 24 40 / 0.85);
-  color: #f2e9c9;
+  border-radius: var(--radius-round);
+  background: color-mix(in srgb, var(--pal-slate-900) 85%, transparent);
+  color: var(--pal-parchment);
   font-size: 8cqh;
   line-height: 1;
 }
@@ -492,16 +492,16 @@
   right: 9cqw;
   display: block;
   height: 37cqh;
-  filter: drop-shadow(0 0.4cqh 0.5cqh rgb(0 0 0 / 0.65));
+  filter: drop-shadow(0 0.4cqh 0.5cqh color-mix(in srgb, var(--pal-black) 65%, transparent));
 }
 
 /* The bezel: a metal ring hugging the art's own shape (its border-radius), then a dark keyline. */
 .cf .cf-art-frame > .cf-art {
   box-shadow:
     0 0 0 0.9cqw var(--cf-bezel),
-    0 0 0 1.4cqw rgb(0 0 0 / 0.5),
+    0 0 0 1.4cqw color-mix(in srgb, var(--pal-black) 50%, transparent),
     inset 0 0 0 1px rgb(0 0 0 / 0.35),
-    inset 0 -0.6em 1.2em rgb(0 0 0 / 0.22);
+    inset 0 -0.6em 1.2em color-mix(in srgb, var(--pal-black) 22%, transparent);
 }
 
 /* A notched trap window clips its own shadow away, so its ring is a larger notched plate behind. */
@@ -512,7 +512,7 @@
   z-index: -1;
   inset: -1.2cqw;
   clip-path: polygon(10% 0, 90% 0, 100% 13%, 100% 87%, 90% 100%, 10% 100%, 0 87%, 0 13%);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--cf-bezel) 80%, #fff), var(--cf-bezel) 45%, color-mix(in srgb, var(--cf-bezel) 55%, #000));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cf-bezel) 80%, #fff), var(--cf-bezel) 45%, color-mix(in srgb, var(--cf-bezel) 55%, var(--pal-black)));
 }
 
 /* A Field Trap's window is a tall hexagon rather than the Trap's chamfered box, so the two trap
@@ -567,6 +567,7 @@
   word-break: normal;
   -webkit-line-clamp: none;
   line-height: 7.6cqh;
+  font-family: var(--font-display);
   font-size: calc(5.2cqh * var(--cf-name-scale, 1) * var(--cf-fit, 1));
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -575,8 +576,8 @@
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--cf-frame) 60%, #fff),
-    color-mix(in srgb, var(--cf-frame) 80%, #000) 55%,
-    color-mix(in srgb, var(--cf-frame) 45%, #000)
+    color-mix(in srgb, var(--cf-frame) 80%, var(--pal-black)) 55%,
+    color-mix(in srgb, var(--cf-frame) 45%, var(--pal-black))
   );
   clip-path: polygon(0 0, 100% 0, 96% 50%, 100% 100%, 0 100%, 4% 50%);
 }
@@ -593,15 +594,15 @@
   height: 4.6cqh;
   translate: -50% 0;
   rotate: 45deg;
-  border-radius: 0.6cqh;
+  border-radius: var(--radius-card-gem);
   background: radial-gradient(
     circle at 35% 30%,
     #fff 0 10%,
     var(--cf-rarity) 48%,
-    color-mix(in srgb, var(--cf-rarity) 50%, #000)
+    color-mix(in srgb, var(--cf-rarity) 50%, var(--pal-black))
   );
   box-shadow:
-    0 0 0 0.35cqh #2a2116,
+    0 0 0 0.35cqh var(--pal-wood-800),
     0 0 1cqh color-mix(in srgb, var(--cf-rarity) 70%, transparent);
 }
 
@@ -630,14 +631,15 @@
   margin: 0;
   padding: 1.6cqh 3cqw;
   overflow: hidden;
-  border-radius: 2.5cqw;
+  border-radius: var(--radius-card-text);
   background:
     radial-gradient(120% 90% at 50% 40%, #f6ecd4, #e3d2ac 70%, #c9b48a),
-    #eadcb8;
+    var(--pal-parchment);
   box-shadow:
     inset 0 0 0 0.35cqw rgb(60 40 10 / 0.45),
-    inset 0 0.5cqh 1cqh rgb(0 0 0 / 0.18);
+    inset 0 0.5cqh 1cqh color-mix(in srgb, var(--pal-black) 18%, transparent);
   color: #2b2116;
+  font-family: var(--font-display);
   font-size: calc(4.4cqh * var(--cf-text-scale, 1) * var(--cf-fit, 1));
   font-weight: 500;
   line-height: 1.18;
@@ -709,6 +711,11 @@
   opacity: 0.75;
 }
 
+/* R5050000: the gear a unit holds, listed below its own text as a Starship's pieces are. */
+.cf .cf-equipped {
+  margin-top: 0.3em;
+}
+
 /* R2521009: a Resource's sale prices on the face shown, "Credits: 2–5", a quiet line under its text
    (`CardDef.resource`, read off the definition alone). */
 .cf .cf-text-credits {
@@ -751,8 +758,8 @@
 :root {
   --mark-ink: #6b4200;
   --mark-line: #c98a00;
-  --mark-band: rgb(255 210 74 / 0.5);
-  --mark-ink-on-dark: var(--radiant, #ffd24a);
+  --mark-band: color-mix(in srgb, var(--pal-gold-300) 50%, transparent);
+  --mark-ink-on-dark: var(--radiant, var(--pal-gold-300));
 }
 
 .cf-mark {
@@ -791,16 +798,16 @@
 .cf-ref[tabindex] {
   pointer-events: auto;
   cursor: help;
-  border-radius: 0.2em;
+  border-radius: var(--radius-card-inline);
 }
 
 .cf-ref[tabindex]:focus-visible {
-  outline: 2px solid var(--selected, #f0c04a);
+  outline: 2px solid var(--selected, var(--pal-gold-400));
   outline-offset: 1px;
 }
 
 .cf-ref[data-ref-open="true"] {
-  background: rgb(255 210 74 / 0.35);
+  background: color-mix(in srgb, var(--pal-gold-300) 35%, transparent);
 }
 
 /* Above every inspect layer (inspect.css: --z-inspect-hover 60, the modal ones at --z-dialog 72), since a
@@ -826,7 +833,7 @@
   pointer-events: auto;
   cursor: help;
   -webkit-touch-callout: none;
-  border-radius: 0.2em;
+  border-radius: var(--radius-card-inline);
 }
 
 /* ...but only where its card takes the pointer. A descendant's own `pointer-events` beats every
@@ -852,7 +859,7 @@
   z-index: 80;
   max-width: min(260px, calc(100vw - 16px));
   padding: 6px 9px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--bg-sunken) 96%, transparent);
   color: var(--text);
   font-size: 0.85rem;
@@ -1038,11 +1045,11 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgb(0 0 0 / 0.4),
+    color-mix(in srgb, var(--pal-black) 40%, transparent),
     transparent 16%,
     transparent 58%,
-    rgb(0 0 0 / 0.5) 78%,
-    rgb(0 0 0 / 0.72)
+    color-mix(in srgb, var(--pal-black) 50%, transparent) 78%,
+    color-mix(in srgb, var(--pal-black) 72%, transparent)
   );
   pointer-events: none;
 }
@@ -1232,7 +1239,7 @@
 }
 
 .cf[data-version="version-comic"]:not([data-radiant-face="true"]) .card-name {
-  background: var(--pal-cyan-400);
+  background: #22d3ee;
   color: var(--pal-black);
   text-shadow: 0.25cqh 0.25cqh 0 var(--pal-white);
 }
@@ -1245,34 +1252,34 @@
    a Radiant face keeps its gold-foil frame, gold bezel and gilded banner, and R2943002 a worn border its edge and
    bezel, the ring taking its colour. The panel (`--cf-frame`) stays the type's. */
 .cf[data-showcase="core"]:not([data-radiant-face="true"]):not([data-frame]) {
-  --cf-bezel: var(--pal-sky-300);
-  --cf-edge: radial-gradient(circle at 50% 30%, var(--pal-sky-300), var(--pal-blue-800) 55%, var(--pal-blue-900));
+  --cf-bezel: #7dd3fc;
+  --cf-edge: radial-gradient(circle at 50% 30%, #7dd3fc, var(--pal-blue-800) 55%, #1e3a8a);
 }
 
 .cf[data-showcase="core"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
   box-shadow:
     0 0 0 0.9cqw var(--cf-bezel),
-    0 0 0 1.6cqw var(--pal-blue-900),
-    0 0 2.4cqw 1.6cqw color-mix(in srgb, var(--pal-sky-300) 45%, transparent);
+    0 0 0 1.6cqw #1e3a8a,
+    0 0 2.4cqw 1.6cqw color-mix(in srgb, #7dd3fc 45%, transparent);
 }
 
 /* Core's capsule: a rounded banner, the name in the text face at its boldest. */
 .cf[data-showcase="core"] .card-name {
   clip-path: none;
-  border-radius: 3.8cqh;
+  border-radius: var(--radius-card-name-core);
   font-family: var(--font-text);
   font-weight: 900;
 }
 
 .cf[data-showcase="core"]:not([data-radiant-face="true"]) .card-name {
-  background: var(--pal-blue-900);
+  background: #1e3a8a;
   color: var(--pal-white);
-  box-shadow: inset 0 0 0 0.4cqh var(--pal-sky-300);
+  box-shadow: inset 0 0 0 0.4cqh #7dd3fc;
 }
 
 .cf[data-showcase="classic"]:not([data-radiant-face="true"]):not([data-frame]) {
-  --cf-bezel: var(--pal-grey-500);
-  --cf-edge: repeating-linear-gradient(to bottom, var(--pal-stone-500) 0 6px, var(--pal-grey-500) 6px 7px);
+  --cf-bezel: #6b7280;
+  --cf-edge: repeating-linear-gradient(to bottom, var(--pal-stone-500) 0 6px, #6b7280 6px 7px);
 }
 
 .cf[data-showcase="classic"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
@@ -1293,8 +1300,8 @@
   color: var(--pal-black);
   text-shadow: none;
   box-shadow:
-    inset 0 0.5cqh 0 var(--pal-grey-500),
-    inset 0 -0.5cqh 0 var(--pal-grey-500);
+    inset 0 0.5cqh 0 #6b7280,
+    inset 0 -0.5cqh 0 #6b7280;
 }
 
 .cf[data-showcase="meditative"]:not([data-radiant-face="true"]):not([data-frame]) {
@@ -1321,17 +1328,17 @@
 }
 
 .cf[data-showcase="stinkyscape"]:not([data-radiant-face="true"]):not([data-frame]) {
-  --cf-bezel: var(--pal-violet-500);
+  --cf-bezel: #8b5cf6;
   --cf-edge:
-    radial-gradient(circle at 22% 16%, var(--pal-violet-500), transparent 40%),
-    radial-gradient(circle at 80% 78%, var(--pal-violet-300), transparent 30%), linear-gradient(var(--pal-slate-900) 0 0);
+    radial-gradient(circle at 22% 16%, #8b5cf6, transparent 40%),
+    radial-gradient(circle at 80% 78%, #c4b5fd, transparent 30%), linear-gradient(var(--pal-slate-900) 0 0);
 }
 
 .cf[data-showcase="stinkyscape"]:not([data-radiant-face="true"]) .cf-art-frame > .cf-art {
   box-shadow:
     0 0 0 0.6cqw var(--cf-bezel),
     0 0 0 1.4cqw var(--pal-slate-900),
-    0 0 2.4cqw 1.4cqw color-mix(in srgb, var(--pal-violet-500) 50%, transparent);
+    0 0 2.4cqw 1.4cqw color-mix(in srgb, #8b5cf6 50%, transparent);
 }
 
 /* Stinkyscape's console: a flat banner, the name wide in capitals. */
@@ -1345,7 +1352,7 @@
   background: var(--pal-slate-900);
   color: var(--pal-slate-100);
   text-shadow: none;
-  box-shadow: inset 0 -0.4cqh 0 var(--pal-violet-500);
+  box-shadow: inset 0 -0.4cqh 0 #8b5cf6;
 }
 
 .cf[data-showcase="training-grounds"]:not([data-radiant-face="true"]):not([data-frame]) {
@@ -1362,7 +1369,7 @@
 /* Training Grounds' plank: a square banner, the name in capitals at its boldest, as if burnt into the wood. */
 .cf[data-showcase="training-grounds"] .card-name {
   clip-path: none;
-  border-radius: 0.6cqh;
+  border-radius: var(--radius-card-gem);
   text-transform: uppercase;
   font-weight: 900;
 }
@@ -1471,17 +1478,17 @@
   --cf-bezel: var(--pal-slate-100);
   --cf-edge: conic-gradient(
     from 200deg,
-    var(--pal-red-400),
-    var(--pal-purple-400),
-    var(--pal-violet-500),
-    var(--pal-sky-400),
-    var(--pal-cyan-400),
-    var(--pal-green-400),
-    var(--pal-cyan-400),
-    var(--pal-sky-400),
-    var(--pal-violet-500),
-    var(--pal-purple-400),
-    var(--pal-red-400)
+    #f87171,
+    #c084fc,
+    #8b5cf6,
+    #38bdf8,
+    #22d3ee,
+    #4ade80,
+    #22d3ee,
+    #38bdf8,
+    #8b5cf6,
+    #c084fc,
+    #f87171
   );
 }
 
@@ -1513,10 +1520,10 @@
   height: 4.6cqh;
   padding: 0 2.2cqw;
   overflow: hidden;
-  border-radius: 2.3cqh;
-  background: linear-gradient(180deg, #3a3326, #1d1911);
+  border-radius: var(--radius-card-tag);
+  background: linear-gradient(180deg, #3a3326, var(--pal-wood-800));
   box-shadow: inset 0 0 0 0.25cqh color-mix(in srgb, var(--cf-rarity) 60%, #8a7650);
-  color: #f3e7c3;
+  color: var(--pal-parchment);
   font-size: 2.9cqh;
   font-weight: 700;
   line-height: 4.6cqh;
@@ -1534,7 +1541,7 @@
   height: 4.4cqh;
   margin: 0;
   overflow: hidden;
-  color: rgb(255 255 255 / 0.85);
+  color: color-mix(in srgb, var(--pal-white) 85%, transparent);
   font-size: 3cqh;
   font-weight: 700;
   line-height: 4.4cqh;
@@ -1589,7 +1596,7 @@
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  text-shadow: 0 0 0.6cqw #000, 0 0.4cqw 0.5cqw #000, 0 0 0.2cqw #000;
+  text-shadow: 0 0 0.6cqw var(--pal-black), 0 0.4cqw 0.5cqw var(--pal-black), 0 0 0.2cqw var(--pal-black);
 }
 
 /* Tones, as Hearthstone colors them: green above the printed number, red below it or wounded.
@@ -1600,13 +1607,13 @@
 
 .cf [data-tone="reduced"] > .cf-num {
   color: #d40000;
-  text-shadow: 0 0 0.5cqw #fff4d0, 0 0 0.8cqw #000, 0 0.4cqw 0.5cqw #000;
+  text-shadow: 0 0 0.5cqw #fff4d0, 0 0 0.8cqw var(--pal-black), 0 0.4cqw 0.5cqw var(--pal-black);
 }
 
 .cf [data-tone="damaged"] > .cf-num,
 .cf .cf-hp[data-tone="reduced"] > .cf-num {
-  color: #ff5a5a;
-  text-shadow: 0 0 0.6cqw #000, 0 0.4cqw 0.5cqw #000, 0 0 0.2cqw #000;
+  color: var(--pal-ember-500);
+  text-shadow: 0 0 0.6cqw var(--pal-black), 0 0.4cqw 0.5cqw var(--pal-black), 0 0 0.2cqw var(--pal-black);
 }
 
 .cf .cf-hp[data-tone="damaged"] > .cf-icon,
@@ -1720,7 +1727,7 @@
     justify-content: center;
     height: 25cqh;
     padding: 0 3.5cqw;
-    border-radius: 2.2cqh;
+    border-radius: var(--radius-card-name);
     white-space: normal;
     line-height: 1.04;
     font-size: calc(10.4cqh * var(--cf-band-scale, 1) * var(--cf-fit, 1));
@@ -1827,7 +1834,7 @@
 }
 
 .cf[data-layout="compact"][data-full-art="true"] .cf-art-frame::after {
-  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 24%, transparent 80%, rgb(0 0 0 / 0.3));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 40%, transparent), transparent 24%, transparent 80%, color-mix(in srgb, var(--pal-black) 30%, transparent));
 }
 
 .cf[data-layout="compact"][data-full-art="true"][data-card-type] .card-name {
@@ -1848,7 +1855,7 @@
   --cf-band-scale: calc(9 / 10.4);
   letter-spacing: 0;
   clip-path: none;
-  box-shadow: inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
+  box-shadow: inset 0 0.3cqh 0 color-mix(in srgb, var(--pal-white) 18%, transparent);
 }
 
 /* Two lines, then an ellipsis, if even FIT_MIN will not fit. */
@@ -1897,7 +1904,7 @@
 }
 
 .cf[data-layout="compact"][data-art-first="true"] .cf-art-frame::after {
-  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 24%, transparent 80%, rgb(0 0 0 / 0.3));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 40%, transparent), transparent 24%, transparent 80%, color-mix(in srgb, var(--pal-black) 30%, transparent));
 }
 
 /* ------------------------------------------------------------------------------- minion ----- */
@@ -1918,18 +1925,18 @@
   height: 100%;
   aspect-ratio: auto;
   margin: 0;
-  border-radius: 12% / 9%;
+  border-radius: var(--radius-card-minion);
 }
 
 .cf[data-layout="minion"] .cf-scale {
   inset: 0;
   border-radius: inherit;
   background:
-    radial-gradient(90% 70% at 50% 38%, color-mix(in srgb, var(--cf-frame) 55%, #1d1a14), transparent 75%),
-    linear-gradient(180deg, #2a2620, #14120e);
+    radial-gradient(90% 70% at 50% 38%, color-mix(in srgb, var(--cf-frame) 55%, var(--pal-wood-800)), transparent 75%),
+    linear-gradient(180deg, #2a2620, var(--pal-wood-900));
   box-shadow:
-    inset 0 0 0 0.6cqmin rgb(255 255 255 / 0.08),
-    inset 0 -3cqh 5cqh rgb(0 0 0 / 0.45);
+    inset 0 0 0 0.6cqmin color-mix(in srgb, var(--pal-white) 8%, transparent),
+    inset 0 -3cqh 5cqh color-mix(in srgb, var(--pal-black) 45%, transparent);
 }
 
 .cf .cf-portrait {
@@ -1970,10 +1977,10 @@
      is a 4-6px name nobody can read. Below 7.5px the name stays readable and ends in an ellipsis
      instead (useFitText marks it data-clamped), and the hover preview shows it whole. */
   font-size: max(7.5px, calc(7.4cqh * var(--cf-fit, 1)));
-  border-radius: 1.2cqh;
+  border-radius: var(--radius-card-name-minion);
   box-shadow:
     0 0.4cqh 0.8cqh rgb(0 0 0 / 0.55),
-    inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
+    inset 0 0.3cqh 0 color-mix(in srgb, var(--pal-white) 18%, transparent);
   clip-path: none;
 }
 
@@ -1989,7 +1996,7 @@
    above and the full face's `data-full-art` rules whatever the source order. */
 .cf[data-layout="minion"][data-full-art="true"] .cf-scale {
   inset: 1.2% 1.7%;
-  border-radius: 10.7% / 8%;
+  border-radius: var(--radius-card-minion-scale);
 }
 
 .cf[data-layout="minion"][data-full-art="true"] .cf-portrait {
@@ -2006,15 +2013,15 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 22%, transparent 62%, rgb(0 0 0 / 0.5));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 40%, transparent), transparent 22%, transparent 62%, color-mix(in srgb, var(--pal-black) 50%, transparent));
   pointer-events: none;
 }
 
 .cf[data-layout="minion"][data-full-art="true"][data-taunt="true"] .cf-portrait::after {
   box-shadow:
-    inset 0 0 0 1cqmin #2b303b,
+    inset 0 0 0 1cqmin var(--pal-slate-800),
     inset 0 0 0 4.4cqmin #c3cad8,
-    inset 0 0 0 5.4cqmin #2b303b;
+    inset 0 0 0 5.4cqmin var(--pal-slate-800);
 }
 
 .cf[data-layout="minion"][data-full-art="true"] .card-name {
@@ -2023,7 +2030,7 @@
   bottom: 0;
   left: 0;
   border-radius: 0;
-  box-shadow: inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
+  box-shadow: inset 0 0.3cqh 0 color-mix(in srgb, var(--pal-white) 18%, transparent);
 }
 
 .cf[data-layout="minion"][data-full-art="true"] .stats {
@@ -2033,7 +2040,7 @@
 /* R3339000: Art-first cards in play drop name bands and text to let art stand edge-to-edge. */
 .cf[data-layout="minion"][data-art-first="true"] .cf-scale {
   inset: 1.2% 1.7%;
-  border-radius: 10.7% / 8%;
+  border-radius: var(--radius-card-minion-scale);
 }
 
 .cf[data-layout="minion"][data-art-first="true"] .cf-portrait {
@@ -2050,7 +2057,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 22%, transparent 62%, rgb(0 0 0 / 0.5));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 40%, transparent), transparent 22%, transparent 62%, color-mix(in srgb, var(--pal-black) 50%, transparent));
   pointer-events: none;
 }
 
@@ -2083,9 +2090,9 @@
 
 .cf[data-layout="minion"][data-taunt="true"]:not([data-full-art="true"]) .cf-portrait::after {
   box-shadow:
-    inset 0 0 0 1cqmin #2b303b,
+    inset 0 0 0 1cqmin var(--pal-slate-800),
     inset 0 0 0 4.4cqmin #c3cad8,
-    inset 0 0 0 5.4cqmin #2b303b;
+    inset 0 0 0 5.4cqmin var(--pal-slate-800);
 }
 
 /* R3339000: an art-first face that is not full art has no rim to ring: the art runs edge to edge under the panel's own
@@ -2094,14 +2101,14 @@
    after the rules they override and carry the `:not` they carry, so they outrank them whatever the layout's ring. */
 .cf[data-layout="minion"][data-art-first="true"]:not([data-full-art="true"]) .cf-portrait::after {
   box-shadow: none;
-  background: linear-gradient(180deg, rgb(0 0 0 / 0.4), transparent 22%, transparent 62%, rgb(0 0 0 / 0.5));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 40%, transparent), transparent 22%, transparent 62%, color-mix(in srgb, var(--pal-black) 50%, transparent));
 }
 
 .cf[data-layout="minion"][data-art-first="true"][data-taunt="true"]:not([data-full-art="true"]) .cf-portrait::after {
   box-shadow:
-    inset 0 0 0 1cqmin #2b303b,
+    inset 0 0 0 1cqmin var(--pal-slate-800),
     inset 0 0 0 4.4cqmin #c3cad8,
-    inset 0 0 0 5.4cqmin #2b303b;
+    inset 0 0 0 5.4cqmin var(--pal-slate-800);
 }
 
 .cf[data-layout="minion"][data-art-first="true"] .stats {
@@ -2121,7 +2128,7 @@
   backdrop-filter: blur(4px);
   box-shadow:
     0 0.4cqh 0.8cqh rgb(0 0 0 / 0.35),
-    inset 0 0.3cqh 0 rgb(255 255 255 / 0.15);
+    inset 0 0.3cqh 0 color-mix(in srgb, var(--pal-white) 15%, transparent);
 }
 
 /* R3339000: the hover plate, the name of a board face that draws none (an art-first face, or any face under "Never"). It
@@ -2141,11 +2148,11 @@
   height: max(11cqh, 10px);
   padding: 0 4cqw;
   border-radius: 0;
-  background: rgb(0 0 0 / 0.75);
+  background: color-mix(in srgb, var(--pal-black) 75%, transparent);
   backdrop-filter: blur(4px);
-  box-shadow: inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
+  box-shadow: inset 0 0.3cqh 0 color-mix(in srgb, var(--pal-white) 18%, transparent);
   clip-path: none;
-  color: #f0f3fa;
+  color: var(--pal-slate-100);
   font-size: max(7.5px, calc(7.4cqh * var(--cf-fit, 1)));
   font-weight: 700;
   letter-spacing: 0;
@@ -2184,7 +2191,7 @@
   left: 3cqw;
   right: 3cqw;
   height: var(--mf-plate);
-  border-radius: 1.2cqh;
+  border-radius: var(--radius-card-name-minion);
   line-height: var(--mf-plate);
 }
 
@@ -2203,11 +2210,11 @@
   top: calc(0.5cqh + 2cqmin);
   right: 0.5cqw;
   padding: max(1.5px, 0.8cqmin) max(2.5px, 1.4cqmin);
-  border-radius: max(3px, 2cqmin);
-  background: linear-gradient(180deg, #fbf5e6, #d9ccb0);
+  border-radius: var(--radius-card-chip);
+  background: linear-gradient(180deg, var(--pal-white), #d9ccb0);
   box-shadow:
-    0 0 0 1px rgb(0 0 0 / 0.75),
-    0 1px 2px rgb(0 0 0 / 0.5);
+    0 0 0 1px color-mix(in srgb, var(--pal-black) 75%, transparent),
+    0 1px 2px color-mix(in srgb, var(--pal-black) 50%, transparent);
   color: #5a4a32;
   font-size: max(7px, 8cqmin);
   font-weight: 800;
@@ -2248,11 +2255,11 @@
   top: 30cqh;
   right: 2cqw;
   padding: 0 max(2.5px, 1.4cqmin);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: radial-gradient(circle at 40% 35%, #2b3142, #0d1018 75%);
   box-shadow:
     0 0 0 max(1px, 0.5cqw) rgb(232 236 248 / 0.75),
-    0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+    0 0.3cqh 0.8cqh color-mix(in srgb, var(--pal-black) 60%, transparent);
   color: #e8ecf8;
   font-size: max(7px, 8cqmin);
   font-style: italic;
@@ -2304,23 +2311,23 @@
   height: var(--mf-stat, 28cqmin);
   padding: 0 calc(var(--mf-stat, 28cqmin) * 0.12);
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: #fff;
   font-size: calc(var(--mf-stat, 28cqmin) * 0.6);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   line-height: var(--mf-stat, 28cqmin);
-  text-shadow: 0 0 0.8cqmin #000, 0 0.5cqmin 0.6cqmin #000, 0 0 0.3cqmin #000;
+  text-shadow: 0 0 0.8cqmin var(--pal-black), 0 0.5cqmin 0.6cqmin var(--pal-black), 0 0 0.3cqmin var(--pal-black);
   box-shadow:
-    0 0 0 0.8cqmin #1a1408,
-    inset 0 0.6cqmin 0.4cqmin rgb(255 255 255 / 0.35),
-    0 0.6cqmin 1cqmin rgb(0 0 0 / 0.6);
+    0 0 0 0.8cqmin var(--pal-wood-900),
+    inset 0 0.6cqmin 0.4cqmin color-mix(in srgb, var(--pal-white) 35%, transparent),
+    0 0.6cqmin 1cqmin color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 .cf .stat-attack {
   order: 0;
   margin-right: auto;
-  background: radial-gradient(circle at 36% 30%, #fff1b0, #f2b32a 45%, #a86400 80%, #6b3c00);
+  background: radial-gradient(circle at 36% 30%, var(--pal-brass-200), var(--pal-gold-400) 45%, var(--pal-brass-600) 80%, var(--pal-wood-600));
 }
 
 .cf .stat-health {
@@ -2335,8 +2342,8 @@
   min-width: calc(var(--mf-stat, 28cqmin) * 0.7);
   height: calc(var(--mf-stat, 28cqmin) * 0.7);
   margin-right: calc(var(--mf-stat, 28cqmin) * -0.14);
-  border-radius: 20% 20% 45% 45%;
-  background: linear-gradient(180deg, #dfe7f3, #8190aa 55%, #465169);
+  border-radius: var(--radius-card-armor);
+  background: linear-gradient(180deg, var(--pal-slate-100), #8190aa 55%, var(--pal-slate-700));
   font-size: calc(var(--mf-stat, 28cqmin) * 0.42);
   line-height: calc(var(--mf-stat, 28cqmin) * 0.7);
 }
@@ -2351,27 +2358,27 @@
 
 .cf .stat[data-tone="reduced"] {
   color: #c80000;
-  text-shadow: 0 0 0.6cqmin #fff4d0, 0 0 1cqmin #000, 0 0.5cqmin 0.6cqmin #000;
+  text-shadow: 0 0 0.6cqmin #fff4d0, 0 0 1cqmin var(--pal-black), 0 0.5cqmin 0.6cqmin var(--pal-black);
 }
 
 .cf .stat-health[data-tone="reduced"] {
-  color: #ff5a5a;
-  text-shadow: 0 0 1cqmin #000, 0 0 0.6cqmin #000, 0 0.5cqmin 0.6cqmin #000;
-  background: radial-gradient(circle at 36% 30%, #7a2a2a, #4a0a0a 50%, #240303 85%);
+  color: var(--pal-ember-500);
+  text-shadow: 0 0 1cqmin var(--pal-black), 0 0 0.6cqmin var(--pal-black), 0 0.5cqmin 0.6cqmin var(--pal-black);
+  background: radial-gradient(circle at 36% 30%, #7a2a2a, var(--pal-lacquer-900) 50%, #240303 85%);
 }
 
 .cf .stat[data-tone="damaged"] {
-  color: #ff5a5a;
-  text-shadow: 0 0 1cqmin #000, 0 0 0.6cqmin #000, 0 0.5cqmin 0.6cqmin #000;
+  color: var(--pal-ember-500);
+  text-shadow: 0 0 1cqmin var(--pal-black), 0 0 0.6cqmin var(--pal-black), 0 0.5cqmin 0.6cqmin var(--pal-black);
 }
 
 .cf .stat-health[data-tone="damaged"] {
-  background: radial-gradient(circle at 36% 30%, #7a2a2a, #4a0a0a 50%, #240303 85%);
+  background: radial-gradient(circle at 36% 30%, #7a2a2a, var(--pal-lacquer-900) 50%, #240303 85%);
   box-shadow:
-    0 0 0 0.8cqmin #1a1408,
+    0 0 0 0.8cqmin var(--pal-wood-900),
     0 0 0 1.4cqmin rgb(255 60 60 / 0.55),
-    inset 0 0.6cqmin 0.4cqmin rgb(255 255 255 / 0.2),
-    0 0.6cqmin 1cqmin rgb(0 0 0 / 0.6);
+    inset 0 0.6cqmin 0.4cqmin color-mix(in srgb, var(--pal-white) 20%, transparent),
+    0 0.6cqmin 1cqmin color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 /* "current over max": the max rides small after the current number, so a full-health gem stays
@@ -2416,22 +2423,22 @@
 /* One chip per keyword, each in its own color, so "RU" and "LS" read apart at a glance. */
 :is(.cf, .field-badges) .keyword,
 :is(.cf, .field-badges) .cf-kw-more {
-  --kw: #3a3f52;
+  --kw: var(--pal-slate-700);
 
   display: block;
   min-width: 2.1em;
   padding: max(1.5px, 0.8cqmin) max(2.5px, 1.4cqmin);
   border: 0;
-  border-radius: max(3px, 2cqmin);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--kw) 88%, #fff), color-mix(in srgb, var(--kw) 80%, #000));
+  border-radius: var(--radius-card-chip);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--kw) 88%, #fff), color-mix(in srgb, var(--kw) 80%, var(--pal-black)));
   box-shadow:
-    0 0 0 1px rgb(0 0 0 / 0.75),
-    0 1px 2px rgb(0 0 0 / 0.5);
+    0 0 0 1px color-mix(in srgb, var(--pal-black) 75%, transparent),
+    0 1px 2px color-mix(in srgb, var(--pal-black) 50%, transparent);
   color: #fff;
   font-weight: 800;
   letter-spacing: 0.02em;
   text-align: center;
-  text-shadow: 0 1px 1px rgb(0 0 0 / 0.8);
+  text-shadow: 0 1px 1px color-mix(in srgb, var(--pal-black) 80%, transparent);
   white-space: nowrap;
 }
 
@@ -2450,7 +2457,7 @@
 :is(.cf, .field-badges) .keyword[data-keyword="Poisonous"] { --kw: #2f8f3a; }
 :is(.cf, .field-badges) .keyword[data-keyword="Lifesteal"] { --kw: #a3173f; }
 :is(.cf, .field-badges) .keyword[data-keyword="Reborn"] { --kw: #1f8fb8; }
-:is(.cf, .field-badges) .keyword[data-keyword="Divine Shield"] { --kw: #c79a1c; }
+:is(.cf, .field-badges) .keyword[data-keyword="Divine Shield"] { --kw: var(--pal-brass-500); }
 :is(.cf, .field-badges) .keyword[data-keyword="Trample"] { --kw: #8a4b1c; }
 :is(.cf, .field-badges) .keyword[data-keyword="Cleave"] { --kw: #7240c9; }
 :is(.cf, .field-badges) .keyword[data-keyword="Pierce"] { --kw: #0f7f86; }
@@ -2458,20 +2465,20 @@
 :is(.cf, .field-badges) .keyword[data-keyword="Temporary"] { --kw: #a8561f; }
 :is(.cf, .field-badges) .keyword[data-keyword="Deft"] { --kw: #b03a8c; }
 :is(.cf, .field-badges) .keyword[data-keyword="Untributable"] { --kw: #6b5a3e; }
-:is(.cf, .field-badges) .keyword[data-keyword="Equip"] { --kw: #c2372f; }
+:is(.cf, .field-badges) .keyword[data-keyword="Equip"] { --kw: var(--pal-red-600); }
 :is(.cf, .field-badges) .keyword[data-keyword="Ranged"] { --kw: #7a5a1f; }
 :is(.cf, .field-badges) .keyword[data-keyword="Flying"] { --kw: #4f7fb8; }
 :is(.cf, .field-badges) .keyword[data-keyword="Cloaked"] { --kw: #5b4a7a; }
-:is(.cf, .field-badges) .keyword[data-keyword="Crater"] { --kw: #7a4a2a; }
+:is(.cf, .field-badges) .keyword[data-keyword="Crater"] { --kw: var(--pal-wood-600); }
 :is(.cf, .field-badges) .keyword[data-keyword="Flashback"] { --kw: #c46a1a; }
 :is(.cf, .field-badges) .keyword[data-keyword="Tradable"] { --kw: #2f7a6a; }
-:is(.cf, .field-badges) .keyword[data-keyword="Indestructible"] { --kw: #3c4a63; }
+:is(.cf, .field-badges) .keyword[data-keyword="Indestructible"] { --kw: var(--pal-slate-700); }
 :is(.cf, .field-badges) .keyword[data-keyword="Immutable"] { --kw: #52607a; }
 :is(.cf, .field-badges) .keyword[data-keyword="Stack"] { --kw: #2f55c2; }
-:is(.cf, .field-badges) .keyword[data-keyword="Can't attack"] { --kw: #4a4a55; }
+:is(.cf, .field-badges) .keyword[data-keyword="Can't attack"] { --kw: var(--pal-slate-700); }
 :is(.cf, .field-badges) .keyword[data-keyword="Armor"] { --kw: #5d6d8a; }
 :is(.cf, .field-badges) .keyword[data-keyword="Lucky"] { --kw: #108a5e; }
-:is(.cf, .field-badges) .keyword[data-keyword="Animated"] { --kw: #9a6a12; }
+:is(.cf, .field-badges) .keyword[data-keyword="Animated"] { --kw: var(--pal-brass-600); }
 :is(.cf, .field-badges) .keyword[data-keyword="Animated on your turn"] { --kw: #7d5a1e; }
 :is(.cf, .field-badges) .keyword[data-keyword="Brittle"] { --kw: #5b7c96; }
 :is(.cf, .field-badges) .keyword[data-keyword="Spell Damage"] { --kw: #3552b8; }
@@ -2487,14 +2494,14 @@
   right: 5cqw;
   bottom: calc(var(--mf-stat, 28cqmin) + var(--mf-plate, 11cqh) * 0.3);
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(
     closest-side,
     transparent 66%,
-    rgb(255 236 150 / 0.3) 82%,
-    rgb(255 245 200 / 0.9)
+    color-mix(in srgb, var(--pal-brass-200) 30%, transparent) 82%,
+    color-mix(in srgb, var(--pal-brass-200) 90%, transparent)
   );
-  box-shadow: 0 0 2.5cqmin rgb(255 220 120 / 0.75);
+  box-shadow: 0 0 2.5cqmin color-mix(in srgb, var(--pal-gold-300) 75%, transparent);
   pointer-events: none;
 }
 
@@ -2505,10 +2512,10 @@
   bottom: var(--mf-plate);
   left: 0;
   border-radius: 0;
-  background: radial-gradient(farthest-corner, transparent 66%, rgb(255 236 150 / 0.4));
+  background: radial-gradient(farthest-corner, transparent 66%, color-mix(in srgb, var(--pal-brass-200) 40%, transparent));
   box-shadow:
-    inset 0 0 0 0.7cqmin rgb(255 244 190 / 0.95),
-    inset 0 0 6cqmin 1cqmin rgb(255 220 120 / 0.85);
+    inset 0 0 0 0.7cqmin color-mix(in srgb, var(--pal-brass-200) 95%, transparent),
+    inset 0 0 6cqmin 1cqmin color-mix(in srgb, var(--pal-gold-300) 85%, transparent);
 }
 
 /* ------------------------------------------------------------------------------ foil ------- */
@@ -2647,9 +2654,9 @@
     z-index: var(--z-raised);
     border-radius: inherit;
     box-shadow:
-      inset 0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 35%, transparent),
-      inset 0 0 4px 1px color-mix(in srgb, var(--pal-violet-300) 35%, transparent),
-      inset 0 0 3px 1px color-mix(in srgb, var(--pal-green-200) 35%, transparent);
+      inset 0 0 6px 2px color-mix(in srgb, #7dd3fc 35%, transparent),
+      inset 0 0 4px 1px color-mix(in srgb, #c4b5fd 35%, transparent),
+      inset 0 0 3px 1px color-mix(in srgb, #bbf7d0 35%, transparent);
     opacity: 0.5;
     pointer-events: none;
     animation: cf-mythic-hand-shimmer var(--motion-slow) var(--ease-in-out) infinite alternate;
@@ -2677,11 +2684,11 @@
   border-radius: inherit;
   background:
     radial-gradient(circle at 50% 50%, rgb(127 107 208 / 0.4), transparent 62%),
-    repeating-linear-gradient(45deg, #232a45 0 4px, #1b2036 4px 8px),
-    #1b2036;
+    repeating-linear-gradient(45deg, var(--pal-ink-900) 0 4px, var(--pal-slate-900) 4px 8px),
+    var(--pal-slate-900);
   box-shadow:
     inset 0 0 0 2px rgb(212 175 55 / 0.55),
-    inset 0 0 0 4px #141726;
+    inset 0 0 0 4px var(--pal-slate-900);
   pointer-events: none;
 }
 
@@ -2700,8 +2707,8 @@
   height: 22%;
   aspect-ratio: 1;
   margin: 0;
-  border: 1px solid rgb(255 214 120 / 0.75);
-  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--pal-gold-300) 75%, transparent);
+  border-radius: var(--radius-round);
 }
 
 /* ------------------------------------------------------------ a face-down card's cost --- */
@@ -2724,7 +2731,7 @@
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  text-shadow: 0 0 2px #000, 0 1px 2px #000;
+  text-shadow: 0 0 2px var(--pal-black), 0 1px 2px var(--pal-black);
   isolation: isolate;
   pointer-events: none;
 }
@@ -2736,9 +2743,9 @@
   z-index: -1;
   clip-path: polygon(50% 0, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%);
   background:
-    radial-gradient(circle at 36% 28%, #d8ecff 0 10%, transparent 34%),
-    radial-gradient(circle at 45% 40%, #6aa7ff, var(--mana, #3d7bd4) 50%, #173a80 85%);
-  filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.7));
+    radial-gradient(circle at 36% 28%, var(--pal-slate-100) 0 10%, transparent 34%),
+    radial-gradient(circle at 45% 40%, #6aa7ff, var(--mana, var(--pal-blue-600)) 50%, #173a80 85%);
+  filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--pal-black) 70%, transparent));
 }
 
 /* In the inspect overlay the back is large, and so is its gem. */

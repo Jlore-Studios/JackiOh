@@ -219,7 +219,7 @@ mod r310_the_viewer_s_own_library_without_its_order {
         type Order = fn(&[CardInstance]) -> Vec<CardInstance>;
         let orders: [Order; 3] = [reversed, rotated, by_id_descending];
         for reorder in orders {
-            let mut b = clone_state(&a);
+            let mut b = a.clone();
             b.players.p1.library = reorder(&b.players.p1.library);
             assert_ne!(ids_of(&b.players.p1.library), ids_of(&a.players.p1.library));
             for viewer in [P1, P2] {

@@ -91,6 +91,24 @@ fn r2660000_a_taunt_on_the_bots_board_walls_the_lethal() {
     assert!(!unstoppable_lethal(&state, AI, None));
 }
 
+/// S+ #100 Plesiosize, a (2) Spell: a Unit in its caster's hand gains +8/+8 and GIGA.
+const PLESIOSIZE: &str = "stinkyscapeplus-100";
+/// A 1/1 Taunt, which one attacker kills (a stand-in, #3486).
+const WALL: &str = "stand-in (1) 1/1 Taunt";
+
+/// R4793000: a bot on 3 with 3 mana holds Plesiosize, a 1/1 Taunt and a 1/1 without it. The Taunt alone
+/// dies to one attacker and the other's hit kills; Plesiosize on it first makes it a 9/9 Taunt that
+/// takes both attacks and lives, the one escape. The walk tries Plesiosize on the other 1/1 first, and
+/// the two used to sign as one position, so it never tried the escape and conceded
+#[test]
+fn r4793000_plesiosize_on_the_second_hand_unit_is_an_escape_the_walk_tries() {
+    let state = facing(
+        json!({ "health": 3, "mana": 3, "hand": [PLESIOSIZE, WALL, SMALL] }),
+        json!({}),
+    );
+    assert!(!unstoppable_lethal(&state, AI, None));
+}
+
 /// R2660000: a bot whose 4/4 swings p2 from 4 to 0 wins before p2's board ever attacks
 #[test]
 fn r2660000_a_bot_that_wins_this_turn_is_not_doomed() {
@@ -282,4 +300,108 @@ fn r3047001_a_card_bought_costs_nothing_so_a_bot_without_mana_still_walls_the_le
     );
     assert!(!unstoppable_lethal(&walled, AI, None));
     assert!(unstoppable_lethal(&broke(&[]), AI, None));
+}
+
+/// Classic+ #35 Rollback, a (4) Spell: "Choose 1, 2 or 3. Return the board to how it was that many
+/// turns ago."
+const ROLLBACK: &str = "classicplus-035";
+
+/// `facing(p1, {})` with a board history (R419) whose one snapshot, last turn's, holds neither side's
+/// field: p2's 3/3 and 4/4 came after it.
+fn with_history_before_the_lethal(p1: Value) -> GameState {
+    let mut state = facing(p1, json!({}));
+    let mut before = board("unstoppable", AI, json!({}), json!({}));
+    before.turn = state.turn - 1;
+    subsystems::board_history::record_board_snapshot(&mut before);
+    state.board_history = before.board_history;
+    state
+}
+
+/// R4796000: a bot holding Classic+ #35 Rollback, with the mana for it, can return the board to last
+/// turn's, before p2's lethal stood there. The history a Rollback reads is no seat's to see in full
+/// (`redact`), so a step that returns the board to a snapshot proves nothing, and the bot plays on. The
+/// same bot a crystal short of it is doomed.
+#[test]
+fn r4796000_a_bot_that_can_roll_the_board_back_plays_on() {
+    let state = with_history_before_the_lethal(json!({ "health": 6, "hand": [ROLLBACK], "mana": 4 }));
+    let rollback = state.players[AI].hand[0].id.clone();
+    let takes_the_lethal_off = legal_actions(&state, AI).into_iter().any(|action| {
+        let ours = matches!(&action, ActionBody::Play { instance_id, .. } if *instance_id == rollback);
+        let played = reduce_unpiloted(&state, &Action::new(action, AI, "premise"));
+        ours && played.error.is_none() && active_units_of(&played.state, HUMAN).is_empty()
+    });
+    assert!(
+        takes_the_lethal_off,
+        "PREMISE: in the game, the Rollback takes p2's units off the field"
+    );
+    assert!(!unstoppable_lethal(&state, AI, None));
+    let short = with_history_before_the_lethal(json!({ "health": 6, "hand": [ROLLBACK], "mana": 3 }));
+    assert!(unstoppable_lethal(&short, AI, None));
+}
+
+/// Meditative #22 Mind Games, a (2) Spell: Greed, Attack or Defend, chosen in secret, its reward at its
+/// caster's next turn start; Attack deals 8 damage to each enemy.
+const MIND_GAMES: &str = "meditative-022";
+/// The Fortify Mind (M #22.1) Mind Games adds to the other player's hand, which guesses the choice.
+const FORTIFY_MIND: &str = "meditative-022-1";
+/// The bot's library in `after_mind_games`: Rapid Replenishes, as many as put each of the check's
+/// worlds' guesses of the secret on Attack.
+const MIND_GAMES_LIBRARY: usize = 29;
+
+/// The bot, p1 on `health`, on its own turn after p2 (its 3/3 and 4/4 on the field) cast Mind Games
+/// choosing `choice`, so the reward lands at p2's next turn start, with `library` Rapid Replenishes in
+/// its library. The bot holds no Fortify Mind: its hand was full, and the token burned.
+fn after_mind_games(choice: &str, health: i32, library: usize) -> GameState {
+    register_cards();
+    let mut s = scenario(json!({
+        "seed": "unstoppable",
+        "active": HUMAN,
+        "p1": { "library": vec!["core-010"; library] },
+        "p2": { "field": ["core-011", "core-008"], "hand": [MIND_GAMES], "mana": 2 },
+    }));
+    for player in [AI, HUMAN] {
+        s.state_mut().players[player].auto_end_turn = Some(false);
+    }
+    s.play(MIND_GAMES, json!({ "modes": [choice] }));
+    s.end_turn();
+    let mut state = s.state().clone();
+    state.players[AI].hand.retain(|card| card.def_id != FORTIFY_MIND);
+    state.players[AI].hero.health = health;
+    state
+}
+
+/// What each of the check's worlds would guess p2's secret to be, were the secret kept in them: the
+/// determinizations `unstoppable_lethal` draws, on its own stream, of the state `redact` gives the bot.
+fn guessed_secrets(state: &GameState) -> Vec<Option<SecretChoice>> {
+    let public = redact(state, AI);
+    let ground = det_ground(&public, AI);
+    let mut rng = Rng::new(UNSTOPPABLE_LETHAL_SEED, 0);
+    (0..UNSTOPPABLE_LETHAL_DETERMINIZATIONS)
+        .map(|_| {
+            let world = determinize_on(&public, AI, &mut rng, DeterminizeOptions::default(), &ground);
+            world.secrets.iter().flatten().find_map(|secret| secret.choice)
+        })
+        .collect()
+}
+
+/// R4796000: p2's Mind Games secret is Defend, so in the game its reward heals p2 and the bot on 12
+/// lives through the 7. A world that guessed Attack, 8 to each enemy before p2 attacks, would make the
+/// lethal by the guess alone, and on this stream all of them guess Attack. An unrevealed secret is
+/// taken out with the opponent's hand, its reward doing nothing, so the bot plays on; the bot on 6,
+/// whom p2's board kills whatever the secret, is still doomed.
+#[test]
+fn r4796000_an_unrevealed_secret_neither_makes_nor_hides_the_lethal() {
+    let defended = after_mind_games("defend", 12, MIND_GAMES_LIBRARY);
+    assert_eq!(defended.active, AI, "PREMISE: the bot's turn");
+    assert_eq!(
+        guessed_secrets(&defended),
+        vec![Some(SecretChoice::Attack); UNSTOPPABLE_LETHAL_DETERMINIZATIONS],
+        "PREMISE: every world guesses Attack"
+    );
+    assert!(!unstoppable_lethal(&defended, AI, None));
+    assert!(unstoppable_lethal(
+        &after_mind_games("defend", 6, MIND_GAMES_LIBRARY),
+        AI,
+        None
+    ));
 }

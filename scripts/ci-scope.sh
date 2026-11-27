@@ -39,8 +39,7 @@
 #
 # `full=false` means every file the pull request changes sits on the SKIP list below, which holds
 # only paths that no CI job other than `bot selftest` ever reads (ci.yml's `changes` job scopes that
-# check on its own, #1455): the night bot's code and its switches, the workflows that run the bot or watch the
-# repo (the pull request title check among them), the agent instruction files (CLAUDE.md, AGENTS.md,
+# check on its own, #1455): the night bot's code and its switches, the agent instruction files (CLAUDE.md, AGENTS.md,
 # GEMINI.md, CONTRIBUTING.md: code cites them in comments and nothing opens them), the repository's
 # meta that only GitHub reads (the issue forms, the pull request template, CODEOWNERS), and the
 # training docs (training/*.md: people and the bots read them, no job does; training/history/ is not
@@ -65,6 +64,11 @@
 # reads training/history/'s sweep-*.md reports. A
 # `full=false` diff prints every other line false too.
 #
+# Seven workflows are not on the list although only the bots and GitHub run them: bot-commands.yml,
+# bot-night.yml, squishy-run.yml, squishy-commands.yml, triage.yml, ci-duration.yml and pr-title.yml.
+# apps/web/src/net/env-production.test.ts reads every file of .github/workflows/ (R4701000, R1933001,
+# R1933000), so each runs `web` alone (#5002).
+#
 # Past the skip list, each changed file turns lines on, and a line no file turned on is false:
 #
 #  - A diff in which every file is one `cargo jackioh patches ship` or `patches cut` writes runs `full`
@@ -76,8 +80,10 @@
 #    pending/, crates/server/.env.example and apps/web/.env.production, and both patches.json and
 #    shipped.json must be in the diff, as no other pull request edits them. Any other file in the diff
 #    scopes as below.
+#  - Run web alone: the seven workflows above, so a diff of only these runs `full` and `web` (#5002);
+#    the case sits ahead of the `.github/` one below.
 #  - Run everything but the db suites: the workspace's Cargo.toml, Cargo.lock, rust-toolchain.toml,
-#    .cargo/ but .cargo/mutants.toml, anything under .github/ that is not on the skip list, and this script. Of these, only
+#    .cargo/ but .cargo/mutants.toml, anything under .github/ that is not on the skip list or one of those seven, and this script. Of these, only
 #    .github/ and this script run infra too: the terraform steps read no cargo file.
 #  - infra: infra/, of which only infra/cloudflare.tf turns web on (apps/edge's config
 #    test reads it, #4011); no e2e line turns on for it.
@@ -177,7 +183,7 @@
 #    when that stops being true), replay.rs's own tests pin the hotseat game's hash in `rust (test tools,
 #    wasm)`, which every change under crates/tools/ runs, and the push to `main` runs e2e smoke after the
 #    merge (#3564). crates/tools/Cargo.toml is not among them. The web's unit tests, the docs, spec/,
-#    training/, reviews/, analysis/, infra/, the top-level Markdown, the deploy files (the Dockerfile,
+#    training/, reviews/, analysis/, infra/, the top-level Markdown, the seven workflows above (#5002), the deploy files (the Dockerfile,
 #    wrangler.jsonc and the Worker, apps/edge/: e2e smoke boots jackioh-server itself, behind no
 #    Worker), the dev dashboard (apps/admin/: the smoke run boots jackioh-server itself and never serves
 #    it; only the daily dashboard spec builds and previews it, spec 49, whose one dashboard read is
@@ -187,7 +193,7 @@
 #
 # apps/web/src/net/ci-scope.test.ts holds every line both ways, and holds `web` and `e2e` to every
 # repository path the web's, the Worker's and the dashboard's sources name (apps/web, apps/edge,
-# apps/admin); crates/tools/tests/acceptance.rs holds the Rust groups to
+# apps/admin), and to every skip-listed file under a directory a source names; crates/tools/tests/acceptance.rs holds the Rust groups to
 # `cargo metadata` and to every file a crate includes from outside itself, and `replay`'s source
 # (tools' replay.rs) to the modules the e2e case keeps on (#4219).
 #
@@ -238,10 +244,6 @@ skipped() {
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) return 1 ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) return 1 ;;
     analysis/*) ;;
-    .github/workflows/bot-commands.yml | .github/workflows/bot-night.yml) ;;
-    .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml) ;;
-    .github/workflows/triage.yml | .github/workflows/ci-duration.yml) ;;
-    .github/workflows/pr-title.yml) ;;
     .cargo/mutants.toml | scripts/mutants.sh | scripts/mutants-runner.sh | scripts/pool-probe.sh) ;;
     *) return 1 ;;
   esac
@@ -323,6 +325,19 @@ fi
 for file in $files; do
   skipped "$file" && continue
 
+  # The workflows that run the bot or watch the repo (#5002): env-production.test.ts reads every file of
+  # .github/workflows/, so web runs for them and no other job does. `continue` keeps the `.github/*` cases
+  # below (every job, and infra) and the e2e catch-all from firing.
+  case "$file" in
+    .github/workflows/bot-commands.yml | .github/workflows/bot-night.yml | \
+      .github/workflows/squishy-run.yml | .github/workflows/squishy-commands.yml | \
+      .github/workflows/triage.yml | .github/workflows/ci-duration.yml | .github/workflows/pr-title.yml)
+      echo "ci-scope: $file is read by env-production.test.ts, so web runs" >&2
+      on web
+      continue
+      ;;
+  esac
+
   case "$file" in
     Cargo.toml | Cargo.lock | rust-toolchain.toml | .cargo/* | .github/* | scripts/ci-scope.sh)
       echo "ci-scope: $file runs every job" >&2
@@ -388,6 +403,8 @@ for file in $files; do
   case "$file" in
     crates/server/Cargo.toml | crates/tools/Cargo.toml) on web ;;
     crates/server/src/env.rs | crates/server/src/app.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
+    # i18n.test.ts reads the engine's Call to Chaos labels and modifier labels (R711000).
+    crates/engine/src/view_for.rs | crates/engine/src/subsystems/*) on web ;;
     crates/server/tests/fixtures/practice-claim.json) on web ;;
     crates/server/* | crates/tools/* | crates/*/README.md) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/* | crates/shared/tests/*) ;;

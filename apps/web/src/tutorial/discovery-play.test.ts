@@ -12,7 +12,7 @@ import { LESSON_GAME_TIMEOUT_MS, playLesson, reckless } from "./harness.ts";
 import { lessonById } from "./lessons.ts";
 import { TUTORIAL_BUBBLES_PER_MOVE_MAX } from "./config.ts";
 import { gotItRuns } from "./scripts/testkit.ts";
-import { heroTargetId, legalPlays, moment } from "./steps.ts";
+import { heroTargetId, moment } from "./steps.ts";
 
 const LESSON = "basics";
 
@@ -142,6 +142,6 @@ describe("R2205001 the reckless player", () => {
     // With only protective plays left, it ends the turn rather than guard.
     const guarded = legal.filter((action) => action.type !== "play" || ["trap", "wall", "shield"].includes(action.instanceId));
     expect(reckless(ctxOf(view, guarded, defs))).toEqual({ type: "endTurn" });
-    expect(legalPlays(ctxOf(view, legal, defs), "trap")).toHaveLength(1);
+    expect(legal.filter((action) => action.type === "play" && action.instanceId === "trap")).toHaveLength(1);
   });
 });

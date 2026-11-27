@@ -409,7 +409,7 @@ async fn write(app: &App, read: &Lobby, next: Lobby, also: &[&str]) -> Result<Lo
 }
 
 /// R3730000: every member of `lobbies`, and `also`, is told the lobby changed.
-fn tell(app: &App, lobbies: &[&Lobby], also: &[&str]) {
+pub(crate) fn tell(app: &App, lobbies: &[&Lobby], also: &[&str]) {
     let mut ids: Vec<&str> = lobbies.iter().flat_map(|lobby| members(lobby)).collect();
     ids.extend_from_slice(also);
     ids.sort_unstable();

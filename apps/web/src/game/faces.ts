@@ -126,8 +126,17 @@ function backrowType(card: CardView): CardType | undefined {
   return "faceDown" in card && card.faceDown === false && "type" in card ? (card.type as CardType) : undefined;
 }
 
+/**
+ * Whether a card of this `defId` has a face: `listedFace` and `namedFace` give null for exactly the
+ * others (the sentinel, or no id). #5136: a pile asks it to know it holds something to show without
+ * building any face.
+ */
+export function hasFace(defId: string): boolean {
+  return defId !== HIDDEN_CARD && defId !== "";
+}
+
 export function listedFace(lookup: CardLookup | null, view: PlayerView, card: CardView): FaceModel | null {
-  if (card.defId === HIDDEN_CARD || card.defId === "") return null;
+  if (!hasFace(card.defId)) return null;
   const info = infoFor(lookup, view, card.defId, card.radiant);
   const type = backrowType(card);
   const fieldPower = matchCardsOf(view).powers.get(card.instanceId);
@@ -159,7 +168,7 @@ export type NamedCard = {
  * at `cost` when one is given.
  */
 export function namedFace(lookup: CardLookup | null, view: PlayerView, named: NamedCard): FaceModel | null {
-  if (named.defId === HIDDEN_CARD || named.defId === "") return null;
+  if (!hasFace(named.defId)) return null;
   const listed = named.instanceId === undefined ? null : cardInView(view, named.instanceId);
   if (listed !== null && listed.defId === named.defId) return listedFace(lookup, view, listed);
   const info = infoFor(lookup, view, named.defId, named.radiant);

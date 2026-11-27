@@ -26,7 +26,7 @@ use jackioh_shared::host::again::in_again_window;
 
 use crate::actor::contracts::one_tx;
 use crate::actor::engine as actor_engine;
-use crate::actor::registry::AttachError;
+use crate::actor::registry::{AttachError, rebuild_once};
 use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
@@ -273,28 +273,7 @@ impl DuosRegistry {
         if let Some(existing) = lock(&self.actors).get(match_id).cloned() {
             return Ok(existing);
         }
-        let (cell, mine) = {
-            let mut rebuilding = lock(&self.rebuilding);
-            match rebuilding.get(match_id) {
-                Some(in_flight) => (Arc::clone(in_flight), false),
-                None => {
-                    let cell: Rebuild = Arc::new(OnceCell::new());
-                    rebuilding.insert(match_id.to_string(), Arc::clone(&cell));
-                    (cell, true)
-                }
-            }
-        };
-        let outcome = cell.get_or_init(|| self.rebuild(app, match_id)).await.clone();
-        if mine {
-            let mut rebuilding = lock(&self.rebuilding);
-            if rebuilding
-                .get(match_id)
-                .is_some_and(|current| Arc::ptr_eq(current, &cell))
-            {
-                rebuilding.shift_remove(match_id);
-            }
-        }
-        outcome
+        rebuild_once(&self.rebuilding, match_id, || self.rebuild(app, match_id)).await
     }
 
     /// B35: hands a socket to the seat `profile_id` holds, rebuilding if needed. Sockets holding no

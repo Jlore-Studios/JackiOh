@@ -582,19 +582,15 @@ mod the_state_check_m2_t5 {
         let mut state = game("indestructible-max-health");
         state.turn = 2;
         state.active = PlayerId::P1;
-        // Suppressive Aura on p2's side: p1's units get -4 max health.
-        put(
-            &mut state,
-            &suppressor().id,
-            slot(PlayerId::P2, Row::Units, 5),
-            json!({}),
-        );
         let dying = put(
             &mut state,
             &warded_pinger().id,
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
+        // A -4 max health debuff taken before it became Indestructible: an Indestructible Unit is
+        // Immutable (R4353000), so no other card's debuff or aura reaches it now (R5113000).
+        live_mut(&mut state, &dying.id).buffs.health = -4;
         let survivor = put(
             &mut state,
             &warded_pinger().id,

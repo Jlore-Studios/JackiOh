@@ -8,6 +8,7 @@ import { useEffect, useState, type ReactElement } from "react";
 
 import { AccountError } from "../auth/AccountError.tsx";
 import Username from "../auth/Username.tsx";
+import { Icon } from "../icons/Icon.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { readFailureOf } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
@@ -117,7 +118,13 @@ export function ShareWithFriend({ matchId }: { matchId: string }): ReactElement 
                         toggle(friend);
                       }}
                     >
-                      {isShared ? t("Shared ✓ · Stop sharing") : t("Share")}
+                      {isShared ? (
+                        <>
+                          {t("Shared")} <Icon name="check" /> · {t("Stop sharing")}
+                        </>
+                      ) : (
+                        t("Share")
+                      )}
                     </button>
                   </li>
                 );

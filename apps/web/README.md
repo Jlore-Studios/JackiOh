@@ -63,13 +63,15 @@ writes. The logo's shadows are stacked strokes, not SVG filters: WebKit draws wh
 at 1x, so an `feDropShadow` blurred the whole mark on a phone (the wood variants' grain and glow, which
 no screen shows, still use filters).
 
-The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, `buttons.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`.
+The colors are one palette (#2105): `src/palette.css`, imported by `index.css` after the fonts. A board stylesheet (`index.css`, `buttons.css`, and `src/game/`'s but the deck builder's and `table.css`) names a palette color, or `color-mix()`es one, and never states a color of its own. Meaning stays in tokens that name palette colors: `--you`, `--opponent`, `--legal`, `--selected` and `--radiant` in `index.css`, the glows in `game/highlights.css`. `src/palette.test.ts` checks this, and holds every other stylesheet to its count in `UNMIGRATED`. Its colours are the table's materials, none of them Tailwind's defaults (R5012000); the card art paints from its own palette, `SCENE_PALETTE` (`src/cards/art/scene.ts`), and an owned look (`cards/cosmetics.css`, `game/table.css`'s playmats, a card version's finish) keeps the colours it had.
 
-The text is one type scale (#2107): `src/typescale.css`, imported by `index.css` after the palette, ten sizes from `--type-3xs` (9px) to `--type-4xl` (30px), the board's body being `--type-md` (13px). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 13px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. The faces are `fonts.css`'s four families: `--font-display`, `--font-text`, `--font-mono` and `--font-signature`, the self-hosted Dancing Script (OFL) a Mythic full art signs its card's name in (R2655003), and beside it the sets' signature hands, `--font-signature-<face>` (R2715002: Kaushan Script, Pinyon Script, Mr Dafoe, Nanum Brush Script, Sedgwick Ave Display and Permanent Marker, each self-hosted with its licence, `cards/signatureFaces.ts` naming which set or card signs in which). A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED`, and keeps `src/game/`'s components from setting a size or a face inline.
+The text is one type scale (#2107, #5013): `src/typescale.css`, imported by `index.css` after the palette, nine sizes from `--type-2xs` (10px, card faces only) to `--type-4xl` (30px), the page's body being `--type-lg` (16px) and the board's `--type-md` (14px, `.app-shell--wide`). Each but `--type-md` has an em form, `--type-<step>-em`, the step over 14px, for text that scales with its box (the board, a card), where `--type-md`'s is `inherit`. No stylesheet outside `src/cards/` names a step under 11px. Headings, dialog titles, the result's word, banners, and a card face's name and rules text are set in `--font-display`; numbers, controls and dense lists stay in `--font-text`. A label is in sentence case unless it is one of the small-caps labels `index.css` styles in one rule at one letter-spacing, or a card face's printed inscription: `src/typography.test.ts` holds each sheet to its count of capitalised selectors in `UPPERCASE` (at most 20 in all) and checks the display face. The faces are `fonts.css`'s four families: `--font-display`, `--font-text`, `--font-mono` and `--font-signature`, the self-hosted Dancing Script (OFL) a Mythic full art signs its card's name in (R2655003), and beside it the sets' signature hands, `--font-signature-<face>` (R2715002: Kaushan Script, Pinyon Script, Mr Dafoe, Nanum Brush Script, Sedgwick Ave Display and Permanent Marker, each self-hosted with its licence, `cards/signatureFaces.ts` naming which set or card signs in which). A board stylesheet gives every `font-size` a step (a `clamp()` or `max()` may hold a viewport or container term beside one), every `font-family` a family or `inherit`, and `font` only `inherit`. `src/typescale.test.ts` checks this, holds every other stylesheet to its count in `UNSCALED` (at most 216 in all, and falling), and keeps `src/game/`'s components from setting a size or a face inline.
 
-The surfaces are one token scale (#2109): `src/surfaces.css`, imported by `index.css` after the type scale, names seven corner radii, four neutral shadow depths and twenty-one stacking levels, each layer holding its level's current number so stacking order is unchanged. A board stylesheet gives every `border-radius` a radius, every neutral `box-shadow` a shadow (glows and selection rings keep their own), every `z-index` a layer, and keeps a background gradient only where it means something: card faces, the main button's `--primary-face*` and the table. Everything else is flat. `src/surfaces.test.ts` checks this, and keeps `src/game/`'s components from setting a radius, a shadow, a layer or a gradient inline. Every other stylesheet, the menus' among them, is held to its count of raw radii, shadows, layers and gradients in `UNTOKENED_SURFACES`: a sheet that moves values onto the tokens lowers its number, and none gains one (the dungeon's sheets state none).
+The surfaces are one token scale (#2109, #5015): `src/surfaces.css`, imported by `index.css` after the type scale, names the corner scale (xs 2px, sm 4px, md 6px, lg 10px, nothing larger: tight corners for wood and brass), the pill (chips, badges and toggles), the round (coins, gems, avatars and dots) and the settings switch's track, then a card face's own cuts, kept as its frame art is cut, and the shapes the effects and the table's marks draw; then four neutral shadow depths and twenty-one stacking levels, each layer holding its level's current number so stacking order is unchanged. No stylesheet but `surfaces.css` writes a `border-radius` length: every one is `0`, `inherit` or `var(--radius-*)`, and the pill appears only in the rules `PILL_RULES` lists. A board stylesheet also gives every neutral `box-shadow` a shadow (glows and selection rings keep their own), every `z-index` a layer, and keeps a background gradient only where it means something: card faces, the main button's `--primary-face*` and the table. Everything else is flat. `src/surfaces.test.ts` checks this, and keeps `src/game/`'s components from setting a radius, a shadow, a layer or a gradient inline. Every other stylesheet, the menus' among them, is held to its count of raw shadows, layers and gradients in `UNTOKENED_SURFACES`: a sheet that moves values onto the tokens lowers its number, and none gains one (the dungeon's sheets state none).
 
 The motion is one vocabulary (#2110): `src/motion.css`, imported by `index.css` after the surfaces, names four durations (`--motion-instant` 80ms, `--motion-fast` 150ms, `--motion-base` 250ms, `--motion-slow` 400ms) and five curves (`--ease-standard`, `--ease-out`, `--ease-in`, `--ease-in-out`, `--ease-overshoot`). A board stylesheet gives every transition and animation a curve (or `linear`, or `steps()`; a `@keyframes` stop spells a curve's value out) and every duration a token, keeping its `* var(--anim-scale)`. These keep their own times: BUILD's (the event table in `game/animations.css`, the `activated` and `turnEnded` rows), R701's wobbles, the table's tap marks, loops, staggers, holds, the clock's 200ms repaint, and any time a `var()` feeds in. `src/motion.test.ts` checks this and lists each sheet's own times in `KEEP`. Every other stylesheet, the menus' among them, is held to its count of raw durations and curves in `UNTOKENED_MOTION` on the same terms.
+
+Low graphics (#5128, R5128000) is the settings panel's switch for a slow device, `lowGraphics` in `settings/store.ts`, which puts `data-low-graphics` on `<html>`. The effects run on `fx/settings.ts`'s `getFxSettings()`, which under it holds the intensity and Big moments at `off` (`LOW_GRAPHICS_FX`), so every reader of either (the effects layer, the auras, the arena, the showcase, `useArtMotion`, `useDepthMotion`, `cardMotion.ts`'s calm level) follows it with no check of its own; `getChosenFxSettings()` is what the player chose, which the panel's controls show (disabled while it holds them) and the account sync carries, and `useFxSettings` watches both stores. `game/Backdrop.tsx` draws no particles under it, `table.css` stills the chase tables' pads, `emotes/portrait.css` the portrait's idle, and `index.css` drops every `backdrop-filter`. Reduce motion stops all motion; Low graphics keeps the card motion that reads the game.
 
 The spacing is one scale (#3225): `src/spacing.css`, imported by `index.css` after the motion, names eleven lengths, `--space-1` (2px) to `--space-11` (40px): 2px apart to 12px, where the board's own lengths sit, then 16, 20, 24, 32 and 40px. A board stylesheet gives every `gap`, `padding` and `margin` (and the `--gap` they read) a step, `0`, `auto`, or a `calc()`, `clamp()` or `max()` holding one, and may keep an `em` or `%` term (it scales with its box), a viewport or container term and `env()`, never a px or rem length of its own. A length that is no step is composed of steps (`calc(var(--space-9) + var(--space-2))`), and a negative one is a step times -1. `src/spacing.test.ts` checks this and holds every other stylesheet to its count of px and rem lengths in `UNMIGRATED`; a sheet that loses some lowers its number.
 
@@ -415,7 +417,7 @@ each have a soft sound (`audio/sfx.ts`), and lifting a card buzzes a phone (`hap
 deal), effects off is `calm` (the sounds stay, the flourishes go), the rest `full`. `Game.tsx` writes it as
 `data-card-motion` and board.css reads it.
 
-**Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks too (R2973000, §13.8): DuosRoute.tsx holds the same guard while its view is live, and its line names the teammate playing on and the AI taking the seat after DISCONNECT_GRACE_SECONDS.
+**Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds the leave guard (`useLeaveGuard`, `net/navigate.ts`): every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks too (R2973000, §13.8): DuosRoute.tsx holds the same guard while its view is live, and its line names the teammate playing on and the AI taking the seat after DISCONNECT_GRACE_SECONDS.
 
 **A draw offer is a question with two answers** (SPEC §2.5, R36, R269). Only the active player
 offers, and `view.drawOffer = { by }` stands on both seats until the offer is answered or lapses at
@@ -507,7 +509,10 @@ a toggle (`marketplace-button`) in the board's control bar (the pill at the bott
 its sidebar; #2645) that opens its panel (`marketplace-panel`), upward from the bar's top edge: the viewer's
 Credits, the turn the offering re-rolls on, and each lot on its face with the price and the copies left
 the view gives and its "Buy" (`market-buy-<offer>`), live exactly when `legal` lists its `marketBuy` and
-sending that body; otherwise it is greyed, its tooltip the engine's `reason`. There is no "Sell": a
+sending that body; otherwise it is greyed (`aria-disabled`, so a touch press reaches it), its tooltip the
+engine's `reason`, and a press shows that reason in a line under it (`market-reason-<offer>`, nothing when
+the view gives none) and sends nothing (R3768000); the line goes with the next view or when the shop
+closes. There is no "Sell": a
 Resource or Spice pays its Credits as it is played or discarded, and shows its quote in braces in the hand
 while the Marketplace is open (R3047004, R4410000).
 
@@ -670,7 +675,10 @@ draws too; a source with none draws the default.
 The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
-to the browser's downloads, for a bug report.
+to the browser's downloads, for a bug report. The file is packed (`replay/pack.ts`, R5124000): the first step whole and
+each later one as its change from the one before, gzipped by the browser's CompressionStream into
+`.json.gz`, about a fiftieth to a hundredth of the plain JSON; a browser without CompressionStream saves plain
+`.json`, and Open replay JSON opens either.
 Every mode's end-of-game result offers one **Main menu** button after its own ways on (R4742000, issue #4742):
 `game/MainMenuButton.tsx` draws it for the result panels and screens (the dungeon run-over screen and fights, the
 Infinite Assault fight, the daily game's result, the co-op result), and `mainMenuAction` is the same label as a
@@ -683,7 +691,7 @@ A finished co-op game's result panel offers "Watch the replay" too (§13.9): `du
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
 The panel takes the focus on its first way on as it comes in; its "View the board" folds it to a "Result" button on the board's rail (`duos-result-reopen`) that opens it again, the replay door and the XP reveal with it (#1755).
-A loaded co-op replay offers "Download JSON" too (R1242000, `duos/download.ts`): the seat's views as one file, made in the page, which `/replays` opens again from its Open replay JSON.
+A loaded co-op replay offers "Download JSON" too (R1242000, `duos/download.ts`): the seat's views as one file, packed as the 1v1 file is, made in the page, which `/replays` opens again from its Open replay JSON.
 
 ```
 src/replay/
@@ -695,11 +703,14 @@ src/replay/
                   `start` and `shareOnOpen` for a result screen's two buttons (R768000)
   ReplayToolbar.tsx  the controls both replays share (#2025): step and turn buttons, Play, the scrubber (the board
                   moves when it is let go), the readout and an actions slot; `replayTestid`, `isTyping`
-  OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player
+  OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player; `ReplayLoadStatus`, the
+                  loading or failure both loaded replays show (this one and the co-op replay)
   ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
   download.ts     "Download JSON" (#1141, R1141000): every step of a source and the row's facts as one file, and
-                  `parseReplayJsonFile` (`readReplayJsonFile`, then `replayStepsOf`) opens one again (#1160);
+                  `readReplayJsonFile`, then `replayStepsOf`, opens one again (#1160);
                   the download both it and the GIF's share.ts hand a file to
+  pack.ts         a replay file's packing, the co-op file's too: each step as its JSON change from the one before
+                  (`diff`, `apply`), gzipped through CompressionStream, and read back under the byte and step caps
   gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
                   function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
                   OffscreenCanvas, in a worker where it can), encoder.ts (GIF bytes by hand), share.ts, export.ts
@@ -867,7 +878,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000, #3734, R3734000): f
                         (collection/ProficiencyPanel.tsx, §14.14, R3013001): its level, its plays to the
                         next on serverConfig.ts's curve and a picker of its stamps, a locked one with the
                         level it needs; the account's copy is cards/stamps.ts's, loaded and each pick sent
-                        by cards/proficiencySync.ts (GET /api/proficiency, PUT /api/proficiency/stamp), and
+                        by cards/proficiencySync.ts (GET /api/proficiency, PUT /api/proficiency/stamp),
+                        loaded again when a counted game's result pays (routes/match.tsx, R4977000), and
                         the faces wear the pick (R3013002);
                         collection/
                         holds the panels (OwnedCards, WalletPanel, TracksPanel), their
@@ -1204,6 +1216,9 @@ src/practice/
                       visible action at a time (think indicator, gaps from config.ts)
   aiTable.ts          the hooks that pace the AI at a table (controller state, board busy, the voice and
                       showcase holds), shared by the route, a dungeon fight's screen and an Infinite Assault fight's screen
+  FightStages.tsx     the screens around a dungeon fight's and an Infinite Assault fight's board: the shell, the
+                      no-setup, stopped and shuffling stages and the board's Menu, each screen passing its test ids
+  savedDecks.ts       `savedDecksFor`: the saved decks the route's and the Assault's deck pickers offer
   config.ts testids.ts PracticeSetup.tsx ThinkIndicator.tsx PracticeLeave.tsx PracticeResult.tsx practice.css
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
@@ -1266,7 +1281,9 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   The same lobby shows the live online game's banner (Rejoin) for a signed-in player in a match.
 - A finished free game is kept for its replay (R768): when it ends the worker adds its config, log,
   catalog version, final hash and a summary to the store, the newest PRACTICE_REPLAYS_KEPT of them, but
-  not a lesson or a game Glitch voided (R679). `{ type: "replays" }` answers the summaries, newest
+  not a lesson, a dungeon run's fight (R2706000) or a game Glitch voided (R679). An Infinite Assault
+  fight is kept with them, its summary naming its level and enemy (`assault`), and its result offers
+  Watch the replay (R5125000). `{ type: "replays" }` answers the summaries, newest
   first, and folds none of them: each has `unavailable` set to `earlier_patch` when it was played on
   another catalog, or to `rules_changed` once opening it found that it no longer folds to its hash;
   `{ type: "replay", game, from, count }` answers a page of `{ step, turn, view }` in the seat the

@@ -1,7 +1,8 @@
 // scripts/ci-scope.sh: the lines ci.yml's `changes` job uses to skip jobs. It may say `full=false`
 // only when no CI job reads any changed file, and any other line false only when nothing its job reads
 // changed; every doubt must come out with every line true. The scans at the end hold `web` and `e2e` to
-// every path the web's and the client's sources name; crates/tools/tests/acceptance.rs holds the Rust
+// every path the web's and the client's sources name, and to each skip-listed file under a directory
+// they name, one by one (#5002); crates/tools/tests/acceptance.rs holds the Rust
 // groups to `cargo metadata`.
 
 import { execFileSync, spawnSync } from "node:child_process";
@@ -56,6 +57,17 @@ const RUST = [
 
 /** A change every line but the db suites runs for. */
 const ENGINE = "crates/engine/src/reduce.rs";
+
+/** The workflows that run the bot or watch the repo. env-production.test.ts reads every workflow, so each runs `web` (#5002). */
+const READ_WORKFLOWS = [
+  ".github/workflows/bot-commands.yml",
+  ".github/workflows/bot-night.yml",
+  ".github/workflows/squishy-run.yml",
+  ".github/workflows/squishy-commands.yml",
+  ".github/workflows/triage.yml",
+  ".github/workflows/ci-duration.yml",
+  ".github/workflows/pr-title.yml",
+];
 
 let repo = "";
 let baseSha = "";
@@ -141,10 +153,9 @@ describe("scripts/ci-scope.sh", () => {
   it("skips the heavy jobs for a diff of the night bot's own files and nothing else", () => {
     expect(onFor("bot/harness/state.py")).toEqual([]);
     expect(onFor("bot/machine/README.md", ".harness/config.json")).toEqual([]);
-    expect(onFor(".github/workflows/bot-night.yml", ".github/workflows/bot-commands.yml", "bot/tests/test_cross.py")).toEqual([]);
-    expect(onFor(".github/workflows/triage.yml", ".github/workflows/ci-duration.yml")).toEqual([]);
+    expect(onFor("bot/tests/test_cross.py")).toEqual([]);
     expect(onFor("CLAUDE.md", "AGENTS.md", "GEMINI.md", "bot/README.md")).toEqual([]);
-    // The repository's meta, which only GitHub reads, and the pull request title check (#187).
+    // The repository's meta, which only GitHub reads (the workflows are not among it, #5002).
     expect(
       onFor(
         "CONTRIBUTING.md",
@@ -152,15 +163,26 @@ describe("scripts/ci-scope.sh", () => {
         ".github/ISSUE_TEMPLATE/config.yml",
         ".github/pull_request_template.md",
         ".github/CODEOWNERS",
-        ".github/workflows/pr-title.yml",
       ),
     ).toEqual([]);
-    // Squishy (#60): its switches and its two workflows, which only the bot's harness reads.
-    expect(onFor(".squishy/config.json", ".github/workflows/squishy-run.yml", ".github/workflows/squishy-commands.yml")).toEqual([]);
+    // Squishy (#60): its switches.
+    expect(onFor(".squishy/config.json")).toEqual([]);
     // The training docs: people and the bots read them, no job does.
     expect(onFor("training/README.md", "training/improve.md", "training/gather.md")).toEqual([]);
     // The notebooks' project (#445): only super.yml's daily `notebooks` job reads it.
     expect(onFor("analysis/notebooks/01-card-win-rates.ipynb", "analysis/jackioh_records/load.py", "analysis/uv.lock")).toEqual([]);
+  });
+
+  // One case per file, as below: each is two script runs.
+  it.each(READ_WORKFLOWS)("#5002 runs web, and nothing else, for %s, which env-production.test.ts reads", (file) => {
+    expect(onFor(file), file).toEqual(["full", "web"]);
+    expect(onFor("bot/harness/state.py", file), `bot + ${file}`).toEqual(["full", "web"]);
+  });
+
+  it("#5002 runs web alone for all seven together, and narrows nothing else", () => {
+    expect(onFor(...READ_WORKFLOWS)).toEqual(["full", "web"]);
+    expect(answerFor(".github/workflows/ci.yml", ...READ_WORKFLOWS)).toEqual(answerFor(".github/workflows/ci.yml"));
+    expect(answerFor(ENGINE, ...READ_WORKFLOWS)).toEqual(answerFor(ENGINE));
   });
 
   it("skips the heavy jobs for a diff of only the mutation-testing tooling or the pool probe", () => {
@@ -402,6 +424,9 @@ describe("scripts/ci-scope.sh", () => {
         "crates/ai/src/decide.rs",
         "crates/wasm/src/lib.rs",
         "crates/shared/src/series.rs",
+        // i18n.test.ts reads the engine's Call to Chaos and modifier labels (R711000).
+        "crates/engine/src/view_for.rs",
+        "crates/engine/src/subsystems/call_to_chaos_stinky.rs",
         "crates/server/Cargo.toml",
         "crates/tools/Cargo.toml",
         // `web (wasm c module)` builds the C module and reads its imports (#3093, #3097).
@@ -767,6 +792,8 @@ const TOP = new Set(readdirSync(ROOT));
 const NOT_NAMED = new Set([".git", "node_modules", "apps", "e2e", "target"]);
 const SOURCE = /\.(ts|tsx|mjs|js)$/;
 const SKIP_DIRS = new Set(["node_modules", "dist", "pkg", ".vite"]);
+/** Directories a named directory's file walk leaves out. */
+const NOT_LISTED = new Set([...SKIP_DIRS, ".git", "target"]);
 const TOKENS = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)'|`((?:[^`\\]|\\.)*)`/g;
 
 function sourcesUnder(root: string): string[] {
@@ -792,31 +819,69 @@ function readings(file: string, literal: string): string[] {
   return out;
 }
 
-function named(reading: string, literal: string): string | undefined {
+/** Every file under a directory, as repository paths. */
+function filesUnder(dir: string): string[] {
+  return readdirSync(join(ROOT, dir), { withFileTypes: true }).flatMap((entry) => {
+    const path = posix.join(dir, entry.name);
+    if (entry.isDirectory()) return NOT_LISTED.has(entry.name) ? [] : filesUnder(path);
+    return [path];
+  });
+}
+
+const SKIPPED_FN = /^skipped\(\) \{\n[\s\S]*?\n\}$/m.exec(readFileSync(SCRIPT, "utf8"))?.[0];
+
+/** The paths among `files` on scripts/ci-scope.sh's skip list, by the script's own `skipped()`: one
+ * process, as a throwaway repository per file would not finish over spec/ and crates/cards/. */
+function skipListed(files: string[]): string[] {
+  if (SKIPPED_FN === undefined) throw new Error("scripts/ci-scope.sh no longer declares `skipped() {…}` as ci-scope.test.ts reads it");
+  const run = spawnSync("sh", ["-c", `${SKIPPED_FN}\nwhile IFS= read -r file; do if skipped "$file"; then echo "$file"; fi; done`], {
+    // A trailing newline: `read` fails on a last line without one, and the loop would skip that path.
+    input: `${files.join("\n")}\n`,
+    encoding: "utf8",
+  });
+  if (run.status !== 0) throw new Error(`skipped() failed: ${run.stderr}`);
+  return run.stdout.split("\n").filter((line) => line !== "");
+}
+
+function named(reading: string, literal: string): { path: string; dir?: string } | undefined {
   const path = stripTrailingSlashes(posix.normalize(reading.replaceAll("*", "x")));
   const first = path.split("/")[0] ?? "";
   if (!TOP.has(first) || NOT_NAMED.has(first) || /\s/.test(path)) return undefined;
   const stat = statSync(join(ROOT, path), { throwIfNoEntry: false });
   if (!literal.includes("/") && !(stat?.isFile() ?? false)) return undefined;
-  return stat?.isDirectory() ? `${path}/x` : path;
+  return stat?.isDirectory() ? { path: `${path}/x`, dir: path } : { path };
 }
 
-function namedPaths(roots: string[], keep: (file: string) => boolean): Map<string, string[]> {
-  const found = new Map<string, string[]>();
+function noted(map: Map<string, string[]>, key: string, file: string): void {
+  const files = map.get(key) ?? [];
+  if (!files.includes(file)) files.push(file);
+  map.set(key, files);
+}
+
+/** `paths`: each path a source names, a directory as `<dir>/x`. `listed`: each skip-listed file under
+ * a directory a source names, which the source may open as well. Both map to the sources. */
+type Named = { paths: Map<string, string[]>; listed: Map<string, string[]> };
+
+function namedPaths(roots: string[], keep: (file: string) => boolean): Named {
+  const paths = new Map<string, string[]>();
+  const dirs = new Map<string, string[]>();
+  const listed = new Map<string, string[]>();
   for (const file of roots.flatMap(sourcesUnder).filter(keep)) {
     for (const match of readFileSync(join(ROOT, file), "utf8").matchAll(TOKENS)) {
       const literal = match[1] ?? match[2] ?? match[3];
       if (literal === undefined || literal.includes("${")) continue;
       for (const reading of readings(file, literal)) {
-        const path = named(reading, literal);
-        if (path === undefined) continue;
-        const files = found.get(path) ?? [];
-        if (!files.includes(file)) files.push(file);
-        found.set(path, files);
+        const hit = named(reading, literal);
+        if (hit === undefined) continue;
+        noted(paths, hit.path, file);
+        if (hit.dir !== undefined) noted(dirs, hit.dir, file);
       }
     }
   }
-  return found;
+  for (const [dir, sources] of dirs) {
+    for (const path of skipListed(filesUnder(dir))) for (const source of sources) noted(listed, path, source);
+  }
+  return { paths, listed };
 }
 
 /** What the web job's typecheck, lint and unit tests read: the web's, the Worker's (apps/edge)
@@ -853,14 +918,31 @@ const E2E = namedPaths(
 
 describe("scripts/ci-scope.sh against the paths the sources name", () => {
   it("finds the paths it must, so a scan that broke cannot pass empty", () => {
-    expect([...WEB.keys()]).toEqual(
-      expect.arrayContaining(["crates/server/src/env.rs", "crates/engine/tests/fixtures/code-input-cases.json", "infra/cloudflare.tf"]),
+    expect([...WEB.paths.keys()]).toEqual(
+      expect.arrayContaining([
+        "crates/server/src/env.rs",
+        "crates/engine/tests/fixtures/code-input-cases.json",
+        "infra/cloudflare.tf",
+        ".github/workflows/x",
+      ]),
     );
-    expect([...E2E.keys()]).toEqual(expect.arrayContaining(["crates/cards/catalog.json"]));
+    expect([...E2E.paths.keys()]).toEqual(expect.arrayContaining(["crates/cards/catalog.json"]));
+  });
+
+  it("#5002 reads the skip list from the script, so a directory's skip-listed files are found", () => {
+    expect(WEB.paths.get(".github/workflows/x")).toContain("apps/web/src/net/env-production.test.ts");
+    expect(filesUnder(".github/workflows")).toEqual(expect.arrayContaining(READ_WORKFLOWS));
+    expect(skipListed(READ_WORKFLOWS)).toEqual([]);
+    expect(
+      skipListed(["bot/harness/state.py", ".github/workflows/ci.yml", "CLAUDE.md", "training/README.md", "training/history/improve.jsonl"]),
+    ).toEqual(["bot/harness/state.py", "CLAUDE.md", "training/README.md"]);
+    // The last path is checked like the others (a `read` without a trailing newline would drop it).
+    expect(skipListed(["CLAUDE.md"])).toEqual(["CLAUDE.md"]);
+    expect(skipListed([".github/workflows/ci.yml", "bot/harness/state.py"])).toEqual(["bot/harness/state.py"]);
   });
 
   // A path on the skip list (`bot/…`) leaves every line off, and its own case above proves it.
-  for (const [line, paths] of [
+  for (const [line, { paths, listed }] of [
     ["web", WEB],
     ["e2e", E2E],
   ] as const) {
@@ -868,6 +950,13 @@ describe("scripts/ci-scope.sh against the paths the sources name", () => {
       it(`runs ${line} for ${path}, which ${files.join(", ")} names`, () => {
         const answer = answerFor(path);
         expect(!answer.full || answer[line]).toBe(true);
+      });
+    }
+    // #5002: a source that lists a directory may open any file in it, so a skip-listed one runs the line like a path of its own.
+    for (const [path, files] of listed) {
+      it(`runs ${line} for ${path}, on the skip list in a directory that ${files.join(", ")} names`, () => {
+        const answer = answerFor(path);
+        expect(answer.full && answer[line], `${path} is on scripts/ci-scope.sh's skip list: take it off`).toBe(true);
       });
     }
   }

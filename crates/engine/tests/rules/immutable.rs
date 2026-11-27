@@ -323,3 +323,185 @@ mod r4353000_an_indestructible_card_is_immutable_innately {
         assert!(immutable_in_play(&state, &field));
     }
 }
+
+/// R5113000 (issue #5113): Immutable keeps another card's buffs, debuffs, keywords, auras and lends off a
+/// card, an Indestructible Unit card's included, while the card's own text still changes it.
+mod r5113000_immutable_takes_no_other_cards_buff_grant_aura_or_lend {
+    use jackioh_engine::effects::{
+        buff, buff_this_turn, grant_keyword, grant_keywords, grant_random_keywords, set_attack_this_turn,
+    };
+
+    use super::*;
+    use crate::rules::fixtures::aura_deaths::aura_board;
+    use crate::rules::fixtures::combat::big_body;
+    use crate::rules::fixtures::harness::{live, run_with_targets};
+
+    /// Each change R5113000 keeps off, aimed at the chosen card: a buff, a debuff, a keyword, random
+    /// keywords, a buff this turn and a set Attack this turn.
+    fn changes() -> Vec<Effect> {
+        vec![
+            buff(json_as(
+                json!({ "target": { "of": "chosen" }, "attack": 2, "health": 2 }),
+            )),
+            buff(json_as(
+                json!({ "target": { "of": "chosen" }, "attack": -1, "health": -1 }),
+            )),
+            grant_keyword(json_as(
+                json!({ "target": { "of": "chosen" }, "keyword": { "kind": "Taunt" } }),
+            )),
+            grant_random_keywords(json_as(json!({ "target": { "of": "chosen" }, "count": 2 }))),
+            buff_this_turn(json_as(
+                json!({ "target": { "of": "chosen" }, "attack": 3, "keywords": [{ "kind": "Rush" }] }),
+            )),
+            set_attack_this_turn(json_as(json!({ "target": { "of": "chosen" }, "attack": 7 }))),
+        ]
+    }
+
+    /// Runs every change at `card`, as `source`'s (none: no card of its own); the events.
+    fn change(state: &mut GameState, card: &CardInstance, source: Option<&CardInstance>) -> Vec<GameEvent> {
+        let mut events = Vec::new();
+        for effect in changes() {
+            events.extend(run_with_targets(
+                state,
+                effect,
+                source,
+                vec![at(card)],
+                PlayerId::P1,
+            ));
+        }
+        events
+    }
+
+    /// Whether any event reports a buff or a keyword given to `card`.
+    fn reports_change(events: &[GameEvent], card: &CardInstance) -> bool {
+        events.iter().any(|event| match event {
+            GameEvent::Buffed { instance_id, .. } | GameEvent::KeywordGranted { instance_id, .. } => {
+                *instance_id == card.id
+            }
+            _ => false,
+        })
+    }
+
+    /// `card` exactly as it was: no buff, no keyword but `kept`, nothing this turn.
+    fn untouched(state: &GameState, card: &CardInstance, kept: &[Keyword]) {
+        let now = live(state, card);
+        assert_eq!(now.buffs, AttackHealth { attack: 0, health: 0 }, "{}", card.id);
+        assert_eq!(now.granted_keywords, kept.to_vec(), "{}", card.id);
+        assert!(now.turn_buff.is_none(), "{}", card.id);
+        assert!(now.attack_this_turn.is_none(), "{}", card.id);
+    }
+
+    #[test]
+    fn r5113000_another_cards_buff_debuff_and_keywords_pass_an_immutable_unit_by() {
+        let mut state = game("r5113000-immutable");
+        let wall = unit_with(&mut state, PlayerId::P2, 1, Keyword::Immutable);
+        let plain = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let before = unit_view(&state, &wall);
+
+        let events = change(&mut state, &wall, None);
+        assert!(!reports_change(&events, &wall));
+        untouched(&state, &wall, &[Keyword::Immutable]);
+        let after = unit_view(&state, &live(&state, &wall));
+        assert_eq!(
+            (after.attack, after.max_health),
+            (before.attack, before.max_health)
+        );
+        assert_eq!(after.keywords, before.keywords);
+
+        // The same changes land on a card that is not Immutable.
+        let events = change(&mut state, &plain, None);
+        assert!(reports_change(&events, &plain));
+        let now = live(&state, &plain);
+        assert_eq!(now.buffs, AttackHealth { attack: 1, health: 1 });
+        assert!(has_keyword(&now.granted_keywords, KeywordKind::Taunt));
+        assert!(now.turn_buff.is_some() && now.attack_this_turn.is_some());
+    }
+
+    #[test]
+    fn r5113000_r4353000_an_indestructible_unit_takes_none_either() {
+        let mut state = game("r5113000-indestructible");
+        let rock = unit_with(&mut state, PlayerId::P2, 1, Keyword::Indestructible);
+        let events = change(&mut state, &rock, None);
+        assert!(!reports_change(&events, &rock));
+        untouched(&state, &rock, &[Keyword::Indestructible]);
+    }
+
+    #[test]
+    fn r5113000_r23_its_own_text_still_changes_it() {
+        let mut state = game("r5113000-own");
+        let wall = unit_with(&mut state, PlayerId::P2, 1, Keyword::Immutable);
+        let events = change(&mut state, &wall, Some(&wall));
+        assert!(reports_change(&events, &wall));
+        let now = live(&state, &wall);
+        assert_eq!(now.buffs, AttackHealth { attack: 1, health: 1 });
+        assert!(has_keyword(&now.granted_keywords, KeywordKind::Taunt));
+    }
+
+    #[test]
+    fn r5113000_no_other_cards_aura_and_no_lend_reaches_it() {
+        // p2's Charger (lane 3) gives p2's other Units +2 Health.
+        let (mut state, _, _, _) = aura_board("r5113000-aura", &big_body.id, 3);
+        let wall = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let wall = grant(&mut state, &wall, Keyword::Immutable);
+        let plain = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 4), json!({}));
+        let (walled, open) = (unit_view(&state, &wall), unit_view(&state, &plain));
+        assert_eq!(
+            open.max_health,
+            walled.max_health + 2,
+            "the aura reaches the plain Unit alone"
+        );
+
+        // "Your Units have Trample" and "your Units have +3 Attack" on p2's side.
+        for (id, kind) in [
+            (
+                "r5113000-keyword",
+                ModifierKind::UnitsHaveKeyword {
+                    keyword: Keyword::Trample,
+                    from_spell: None,
+                },
+            ),
+            (
+                "r5113000-attack",
+                ModifierKind::UnitsAttack {
+                    amount: 3,
+                    from_spell: None,
+                },
+            ),
+        ] {
+            state.players[PlayerId::P2].mods.push(PlayerModifier {
+                id: id.to_string(),
+                expiry: ModifierExpiry::Never,
+                kind,
+            });
+        }
+        let (walled_now, open_now) = (unit_view(&state, &wall), unit_view(&state, &plain));
+        assert!(has_keyword(&open_now.keywords, KeywordKind::Trample));
+        assert_eq!(open_now.attack, open.attack + 3);
+        assert!(!has_keyword(&walled_now.keywords, KeywordKind::Trample));
+        assert_eq!(walled_now.attack, walled.attack);
+    }
+
+    #[test]
+    fn r5113001_r3547002_grant_keywords_gives_its_list_together_and_an_immutable_card_none() {
+        let mut state = game("r5113001-list");
+        let plain = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let wall = unit_with(&mut state, PlayerId::P2, 2, Keyword::Immutable);
+        let list = || {
+            grant_keywords(json_as(json!({
+                "target": { "of": "chosen" },
+                "keywords": [{ "kind": "Immutable" }, { "kind": "Divine Shield" }, { "kind": "Immune to Spells" }],
+            })))
+        };
+        run_with_targets(&mut state, list(), None, vec![at(&plain)], PlayerId::P1);
+        let given = live(&state, &plain).granted_keywords;
+        for kind in [
+            KeywordKind::Immutable,
+            KeywordKind::DivineShield,
+            KeywordKind::ImmuneToSpells,
+        ] {
+            assert!(has_keyword(&given, kind), "{kind:?}");
+        }
+        run_with_targets(&mut state, list(), None, vec![at(&wall)], PlayerId::P1);
+        untouched(&state, &wall, &[Keyword::Immutable]);
+    }
+}

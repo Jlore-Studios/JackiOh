@@ -17,7 +17,7 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::config::{MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X};
+use crate::config::{MANA_CEILING, MAX_CHOICE_COMBINATIONS, MIN_CHOSEN_X};
 use crate::graveyard_play::PlayPayment;
 use crate::rng::Rng;
 use crate::script::TargetCheckArgs;
@@ -294,7 +294,7 @@ pub fn play_made_radiant(state: &GameState, player: PlayerId, card: &CardInstanc
         || tagged_play_radiant(state, player, card)
         || crate::subsystems::feng_shui::rewards(state, player, card)
         || radiant_next_play(state, player)
-        || crate::mana::garden_dearer_price(state, card).is_some()
+        || crate::mana::garden_dearer_premium(state, card).is_some()
 }
 
 /// R831005: whether a live `radiantNextPlay` modifier of the player makes their next play Radiant.
@@ -748,9 +748,9 @@ pub fn chooses_x(state: &GameState, instance: &CardInstance) -> bool {
         && crate::scripts::script_of(state, instance).cost.is_none()
 }
 
-/// §2.3, R348, R1223: why this X is not one the player may choose for this card, or `Ok` when it is:
-/// 1 ≤ X ≤ the mana the player can spend (`MIN_CHOSEN_X`), their current mana plus what a credit line
-/// still lends them (`credit::spendable_mana`). `legal_x_values` offers exactly the values this passes
+/// §2.3, R348, R1223, R5148000: why this X is not one the player may choose for this card, or `Ok` when
+/// it is: 1 ≤ X ≤ the mana the player can spend (`MIN_CHOSEN_X`), their current mana plus what a credit
+/// line still lends them (`credit::spendable_mana`), and never above `MANA_CEILING`. `legal_x_values` offers exactly the values this passes
 /// and `refuse_x` refuses exactly the ones it names, so the picker and the reducer cannot disagree.
 pub fn why_x_refused(
     state: &GameState,
@@ -774,11 +774,16 @@ pub fn why_x_refused(
             "X is above your current mana"
         }));
     }
+    // R5148000: within the mana to spend, still never above the ceiling.
+    if value > MANA_CEILING {
+        return Err(EngineError::new(format!("X is at most {MANA_CEILING}")));
+    }
     Ok(())
 }
 
 /// The most X a play of this card may choose: the mana the player can spend for an X-cost card (R1223),
 /// and for a copier with an X-cost text what is left of it once its own price is paid (B5 E14, R545).
+/// `why_x_refused` holds it to `MANA_CEILING` besides (R5148000).
 fn most_x(state: &GameState, player: PlayerId, card: &CardInstance) -> i32 {
     // R1223: an X may be chosen out of borrowed mana too.
     let mana = crate::credit::spendable_mana(state, player);
@@ -1400,8 +1405,8 @@ pub fn targeting_discards_required(
     total
 }
 
-/// Classic #33 Joro, R450: whether `interceptor`, summoned into its controller's leftmost open unit
-/// zone and read as it would stand there, would be a legal pick of `decl`; only then does a pick move.
+/// Classic #33 Joro, R450: whether `interceptor`, summoned where `giga::summon_anchor` puts it (R4990000)
+/// and read as it would stand there, would be a legal pick of `decl`; only then does a pick move.
 pub fn interceptor_fits_decl(
     state: &GameState,
     player: PlayerId,
@@ -1413,7 +1418,7 @@ pub fn interceptor_fits_decl(
     if !sides_for(player, decl).contains(&defender) || !pick_kinds_for(decl).contains(&FilterOf::Unit) {
         return false;
     }
-    let Some(zone) = crate::zones::first_entry_zone(state, defender, Row::Units) else {
+    let Some(zone) = crate::giga::summon_anchor(state, defender, interceptor) else {
         return false;
     };
     let probe = CardInstance {
@@ -2114,9 +2119,9 @@ struct PlayPrice {
     cost: i32,
 }
 
-/// R65, R455: every price the card could be played at now, one per X and embiggen choice — the prices
-/// `priced_play_actions` lists plays at, with the ones a ban forbids left out, before any is paid for.
-fn play_prices(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayPrice> {
+/// R65: every price the card's X and embiggen choices come to now, X outermost, the banned ones (R455)
+/// among them.
+fn every_play_price(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayPrice> {
     let x_values: Vec<Option<i32>> = if chooses_x(state, card) {
         legal_x_values(state, player, card)
             .into_iter()
@@ -2142,9 +2147,6 @@ fn play_prices(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<
                 ..card.clone()
             };
             let cost = crate::mana::play_cost(state, &probe);
-            if crate::cost_rules::why_play_banned(state, player, &probe, cost).is_err() {
-                continue;
-            }
             out.push(PlayPrice {
                 x: *x,
                 embiggen: *embiggen,
@@ -2154,6 +2156,15 @@ fn play_prices(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<
         }
     }
     out
+}
+
+/// R65, R455: every price the card could be played at now, one per X and embiggen choice — the prices
+/// `priced_play_actions` lists plays at, with the ones a ban forbids left out, before any is paid for.
+fn play_prices(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayPrice> {
+    every_play_price(state, player, card)
+        .into_iter()
+        .filter(|price| crate::cost_rules::why_play_banned(state, player, &price.probe, price.cost).is_ok())
+        .collect()
 }
 
 /// R667: the costs a play of this card from its player's hand could pay now, whatever mana is left.
@@ -2200,41 +2211,16 @@ fn why_unplayable(
     refuse_price: impl Fn(&CardInstance, i32) -> Option<String>,
 ) -> Option<String> {
     // (a) Ban: every X and embiggen combination `play_prices` enumerates, stamped alike, is banned (R455).
-    let x_values: Vec<Option<i32>> = if chooses_x(state, card) {
-        legal_x_values(state, player, card)
-            .into_iter()
-            .map(Some)
-            .collect()
-    } else {
-        vec![None]
-    };
-    let embiggens: Vec<Option<bool>> = if has_dearer_price(state, card) {
-        legal_embiggen_choices(state, card)
-            .into_iter()
-            .map(Some)
-            .collect()
-    } else {
-        vec![None]
-    };
+    let every = every_play_price(state, player, card);
     let mut banned = 0;
-    let mut combos = 0;
     let mut ban_message: Option<String> = None;
-    for x in &x_values {
-        for embiggen in &embiggens {
-            combos += 1;
-            let probe = CardInstance {
-                x: x.or(card.x),
-                embiggened: embiggen.or(card.embiggened),
-                ..card.clone()
-            };
-            let cost = crate::mana::play_cost(state, &probe);
-            if let Err(error) = crate::cost_rules::why_play_banned(state, player, &probe, cost) {
-                banned += 1;
-                ban_message.get_or_insert(error.message);
-            }
+    for price in &every {
+        if let Err(error) = crate::cost_rules::why_play_banned(state, player, &price.probe, price.cost) {
+            banned += 1;
+            ban_message.get_or_insert(error.message);
         }
     }
-    if combos > 0 && banned == combos {
+    if !every.is_empty() && banned == every.len() {
         return ban_message;
     }
     // (b) Price: `play_prices` left nothing unbanned. An X card with no legal X names its smallest

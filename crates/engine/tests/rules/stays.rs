@@ -64,18 +64,6 @@ fn sorted_moved(later: &LaterMoves) -> Vec<String> {
     moved
 }
 
-mod stays_left_field_since_r174 {
-    use super::*;
-
-    #[test]
-    fn r174_finds_a_card_that_left_the_field_after_a_point_and_nothing_before_it() {
-        let events = [destroyed("c1"), damage("c2"), destroyed("c2"), summoned("c2")];
-        assert!(left_field_since(&events, 1, "c2"));
-        assert!(!left_field_since(&events, 1, "c1"));
-        assert!(left_field_since(&events, 0, "c1"));
-    }
-}
-
 mod stays_moves_in_r212 {
     use super::*;
 

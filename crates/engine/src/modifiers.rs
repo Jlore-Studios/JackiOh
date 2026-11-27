@@ -156,11 +156,6 @@ pub fn install_lasting_modifiers(sink: &mut EngineSink<'_>) {
     }
 }
 
-/// An "until used" modifier is consumed the moment it applies (Lunar Eclipse's discount).
-pub fn consume_modifier(sink: &mut EngineSink<'_>, player: PlayerId, id: &str) {
-    remove_modifier(sink, player, id);
-}
-
 /// Cleanup at the end of `player`'s turn: "this turn" modifiers go, and so do the ones that were
 /// scheduled to last through this player's turn (Professor Curvature, R48).
 pub fn expire_modifiers(sink: &mut EngineSink<'_>, player: PlayerId) {
@@ -258,10 +253,6 @@ pub fn own_turn_reached(state: &GameState, effect: &DelayedEffect) -> bool {
 /// "in N turns" with a caption.
 pub fn has_countdown(effect: &DelayedEffect) -> bool {
     effect.due_own_turn.is_some() && effect.label.is_some()
-}
-
-pub fn drop_delayed(state: &mut GameState, id: &str) {
-    state.delayed.retain(|effect| effect.id != id);
 }
 
 // Activate and turn (B5 E10, E28)

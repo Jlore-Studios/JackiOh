@@ -7,7 +7,7 @@
   min-height: 44px;
   padding: 0 18px;
   border: 1px dashed var(--tavern-brass);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--tavern-night) 65%, transparent);
   color: var(--tavern-gold-pale);
   font: inherit;
@@ -36,7 +36,7 @@
   padding: var(--space-8) var(--space-9) var(--space-9);
   overflow-y: auto;
   border: 1px solid var(--tavern-brass);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-night));
   box-shadow: 0 18px 60px color-mix(in srgb, var(--tavern-night) 80%, transparent);
   text-align: start;

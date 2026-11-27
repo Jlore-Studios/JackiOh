@@ -1,0 +1,86 @@
+# Asks a deployed site for its card statistics as the /stats page's first read does (#5174): `GET
+# /api/stats/cards?mode=all` (apps/web/src/routes/stats.tsx, DEFAULT_MODE) must answer 200 with cards
+# within the client's API_REQUEST_TIMEOUT_SECONDS, read from the client's own copy
+# (apps/web/src/wire/serverConfig.ts, generated from crates/server/src/config.rs) so the two never part.
+# Past that the client gives up and the page says "The card statistics didn't load."
+#
+# A first attempt that fails is a warning, and the second is the verdict, as a person who presses Retry
+# sees it. The first request after the server wakes can wait on a statistics load already under way at
+# boot (the bot pool's refresh, R3049002), so a slow first answer followed by a quick second is the server
+# warming. Two failures in a row mean the page is broken.
+#
+# deploy-staging.yml and promote-production.yml run it once their server reports the deployed commit,
+# while the deploy has the container awake, so the check wakes nothing and adds no container time (no
+# schedule runs it for that reason; staging redeploys whenever main has moved, as often as every two
+# hours). Staging's site is behind Cloudflare Access, which lets a request through with an Access service
+# token's two headers. A refusal from Access fails at once.
+name: check the card statistics load
+description: GET a site's /api/stats/cards?mode=all and fail unless it answers 200 with cards within the client's timeout
+inputs:
+  site:
+    description: the site's base URL, which sends /api/* to its server
+    required: true
+  access-client-id:
+    description: an Access service token's client id, for a site behind Cloudflare Access; empty sends none
+    required: false
+    default: ""
+  access-client-secret:
+    description: that service token's client secret
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        SITE: ${{ inputs.site }}
+        ACCESS_ID: ${{ inputs.access-client-id }}
+        ACCESS_SECRET: ${{ inputs.access-client-secret }}
+        CONFIG: apps/web/src/wire/serverConfig.ts
+        # The Cards tab's first read, on the page's default match type.
+        STATS_PATH: /api/stats/cards?mode=all
+        ATTEMPTS: "2"
+        # Between two attempts.
+        PAUSE_SECONDS: "5"
+      run: |
+        set -uo pipefail
+        timeout=$(sed -nE 's/^export const API_REQUEST_TIMEOUT_SECONDS = ([0-9_]+);.*/\1/p' "$CONFIG" | tr -d _)
+        if [ -z "$timeout" ]; then
+          echo "::error::API_REQUEST_TIMEOUT_SECONDS is not in $CONFIG, so the check cannot hold the server to the client's timeout"
+          exit 1
+        fi
+        access=()
+        if [ -n "$ACCESS_ID" ]; then
+          access=(-H "CF-Access-Client-Id: $ACCESS_ID" -H "CF-Access-Client-Secret: $ACCESS_SECRET")
+        fi
+        body=$(mktemp)
+        errors=$(mktemp)
+        seen=""
+        for attempt in $(seq 1 "$ATTEMPTS"); do
+          : > "$body"
+          : > "$errors"
+          out=$(curl -sS -m "$timeout" -o "$body" -w '%{http_code} %{time_total}' "${access[@]}" "$SITE$STATS_PATH" 2> "$errors")
+          status=${out%% *}
+          seconds=${out##* }
+          cards=$(jq -r 'if (.cards | type) == "array" then (.cards | length) else "no cards list" end' "$body" 2> /dev/null || echo "no JSON")
+          cards=${cards:-no body}
+          if [ "$status" = 200 ] && [[ $cards =~ ^[0-9]+$ ]] && [ "$cards" -gt 0 ]; then
+            echo "$SITE$STATS_PATH: $cards cards in ${seconds}s (attempt $attempt of $ATTEMPTS)"
+            echo "$SITE: the card statistics loaded in ${seconds}s (attempt $attempt of $ATTEMPTS)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          case $status in
+            301 | 302 | 303 | 307 | 401 | 403)
+              if [ "${#access[@]}" -gt 0 ]; then
+                echo "::error::$SITE$STATS_PATH answered $status: Cloudflare Access did not accept the service token (CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET, docs/deploy-cloudflare.md)."
+                exit 1
+              fi
+              ;;
+          esac
+          seen="HTTP ${status:-000} after ${seconds:-?}s, $cards$( [ -s "$errors" ] && printf '; %s' "$(head -c 300 "$errors")" )"
+          echo "::warning::$SITE$STATS_PATH, attempt $attempt of $ATTEMPTS: $seen"
+          [ "$attempt" = "$ATTEMPTS" ] || sleep "$PAUSE_SECONDS"
+        done
+        echo "::error::$SITE$STATS_PATH did not answer 200 with cards within ${timeout}s (API_REQUEST_TIMEOUT_SECONDS) in $ATTEMPTS attempts; last: $seen. Players see \"The card statistics didn't load.\" (#5174)"
+        echo "$SITE: the card statistics did not load in $ATTEMPTS attempts; last: $seen" >> "$GITHUB_STEP_SUMMARY"
+        exit 1

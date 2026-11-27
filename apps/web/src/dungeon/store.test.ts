@@ -257,6 +257,8 @@ describe("B19 a run in progress survives a reload", () => {
     expect(readRunHistory()).toEqual([
       expect.objectContaining({ seed: "QWERTY", won: false, rowReached: 0, score: 0, embers: 0, timeMs: 5 * MINUTE_MS, stats: ZERO_STATS }),
     ]);
+    // ZERO_STATS is the store's own empty stats, so this holds it to its name: every counter at zero.
+    expect(Object.values(ZERO_STATS).every((count) => count === 0)).toBe(true);
     expect(wasmBindings.runScore).not.toHaveBeenCalled();
     expect(wasmBindings.runEmbers).not.toHaveBeenCalled();
     expect(stored(DUNGEON_HISTORY_KEY)).toEqual({ v: 1, runs: readRunHistory() });

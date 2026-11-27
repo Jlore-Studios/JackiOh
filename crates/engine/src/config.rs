@@ -39,6 +39,10 @@ pub const MAX_COPIES: i32 = 1;
 pub const LOADOUT_DECKS: usize = 3;
 /// §2.3
 pub const MAX_MANA: i32 = 4;
+/// §2.3, R5148000: the most mana a player may hold, current or maximum, temporary mana included, and
+/// the most X an X-cost card may choose or count. Costs are not capped: a card may cost more, which
+/// only infinite mana (R3548004) or a credit line (R1223) pays.
+pub const MANA_CEILING: i32 = 15;
 /// §2
 pub const HERO_HEALTH: i32 = 30;
 
@@ -2400,6 +2404,14 @@ pub const RADIANT_TIER_C_FROM: f64 = (RADIANT_TIER_BAND_LOW + ADJUSTED_WIN_RATE_
 /// R4676000: the least X paid that Extended stats counts in one row with every higher X ("X ≥ 5"): few
 /// plays reach it, so each higher X alone would read "not enough games".
 pub const VARIANT_X_GROUP_FROM: i32 = 5;
+
+/// R4707000: the most sides a die may have for its raw face to be the outcome the game record keeps, when
+/// its card checks no face of its own (`RollHit`): a d6's six faces are six rows, a d100's would be a hundred.
+pub const ROLL_SPLIT_MAX_SIDES: i32 = 6;
+
+/// R4707001: an outcome's expected count is kept in the totals in whole millionths of a roll, so the
+/// totals stay integers and add exactly.
+pub const ROLL_EXPECTED_SCALE: i64 = 1_000_000;
 
 /// R4552000: the win probability's intercept, `β₀` of `P = σ(β₀ + β₁·eval + β₂·turn + β₃·first)`, fit by
 /// `cargo jackioh stats calibrate` over development records against `WIN_PROBABILITY_AI_GENERATION`'s

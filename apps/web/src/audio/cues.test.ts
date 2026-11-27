@@ -234,6 +234,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   // MN05.
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  // R5045000.
+  damageNullified: { type: "damageNullified", instanceId: "b5", sourceId: "u1", targetId: "u6", amount: 2, combat: true },
   // R3857000.
   armorGained: { type: "armorGained", player: "p2", amount: 2, armor: 2 },
   // Meditative #39.2, R961.
@@ -353,6 +355,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   discardPrevented: "cancel",
   // MN05.
   damageAbsorbed: "armorRing",
+  // R5045000: a pool's soak, a soft cancel.
+  damageNullified: "cancel",
   // R3857000: the sweep of a stat gained; the ring stays the whole hit's (R1365's own sounds).
   armorGained: "buff",
   // Meditative #39.2, R961.
@@ -442,6 +446,7 @@ const UNCONDITIONAL: readonly GameEventType[] = [
   "marked",
   "discardPrevented",
   "damageAbsorbed",
+  "damageNullified",
   "armorGained",
 ];
 

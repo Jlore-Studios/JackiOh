@@ -68,3 +68,26 @@ it("the record shows best and checkpoints, and Start offers level 1 and the high
   expect(start).toHaveBeenCalledWith(expect.objectContaining({ date: DAY.date, startLevel: 2, source: "dayDeck" }));
   expect(within(screen.getByTestId(assaultTestid.history)).getByText(DAY.date, { exact: false })).toBeInTheDocument();
 });
+
+// #5005 (docs/implicit-states.md §16, H2): the store refuses a Start sent past UTC midnight and moves the
+// screen on to the new day; the screen's own picks follow it.
+it("R4581000 a day screen moved on to a new day offers that day's deck and a start level its record holds", () => {
+  bindingFixtures.assaultDayDeck.mockImplementation((date: string) => [`deck-of-${date}`]);
+  const start = vi.fn(() => null);
+  const { rerender } = render(<DayScreen assault={assault({ start })} saved={NO_SAVED} />);
+  expect(screen.getByTestId(assaultTestid.startLevel(2))).toBeChecked();
+
+  const next = "2026-11-24";
+  const nextRecord = { date: next, best: 0, checkpoints: [], attempts: 0, repelledOn: null };
+  const nextDay = assault({
+    start,
+    day: { ...DAY, date: next, seed: `assault-${next}` },
+    record: nextRecord,
+    records: { [DAY.date]: RECORD, [next]: nextRecord },
+  });
+  rerender(<DayScreen assault={nextDay} saved={NO_SAVED} />);
+  fireEvent.click(screen.getByTestId(assaultTestid.start));
+
+  expect(start).toHaveBeenLastCalledWith({ date: next, deck: [`deck-of-${next}`], source: "dayDeck", startLevel: 1 });
+  bindingFixtures.assaultDayDeck.mockReset().mockReturnValue(["core-001", "core-002"]);
+});

@@ -1570,8 +1570,9 @@ mod tests {
                 assert_eq!(s.state().players.p1.mana.next_turn_mod, 100);
                 s.end_turn();
                 assert_eq!(s.state().active, P1);
+                // R5148000: the refresh's 100 more is held at the mana ceiling.
                 let mana = &s.state().players.p1.mana;
-                assert_eq!(mana.current, mana.max + 100);
+                assert_eq!(mana.current, jackioh_engine::config::MANA_CEILING);
             }
 
             /// R767000: through v0.6.9c a line that ended on J left In Too Deep on the field.

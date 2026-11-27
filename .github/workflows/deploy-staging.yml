@@ -31,6 +31,10 @@
 #     (WASM_CACHE), so a commit that changes nothing under crates/ skips the build. CI's own module
 #     carries the `preview` feature a player's bundle must not, so it is not used.
 #
+# Once the server reports the deployed commit, the deploy asks it for the /stats page's first read
+# (.github/actions/check-stats, #5174), and fails when the card statistics do not load within the
+# client's timeout.
+#
 # Needs CLOUDFLARE_API_TOKEN, the secret production's deploy uses, and for the live check an Access
 # service token that Cloudflare Access lets through to staging.jackioh.com, in CF_ACCESS_CLIENT_ID and
 # CF_ACCESS_CLIENT_SECRET: without them the check is skipped with a notice, since Access refuses
@@ -194,6 +198,16 @@ jobs:
           site: ${{ env.SITE }}
           commit: ${{ steps.sha.outputs.sha }}
           seconds: ${{ env.LIVE_SECONDS }}
+          access-client-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+
+      # #5174: the new server answers the /stats page's first read within the client's timeout. A commit
+      # from before the check has no action to run.
+      - name: the card statistics load
+        if: steps.access.outputs.set == 'true' && hashFiles('.github/actions/check-stats/action.yml') != ''
+        uses: ./.github/actions/check-stats
+        with:
+          site: ${{ env.SITE }}
           access-client-id: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           access-client-secret: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
 

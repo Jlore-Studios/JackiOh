@@ -26,7 +26,7 @@ use super::targets::{TargetSpec, instance_of};
 use crate::config::{ROLL_COIN_SIDES, ROLL_HEADS, ROLL_TAILS};
 use crate::prelude::json_as;
 use crate::script::{Effect, EffectContext};
-use crate::wire::{GameEvent, Keyword, RollKind, RollResult, Row, Zone};
+use crate::wire::{GameEvent, Keyword, RollHit, RollKind, RollResult, Row, Zone};
 
 /// R2652001: the first face `wanted` holds for, else the first face drawn — the face a roll whose
 /// better rule keeps any wanted face keeps.
@@ -79,8 +79,15 @@ pub fn roll_die(
 /// R2652000, R2652001: report `rolls` as one `rolled` batch of the card running the script (`""` and
 /// its definition once the card is gone, as R436's report names it), withheld from the trigger loop.
 /// A batch of no rolls is nothing. `faceDown` records that the card was face-down in a backrow as it
-/// rolled, which decides who reads the batch (`view_for::withheld_rolls`).
-pub fn emit_rolled(ctx: &mut EffectContext<'_>, kind: RollKind, sides: i32, rolls: Vec<RollResult>) {
+/// rolled, which decides who reads the batch (`view_for::withheld_rolls`). R4707000: `hit`, the faces a
+/// die's card checks for, is the game record's.
+pub fn emit_rolled(
+    ctx: &mut EffectContext<'_>,
+    kind: RollKind,
+    sides: i32,
+    rolls: Vec<RollResult>,
+    hit: Option<RollHit>,
+) {
     if rolls.is_empty() {
         return;
     }
@@ -110,6 +117,7 @@ pub fn emit_rolled(ctx: &mut EffectContext<'_>, kind: RollKind, sides: i32, roll
         sides,
         rolls,
         face_down,
+        hit,
     });
     let at = ctx.sink.events.len() - 1;
     crate::triggers::withhold_report(&mut ctx.sink, at);
@@ -119,7 +127,15 @@ pub fn emit_rolled(ctx: &mut EffectContext<'_>, kind: RollKind, sides: i32, roll
 /// `roll_die`) and reports them before the effects they decided.
 pub fn report_rolls(kind: RollKind, sides: i32, rolls: Vec<RollResult>) -> Effect {
     Effect::new("reportRolls", move |ctx| {
-        emit_rolled(ctx, kind, sides, rolls.clone())
+        emit_rolled(ctx, kind, sides, rolls.clone(), None)
+    })
+}
+
+/// R4707000: `report_rolls` for dice whose card branches on the faces `hit` holds (Dice of Doom's 67,
+/// Unreal Estate's chance), so the game record keeps whether each landed there rather than its face.
+pub fn report_die_hits(sides: i32, rolls: Vec<RollResult>, hit: RollHit) -> Effect {
+    Effect::new("reportRolls", move |ctx| {
+        emit_rolled(ctx, RollKind::Die, sides, rolls.clone(), Some(hit))
     })
 }
 
@@ -176,7 +192,7 @@ pub fn flip_coins(args: FlipCoinsArgs) -> Effect {
         let heads = rolls.iter().filter(|roll| roll.heads()).count() as i32;
         let tails = coins - heads;
         // R2652001: the coins are shown before the buff they decided.
-        emit_rolled(ctx, RollKind::Coin, ROLL_COIN_SIDES, rolls);
+        emit_rolled(ctx, RollKind::Coin, ROLL_COIN_SIDES, rolls, None);
 
         let nothing = BuffAmount::default();
         let per_heads = args.per_heads.as_ref().unwrap_or(&nothing);
@@ -213,7 +229,7 @@ pub fn flip_coin_keyword(args: FlipCoinKeywordArgs) -> Effect {
         let coin = flip_coin(ctx, lucky);
         let heads = coin.heads();
         // R2652001: the one coin is its own batch, shown before the keyword it decided.
-        emit_rolled(ctx, RollKind::Coin, ROLL_COIN_SIDES, vec![coin]);
+        emit_rolled(ctx, RollKind::Coin, ROLL_COIN_SIDES, vec![coin], None);
         let keyword = if heads {
             args.heads_keyword.clone()
         } else {

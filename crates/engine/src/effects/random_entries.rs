@@ -71,13 +71,22 @@ pub fn do_random_entries(args: DoRandomEntriesArgs) -> Effect {
                 }
             }
         };
-        // R436: what was picked, announced before any of it resolves.
+        // R436: what was picked, announced before any of it resolves. R4707000: with the picks' places in
+        // the list for the game record, unless the list was done whole, which drew nothing.
+        let place = |at: usize| i32::try_from(at).unwrap_or(i32::MAX);
+        let roll = (picked.len() < args.entries.len()).then(|| {
+            (
+                picked.iter().map(|at| place(*at)).collect(),
+                place(args.entries.len()),
+            )
+        });
         let mut effects = vec![announce_chaos(
             "doRandomEntries:announce",
             picked
                 .iter()
                 .map(|index| args.entries[*index].label.clone())
                 .collect(),
+            roll,
         )];
         for index in &picked {
             effects.extend(args.entries[*index].effects.clone());

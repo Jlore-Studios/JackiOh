@@ -1000,9 +1000,9 @@ Destroy every card with a lower winrate than this.
 Destroy every enemy card with a lower winrate than this.
 
 **(1) PIP, Spell, Rare, Stinkyscape+, \#94**  
-Put a Unit on a performance enhancement plan, they have 1 turn to get a kill otherwise they are destroyed.  
+Put a Unit on a performance improvement plan, they have 1 turn to get a kill otherwise they are destroyed.  
 \~\~\~  
-Put a Unit on a performance enhancement plan, they have 1 turn to get a kill otherwise they are destroyed. If they fail, add 3 **The Coins** to your hand.
+Put a Unit on a performance improvement plan, they have 1 turn to get a kill otherwise they are destroyed. If they fail, add 3 **The Coins** to your hand.
 
 **(3) JC Backed, Spell, Legendary, Stinkyscape+, \#95**  
 Fill your hand with random S tier {or A tier if no S exist} cards. Summon 2 **Jlarna** and lose 1 mana for the rest of the game.  

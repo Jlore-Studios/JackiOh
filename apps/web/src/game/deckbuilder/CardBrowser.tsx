@@ -7,7 +7,7 @@
 
 import type { ReactElement, ReactNode } from "react";
 
-import type { Tag } from "@jackioh/shared";
+import type { SetName, Tag } from "@jackioh/shared";
 import type { CatalogSnapshot } from "@jackioh/validator";
 
 import { CardDetail } from "../../cards/inspect/CardDetail.tsx";
@@ -39,6 +39,8 @@ export type CardBrowserProps = {
   ownedUnavailable?: boolean;
   /** FilterBar's: the tag chips, the deck builder's when absent. */
   tags?: readonly Tag[];
+  /** FilterBar's: the set chips, the deck builder's when absent (R5131000). */
+  sets?: readonly SetName[];
   /** The grid's deck half; absent, the grid is read-only. */
   deck?: PoolGridDeckProps;
   /** R1956000: a read-only grid's cards that are the viewer's own copies, and what they own on them. */
@@ -59,7 +61,7 @@ export type CardBrowserProps = {
 };
 
 export default function CardBrowser(props: CardBrowserProps): ReactElement {
-  const { catalog, pool, filter, onFilter, sort, onSort, ownedControl, ownedUnavailable, tags, showStats } = props;
+  const { catalog, pool, filter, onFilter, sort, onSort, ownedControl, ownedUnavailable, tags, sets, showStats } = props;
   const { deck, own, virtual, status, onInspect, detail, onCloseDetail, winRates } = props;
   const detailDef = detail === null ? undefined : catalog.cards[detail.cardId];
 
@@ -74,6 +76,7 @@ export default function CardBrowser(props: CardBrowserProps): ReactElement {
         ownedControl={ownedControl}
         ownedUnavailable={ownedUnavailable}
         tags={tags}
+        sets={sets}
       />
       {status}
       {sort.key === "winRate" && winRates !== undefined && (winRates.status === "loading" || winRates.status === "failed") ? (

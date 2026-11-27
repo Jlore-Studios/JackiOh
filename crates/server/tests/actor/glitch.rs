@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 use jackioh_engine::wire::PlayerId;
 use jackioh_engine::{CreateGameArgs, LastBoardEntry};
 use jackioh_server::actor::match_actor::MatchActor;
-use jackioh_server::api::game_records::record_live_game;
+use jackioh_server::api::game_records::refile_live_game;
 use jackioh_server::api::results::void_match;
 use jackioh_server::api::series::start_series;
 use jackioh_server::app::App;
@@ -491,7 +491,7 @@ mod glitchs_swap {
                 row.mode = Some(QueueMode::Bo1);
             }
         }
-        let record = record_live_game(&w.app, MATCH_ID)
+        let record = refile_live_game(&w.app, MATCH_ID)
             .await
             .expect("the game is filed");
         assert_eq!(to_json(&record.pilots), json!({ "p1": "ai", "p2": "human" }));

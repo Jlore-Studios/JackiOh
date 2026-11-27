@@ -1,6 +1,6 @@
 //! SPEC §8.12 S+ #163 Accelerationist (Unit 6/6 → 12/12, cost 3, Common), a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    "Aura: Has +{buff}/+{buff} for every card that Evolved this game." (+3; +2 until issue #4353)
-//!   Radiant: "Aura: Has +{buff2}/+{buff2} for every card that Evolved this game." (+6; +4 until issue
+//!   Base:    "Has +{buff}/+{buff} for every card that Evolved this game." (+3; +2 until issue #4353)
+//!   Radiant: "Has +{buff2}/+{buff2} for every card that Evolved this game." (+6; +4 until issue
 //!            #4353)
 //!
 //! Renumbered from the designer's second #92 (SP5). R3536004: each player counts the cards of theirs that

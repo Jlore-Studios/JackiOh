@@ -195,8 +195,8 @@ use anyhow::{Context, bail};
 use indexmap::{IndexMap, IndexSet};
 use jackioh_cards::{CATALOG, register_all, shipped_versions};
 use jackioh_engine::testkit::{
-    I6_GATE_STRIDE, I8_GATE_STRIDE, I14_GATE_STRIDE, create_invariant_monitor, malformed_actions,
-    malformed_answers, preview_every_set, prompt_blocked_action, set_ships,
+    I6_GATE_STRIDE, I8_GATE_STRIDE, I14_GATE_STRIDE, ListedFinding, create_invariant_monitor,
+    malformed_actions, malformed_answers, preview_every_set, prompt_blocked_action, set_ships,
 };
 use jackioh_engine::{
     AI_DIFFICULTY, AI_PLAYOUT_STEP_CAP, Action, ActionBody, BACKROW_ZONES, CardDef, CardInstance, CardType,
@@ -209,6 +209,7 @@ use jackioh_engine::{
 };
 use jackioh_run::config::{RUN_ARTIFACT_LEVEL_MAX, RUN_DECK_MAX, RUN_STARTER_SIZE, RUN_TIERS};
 use rayon::prelude::*;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
@@ -1209,12 +1210,200 @@ struct FuzzFailure {
     stage: FailureStage,
     message: String,
     at: At,
+    /// The step behind the failure (#5154); boxed so the error stays small.
+    trace: Option<Box<StepTrace>>,
 }
 
 impl FuzzFailure {
     fn new(stage: FailureStage, message: String, at: At) -> FuzzFailure {
-        FuzzFailure { stage, message, at }
+        FuzzFailure {
+            stage,
+            message,
+            at,
+            trace: None,
+        }
     }
+
+    fn with_trace(mut self, trace: StepTrace) -> FuzzFailure {
+        self.trace = Some(Box::new(trace));
+        self
+    }
+}
+
+/// The step a failing seed stopped at (#5154), printed under its `message:`: the action, the actions
+/// before it and the events one step emitted, capped by `TRACE_EVENTS_SHOWN`. Built only on a failure, so
+/// a passing seed pays nothing, and kept out of `signature_of`, so grouping is unchanged.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct StepTrace {
+    /// Which step: `step 12`, `before step 12`, `step 12 (refused)`, `setup` or `I14 branch after step 12`.
+    label: String,
+    /// The action as the log holds it, JSON with its seat and nonce; `None` at setup.
+    action: Option<String>,
+    /// `step N <action>` of the steps before this one, oldest first.
+    earlier: Vec<String>,
+    /// Whose events these are: `step 12`, `step 11 (the previous step)`, `setup` or `the branch`.
+    events_of: String,
+    total: usize,
+    /// The events counted by type, most first, ties by name.
+    by_type: Vec<(String, usize)>,
+    head: Vec<String>,
+    tail: Vec<String>,
+}
+
+impl StepTrace {
+    /// `log` holds the steps before the traced one; `acting` is the traced one's action, if any.
+    fn new(
+        label: String,
+        acting: Option<&Action>,
+        log: &[Action],
+        events_of: String,
+        events: &[GameEvent],
+    ) -> StepTrace {
+        let first = log.len().saturating_sub(TRACE_EARLIER_ACTIONS);
+        let earlier = log[first..]
+            .iter()
+            .enumerate()
+            .map(|(offset, action)| clip(format!("step {} {}", first + offset + 1, json_of(action))))
+            .collect();
+        let mut counts: IndexMap<String, usize> = IndexMap::new();
+        for event in events {
+            *counts.entry(event.event_type().as_str().to_string()).or_default() += 1;
+        }
+        let mut by_type: Vec<(String, usize)> = counts.into_iter().collect();
+        by_type.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        let line = |event: &GameEvent| clip(json_of(event));
+        let (head, tail) = if events.len() > TRACE_EVENTS_SHOWN {
+            (
+                events[..TRACE_EVENTS_HEAD].iter().map(line).collect(),
+                events[events.len() - (TRACE_EVENTS_SHOWN - TRACE_EVENTS_HEAD)..]
+                    .iter()
+                    .map(line)
+                    .collect(),
+            )
+        } else {
+            (events.iter().map(line).collect(), Vec::new())
+        };
+        StepTrace {
+            label,
+            action: acting.map(|action| clip(json_of(action))),
+            earlier,
+            events_of,
+            total: events.len(),
+            by_type,
+            head,
+            tail,
+        }
+    }
+
+    /// Setup's own events, the opening deal's.
+    fn setup(events: &[GameEvent]) -> StepTrace {
+        StepTrace::new("setup".to_string(), None, &[], "setup".to_string(), events)
+    }
+
+    /// The step just logged: `log` ends with its action and `events` are what its `reduce` emitted.
+    fn after_step(log: &[Action], events: &[GameEvent]) -> StepTrace {
+        let step = log.len();
+        StepTrace::new(
+            format!("step {step}"),
+            log.last(),
+            &log[..step.saturating_sub(1)],
+            format!("step {step}"),
+            events,
+        )
+    }
+
+    /// A check made before `acting` is reduced, or `acting` refused: the previous step's events.
+    fn before_step(log: &[Action], acting: &Action, last_events: &[GameEvent], refused: bool) -> StepTrace {
+        let step = log.len() + 1;
+        StepTrace::new(
+            if refused {
+                format!("step {step} (refused)")
+            } else {
+                format!("before step {step}")
+            },
+            Some(acting),
+            log,
+            if log.is_empty() {
+                "setup".to_string()
+            } else {
+                format!("step {} (the previous step)", log.len())
+            },
+            last_events,
+        )
+    }
+
+    /// An I14 finding: the listed action sent on a copy of the state after `log`, and what it emitted.
+    fn branch(log: &[Action], finding: &ListedFinding) -> StepTrace {
+        StepTrace::new(
+            format!("I14 branch after step {}", log.len()),
+            Some(&finding.action),
+            log,
+            "the branch".to_string(),
+            &finding.events,
+        )
+    }
+
+    fn elided(&self) -> usize {
+        self.total - self.head.len() - self.tail.len()
+    }
+
+    /// The report's lines, indented as `report()`'s are.
+    fn lines(&self) -> Vec<String> {
+        let mut lines = vec![format!("  trace: {}", self.label)];
+        if let Some(action) = &self.action {
+            lines.push(format!("    action: {action}"));
+        }
+        if !self.earlier.is_empty() {
+            lines.push("    earlier actions:".to_string());
+            lines.extend(self.earlier.iter().map(|earlier| format!("      {earlier}")));
+        }
+        let counts = if self.by_type.is_empty() {
+            "none".to_string()
+        } else {
+            self.by_type
+                .iter()
+                .map(|(name, n)| format!("{name}×{n}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        lines.push(format!(
+            "    events of {}: {} in all; by type: {counts}",
+            self.events_of, self.total
+        ));
+        lines.extend(self.head.iter().map(|event| format!("      {event}")));
+        if self.elided() > 0 {
+            lines.push(format!("      … {} more", self.elided()));
+        }
+        lines.extend(self.tail.iter().map(|event| format!("      {event}")));
+        lines
+    }
+
+    fn json(&self) -> Value {
+        json!({
+            "label": self.label,
+            "action": self.action,
+            "earlier": self.earlier,
+            "eventsOf": self.events_of,
+            "eventCount": self.total,
+            "byType": self.by_type.iter().cloned().collect::<IndexMap<_, _>>(),
+            "events": self.head.iter().chain(&self.tail).collect::<Vec<_>>(),
+            "elided": self.elided(),
+        })
+    }
+}
+
+fn json_of(value: &impl Serialize) -> String {
+    serde_json::to_string(value).unwrap_or_default()
+}
+
+/// `text` cut to `TRACE_LINE_CHARS` characters, with `…` where it was cut.
+fn clip(text: String) -> String {
+    if text.chars().count() <= TRACE_LINE_CHARS {
+        return text;
+    }
+    let mut cut: String = text.chars().take(TRACE_LINE_CHARS).collect();
+    cut.push('…');
+    cut
 }
 
 struct GameRun {
@@ -1486,8 +1675,14 @@ fn play_game_with_options(
     // Setup's own events: a Unit cast on draw in the opening deal (C+ #26 Tommy Tempo) enters there.
     let mut opening = monitor.after(&begun.events, &state);
     opening.extend(monitor.hidden(&state));
-    opening.extend(monitor.listed(&state, probe));
+    let stepwise = opening.len();
+    let branches = monitor.listed_findings(&state, probe);
+    opening.extend(branches.iter().map(|found| found.message.clone()));
     if let Some(first) = opening.first() {
+        let trace = match branches.first() {
+            Some(branch) if stepwise == 0 => StepTrace::branch(&log, branch),
+            _ => StepTrace::setup(&begun.events),
+        };
         return Err(FuzzFailure::new(
             FailureStage::Invariant,
             first.clone(),
@@ -1495,7 +1690,8 @@ fn play_game_with_options(
                 turn: state.turn,
                 actions: 0,
             },
-        ));
+        )
+        .with_trace(trace));
     }
     // #1387: the checkpoint prefers a state with paused work; step 0 is the setup state.
     let mut paused_steps: Vec<usize> = Vec::new();
@@ -1549,6 +1745,7 @@ fn play_game_with_options(
 
         let unsound = monitor.before(&state, player, &chosen);
         if let Some(first) = unsound.first() {
+            let acting = Action::new(chosen.clone(), player, format!("fuzz-{}", log.len()));
             return Err(FuzzFailure::new(
                 FailureStage::Invariant,
                 first.clone(),
@@ -1556,7 +1753,8 @@ fn play_game_with_options(
                     turn: state.turn,
                     actions: log.len(),
                 },
-            ));
+            )
+            .with_trace(StepTrace::before_step(&log, &acting, &last_events, false)));
         }
 
         // #1386: forged actions against this state, never logged. A channel action is skipped: the
@@ -1572,6 +1770,7 @@ fn play_game_with_options(
                 probe,
             )
         {
+            let acting = Action::new(chosen.clone(), player, format!("fuzz-{}", log.len()));
             return Err(FuzzFailure::new(
                 FailureStage::Probe,
                 message,
@@ -1579,7 +1778,8 @@ fn play_game_with_options(
                     turn: state.turn,
                     actions: log.len(),
                 },
-            ));
+            )
+            .with_trace(StepTrace::before_step(&log, &acting, &last_events, false)));
         }
 
         let action = Action::new(chosen, player, format!("fuzz-{}", log.len()));
@@ -1600,7 +1800,8 @@ fn play_game_with_options(
                     turn: state.turn,
                     actions: log.len(),
                 },
-            ));
+            )
+            .with_trace(StepTrace::before_step(&log, &action, &last_events, true)));
         }
 
         let action_type = action.action_type().as_str().to_string();
@@ -1618,10 +1819,17 @@ fn play_game_with_options(
         if log.len().is_multiple_of(unlisted_stride) {
             broken.extend(monitor.unlisted(&state));
         }
+        let stepwise = broken.len();
+        let mut branches: Vec<ListedFinding> = Vec::new();
         if log.len().is_multiple_of(listed_stride) {
-            broken.extend(monitor.listed(&state, probe));
+            branches = monitor.listed_findings(&state, probe);
+            broken.extend(branches.iter().map(|found| found.message.clone()));
         }
         if let Some(first) = broken.first() {
+            let trace = match branches.first() {
+                Some(branch) if stepwise == 0 => StepTrace::branch(&log, branch),
+                _ => StepTrace::after_step(&log, &result.events),
+            };
             return Err(FuzzFailure::new(
                 FailureStage::Invariant,
                 first.clone(),
@@ -1629,7 +1837,8 @@ fn play_game_with_options(
                     turn: state.turn,
                     actions: log.len(),
                 },
-            ));
+            )
+            .with_trace(trace));
         }
 
         let step = log.len();
@@ -1654,7 +1863,8 @@ fn play_game_with_options(
                     turn: state.turn,
                     actions: step,
                 },
-            ));
+            )
+            .with_trace(StepTrace::after_step(&log, &result.events)));
         }
         note_played(&mut played, &result.events);
         note_radiant(&mut radiant, &result.events);
@@ -2089,6 +2299,19 @@ pub const CHECKPOINT_TIME_BOUND_MS: u128 = 5_000;
 /// anything between them (S+ T-the-enigmata's self-playing turns, R3569004), is weighed a turn at a
 /// time (`most_events_in_a_turn`, #4375).
 pub const GROWTH_EVENTS_BOUND: i64 = 10_000;
+
+/// The most events of one step a failure's trace prints (#5154): the first `TRACE_EVENTS_HEAD` and the
+/// rest of this count from the end, with a `… K more` line between them when the step emitted more.
+const TRACE_EVENTS_SHOWN: usize = 200;
+
+/// How many of `TRACE_EVENTS_SHOWN` come from the start of the step's events.
+const TRACE_EVENTS_HEAD: usize = TRACE_EVENTS_SHOWN / 2;
+
+/// How many of the steps before the failing one a trace lists the action of.
+const TRACE_EARLIER_ACTIONS: usize = 4;
+
+/// The longest an action's or an event's line in a trace may be, in characters; a longer one ends in `…`.
+const TRACE_LINE_CHARS: usize = 600;
 
 /// The largest number any card instance may carry after one action (attack, health, cost, counter),
 /// catching runaway scaling (e.g. R884000 University).
@@ -2598,8 +2821,13 @@ struct Failure {
     /// How many leading deck indices the failing game pinned Radiant (#4161); 0 outside the Radiant
     /// rotation. Kept out of `signature`, like `start`.
     radiant: usize,
-    turn: i64,
+    /// An `i32` like `GameState.turn`, with `-1` for a panic before the game began; it and the boxed trace
+    /// keep `Failure` under clippy's `result_large_err` threshold.
+    turn: i32,
     actions: i64,
+    /// The step behind the failure (#5154), printed under `message:`. Kept out of `signature`, like
+    /// `start`; boxed like `decks`.
+    trace: Option<Box<StepTrace>>,
 }
 
 impl Failure {
@@ -2944,6 +3172,9 @@ fn report(failures: &[Failure], ran: u32, elapsed_ms: f64) -> String {
             ));
         }
         lines.push(format!("  message: {}", first.message));
+        if let Some(trace) = &first.trace {
+            lines.extend(trace.lines());
+        }
         let shown: Vec<String> = seeds.iter().take(40).cloned().collect();
         let more = if seeds.len() > 40 {
             format!(", … ({} total)", seeds.len())
@@ -3338,13 +3569,14 @@ fn run_seed_with_options(
                 .with_forecast_judged(run.forecast_judged),
         })
     }));
-    let (stage, message, turn, actions) = match caught {
+    let (stage, message, turn, actions, trace) = match caught {
         Ok(Ok(passed)) => return Ok(passed),
         Ok(Err(failure)) => (
             failure.stage,
             failure.message,
-            i64::from(failure.at.turn),
+            failure.at.turn,
             i64::try_from(failure.at.actions).unwrap_or(i64::MAX),
+            failure.trace,
         ),
         Err(payload) => {
             // A raw panic out of the engine or a card script: the message alone rarely says which file
@@ -3357,8 +3589,9 @@ fn run_seed_with_options(
                     panic_message(&*payload),
                     origin_of(location.as_deref())
                 ),
-                reached.map_or(-1, |at| i64::from(at.turn)),
+                reached.map_or(-1, |at| at.turn),
                 reached.map_or(-1, |at| i64::try_from(at.actions).unwrap_or(i64::MAX)),
+                None,
             )
         }
     };
@@ -3375,6 +3608,7 @@ fn run_seed_with_options(
         radiant: setup.radiant,
         turn,
         actions,
+        trace,
     })
 }
 
@@ -3598,6 +3832,7 @@ impl Wave {
                     "turn": failure.turn,
                     "step": failure.actions,
                     "message": failure.message,
+                    "trace": failure.trace.as_ref().map(|trace| trace.json()),
                     "forced": failure.forced,
                     "handicaps": run.as_ref().map(|options| json!(options.handicaps)),
                     "marks": run.as_ref().map(|options| json!(options.deck_marks)),
@@ -3872,9 +4107,17 @@ fn lint_record(record: &CorpusRecord) -> Vec<String> {
 
 type NamedRecord = (String, CorpusRecord);
 
-/// Every `.json` file of `dir`, sorted by name, parsed; with every problem found, a file that is no
-/// record included, one line each, led by the file's name.
-fn read_corpus(dir: &Path) -> anyhow::Result<(Vec<NamedRecord>, Vec<String>)> {
+/// A corpus as `read_named_records` reads it: each record led by its file's name, and every problem.
+pub(crate) type NamedRecords<T> = (Vec<(String, T)>, Vec<String>);
+
+/// Every `.json` file of `dir`, sorted by name, parsed as a `T` and linted by `lint`; with every problem
+/// found, a file that is no `what` included, one line each, led by the file's name. The fuzz corpus's
+/// and the perf corpus's reader.
+pub(crate) fn read_named_records<T: DeserializeOwned>(
+    dir: &Path,
+    what: &str,
+    lint: impl Fn(&T) -> Vec<String>,
+) -> anyhow::Result<NamedRecords<T>> {
     let mut paths: Vec<_> = fs::read_dir(dir)
         .with_context(|| format!("reading {}", dir.display()))?
         .map(|entry| entry.map(|entry| entry.path()))
@@ -3889,19 +4132,25 @@ fn read_corpus(dir: &Path) -> anyhow::Result<(Vec<NamedRecord>, Vec<String>)> {
             .file_name()
             .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
         let text = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
-        match serde_json::from_str::<CorpusRecord>(&text) {
+        match serde_json::from_str::<T>(&text) {
             Ok(record) => {
                 problems.extend(
-                    lint_record(&record)
+                    lint(&record)
                         .into_iter()
                         .map(|problem| format!("{name}: {problem}")),
                 );
                 records.push((name, record));
             }
-            Err(error) => problems.push(format!("{name}: not a corpus record: {error}")),
+            Err(error) => problems.push(format!("{name}: not a {what}: {error}")),
         }
     }
     Ok((records, problems))
+}
+
+/// Every `.json` file of `dir`, sorted by name, parsed; with every problem found, a file that is no
+/// record included, one line each, led by the file's name.
+fn read_corpus(dir: &Path) -> anyhow::Result<(Vec<NamedRecord>, Vec<String>)> {
+    read_named_records(dir, "corpus record", lint_record)
 }
 
 /// `record` through the gate's checks with its pinned decks and literal optional start inputs.
@@ -3960,18 +4209,30 @@ fn regress(dir: &Path) -> anyhow::Result<Regress> {
                 "{name}: seed {seed} ({catalog_version}): passed, {} on turn {}, {} actions, hash {}",
                 passed.reason, passed.turn, passed.actions, passed.hash
             )),
-            Some(Err(failure)) => out.failed.push(format!(
-                "{name}: seed {seed} ({catalog_version}) failed [{}] at turn {}, {} actions: {}\n  found: {}",
-                failure.stage.as_str(),
-                failure.turn,
-                failure.actions,
-                failure.message,
-                record.found
-            )),
+            Some(Err(failure)) => out.failed.push(regress_failure_line(name, record, &failure)),
             None => {}
         }
     }
     Ok(out)
+}
+
+/// A failing record's line: its message, the failing step's trace when there is one (#5154), then what
+/// the record found.
+fn regress_failure_line(name: &str, record: &CorpusRecord, failure: &Failure) -> String {
+    let trace = failure
+        .trace
+        .as_ref()
+        .map_or_else(String::new, |trace| format!("\n{}", trace.lines().join("\n")));
+    format!(
+        "{name}: seed {} ({}) failed [{}] at turn {}, {} actions: {}{trace}\n  found: {}",
+        record.seed,
+        record.catalog_version,
+        failure.stage.as_str(),
+        failure.turn,
+        failure.actions,
+        failure.message,
+        record.found
+    )
 }
 
 /// `cargo jackioh fuzz --regress`: prints each record's line and the totals, and fails on any problem.
@@ -4731,7 +4992,7 @@ pub(crate) mod tests {
             CardScripts, GameEventType, Script, TriggerDef, clear_overrides, effects, json_as,
             register_catalog_as, register_scripts,
         };
-        use jackioh_engine::{CardDef, Tuning};
+        use jackioh_engine::{CardDef, Effect, Tuning};
 
         /// A fixture Unit that Buffs itself at the start of every turn, University's mistake before
         /// R884000.
@@ -4743,17 +5004,6 @@ pub(crate) mod tests {
 
         /// Puts the grower in this thread's catalog and scripts; `clear_overrides` takes it out.
         fn install_grower() {
-            register_all();
-            let face = json!({ "attack": 1, "health": 1, "keywords": [{ "kind": "Can't attack" }],
-                "text": "Can't attack\nAt the start of each turn: this gains nine times its Buffs (at least +9/+9)." });
-            let def: CardDef = json_as(
-                json!({ "id": GROWER, "index": GROWER, "name": "Grower (fuzz fixture)",
-                "set": "Core", "type": "Unit", "tags": [], "rarity": "Common", "token": false, "cost": 1,
-                "base": face, "radiant": face }),
-            );
-            let mut catalog = (*CATALOG).clone();
-            catalog.insert(GROWER.to_string(), def);
-            register_catalog_as(catalog, jackioh_cards::catalog_version());
             let grow = TriggerDef::new(
                 "fuzz-grower-grow",
                 &[GameEventType::TurnStarted],
@@ -4766,13 +5016,31 @@ pub(crate) mod tests {
                     ))]
                 },
             );
+            install_planted(
+                GROWER,
+                "Can't attack\nAt the start of each turn: this gains nine times its Buffs (at least +9/+9).",
+                grow,
+            );
+        }
+
+        /// Puts a Unit `id` that can't attack and runs `trigger` in this thread's catalog and scripts.
+        fn install_planted(id: &str, text: &str, trigger: TriggerDef) {
+            register_all();
+            let face = json!({ "attack": 1, "health": 1, "keywords": [{ "kind": "Can't attack" }],
+                "text": text });
+            let def: CardDef = json_as(json!({ "id": id, "index": id, "name": "Planted (fuzz fixture)",
+                "set": "Core", "type": "Unit", "tags": [], "rarity": "Common", "token": false, "cost": 1,
+                "base": face, "radiant": face }));
+            let mut catalog = (*CATALOG).clone();
+            catalog.insert(id.to_string(), def);
+            register_catalog_as(catalog, jackioh_cards::catalog_version());
             let script = Script {
-                triggers: vec![grow],
+                triggers: vec![trigger],
                 ..Script::default()
             };
             let mut scripts = jackioh_cards::scripts_of();
             scripts.insert(
-                GROWER.to_string(),
+                id.to_string(),
                 CardScripts {
                     base: script.clone(),
                     radiant: script,
@@ -4819,6 +5087,68 @@ pub(crate) mod tests {
                 "{text}"
             );
             assert!(text.contains("[growth]"), "{text}");
+            // #5154: the step behind it is printed under `message:`, capped, and kept out of the signature.
+            let trace = failure.trace.as_ref().expect("a growth failure carries its step");
+            assert_eq!(trace.label, format!("step {}", failure.actions));
+            assert!(
+                text.contains(&format!("events of step {}:", failure.actions)),
+                "{text}"
+            );
+            assert!(text.contains("in all; by type: "), "{text}");
+            let events = text.lines().filter(|line| line.starts_with("      {")).count();
+            assert!(
+                events > 0 && events <= TRACE_EVENTS_SHOWN,
+                "{events} event lines in {text}"
+            );
+            assert_eq!(failure.signature, signature_of(failure.stage, &failure.message));
+        }
+
+        /// The planted Unit that writes P1's mana below nothing each turn (I17).
+        const DRAINER: &str = "fuzz-drainer";
+
+        #[test]
+        fn a_planted_step_that_breaks_an_invariant_prints_its_events_in_the_trace() {
+            // The engine's mana verbs floor at 0, so the fixture writes below it directly.
+            let drain = TriggerDef::new("fuzz-drainer-drain", &[GameEventType::TurnStarted], |_, _| {
+                vec![Effect::new("fuzz-drain", |ctx| {
+                    ctx.sink.state.players[PlayerId::P1].mana.current = -1;
+                })]
+            });
+            install_planted(
+                DRAINER,
+                "Can't attack\nAt the start of each turn: drain mana.",
+                drain,
+            );
+            let failure = (1..=PLANTED_SEEDS)
+                .find_map(|seed| {
+                    let (mut p1, mut p2) = decks_for_seed(seed);
+                    p1[0] = DRAINER.to_string();
+                    p2[0] = DRAINER.to_string();
+                    fuzz_deal(seed, (p1, p2)).err()
+                })
+                .expect("a card that writes mana below nothing must fail one of the planted seeds");
+            clear_overrides();
+            assert_eq!(failure.stage, FailureStage::Invariant, "{}", failure.message);
+            assert!(
+                failure.message.starts_with("I9 wrong mana"),
+                "{}",
+                failure.message
+            );
+            let trace = failure
+                .trace
+                .as_ref()
+                .expect("an after-step failure carries its step");
+            assert_eq!(trace.label, format!("step {}", failure.actions));
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(
+                text.contains(&format!("  trace: step {}", failure.actions)),
+                "{text}"
+            );
+            assert!(text.contains("\"type\":\"turnStarted\""), "{text}");
+            assert!(
+                text.contains(&format!("\"nonce\":\"fuzz-{}\"", failure.actions - 1)),
+                "{text}"
+            );
         }
 
         /// `seed`'s handicapped deal with the grower first in both decks.
@@ -5081,6 +5411,30 @@ pub(crate) mod tests {
             assert!(text.contains("[probe]"), "{text}");
         }
 
+        #[test]
+        fn a_probe_failure_prints_the_previous_step_s_action_and_events() {
+            register_all();
+            let Some(failure) = fuzz_deal_probed(1, decks_for_seed(1), forgetful).err() else {
+                panic!("a reducer that forgets nonces must fail seed 1");
+            };
+            assert_eq!(failure.stage, FailureStage::Probe, "{}", failure.message);
+            let trace = failure.trace.as_ref().expect("a probe failure carries its step");
+            assert!(trace.label.starts_with("before step "), "{}", trace.label);
+            assert!(trace.action.is_some());
+            let earlier = trace.earlier.last().expect("the previous step's action");
+            assert!(
+                earlier.starts_with(&format!("step {} ", failure.actions)),
+                "{earlier}"
+            );
+            assert!(
+                trace.events_of.contains(&format!("step {}", failure.actions)),
+                "{}",
+                trace.events_of
+            );
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(text.contains("    earlier actions:"), "{text}");
+        }
+
         /// A reducer that takes any answer from the prompt's holder as the prompt's first listed answer.
         fn lenient(state: &GameState, action: &Action) -> ReduceResult {
             if let (ActionBody::Answer { .. }, Some(pending)) = (&action.body, &state.pending)
@@ -5156,6 +5510,14 @@ pub(crate) mod tests {
             let text = report(std::slice::from_ref(&failure), 1, 0.0);
             assert!(text.contains("example: seed 1 ("), "{text}");
             assert!(text.contains("[invariant]"), "{text}");
+            // #5154: the branch's action is printed, and a replay prints the same bytes.
+            assert!(text.contains("  trace: I14 branch after step "), "{text}");
+            assert!(text.contains("\"type\":\"concede\""), "{text}");
+            assert!(text.contains(&format!("\"nonce\":\"{I14_NONCE}\"")), "{text}");
+            let Some(again) = fuzz_deal_probed(1, decks_for_seed(1), refuses_the_listed_concede).err() else {
+                panic!("the same seed fails the same way");
+            };
+            assert_eq!(report(std::slice::from_ref(&again), 1, 0.0), text);
         }
 
         /// A reducer that accepts one listed action (I14) but returns a state with a Unit token in a
@@ -5212,6 +5574,20 @@ pub(crate) mod tests {
             let text = report(std::slice::from_ref(&failure), 1, 0.0);
             assert!(text.contains("example: seed 1 ("), "{text}");
             assert!(text.contains("[invariant]"), "{text}");
+            // #5154: the branch's action and the events it emitted are printed.
+            let trace = failure
+                .trace
+                .as_ref()
+                .expect("a branch finding carries its branch");
+            assert_eq!(trace.events_of, "the branch");
+            assert!(
+                trace
+                    .action
+                    .as_ref()
+                    .is_some_and(|action| action.contains("concede"))
+            );
+            assert!(text.contains("  trace: I14 branch after step "), "{text}");
+            assert!(text.contains("events of the branch: "), "{text}");
         }
 
         /// A reducer that accepts one listed action (I14) but leaves work owed with no prompt open (I7)
@@ -5563,6 +5939,188 @@ pub(crate) mod tests {
             assert_eq!(hash_state(&remembered.state), hash_state(&state));
             let wrong = judge_probe(&state, &remembered, None).expect("a moved nonce memory is no refusal");
             assert!(wrong.contains("moved the state"), "{wrong}");
+        }
+    }
+
+    mod fuzz_step_trace {
+        use super::fuzz_regression_corpus::sound;
+        use super::*;
+
+        fn ended(turn: i32) -> GameEvent {
+            GameEvent::TurnEnded {
+                player: PlayerId::P1,
+                turn,
+                unspent_mana: 0,
+            }
+        }
+
+        fn log_of(steps: usize) -> Vec<Action> {
+            (0..steps)
+                .map(|step| Action::new(ActionBody::EndTurn, PlayerId::P2, format!("fuzz-{step}")))
+                .collect()
+        }
+
+        fn failure_with(trace: Option<StepTrace>) -> Failure {
+            Failure {
+                seed: 1,
+                rotation: None,
+                start: StartKind::Plain,
+                endings: false,
+                stage: FailureStage::Invariant,
+                signature: signature_of(FailureStage::Invariant, "I21 planted"),
+                message: "I21 planted".into(),
+                decks: Box::new((Vec::new(), Vec::new())),
+                forced: Vec::new(),
+                radiant: 0,
+                turn: 2,
+                actions: 7,
+                trace: trace.map(Box::new),
+            }
+        }
+
+        #[test]
+        fn a_step_trace_elides_the_middle_of_a_long_event_list_and_counts_the_types() {
+            let events: Vec<GameEvent> = (0..500).map(ended).collect();
+            let trace = StepTrace::after_step(&log_of(7), &events);
+            let text = trace.lines().join("\n");
+            let shown = trace
+                .lines()
+                .iter()
+                .filter(|line| line.starts_with("      {"))
+                .count();
+            assert_eq!(shown, TRACE_EVENTS_SHOWN, "{text}");
+            let kind = events[0].event_type().as_str();
+            assert!(
+                text.contains(&format!("500 in all; by type: {kind}×500")),
+                "{text}"
+            );
+            let lines = trace.lines();
+            let more = lines
+                .iter()
+                .position(|line| line == &format!("      … {} more", 500 - TRACE_EVENTS_SHOWN))
+                .unwrap_or_else(|| panic!("no elision line in {text}"));
+            assert!(lines[more - 1].starts_with("      {"), "{text}");
+            assert!(lines[more + 1].starts_with("      {"), "{text}");
+            assert!(
+                lines[more - 1].contains("\"turn\":99"),
+                "the head ends at event 99: {text}"
+            );
+            assert!(
+                lines[more + 1].contains("\"turn\":400"),
+                "the tail starts at event 400: {text}"
+            );
+            assert_eq!(trace.json()["elided"], json!(500 - TRACE_EVENTS_SHOWN));
+
+            let short = StepTrace::after_step(&log_of(7), &events[..5]).lines().join("\n");
+            assert!(!short.contains(" more"), "{short}");
+            assert!(
+                StepTrace::after_step(&log_of(1), &[])
+                    .lines()
+                    .join("\n")
+                    .contains("0 in all; by type: none")
+            );
+        }
+
+        #[test]
+        fn a_step_trace_names_the_step_its_action_its_seat_and_the_steps_before() {
+            let log = log_of(7);
+            let trace = StepTrace::after_step(&log, &[ended(3)]);
+            let text = trace.lines().join("\n");
+            assert_eq!(trace.label, "step 7");
+            assert!(
+                text.contains("action: {\"type\":\"endTurn\",\"playerId\":\"p2\",\"nonce\":\"fuzz-6\"}"),
+                "{text}"
+            );
+            assert_eq!(trace.earlier.len(), TRACE_EARLIER_ACTIONS);
+            assert!(trace.earlier[0].starts_with("step 3 "), "{:?}", trace.earlier);
+            assert!(
+                trace.earlier[TRACE_EARLIER_ACTIONS - 1].starts_with("step 6 "),
+                "{:?}",
+                trace.earlier
+            );
+            // The offending event is in the trace.
+            assert!(text.contains(&json_of(&ended(3))), "{text}");
+
+            let refused = StepTrace::before_step(&log, &log[0], &[ended(3)], true);
+            assert_eq!(refused.label, "step 8 (refused)");
+            assert_eq!(refused.events_of, "step 7 (the previous step)");
+            assert_eq!(
+                StepTrace::before_step(&[], &log[0], &[], false).events_of,
+                "setup"
+            );
+            assert_eq!(StepTrace::setup(&[]).action, None);
+        }
+
+        #[test]
+        fn a_line_longer_than_the_cap_is_cut() {
+            let long = clip("x".repeat(TRACE_LINE_CHARS + 50));
+            assert_eq!(long.chars().count(), TRACE_LINE_CHARS + 1);
+            assert!(long.ends_with('…'));
+            assert_eq!(clip("short".to_string()), "short");
+        }
+
+        #[test]
+        fn a_failure_without_a_trace_prints_no_trace_lines_and_a_null_trace() {
+            let failure = failure_with(None);
+            let text = report(std::slice::from_ref(&failure), 1, 0.0);
+            assert!(!text.contains("  trace:"), "{text}");
+            let wave = Wave {
+                failures: vec![failure],
+                ..play_handicap_wave(1, 1, &Forcing::default())
+            };
+            assert!(wave.json()["failures"][0]["trace"].is_null());
+        }
+
+        #[test]
+        fn a_trace_stays_out_of_the_signature_and_the_report_prints_it_under_the_message() {
+            let trace = StepTrace::after_step(&log_of(7), &[ended(3)]);
+            let plain = failure_with(None);
+            let traced = failure_with(Some(trace.clone()));
+            assert_eq!(plain.signature, traced.signature);
+            let text = report(&[traced, plain], 1, 0.0);
+            assert!(text.contains("1 distinct failure signature"), "{text}");
+            let lines: Vec<&str> = text.lines().collect();
+            let message = lines
+                .iter()
+                .position(|line| line == &"  message: I21 planted")
+                .expect("message");
+            assert_eq!(lines[message + 1], "  trace: step 7", "{text}");
+        }
+
+        #[test]
+        fn json_carries_the_trace_beside_the_step_count() {
+            let trace = StepTrace::after_step(&log_of(7), &[ended(3)]);
+            let wave = Wave {
+                failures: vec![failure_with(Some(trace))],
+                ..play_handicap_wave(1, 1, &Forcing::default())
+            };
+            let json = wave.json();
+            let failure = &json["failures"][0];
+            assert_eq!(failure["step"], json!(7));
+            assert_eq!(failure["trace"]["label"], json!("step 7"));
+            assert_eq!(failure["trace"]["eventCount"], json!(1));
+            assert_eq!(failure["trace"]["events"].as_array().map(Vec::len), Some(1));
+            assert_eq!(failure["trace"]["elided"], json!(0));
+        }
+
+        #[test]
+        fn the_regress_failure_line_prints_the_trace_when_there_is_one() {
+            let record = sound(1);
+            let trace = StepTrace::after_step(&log_of(7), &[ended(3)]);
+            let traced = regress_failure_line("r1", &record, &failure_with(Some(trace.clone())));
+            for line in trace.lines() {
+                assert!(traced.contains(&line), "{traced}");
+            }
+            assert!(
+                traced.contains("actions: I21 planted\n  trace: step 7\n"),
+                "{traced}"
+            );
+            assert!(
+                traced.ends_with(&format!("\n  found: {}", record.found)),
+                "{traced}"
+            );
+            let plain = regress_failure_line("r1", &record, &failure_with(None));
+            assert!(plain.contains("actions: I21 planted\n  found: "), "{plain}");
         }
     }
 
@@ -6199,6 +6757,7 @@ pub(crate) mod tests {
                 turn: 4,
                 radiant: 0,
                 actions: 3,
+                trace: None,
             };
             let failed = Wave {
                 failures: vec![
@@ -6460,6 +7019,7 @@ pub(crate) mod tests {
                 turn: 2,
                 radiant: 0,
                 actions: 1,
+                trace: None,
             };
             let text = report(std::slice::from_ref(&failure), 1, 0.0);
             assert!(text.contains("\n  start: glitch-boards\n"), "{text}");
@@ -6510,6 +7070,7 @@ pub(crate) mod tests {
                 turn: 2,
                 radiant: 0,
                 actions: 1,
+                trace: None,
             };
             for (start, endings, field) in [
                 (StartKind::Plain, false, None),
@@ -6859,6 +7420,7 @@ pub(crate) mod tests {
                 turn: 2,
                 radiant: 0,
                 actions: 1,
+                trace: None,
             };
             let wave_of = |failure: Failure| Wave {
                 handicapped: false,

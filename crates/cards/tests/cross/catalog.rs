@@ -12409,20 +12409,20 @@ mod catalog_membership_build_m4_t1_b2_1 {
     // segment as the set's row of the set table does: a new set is its row and its census entry.
     #[test]
     fn r3114000_every_census_set_has_a_table_row_with_its_segment() {
-        use jackioh_engine::{CATALOG_SETS, HELD_SINGLE_PLAYER_SETS, SetStage, set_row};
+        use jackioh_engine::{CATALOG_SETS, SetStage, set_row};
         for census in CENSUS {
             let set: SetName = census
                 .set
                 .parse()
                 .unwrap_or_else(|error| panic!("{}: {error}", census.set));
             let row = set_row(set);
-            // R4577000: a single-player set held while it is built holds cards too.
+            // R4577000: a single-player set built card by card holds cards too, held or open.
             assert!(
                 matches!(
                     row.stage,
-                    SetStage::Shipped | SetStage::Held | SetStage::HeldSinglePlayer
+                    SetStage::Shipped | SetStage::Held | SetStage::HeldSinglePlayer | SetStage::SinglePlayer
                 ),
-                "{}: the census holds a set the catalog orders or one held for single-player, not a {:?} one",
+                "{}: the census holds a set the catalog orders or a single-player set with cards, not a {:?} one",
                 census.set,
                 row.stage
             );
@@ -12431,12 +12431,17 @@ mod catalog_membership_build_m4_t1_b2_1 {
         let named: Vec<&str> = CENSUS.iter().map(|census| census.set).collect();
         let ordered: Vec<&str> = CATALOG_SETS
             .iter()
-            .chain(HELD_SINGLE_PLAYER_SETS.iter())
+            .chain(SetName::ALL.iter().filter(|set| {
+                matches!(
+                    set_row(**set).stage,
+                    SetStage::HeldSinglePlayer | SetStage::SinglePlayer
+                ) && CATALOG.values().any(|def| def.set == **set)
+            }))
             .map(|set| set.as_str())
             .collect();
         assert_eq!(
             named, ordered,
-            "one census entry per set the catalog orders, in its order, then one per held single-player set"
+            "one census entry per set the catalog orders, in its order, then one per single-player set with cards"
         );
     }
 

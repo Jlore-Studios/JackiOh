@@ -2,10 +2,10 @@
 //! in the same tier as plays and Heroic Power (R43), round-robin by source instance and ordered by mana.
 
 use jackioh_ai::{
-    AI_BUDGET, AI_DECISION_PRICE_NODES, AI_EVAL, AI_PROMPT_ACTIVATION_PROBE_NODES, ActivationPrice,
-    AiOptions, DecisionReason, EvalWeights, GREEDY_EVAL, NextSwing, NodeCounter, Prices, action_key,
-    activation_prices, candidate_actions, create_node_counter, decide, decision_prices_at, det_ground,
-    evaluate, evaluate_priced, probe_world, prompt_activation_prices, redact,
+    AI_BUDGET, AI_EVAL, AI_PROMPT_ACTIVATION_PROBE_NODES, ActivationPrice, AiOptions, DecisionReason,
+    EvalWeights, GREEDY_EVAL, NextSwing, NodeCounter, Prices, action_key, activation_prices,
+    candidate_actions, create_node_counter, decide, det_ground, evaluate, evaluate_priced, probe_world,
+    prompt_activation_prices, redact,
 };
 use jackioh_engine::testkit::{
     ActionBody, ActionType, ActivationCost, ActivationDecl, ActivationUses, CardDef, CardInstance,
@@ -15,7 +15,8 @@ use jackioh_engine::testkit::{
 };
 
 use super::support::{
-    AI, HUMAN, act, in_graveyard, is_legal, on_field, register_cards, run_puzzle, scenario, trace,
+    AI, HUMAN, act, decision_prices_at, in_graveyard, is_legal, on_field, register_cards, run_puzzle,
+    scenario, trace,
 };
 
 const PUNISH: &str = "classic-020"; // Field Spell; Activate: deal 2 damage, or a discard, or a delayed destroy
@@ -582,7 +583,7 @@ mod r4197000_heroic_powers_pick_is_priced_by_what_each_power_keeps_giving {
         assert_eq!(counter.used(), 0);
         let public = redact(state, AI);
         let probe = probe_world(&public, AI, &det_ground(&public, AI));
-        let alone = activation_prices(&probe, AI, &create_node_counter(AI_DECISION_PRICE_NODES, None));
+        let alone = activation_prices(&probe, AI, &create_node_counter(AI_BUDGET.nodes, None));
         assert_eq!(decision_prices_at(state, AI).activations, alone);
     }
 

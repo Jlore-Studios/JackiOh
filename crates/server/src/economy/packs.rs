@@ -266,20 +266,7 @@ pub async fn buy_pack_once(
 /// §14.3: opens one unopened pack of `pack`'s kind, in one transaction. Under the account's lock (R1301003)
 /// it rolls the opening from `seed` (`jackioh_shared::economy::open::open_card_pack`) and writes every grant. Every economy row's `ref`
 /// is the opening's log; the collection's rows have no `ref` and share the opening's `at`. No pack held is
-/// 409, writing nothing. With no key, [`open_pack_once`]'s opening.
-pub async fn open_pack(
-    app: &App,
-    profile_id: &str,
-    pack: PackKind,
-    registry: &[Cosmetic],
-    seed: &str,
-) -> Result<OpenedPack, ApiError> {
-    open_pack_once(app, profile_id, pack, registry, seed, None)
-        .await?
-        .now()
-}
-
-/// [`open_pack`] under an `Idempotency-Key` (R2124000): right after the account's lock, before the
+/// 409, writing nothing. Under an `Idempotency-Key` (R2124000): right after the account's lock, before the
 /// pack held is read (a retry finds the pack its first try spent gone), a key already committed
 /// answers the opening it kept, and an opening's answer is kept in its own transaction.
 pub async fn open_pack_once(
@@ -423,19 +410,6 @@ pub async fn open_packs_once(
     Ok(Spent::Now(opened))
 }
 
-/// [`open_packs_once`] with no key.
-pub async fn open_packs(
-    app: &App,
-    profile_id: &str,
-    pack: PackKind,
-    registry: &[Cosmetic],
-    seeds: &[String],
-) -> Result<OpenedPacks, ApiError> {
-    open_packs_once(app, profile_id, pack, registry, seeds, None)
-        .await?
-        .now()
-}
-
 /// The error a decision's refusal answers: no pack held is a conflict, writing nothing; a pool with no card
 /// is the catalog's fault.
 fn refused(refusal: EconomyRefusal) -> ApiError {
@@ -492,7 +466,7 @@ pub async fn post_buy(app: &Arc<App>, req: Req) -> ApiResult {
         .answer()
 }
 
-/// `POST /api/packs/open` (`AuthLevel::Active`): `{ pack }`; [`open_pack`] over the shipped
+/// `POST /api/packs/open` (`AuthLevel::Active`): `{ pack }`; [`open_pack_once`] over the shipped
 /// registry, from a fresh seed (`SystemIds::seed`, 16 random bytes), so no seed the account can
 /// read foretells a later roll (§14.11), with an optional `Idempotency-Key` (R2124000);
 /// [`open_pack_once`], in the account's spend turn (R2378000).

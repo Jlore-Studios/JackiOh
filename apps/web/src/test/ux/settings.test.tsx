@@ -40,10 +40,11 @@ const DEFAULTS: Settings = {
   lethalHint: true,
   attackOutcomes: true,
   reduceMotion: false,
+  lowGraphics: false,
   muteOpponentEmotes: false,
   muteSpectatorEmotes: false,
 };
-const KEYS = ["attackOutcomes", "autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "lethalHint", "muteOpponentEmotes", "muteSpectatorEmotes", "reduceMotion"];
+const KEYS = ["attackOutcomes", "autoEndTurn", "confirmEndTurn", "dragToPlay", "hoverPreviews", "lethalHint", "lowGraphics", "muteOpponentEmotes", "muteSpectatorEmotes", "reduceMotion"];
 
 afterEach(() => {
   cleanup();

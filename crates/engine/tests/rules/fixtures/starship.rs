@@ -13,7 +13,7 @@ use std::sync::LazyLock;
 use jackioh_engine::effects;
 // The verbs and reads as a card script names them, through the prelude (CLAUDE.md rule 5).
 use jackioh_engine::prelude::{
-    awaken, dormant_starship_of, launched_starship_of, starship_pieces_of, when_launched,
+    awaken, dormant_starship_of, launched_starship_of, starship_pieces_of, units_on_field_of, when_launched,
 };
 use jackioh_engine::testkit::*;
 
@@ -164,7 +164,7 @@ fn embiggen(mut card: CardDef) -> CardDef {
     card.cost = CardCost::Embiggen { base: 1, embiggen: 2 };
     card
 }
-/// "Embiggened (2): Starship Piece and Equip." (#129 Missile Pod's lend, R1878001.)
+/// "Embiggened (+1): Starship Piece and Equip." (#129 Missile Pod's lend, R1878001.)
 pub static lender: LazyLock<CardDef> =
     LazyLock::new(|| embiggen(def("ss-lender", 18537, "Unit", 1, (1, 1), json!([]), json!([]))));
 /// No piece at either price.
@@ -277,7 +277,13 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             grab.id.clone(),
-            spell(hook(|_ctx| vec![effects::steal_all(json_as(json!({})))])),
+            spell(hook(|ctx| {
+                // One `steal` for each enemy Unit, in lane order.
+                units_on_field_of(ctx.state, opponent_of(ctx.controller))
+                    .into_iter()
+                    .map(|unit| effects::steal(json_as(json!({ "instanceId": unit.id }))))
+                    .collect()
+            })),
         ),
         (
             liftoff.id.clone(),

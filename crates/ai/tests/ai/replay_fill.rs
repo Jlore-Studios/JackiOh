@@ -116,7 +116,8 @@ fn r4447000_a_pinned_decision_keeps_its_action_line_and_nodes() {
     // determinization 0, then the 4/4. At 0 (3af8296300) it was the 4/4, then Stockpile, then a drawn
     // card, in 137 nodes: the other worlds' cut replays of the Stockpile line ended their turn with
     // its crystals unspent. Its nodes are 178 since R4806000 (171 before): the lethal solver walks a
-    // play's two lanes as two positions.
+    // play's two lanes as two positions. They are 183 since R4797000 (178 before): a reply whose
+    // opponent's turn ended by itself after its last move now plays that End turn, one node.
     let stockpile = r#"{"instanceId":"c1","type":"play"}"#;
     let line = [
         stockpile,
@@ -130,7 +131,7 @@ fn r4447000_a_pinned_decision_keeps_its_action_line_and_nodes() {
         (
             stockpile.to_string(),
             line.iter().map(|key| key.to_string()).collect(),
-            178
+            183
         )
     );
 }
@@ -157,7 +158,7 @@ fn r4447000_a_decision_counts_the_finalist_replays_its_worlds_cut() {
 }
 
 /// R4447000: a line that plays a card it drew is cut on a world that drew other cards, the fill on or
-/// off, and not on the world it was found on; `score_line` is `replay_line` with the fill off.
+/// off, and not on the world it was found on.
 #[test]
 fn r4447000_a_line_that_plays_a_card_it_drew_is_cut_on_a_world_that_drew_another() {
     let (line, a, b) = cut_scene(&[VANILLA]);
@@ -167,11 +168,6 @@ fn r4447000_a_line_that_plays_a_card_it_drew_is_cut_on_a_world_that_drew_another
     assert!(on.cut);
     assert!(!replayed(&a, &line, ReplayFill::OFF).0.cut);
     assert!(!replayed(&a, &line, FILL).0.cut);
-    let counter = create_node_counter(AI_BUDGET.nodes, None);
-    assert_eq!(
-        score_line(&b, AI, &line, &counter, false, None, Prices::NONE),
-        Some(off.score)
-    );
 }
 
 /// R4447000: off, the cut replay ends its turn after the draw with two crystals unspent; on, it plays

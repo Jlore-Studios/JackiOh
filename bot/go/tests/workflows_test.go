@@ -866,7 +866,9 @@ func TestWorkflows_ItIsLinted(t *testing.T) {
 
 // gather.yml plays without a pause (#3740): each run plays GATHER_HOURS on the commit that started
 // it, under GitHub's 6-hour job limit, so a rerun plays the same games, and as it ends it starts the
-// next run on main as it is then, with a schedule to start the chain again; no push starts it.
+// next run on main as it is then, with a schedule to start the chain again; no push starts it. Each
+// part plays to the deadline in one process that `timeout` stops there (#5175), so every part ends
+// together and a stopped part is no failure.
 func TestWorkflows_GatherPlaysTheNewestMainWithoutAPause(t *testing.T) {
 	text := workflowsRead(t, "gather.yml")
 	assertIn(t, "  schedule:\n    - cron: ", text)
@@ -881,7 +883,9 @@ func TestWorkflows_GatherPlaysTheNewestMainWithoutAPause(t *testing.T) {
 	assertTrue(t, workflowsInt(t, hours[1])*60+30 <= 350, "GATHER_HOURS fits GitHub's job limit")
 	play := workflowsScript(t, job, workflowsGatherPlay)
 	assertIn(t, `deadline=$(( $(date +%s) + HOURS * 3600 ))`, play)
-	assertIn(t, `[ $(( $(date +%s) + took )) -le "$deadline" ]`, play)
+	assertIn(t, `timeout "$(( deadline - $(date +%s) ))" target/release/jackioh stats`, play)
+	assertIn(t, `wait "$play" || status=$?`, play)
+	assertIn(t, `[ "$status" -ne 0 ] && [ "$status" -ne 124 ]`, play)
 	next := workflowsJob(t, text, "next")
 	assertIn(t, "if: ${{ !cancelled() && vars.GATHER_ON_PATCH == 'true' }}", next)
 	assertIn(t, `[ "$minutes" -lt "$GATHER_NEXT_MIN_MINUTES" ]`, next)
@@ -889,11 +893,15 @@ func TestWorkflows_GatherPlaysTheNewestMainWithoutAPause(t *testing.T) {
 	assertTrue(t, workflowsLinted(t, "gather.yml"))
 }
 
-// #3740: the gather lane holds two of the organization's 60 hosted jobs, its two parts, and every
-// job of its runs on GitHub's runners: the owner's PC no longer runs it.
-func TestWorkflows_TheGatherLaneHoldsTwoOfGithubsRunners(t *testing.T) {
+// #3740: the gather lane holds five of the organization's 60 hosted jobs (two until 2026-11-26), its
+// five parts, each its own equal slice of a run's GATHER_STRIDE, and every job of its runs on GitHub's
+// runners: the owner's PC no longer runs it.
+func TestWorkflows_TheGatherLaneHoldsFiveOfGithubsRunners(t *testing.T) {
 	text := workflowsRead(t, "gather.yml")
-	assertIn(t, "part: [1, 2]\n", workflowsJob(t, text, "gather"))
+	assertIn(t, "part: [1, 2, 3, 4, 5]\n", workflowsJob(t, text, "gather"))
+	stride := regexp.MustCompile(`(?m)^  GATHER_STRIDE: "(\d+)"$`).FindStringSubmatch(text)
+	assertTrue(t, stride != nil, "GATHER_STRIDE")
+	assertTrue(t, workflowsInt(t, stride[1])%5 == 0, "GATHER_STRIDE splits into five equal slices")
 	assertNotIn(t, "TRAINING_ON_PC", text)
 	assertNotIn(t, "jackioh-selfplay-local", text)
 	assertNotIn(t, "inputs.runner", text)
@@ -902,16 +910,20 @@ func TestWorkflows_TheGatherLaneHoldsTwoOfGithubsRunners(t *testing.T) {
 // workflowsGatherPlay is the name of gather.yml's step that plays and files the games.
 const workflowsGatherPlay = "play and file, a batch at a time (cargo jackioh stats --series gather, stats-import --totals-only)"
 
-// gather.yml files its games into the card statistics about an hour at a time as it plays them,
-// each piece one file a database claims once, through training/file-records.sh, so a rerun folds no
-// game twice.
+// gather.yml files its games into the card statistics as it plays them, GATHER_FILE_GAMES to a file
+// that `stats --out-every` writes once every one of its games has finished (#5175), each file one a
+// database claims once, through training/file-records.sh, so a rerun folds no game twice. The loop
+// files each file as it appears and again once the games stop, so the last whole files are filed.
 func TestWorkflows_GatherFilesItsGamesAsItPlays(t *testing.T) {
 	assertTrue(t, isFile(filepath.Join(config.RepoRoot, "training", "file-records.sh")))
 	gather := workflowsRead(t, "gather.yml")
 	assertTrue(t, regexp.MustCompile(`(?m)^  GATHER_FILE_GAMES: "\d+"$`).MatchString(gather), "GATHER_FILE_GAMES")
 	play := workflowsScript(t, workflowsJob(t, gather, "gather"), workflowsGatherPlay)
-	assertIn(t, `--from "$start" --games "$n"`, play)
+	assertIn(t, `--from "$from" --games "$slice" --out-every "$GATHER_FILE_GAMES" --out "$dir"`, play)
+	assertIn(t, `for file in "$dir"/*.jsonl; do`, play)
 	assertIn(t, `sh training/file-records.sh target/release/jackioh-server "$file"`, play)
+	assertTrue(t, strings.Count(play, "\n          file_new\n") == 1, "file_new once after the games stop")
+	assertTrue(t, regexp.MustCompile(`(?m)^  GATHER_POLL_SECONDS: "\d+"$`).MatchString(gather), "GATHER_POLL_SECONDS")
 	assertNotIn(t, "stats-import", play)
 }
 

@@ -143,8 +143,10 @@ func (x *Worker) suggest() {
 }
 
 // judge is a survey's second look at its suggestions (`suggestions.auto_approve`,
-// `prompts/judge.md`): a fresh call that reads them against the latest decisions people made on
-// suggestions and says, of each, whether it would approve it. Its word, by each suggestion's number
+// `prompts/judge.md`): a fresh call that argues against each one, reading it against the latest
+// decisions people made on suggestions and the open issues and pull requests the survey read
+// (`existing`, so it sees work already in flight, #5104), and says, of each, whether it would
+// approve it. Its word, by each suggestion's number
 // from 1; none when auto-approval is off or there is nothing to judge. The suggestions matter more
 // than the judge's word on them, so a judge call that fails or stops (a cap, an infra error)
 // leaves every one to a person instead of losing the survey.
@@ -165,7 +167,11 @@ func (x *Worker) judge(found []*verdicts.Suggestion, cwd string) map[int]*verdic
 	if !pyjson.Truthy(decided) {
 		decided = prompts.Data("(none)", "Recent decisions on suggestions")
 	}
-	prompt := x.Render("judge", pyjson.New("repo", x.Cfg.Repo, "count", len(found),
+	existing := x.Plan.Get("existing")
+	if !pyjson.Truthy(existing) {
+		existing = prompts.Data("(none)", "Existing issues and pull requests")
+	}
+	prompt := x.Render("judge", pyjson.New("repo", x.Cfg.Repo, "count", len(found), "existing", existing,
 		"suggestions", prompts.Data(strings.Join(listed, "\n\n"), "The suggestions to judge"),
 		"decided", decided))
 	if err := herr.Try(func() {

@@ -26,9 +26,10 @@ fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
 }
 
-/// The Radiant face adds Evasive to what the base face gives. Immune to Spells goes on last: once it
-/// stands, "a Spell doesn't affect it" (E35) turns away every later effect of this same Spell, so the
-/// keywords are given together as R3547002 reads them and the printed order is not observable.
+/// The Radiant face adds Evasive to what the base face gives. The keywords are given together by one
+/// `grant_keywords` (R5113001), Immune to Spells last, as R3547002 reads them: once Immutable stands it
+/// turns away another card's grant (R5113000), and once Immune to Spells stands "a Spell doesn't affect
+/// it" (E35), so one grant at a time would land only the first. The printed order is not observable.
 /// `shield` is issue #3951's Divine Shield and `armor` issue #3996's Armor `armor`.
 fn phase_fabric(radiant: bool, shield: bool, armor: bool) -> Script {
     Script {
@@ -45,10 +46,9 @@ fn phase_fabric(radiant: bool, shield: bool, armor: bool) -> Script {
                 keywords.push(json!({ "kind": "Evasive" }));
             }
             keywords.push(json!({ "kind": "Immune to Spells" }));
-            keywords
-                .into_iter()
-                .map(|keyword| grant_keyword(json_as(json!({ "target": { "of": "chosen" }, "keyword": keyword }))))
-                .collect()
+            vec![grant_keywords(json_as(
+                json!({ "target": { "of": "chosen" }, "keywords": keywords }),
+            ))]
         })),
         ..Script::default()
     }

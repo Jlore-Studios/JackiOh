@@ -32,6 +32,7 @@ crates/cards
 ├── clippy.toml         the purity lint (CLAUDE.md rule 4), the engine's file
 ├── src/lib.rs          CATALOG, CATALOG_IDS, CATALOG_VERSION, card_def, register_all, the registry
 ├── src/query.rs        spec §5.1's catalog.query, the only random-pool source
+├── src/war_doctrine.rs the War Doctrine text S #137 and S #176 share (R5106000)
 ├── src/census.rs       each set's cards, tokens, rarities and tag counts (#2581)
 ├── src/ky_test_bank.rs C+ #42 KY's Test's problems (R420)
 ├── src/scripts/
@@ -387,6 +388,9 @@ Every change to card data is a patch, and every patch is kept.
   shipped versions over which the card plays the same, `<card>~<first version>`, a new one starting
   where a change line moves a field other than `WORDING_FIELDS` and `PLAY_VERSION_QUIET_FIELDS` (`loc`)
   or the version's own `plays` claim its family; no tier ends one, and a day's cut restates its micros.
+  Each is numbered over its card's whole history (R5035000): `v1` first, the next number where a line
+  on the card moves a field its face shows (`FACE_FIELDS`), else the next letters (`versions::next_letters`,
+  a micro's): v1, v1b, v2.
   `deck_play_versions()` keeps a deck's cards, which the engine's `play_version_figures` reads
   (`GET /api/stats/versions`, R4675001); a card `catalog.json` holds before the history does, one a
   branch adds or of a set a branch releases, has none until `patches ship`.

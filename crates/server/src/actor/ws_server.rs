@@ -710,6 +710,119 @@ fn upgrade_address(headers: &HeaderMap, peer: Option<&str>, trusted_proxy_hops: 
     ))
 }
 
+/// Which socket an upgrade opens, for the lines `admit` logs and the count it is held to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Door {
+    /// `WS_PATH`, a seat's socket.
+    Match,
+    /// `WATCH_PATH`, a watcher's socket.
+    Watch,
+    /// `WS_DUOS_PATH`, a co-op seat's socket.
+    Duos,
+    /// `SOCIAL_PATH`, a signed-in tab's socket (R3214000).
+    Social,
+}
+
+impl Door {
+    /// The line a refused origin is logged as: the match and watch sockets' lines name the origin, the
+    /// co-op and social sockets' their path.
+    fn log_origin_refused(self, headers: &HeaderMap) {
+        match self {
+            Door::Match | Door::Watch => {
+                let origin = headers
+                    .get("origin")
+                    .map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned());
+                tracing::warn!(event = "ws.upgrade.origin_refused", origin = %origin.unwrap_or_else(|| "undefined".to_string()));
+            }
+            Door::Duos => tracing::warn!(event = "ws.upgrade.origin_refused", path = WS_DUOS_PATH),
+            Door::Social => tracing::warn!(event = "ws.upgrade.origin_refused", path = SOCIAL_PATH),
+        }
+    }
+
+    /// The key `address` is counted under.
+    fn counted_as(self, address: String) -> String {
+        match self {
+            // Counted apart from the match, co-op and watch sockets, under a key of its own, so a person's
+            // idle tabs never take the room a game's socket needs.
+            Door::Social => format!("{SOCIAL_PATH} {address}"),
+            Door::Match | Door::Watch | Door::Duos => address,
+        }
+    }
+
+    /// The line an address past its count is logged as; only the social socket's names its path.
+    fn log_too_many(self, limit: usize) {
+        match self {
+            Door::Social => tracing::warn!(event = "ws.upgrade.too_many", path = SOCIAL_PATH, limit = limit),
+            Door::Match | Door::Watch | Door::Duos => {
+                tracing::warn!(event = "ws.upgrade.too_many", limit = limit)
+            }
+        }
+    }
+}
+
+/// An upgrade `admit` let through.
+struct Admitted {
+    /// The upgrade, its frames capped and its subprotocol fixed.
+    upgrade: WebSocketUpgrade,
+    /// Held until the connection ends: the address keeps this socket counted.
+    slot: AddressSlot,
+    /// The app's key (`app_key`).
+    key: usize,
+    /// The request's URI.
+    uri: Uri,
+    /// The token the upgrade carries (`upgrade_token`).
+    token: Option<String>,
+}
+
+/// §9.8: the checks every socket's upgrade makes, in order: its origin (R162), its address's count
+/// (R190), the upgrade itself, then its token. A refused one answers the response to send.
+async fn admit(app: &App, req: Request, options: &AttachOptions, door: Door) -> Result<Admitted, Response> {
+    let allowed = options.allowed_origins.clone().unwrap_or_default();
+    let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
+    let max_per_address = options
+        .max_connections_per_address
+        .unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
+
+    let (mut parts, _body) = req.into_parts();
+
+    if !origin_allowed(&allowed, &parts.headers) {
+        door.log_origin_refused(&parts.headers);
+        // A bare `HTTP/1.1 403 Forbidden`: a status, no body.
+        return Err(StatusCode::FORBIDDEN.into_response());
+    }
+
+    let peer = parts
+        .extensions
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|ConnectInfo(addr)| addr.ip().to_string());
+    let address = upgrade_address(&parts.headers, peer.as_deref(), trusted_proxy_hops);
+    let key = app_key(app);
+    let Some(slot) = AddressSlot::claim(key, door.counted_as(address), max_per_address) else {
+        // No address in the log line: the count is the signal.
+        door.log_too_many(max_per_address);
+        return Err(StatusCode::TOO_MANY_REQUESTS.into_response());
+    };
+
+    let upgrade = match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
+        Ok(upgrade) => upgrade,
+        Err(rejection) => return Err(rejection.into_response()),
+    };
+    let token = upgrade_token(&parts.headers, &parts.uri);
+
+    Ok(Admitted {
+        upgrade: upgrade
+            // §9.8: cap message and frame sizes to prevent unbounded buffering.
+            .max_message_size(MAX_FRAME_BYTES)
+            .max_frame_size(MAX_FRAME_BYTES)
+            // Echo only the fixed name, never anything that was offered beside it.
+            .protocols([WS_SUBPROTOCOL]),
+        slot,
+        key,
+        uri: parts.uri,
+        token,
+    })
+}
+
 /// The `/ws/match` upgrade.
 pub async fn handle(app: Arc<App>, req: Request) -> Response {
     let options = AttachOptions::for_app(&app);
@@ -718,58 +831,26 @@ pub async fn handle(app: Arc<App>, req: Request) -> Response {
 
 /// Upgrades match WebSocket enforcing origin, connection limit, and frame size.
 pub async fn handle_with(app: Arc<App>, req: Request, options: &AttachOptions) -> Response {
-    let allowed = options.allowed_origins.clone().unwrap_or_default();
-    let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
-    let max_per_address = options
-        .max_connections_per_address
-        .unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
-
-    let (mut parts, _body) = req.into_parts();
-
-    if !origin_allowed(&allowed, &parts.headers) {
-        let origin = parts
-            .headers
-            .get("origin")
-            .map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned());
-        tracing::warn!(event = "ws.upgrade.origin_refused", origin = %origin.unwrap_or_else(|| "undefined".to_string()));
-        // A bare `HTTP/1.1 403 Forbidden`: a status, no body.
-        return StatusCode::FORBIDDEN.into_response();
-    }
-
-    let peer = parts
-        .extensions
-        .get::<ConnectInfo<SocketAddr>>()
-        .map(|ConnectInfo(addr)| addr.ip().to_string());
-    let address = upgrade_address(&parts.headers, peer.as_deref(), trusted_proxy_hops);
-    let key = app_key(&app);
-    let Some(slot) = AddressSlot::claim(key, address, max_per_address) else {
-        // No address in the log line: the count is the signal.
-        tracing::warn!(event = "ws.upgrade.too_many", limit = max_per_address);
-        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    let Admitted {
+        upgrade,
+        slot,
+        key,
+        uri,
+        token,
+    } = match admit(&app, req, options, Door::Match).await {
+        Ok(admitted) => admitted,
+        Err(refused) => return refused,
     };
 
-    let upgrade = match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
-        Ok(upgrade) => upgrade,
-        Err(rejection) => return rejection.into_response(),
-    };
-    let uri = parts.uri.clone();
-    let token = upgrade_token(&parts.headers, &parts.uri);
-
-    upgrade
-        // §9.8: cap message and frame sizes to prevent unbounded buffering.
-        .max_message_size(MAX_FRAME_BYTES)
-        .max_frame_size(MAX_FRAME_BYTES)
-        // Echo only the fixed name, never anything that was offered beside it.
-        .protocols([WS_SUBPROTOCOL])
-        .on_upgrade(move |ws| async move {
-            // Held until the connection ends: the address keeps this socket counted.
-            let _slot = slot;
-            let (socket, pump) = socket_from_ws(ws);
-            register_client(key, &socket);
-            handle_match_socket(&app, &socket, &uri, token).await;
-            let _ = pump.await;
-            unregister_client(key, &socket);
-        })
+    upgrade.on_upgrade(move |ws| async move {
+        // Held until the connection ends: the address keeps this socket counted.
+        let _slot = slot;
+        let (socket, pump) = socket_from_ws(ws);
+        register_client(key, &socket);
+        handle_match_socket(&app, &socket, &uri, token).await;
+        let _ = pump.await;
+        unregister_client(key, &socket);
+    })
 }
 
 /// #939, #940: socket for watching friend's live match (`social::watch`).
@@ -778,54 +859,27 @@ pub const WATCH_PATH: &str = "/ws/watch";
 /// Upgrades `/ws/watch` connection with rate limiting and frame limits (R1379000).
 pub async fn handle_watch(app: Arc<App>, req: Request) -> Response {
     let options = AttachOptions::for_app(&app);
-    let allowed = options.allowed_origins.clone().unwrap_or_default();
-    let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
-    let max_per_address = options
-        .max_connections_per_address
-        .unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
-
-    let (mut parts, _body) = req.into_parts();
-
-    if !origin_allowed(&allowed, &parts.headers) {
-        let origin = parts
-            .headers
-            .get("origin")
-            .map(|value| String::from_utf8_lossy(value.as_bytes()).into_owned());
-        tracing::warn!(event = "ws.upgrade.origin_refused", origin = %origin.unwrap_or_else(|| "undefined".to_string()));
-        return StatusCode::FORBIDDEN.into_response();
-    }
-
-    let peer = parts
-        .extensions
-        .get::<ConnectInfo<SocketAddr>>()
-        .map(|ConnectInfo(addr)| addr.ip().to_string());
-    let address = upgrade_address(&parts.headers, peer.as_deref(), trusted_proxy_hops);
-    let key = app_key(&app);
-    let Some(slot) = AddressSlot::claim(key, address, max_per_address) else {
-        tracing::warn!(event = "ws.upgrade.too_many", limit = max_per_address);
-        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    let Admitted {
+        upgrade,
+        slot,
+        key,
+        uri: _,
+        token,
+    } = match admit(&app, req, &options, Door::Watch).await {
+        Ok(admitted) => admitted,
+        Err(refused) => return refused,
     };
 
-    let upgrade = match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
-        Ok(upgrade) => upgrade,
-        Err(rejection) => return rejection.into_response(),
-    };
-    let token = upgrade_token(&parts.headers, &parts.uri);
-
-    upgrade
-        .max_message_size(MAX_FRAME_BYTES)
-        .max_frame_size(MAX_FRAME_BYTES)
-        .protocols([WS_SUBPROTOCOL])
-        .on_upgrade(move |ws| async move {
-            let _slot = slot;
-            let (socket, frames) = Socket::channel();
-            let listener = crate::social::watch::listen(&socket);
-            let pumping = tokio::spawn(pump(ws, socket.clone(), frames));
-            register_client(key, &socket);
-            crate::social::watch::serve(&app, &socket, token, listener).await;
-            let _ = pumping.await;
-            unregister_client(key, &socket);
-        })
+    upgrade.on_upgrade(move |ws| async move {
+        let _slot = slot;
+        let (socket, frames) = Socket::channel();
+        let listener = crate::social::watch::listen(&socket);
+        let pumping = tokio::spawn(pump(ws, socket.clone(), frames));
+        register_client(key, &socket);
+        crate::social::watch::serve(&app, &socket, token, listener).await;
+        let _ = pumping.await;
+        unregister_client(key, &socket);
+    })
 }
 
 /// R3214000: the social socket, one per signed-in tab (`social::live`).
@@ -835,54 +889,28 @@ pub const SOCIAL_PATH: &str = "/ws/social";
 /// `/ws/watch` is upgraded.
 pub async fn handle_social(app: Arc<App>, req: Request) -> Response {
     let options = AttachOptions::for_app(&app);
-    let allowed = options.allowed_origins.clone().unwrap_or_default();
-    let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
-    let max_per_address = options
-        .max_connections_per_address
-        .unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
-
-    let (mut parts, _body) = req.into_parts();
-    if !origin_allowed(&allowed, &parts.headers) {
-        tracing::warn!(event = "ws.upgrade.origin_refused", path = SOCIAL_PATH);
-        return StatusCode::FORBIDDEN.into_response();
-    }
-    let peer = parts
-        .extensions
-        .get::<ConnectInfo<SocketAddr>>()
-        .map(|ConnectInfo(addr)| addr.ip().to_string());
-    let address = upgrade_address(&parts.headers, peer.as_deref(), trusted_proxy_hops);
-    let key = app_key(&app);
-    // Counted apart from the match, co-op and watch sockets, under a key of its own, so a person's
-    // idle tabs never take the room a game's socket needs.
-    let Some(slot) = AddressSlot::claim(key, format!("{SOCIAL_PATH} {address}"), max_per_address) else {
-        tracing::warn!(
-            event = "ws.upgrade.too_many",
-            path = SOCIAL_PATH,
-            limit = max_per_address
-        );
-        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    let Admitted {
+        upgrade,
+        slot,
+        key,
+        uri: _,
+        token,
+    } = match admit(&app, req, &options, Door::Social).await {
+        Ok(admitted) => admitted,
+        Err(refused) => return refused,
     };
-    let upgrade = match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
-        Ok(upgrade) => upgrade,
-        Err(rejection) => return rejection.into_response(),
-    };
-    let token = upgrade_token(&parts.headers, &parts.uri);
 
-    upgrade
-        .max_message_size(MAX_FRAME_BYTES)
-        .max_frame_size(MAX_FRAME_BYTES)
-        .protocols([WS_SUBPROTOCOL])
-        .on_upgrade(move |ws| async move {
-            let _slot = slot;
-            let (socket, frames) = Socket::channel();
-            let pumping = tokio::spawn(pump(ws, socket.clone(), frames));
-            register_client(key, &socket);
-            // Held until the connection ends; dropping it takes the socket off its account's list.
-            let admitted = crate::social::live::serve(&app, &socket, token).await;
-            let _ = pumping.await;
-            drop(admitted);
-            unregister_client(key, &socket);
-        })
+    upgrade.on_upgrade(move |ws| async move {
+        let _slot = slot;
+        let (socket, frames) = Socket::channel();
+        let pumping = tokio::spawn(pump(ws, socket.clone(), frames));
+        register_client(key, &socket);
+        // Held until the connection ends; dropping it takes the socket off its account's list.
+        let admitted = crate::social::live::serve(&app, &socket, token).await;
+        let _ = pumping.await;
+        drop(admitted);
+        unregister_client(key, &socket);
+    })
 }
 
 /// #946: Duos co-op socket path.
@@ -891,48 +919,28 @@ pub const WS_DUOS_PATH: &str = "/ws/duos";
 /// B35: upgrades `/ws/duos` connection with rate limiting and frame limits (R1441).
 pub async fn handle_duos(app: Arc<App>, req: Request) -> Response {
     let options = AttachOptions::for_app(&app);
-    let allowed = options.allowed_origins.clone().unwrap_or_default();
-    let trusted_proxy_hops = options.trusted_proxy_hops.unwrap_or(DEFAULT_TRUSTED_PROXY_HOPS);
-    let max_per_address = options
-        .max_connections_per_address
-        .unwrap_or(WS_MAX_CONNECTIONS_PER_ADDRESS);
-
-    let (mut parts, _body) = req.into_parts();
-    if !origin_allowed(&allowed, &parts.headers) {
-        tracing::warn!(event = "ws.upgrade.origin_refused", path = WS_DUOS_PATH);
-        return StatusCode::FORBIDDEN.into_response();
-    }
-    let peer = parts
-        .extensions
-        .get::<ConnectInfo<SocketAddr>>()
-        .map(|ConnectInfo(addr)| addr.ip().to_string());
-    let address = upgrade_address(&parts.headers, peer.as_deref(), trusted_proxy_hops);
-    let key = app_key(&app);
-    let Some(slot) = AddressSlot::claim(key, address, max_per_address) else {
-        tracing::warn!(event = "ws.upgrade.too_many", limit = max_per_address);
-        return StatusCode::TOO_MANY_REQUESTS.into_response();
+    let Admitted {
+        upgrade,
+        slot,
+        key,
+        uri,
+        token,
+    } = match admit(&app, req, &options, Door::Duos).await {
+        Ok(admitted) => admitted,
+        Err(refused) => return refused,
     };
-    let upgrade = match WebSocketUpgrade::from_request_parts(&mut parts, &()).await {
-        Ok(upgrade) => upgrade,
-        Err(rejection) => return rejection.into_response(),
-    };
-    let token = upgrade_token(&parts.headers, &parts.uri);
-    let match_id = query_param(&query_pairs(&parts.uri), "matchId");
+    let match_id = query_param(&query_pairs(&uri), "matchId");
 
-    upgrade
-        .max_message_size(MAX_FRAME_BYTES)
-        .max_frame_size(MAX_FRAME_BYTES)
-        .protocols([WS_SUBPROTOCOL])
-        .on_upgrade(move |ws| async move {
-            let _slot = slot;
-            let (socket, frames) = Socket::channel();
-            let gate = crate::duos::ws::HelloGate::install(&socket);
-            let pump = tokio::spawn(pump(ws, socket.clone(), frames));
-            register_client(key, &socket);
-            crate::duos::ws::handle_duos_socket(&app, &socket, gate, token, match_id).await;
-            let _ = pump.await;
-            unregister_client(key, &socket);
-        })
+    upgrade.on_upgrade(move |ws| async move {
+        let _slot = slot;
+        let (socket, frames) = Socket::channel();
+        let gate = crate::duos::ws::HelloGate::install(&socket);
+        let pump = tokio::spawn(pump(ws, socket.clone(), frames));
+        register_client(key, &socket);
+        crate::duos::ws::handle_duos_socket(&app, &socket, gate, token, match_id).await;
+        let _ = pump.await;
+        unregister_client(key, &socket);
+    })
 }
 
 #[cfg(test)]
@@ -1021,5 +1029,46 @@ mod tests {
         let log = logged(|| read = upgrade_token(&HeaderMap::new(), &target));
         assert_eq!(read, None);
         assert!(log.is_empty(), "{log}");
+    }
+
+    /// §9.8: a refused origin is logged as each socket's upgrade logged it before they shared `admit`:
+    /// the match and watch sockets' lines name the origin (`undefined` when there is none), the co-op
+    /// and social sockets' their path.
+    #[test]
+    fn each_door_logs_a_refused_origin_as_before() {
+        let mut headers = HeaderMap::new();
+        headers.insert("origin", HeaderValue::from_static("https://elsewhere.example"));
+        for door in [Door::Match, Door::Watch] {
+            let log = logged(|| door.log_origin_refused(&headers));
+            assert!(log.contains(r#""event":"ws.upgrade.origin_refused""#), "{log}");
+            assert!(log.contains(r#""origin":"https://elsewhere.example""#), "{log}");
+            assert!(!log.contains(r#""path""#), "{log}");
+            let log = logged(|| door.log_origin_refused(&HeaderMap::new()));
+            assert!(log.contains(r#""origin":"undefined""#), "{log}");
+        }
+        for (door, path) in [(Door::Duos, "/ws/duos"), (Door::Social, "/ws/social")] {
+            let log = logged(|| door.log_origin_refused(&headers));
+            assert!(log.contains(r#""event":"ws.upgrade.origin_refused""#), "{log}");
+            assert!(log.contains(&format!(r#""path":"{path}""#)), "{log}");
+            assert!(!log.contains(r#""origin":"#), "{log}");
+        }
+    }
+
+    /// R3214000: only the social socket is counted under a key of its own, and only its line names its
+    /// path when its address is past the count; the match, watch and co-op sockets share one count.
+    #[test]
+    fn only_the_social_door_counts_apart_and_names_its_path_when_full() {
+        for door in [Door::Match, Door::Watch, Door::Duos] {
+            assert_eq!(door.counted_as("hash".to_string()), "hash");
+            let log = logged(|| door.log_too_many(3));
+            assert!(log.contains(r#""event":"ws.upgrade.too_many""#), "{log}");
+            assert!(log.contains(r#""limit":3"#), "{log}");
+            assert!(!log.contains(r#""path""#), "{log}");
+        }
+        assert_eq!(Door::Social.counted_as("hash".to_string()), "/ws/social hash");
+        let log = logged(|| Door::Social.log_too_many(3));
+        assert!(log.contains(r#""event":"ws.upgrade.too_many""#), "{log}");
+        assert!(log.contains(r#""limit":3"#), "{log}");
+        assert!(log.contains(r#""path":"/ws/social""#), "{log}");
     }
 }

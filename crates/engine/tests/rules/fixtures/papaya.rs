@@ -1,12 +1,13 @@
 //! Test-only cards for Classic+ #62 KY's Papaya's curve targeting (SPEC §8.7 row 62, R422; B5 E32),
-//! running the card's engine half as the real script does (`papaya_begin`, then `papaya_answered`).
+//! running the card's engine half as the real script does (`papaya_begin_with`, then
+//! `papaya_answered_with`).
 //! `curve` runs the rules through v0.4.0f (`PAPAYA_RULES_V0_4_0F`: "done", the exiles), which most of
 //! the suite proves, and `curve_now` today's (R1704000: four Discovers, the destroys).
 
 use std::sync::LazyLock;
 
 use jackioh_engine::subsystems::papaya::{
-    PAPAYA_RULES_V0_4_0F, PAPAYA_STEP, papaya_answered, papaya_answered_with, papaya_begin, papaya_begin_with,
+    PAPAYA_RULES, PAPAYA_RULES_V0_4_0F, PAPAYA_STEP, papaya_answered_with, papaya_begin_with,
 };
 use jackioh_engine::testkit::*;
 
@@ -96,8 +97,8 @@ fn curve_script() -> Script {
 
 fn curve_now_script() -> Script {
     Script {
-        cry: Some(hook(|_ctx| papaya_begin())),
-        resume: IndexMap::from([(PAPAYA_STEP, hook(papaya_answered))]),
+        cry: Some(hook(|_ctx| papaya_begin_with(PAPAYA_RULES))),
+        resume: IndexMap::from([(PAPAYA_STEP, hook(|ctx| papaya_answered_with(PAPAYA_RULES, ctx)))]),
         ..Script::default()
     }
 }

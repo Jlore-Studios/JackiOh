@@ -27,14 +27,14 @@
 }
 
 .starscape-node[data-here="true"] {
-  border-color: var(--pal-gold-200);
-  background: var(--pal-yellow-400);
-  box-shadow: 0 0 4px color-mix(in srgb, var(--pal-yellow-400) 70%, transparent);
+  border-color: var(--pal-brass-200);
+  background: var(--pal-gold-400);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--pal-gold-400) 70%, transparent);
 }
 
 .starscape-node[data-reward="edge"] {
   width: 8px;
   height: 8px;
-  border-color: var(--pal-violet-300);
-  background: var(--pal-violet-700);
+  border-color: var(--pal-amethyst-300);
+  background: var(--pal-amethyst-700);
 }

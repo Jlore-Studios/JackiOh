@@ -105,3 +105,48 @@ fn a_played_zephyrs_pays_up_front_and_only_once() {
     );
     assert_eq!(nodes_for(s.state(), &play), 1 + expensive);
 }
+
+/// R4595004: a face-down Zephyrs revealed (`activate` "reveal") runs the ranking a played one does,
+/// so it pays the same up front, and only once (the sweep's `sweep2:easy:infiniteassault-048:3`, whose
+/// every reveal took a second for one node).
+#[test]
+fn r4595004_a_face_down_zephyrs_revealed_pays_up_front_and_only_once() {
+    register_cards();
+    let s = scenario(json!({
+        "seed": "r4595004", "turn": 9,
+        "p1": { "hand": [ZEPHYRS], "library": DECK, "mana": 5 },
+        "p2": { "hand": [STOCKPILE], "library": DECK },
+    }));
+    // A Spell is never placed on the field by a scenario (§3.2): the hand's Zephyrs is moved to the
+    // backrow as a Cloaked set (R783009) leaves it, set two turns ago.
+    let mut value = serde_json::to_value(s.state()).expect("the state serializes");
+    let mut card = value["players"]["p1"]["hand"][0].take();
+    value["players"]["p1"]["hand"] = json!([]);
+    card["zone"] = json!({ "z": "field", "player": "p1", "row": "backrow", "lane": 1 });
+    card["setAs"] = json!({ "reveal": "cloaked", "setTurn": 7 });
+    card["tuning"] = json!({ "addKeywords": [{ "kind": "Cloaked" }] });
+    card["summonedTurn"] = json!(7);
+    value["players"]["p1"]["backrow"][0] = card;
+    let state: GameState = serde_json::from_value(value).expect("the state deserializes");
+    let id = s.card(ZEPHYRS).id.clone();
+    let reveal = legal_actions(&state, AI)
+        .into_iter()
+        .find(|action| {
+            matches!(action, ActionBody::Activate { instance_id, ability, .. }
+                if *instance_id == id && ability.as_deref() == Some("reveal"))
+        })
+        .expect("the face-down Zephyrs can be revealed");
+    let expensive = AI_SEARCH.expensive_def_nodes as usize;
+    assert_eq!(surcharge_nodes(&state, AI, &reveal), expensive);
+    let stepped = reduce_unpiloted(&state, &Action::new(reveal.clone(), AI, "charge".to_string()));
+    assert!(stepped.error.is_none());
+    assert_eq!(
+        announced_surcharge_nodes(&state, &reveal, &stepped),
+        0,
+        "the up-front charge paid for it"
+    );
+    assert_eq!(
+        nodes_for(&state, &reveal),
+        1 + expensive + event_surcharge_nodes(&stepped)
+    );
+}

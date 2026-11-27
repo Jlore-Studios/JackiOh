@@ -416,7 +416,7 @@ mod a_prompt_in_the_middle_of_an_effect_list_9_3_10_6 {
         let steps: Vec<String> = state.work.iter().map(|item| item.resume.step.clone()).collect();
         assert_eq!(steps, vec!["second", ""]);
         assert_eq!(
-            peek_work(&state).map(|item| item.resume.step.clone()),
+            state.work.first().map(|item| item.resume.step.clone()),
             Some("second".to_string())
         );
 
@@ -443,10 +443,10 @@ mod a_prompt_in_the_middle_of_an_engine_sequence_10_3_10_5 {
 
         // Step 2 asked, so step 3 is owed as a work item naming the sequence and its cursor.
         assert_eq!(amounts(&started), vec![1]);
-        assert!(is_owed(&state, SEQUENCE_HOOK));
+        assert!(!owed_work(&state, Some(SEQUENCE_HOOK)).is_empty());
         assert_eq!(state.work.len(), 1);
         assert_eq!(
-            peek_work(&state).and_then(|item| item.resume.data.get(AT_KEY)),
+            state.work.first().and_then(|item| item.resume.data.get(AT_KEY)),
             Some(&json!(2))
         );
 
@@ -587,7 +587,7 @@ mod the_work_queue_9_3_r68 {
 
         let ids: Vec<String> = sink.state.work.iter().map(|item| item.id.clone()).collect();
         assert_eq!(ids, vec![inner.id.clone(), outer.id.clone()]);
-        assert_eq!(peek_work(sink.state), Some(&inner));
+        assert_eq!(sink.state.work.first(), Some(&inner));
         assert_eq!(take_work(sink.state), Some(inner.clone()));
         assert_eq!(take_work(sink.state), Some(outer.clone()));
         assert_eq!(take_work(sink.state), None);
@@ -654,9 +654,12 @@ mod the_work_queue_9_3_r68 {
         let kept = push_work(&mut sink, stub("kept"), None);
         let parked = push_work(&mut sink, stub("parked"), None);
 
-        assert_eq!(unpark_work(sink.state, &parked.id), Some(parked.clone()));
+        assert_eq!(
+            drop_work(sink.state, |item| item.id == parked.id),
+            vec![parked.clone()]
+        );
         assert_eq!(sink.state.work, vec![kept.clone()]);
-        assert_eq!(unpark_work(sink.state, &parked.id), None);
+        assert_eq!(drop_work(sink.state, |item| item.id == parked.id), vec![]);
 
         push_work(
             &mut sink,
@@ -671,7 +674,7 @@ mod the_work_queue_9_3_r68 {
             drop_work(sink.state, |item| item.resume.hook == SEQUENCE_HOOK).len(),
             1
         );
-        assert!(!is_owed(sink.state, SEQUENCE_HOOK));
+        assert!(owed_work(sink.state, Some(SEQUENCE_HOOK)).is_empty());
         assert_eq!(sink.state.work, vec![kept]);
     }
 

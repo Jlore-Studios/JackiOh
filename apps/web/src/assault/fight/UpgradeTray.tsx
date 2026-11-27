@@ -7,10 +7,11 @@
 // It is a route's slot (`Game`'s `heroAside`), as `boardRail` is: it reads the level, never a game,
 // so it can show nothing the view does not (CLAUDE.md rule 7).
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactElement } from "react";
+import type { ReactElement } from "react";
 
 import type { AssaultUpgrade, AssaultUpgradeKind } from "@jackioh/run";
 
+import { useAsideList } from "../../game/useAsideList.ts";
 import { t } from "../../i18n/i18n.ts";
 import { BackLayer } from "../../net/backLayers.ts";
 import { assaultFightTestid } from "./testids.ts";
@@ -41,7 +42,7 @@ export function upgradeName(kind: AssaultUpgradeKind): string {
 }
 
 /** R4582002: what the upgrade does, through `t()`; no amount is stated (CLAUDE.md rule 9). */
-export function upgradeLine(kind: AssaultUpgradeKind): string {
+function upgradeLine(kind: AssaultUpgradeKind): string {
   switch (kind) {
     case "openingCards":
       return t("More cards in its opening hand.");
@@ -71,29 +72,7 @@ type UpgradeTrayProps = {
 
 /** The enemy's tray; nothing when the level holds no upgrade. */
 export function UpgradeTray({ upgrades }: UpgradeTrayProps): ReactElement | null {
-  const [open, setOpen] = useState(false);
-  const listId = useId();
-  const root = useRef<HTMLDivElement>(null);
-  const button = useRef<HTMLButtonElement>(null);
-
-  /** Escape and Back close the list and put the focus back on the button that opened it. */
-  const close = useCallback(() => {
-    setOpen(false);
-    button.current?.focus();
-  }, []);
-
-  // A press anywhere else closes the list, as the board's other menus do (ModifierList.tsx).
-  useEffect(() => {
-    if (!open) return;
-    function onPointer(event: PointerEvent): void {
-      if (event.target instanceof Node && root.current?.contains(event.target) === true) return;
-      setOpen(false);
-    }
-    window.addEventListener("pointerdown", onPointer);
-    return () => {
-      window.removeEventListener("pointerdown", onPointer);
-    };
-  }, [open]);
+  const { open, setOpen, listId, root, button, close } = useAsideList();
 
   if (upgrades.length === 0) return null;
 

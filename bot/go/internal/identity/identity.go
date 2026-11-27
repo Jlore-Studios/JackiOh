@@ -154,11 +154,6 @@ func (x *Identity) Slash() string {
 	return "/" + x.Command
 }
 
-// CommitPrefix is what its commits' messages start with: `bot: build pass 1 for #85`.
-func (x *Identity) CommitPrefix() string {
-	return strings.TrimRight(x.LabelPrefix, ":")
-}
-
 // Home is the bot's home directory, relative to the repository root.
 func Home() string {
 	found := strings.Trim(strings.TrimFunc(os.Getenv("HARNESS_HOME"), py.IsSpace), "/")

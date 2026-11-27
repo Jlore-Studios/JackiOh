@@ -6,7 +6,7 @@
   flex-direction: column;
   gap: 10px;
   padding-top: 14px;
-  border-top: 1px solid rgba(201, 149, 63, 0.22);
+  border-top: 1px solid color-mix(in srgb, var(--pal-brass-500) 22%, transparent);
 }
 
 /* R3221000: the question is a Dialog (Dialog.tsx); its typed word's field spans the panel. */
@@ -30,9 +30,9 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px 14px;
-  border: 1px solid rgba(201, 149, 63, 0.3);
-  border-radius: 10px;
-  background: rgba(239, 224, 191, 0.05);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-parchment) 5%, transparent);
 }
 
 .tavern.app-shell .account-username__name {

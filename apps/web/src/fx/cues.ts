@@ -12,7 +12,7 @@
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 
 import { GLITCH_WORDS } from "../cards/glitch.ts";
-import { animationRow, animTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
+import { animationRow, animTestid, hitTestid, locateInstance, pileTestid, targetFor, type AnimationEntry, type EntrySlam } from "../game/animations.ts";
 import { defIdOfInstance, sideOf, testid, type Side } from "../game/contract.ts";
 import { armorTookHalf, damageFeel, damageTier, playTier, UNIT_SLAM, type PlayTier } from "../game/damageFeel.ts";
 import { seatOutcome } from "../game/outcome.ts";
@@ -529,6 +529,27 @@ const armor: Recipe = (event, p) => {
   }
   if (event.type === "damageAbsorbed") pushShake(cues, p.env.intensity, FX_ARMOR_TRAUMA, land);
   return cues;
+};
+
+/**
+ * R5045000: a damage pool nullified part of a hit (`damageNullified`). A cool ring pulses from the
+ * pool's card (S+ #42 Force Projector, S+ #123 Oct), a mote carries the soak to the hit's target, and
+ * there a small shield blooms with the nullified number in the absorb tone, landing with the mote, so
+ * a hit that seemed to do nothing shows where it went. No shake: nothing got through.
+ */
+const nullify: Recipe = (event, p) => {
+  if (event.type !== "damageNullified") return [];
+  const land = frac(FX_MOTIF_PHASES.land, p.D);
+  const struck = hitTestid(p.view, event.targetId);
+  const pool = locateInstance(p.view, event.instanceId);
+  const cues: FxCue[] = [];
+  if (pool !== null) {
+    cues.push(ring(p.D, "arcane", anchor(pool), 0));
+    if (struck !== null && struck !== pool) cues.push(projectile(p.env.intensity, "arcane", anchor(pool), anchor(struck), land));
+  }
+  if (struck === null) return cues;
+  const at = anchor(struck);
+  return [...cues, ...shieldCues("small", at, p.D, land, p.env.intensity), splat(p.D, "absorb", event.amount, at, land)];
 };
 
 const drain: Recipe = (event, p) => {
@@ -1148,6 +1169,7 @@ const RECIPES: { readonly [R in FxRecipe]: Recipe } = {
   brand: (event, p) => brandCues(event, anchor(p.tgt), p.D, p.env.intensity),
   rewind,
   armor,
+  nullify,
   curve,
   line,
 };

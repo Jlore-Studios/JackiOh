@@ -93,8 +93,7 @@ const ESCAPE_HANDLERS: Record<string, number> = {
   // under stays live, so no scrim, no Tab trap.
   "routes/landing.tsx": 1,
   "game/Marketplace.tsx": 1,
-  "game/deckbuilder/DeckHistory.tsx": 1,
-  "game/deckbuilder/DeckCosmeticsPicker.tsx": 1,
+  "game/deckbuilder/useWorkshopPopover.ts": 1,
   "emotes/PortraitPicker.tsx": 1,
   "emotes/ui.tsx": 1,
   "game/ModifierList.tsx": 1,
@@ -253,7 +252,7 @@ describe("R3221000 the menus' dialogs on the one Dialog", () => {
   });
 
   it("R3221000 the ✕ is DialogClose's alone, and no × is a close", () => {
-    expect(countsOf((file) => glyphs(file, "✕"))).toEqual({ "game/Dialog.tsx": 1 });
+    expect(countsOf((file) => glyphs(file, "✕"))).toEqual({});
     // The craft editor's Remove-hat buttons and the deck editor's Stop-comparing chip: each removes a
     // thing from its row, named for it, and closes nothing.
     expect(countsOf((file) => glyphs(file, "×"))).toEqual({ "game/craft/CraftEditor.tsx": 2, "game/deckbuilder/DeckEditor.tsx": 1 });

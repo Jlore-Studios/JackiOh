@@ -1,11 +1,13 @@
 package plan
 
 // Suggestions that approve themselves (`suggestions.auto_approve`). After a survey, a second model
-// call, the judge (`prompts/judge.md`, `work.Worker.judge`), reads each suggestion against the
-// latest decisions people made on suggestions (`declined.DecidedLines`, its rolling window) and
-// says whether it would approve it. Delivery says so in the issue's footer and, for one it would
-// approve, keeps a record (`suggest.auto`, `MarkAutoApprove`). `AutoApprove`, in the sweep, then
-// queues each such suggestion that has waited `wait_hours` and that no person took up:
+// call, the judge (`prompts/judge.md`, `work.Worker.judge`), argues against each suggestion, reading
+// it against the latest decisions people made on suggestions (`declined.DecidedLines`, its rolling
+// window) and the open issues and pull requests, and says whether it would approve it. Delivery says
+// so in the issue's footer and, for one it would approve, keeps a record (`suggest.auto`,
+// `MarkAutoApprove`). `AutoApprove`, in the sweep, then queues each such suggestion that has waited
+// `wait_hours` and that no person took up. With `wait_hours` 0, delivery calls it as the suggestions
+// open (#5104), so one the judge would approve is queued at once:
 //
 //   - one that is closed, or lost `bot:suggestion` (a person voted, or queued it), is decided
 //     already, and its record goes;
@@ -145,10 +147,13 @@ func AutoApprove(ctx *hctx.Context) []string {
 		if why != "" {
 			why = fmt.Sprintf(" (%s)", strings.TrimRight(why, "."))
 		}
-		ctx.GH.CreateComment(number, fmt.Sprintf("Approved by itself: no one voted on it, commented or "+
-			"reacted 👎 in the %d hours since it opened, and the judge would approve it%s. It goes in at "+
-			"`priority:low`. %s `%s stop` takes it back out of the queue.\n\n%s", auto.WaitHours, why,
-			answer, config.Slash, config.Marker))
+		reason := fmt.Sprintf("no one voted on it, commented or reacted 👎 in the %d hours since it opened, "+
+			"and the judge would approve it%s", auto.WaitHours, why)
+		if auto.WaitHours == 0 {
+			reason = "the judge, which argues against every suggestion before it approves one, would approve it" + why
+		}
+		ctx.GH.CreateComment(number, fmt.Sprintf("Approved by itself: %s. It goes in at `priority:low`. %s "+
+			"`%s stop` takes it back out of the queue.\n\n%s", reason, answer, config.Slash, config.Marker))
 		notes = append(notes, fmt.Sprintf("#%d approved itself", number))
 	}
 	if len(gone) > 0 {

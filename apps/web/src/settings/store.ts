@@ -17,6 +17,8 @@ export type Settings = {
   /** R3477000: while an attack is aimed, each legal target shows the engine's forecast of it. */
   attackOutcomes: boolean;
   reduceMotion: boolean;
+  /** R5128000: the effects layer at intensity off and Big moments off, and the ambient layers undrawn; motion stays. */
+  lowGraphics: boolean;
   /** R644 (§5): kept per device. */
   muteOpponentEmotes: boolean;
   /** R2990004: every match's sideline strip is muted from its start. */
@@ -35,6 +37,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   lethalHint: true,
   attackOutcomes: true,
   reduceMotion: false,
+  lowGraphics: false,
   muteOpponentEmotes: false,
   muteSpectatorEmotes: false,
 });
@@ -48,12 +51,16 @@ const SETTING_KEYS: readonly SettingKey[] = [
   "lethalHint",
   "attackOutcomes",
   "reduceMotion",
+  "lowGraphics",
   "muteOpponentEmotes",
   "muteSpectatorEmotes",
 ];
 
 /** B22: settings.css maps this attribute to the reduced-motion scale. */
 const REDUCE_MOTION_ATTRIBUTE = "data-reduce-motion";
+
+/** R5128000: index.css, table.css and portrait.css read this attribute for Low graphics. */
+export const LOW_GRAPHICS_ATTRIBUTE = "data-low-graphics";
 
 let snapshot: Settings | null = null;
 
@@ -89,6 +96,8 @@ function applyToDocument(settings: Settings): void {
   const root = document.documentElement;
   if (settings.reduceMotion) root.setAttribute(REDUCE_MOTION_ATTRIBUTE, "true");
   else root.removeAttribute(REDUCE_MOTION_ATTRIBUTE);
+  if (settings.lowGraphics) root.setAttribute(LOW_GRAPHICS_ATTRIBUTE, "true");
+  else root.removeAttribute(LOW_GRAPHICS_ATTRIBUTE);
 }
 
 function sameSettings(a: Settings, b: Settings): boolean {
@@ -167,4 +176,5 @@ export function useSetting<K extends SettingKey>(key: K): Settings[K] {
 export function __resetSettingsForTests(): void {
   snapshot = null;
   document.documentElement.removeAttribute(REDUCE_MOTION_ATTRIBUTE);
+  document.documentElement.removeAttribute(LOW_GRAPHICS_ATTRIBUTE);
 }

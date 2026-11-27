@@ -77,10 +77,6 @@ fn constants() -> Vec<(&'static str, Value)> {
             json!(c::CODE_ATTEMPTS_PER_PROFILE_PER_HOUR),
         ),
         (
-            "CODE_ATTEMPT_RETENTION_DAYS",
-            json!(c::CODE_ATTEMPT_RETENTION_DAYS),
-        ),
-        (
             "CODE_ATTEMPT_WINDOW_SECONDS",
             json!(c::CODE_ATTEMPT_WINDOW_SECONDS),
         ),
@@ -137,10 +133,6 @@ fn constants() -> Vec<(&'static str, Value)> {
             "MATCHMAKER_SWEEP_INTERVAL_SECONDS",
             json!(c::MATCHMAKER_SWEEP_INTERVAL_SECONDS),
         ),
-        (
-            "MATCH_ACTION_RETENTION_DAYS",
-            json!(c::MATCH_ACTION_RETENTION_DAYS),
-        ),
         ("MATCH_CEILING_MS", json!(c::MATCH_CEILING_MS)),
         ("MATCH_FOUND_NAV_DELAY_MS", json!(c::MATCH_FOUND_NAV_DELAY_MS)),
         ("MATCH_OVER_CLOSE_CODE", json!(c::MATCH_OVER_CLOSE_CODE)),
@@ -148,22 +140,9 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("MAX_SAVED_TRIOS", json!(c::MAX_SAVED_TRIOS)),
         ("MIN_ACCOUNT_AGE_YEARS", json!(c::MIN_ACCOUNT_AGE_YEARS)),
         ("MULLIGAN_CLOCK_MS", json!(c::MULLIGAN_CLOCK_MS)),
-        (
-            "PLAY_TELEMETRY_RETENTION_DAYS",
-            json!(c::PLAY_TELEMETRY_RETENTION_DAYS),
-        ),
         ("PLAYER_STATS_BYTES_MAX", json!(c::PLAYER_STATS_BYTES_MAX)),
         ("PROMPT_CLOCK_MS", json!(c::PROMPT_CLOCK_MS)),
         ("PROMPT_CLOCK_SECONDS", json!(c::PROMPT_CLOCK_SECONDS)),
-        // R4677000: how far back anyone but a dev account may read `/stats`' patches.
-        (
-            "PUBLIC_STATS_PATCHES_LINE_BEFORE",
-            json!(c::PUBLIC_STATS_PATCHES_LINE_BEFORE),
-        ),
-        (
-            "PUBLIC_STATS_PATCHES_NEWEST",
-            json!(c::PUBLIC_STATS_PATCHES_NEWEST),
-        ),
         ("RANK_STREAK_FLAME_LENGTH", json!(c::RANK_STREAK_FLAME_LENGTH)),
         (
             "RATING_WINDOW_FULL_AFTER_SECONDS",
@@ -174,8 +153,6 @@ fn constants() -> Vec<(&'static str, Value)> {
             "REDEMPTION_RESPONSE_FLOOR_MS",
             json!(c::REDEMPTION_RESPONSE_FLOOR_MS),
         ),
-        ("REPLAY_LIST_PAGE", json!(c::REPLAY_LIST_PAGE)),
-        ("REPLAY_REQUESTS_PER_MINUTE", json!(c::REPLAY_REQUESTS_PER_MINUTE)),
         (
             "ROOM_CODE_FORMAT",
             json!({
@@ -221,22 +198,14 @@ fn constants() -> Vec<(&'static str, Value)> {
             "USERNAME_PREVIEW_DEBOUNCE_MS",
             json!(c::USERNAME_PREVIEW_DEBOUNCE_MS),
         ),
-        ("WS_IDLE_TIMEOUT_SECONDS", json!(c::WS_IDLE_TIMEOUT_SECONDS)),
-        ("WS_OUTBOX_MAX_FRAMES", json!(c::WS_OUTBOX_MAX_FRAMES)),
         ("WS_PING_INTERVAL_SECONDS", json!(c::WS_PING_INTERVAL_SECONDS)),
         // ---- Social: friends, presence, challenges, chat (#937, #938, #941) ----
         // SPEC S7's twelve, for the Play together page, its heartbeat, chat and watch views, and the
         // social poll (SOCIAL_POLL_MS) its unread counts and challenges are read again at.
         ("CHALLENGE_TTL_MS", json!(c::CHALLENGE_TTL_MS)),
         ("CHAT_MAX_CHARS", json!(c::CHAT_MAX_CHARS)),
-        ("CHAT_MESSAGES_PER_MINUTE", json!(c::CHAT_MESSAGES_PER_MINUTE)),
-        ("CHAT_PAGE", json!(c::CHAT_PAGE)),
         ("CHAT_POLL_MS", json!(c::CHAT_POLL_MS)),
-        ("CHAT_RETENTION_DAYS", json!(c::CHAT_RETENTION_DAYS)),
-        ("FRIEND_REQUESTS_PER_HOUR", json!(c::FRIEND_REQUESTS_PER_HOUR)),
-        ("MAX_FRIENDS", json!(c::MAX_FRIENDS)),
         ("PRESENCE_HEARTBEAT_MS", json!(c::PRESENCE_HEARTBEAT_MS)),
-        ("PRESENCE_TTL_MS", json!(c::PRESENCE_TTL_MS)),
         ("SOCIAL_POLL_MS", json!(c::SOCIAL_POLL_MS)),
         ("SPECTATE_DELAY_MS", json!(c::SPECTATE_DELAY_MS)),
         ("SPECTATORS_PER_MATCH", json!(c::SPECTATORS_PER_MATCH)),
@@ -249,11 +218,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("SPECTATOR_EMOTE_WINDOW_MAX", json!(c::SPECTATOR_EMOTE_WINDOW_MAX)),
         // end Social
         // Duos co-op (#946)
-        ("DUOS_AI_STEP_DELAY_MS", json!(c::DUOS_AI_STEP_DELAY_MS)),
-        ("DUOS_MULLIGAN_CLOCK_MS", json!(c::DUOS_MULLIGAN_CLOCK_MS)),
-        ("DUOS_PROMPT_CLOCK_MS", json!(c::DUOS_PROMPT_CLOCK_MS)),
         ("DUOS_ROOM_TTL_MS", json!(c::DUOS_ROOM_TTL_MS)),
-        ("DUOS_ROUND_CLOCK_MS", json!(c::DUOS_ROUND_CLOCK_MS)),
         ("PING_RATE_LIMIT", json!(c::PING_RATE_LIMIT)),
         ("PING_RATE_WINDOW_MS", json!(c::PING_RATE_WINDOW_MS)),
         ("PING_SHOW_MS", json!(c::PING_SHOW_MS)),
@@ -268,60 +233,10 @@ fn constants() -> Vec<(&'static str, Value)> {
                 "unowned": c::PACK_UNOWNED_WEIGHTS.unowned,
             }),
         ),
-        ("PITY_EPIC_PACKS", json!(c::PITY_EPIC_PACKS)),
-        ("PITY_LEGENDARY_PACKS", json!(c::PITY_LEGENDARY_PACKS)),
-        ("PITY_MYTHIC_PACKS", json!(c::PITY_MYTHIC_PACKS)),
-        ("CARD_TOKEN_BAR_SIZE", json!(c::CARD_TOKEN_BAR_SIZE)),
         // #2728's cosmetic bar, a size for each step of its cycle (R2728000).
-        (
-            "COSMETIC_TOKEN_BAR_SIZE_RARE",
-            json!(c::COSMETIC_TOKEN_BAR_SIZE_RARE),
-        ),
-        (
-            "COSMETIC_TOKEN_BAR_SIZE_EPIC",
-            json!(c::COSMETIC_TOKEN_BAR_SIZE_EPIC),
-        ),
-        (
-            "COSMETIC_TOKEN_BAR_SIZE_LEGENDARY",
-            json!(c::COSMETIC_TOKEN_BAR_SIZE_LEGENDARY),
-        ),
-        (
-            "COSMETIC_TOKEN_BAR_SIZE_PACK",
-            json!(c::COSMETIC_TOKEN_BAR_SIZE_PACK),
-        ),
-        (
-            "TOKEN_BAR_POINTS_BY_CARD_RARITY",
-            json!(c::TOKEN_BAR_POINTS_BY_CARD_RARITY),
-        ),
-        (
-            "TOKEN_BAR_POINTS_BY_COSMETIC_RARITY",
-            json!(c::TOKEN_BAR_POINTS_BY_COSMETIC_RARITY),
-        ),
-        (
-            "CARD_TOKEN_BAR_TARGET_PACKS",
-            json!(c::CARD_TOKEN_BAR_TARGET_PACKS),
-        ),
-        (
-            "COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE",
-            json!(c::COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE),
-        ),
-        (
-            "COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC",
-            json!(c::COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC),
-        ),
-        (
-            "COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY",
-            json!(c::COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY),
-        ),
-        (
-            "COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK",
-            json!(c::COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK),
-        ),
         ("COSMETIC_TOKEN_CYCLE", json!(c::COSMETIC_TOKEN_CYCLE)),
         ("COSMETIC_PACK_SLOTS", json!(c::COSMETIC_PACK_SLOTS)),
-        ("CHASE_SHARD_PACKS", json!(c::CHASE_SHARD_PACKS)),
         ("SET_TRACK_LEVELS", json!(c::SET_TRACK_LEVELS)),
-        ("SET_TRACK_XP_PER_LEVEL", json!(c::SET_TRACK_XP_PER_LEVEL)),
         ("SET_TRACK_UNLOCK_LEVEL", json!(c::SET_TRACK_UNLOCK_LEVEL)),
         // #3335's Fleet track (§14.15, R3335001): its levels and its daily cap, which its panel shows.
         ("FLEET_TRACK_LEVELS", json!(c::FLEET_TRACK_LEVELS)),
@@ -330,94 +245,25 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("PROFICIENCY_LEVEL_PLAYS", json!(c::PROFICIENCY_LEVEL_PLAYS)),
         ("PROFICIENCY_LEVELS", json!(c::PROFICIENCY_LEVELS)),
         ("JLORE_LADDER_WIN", json!(c::JLORE_LADDER_WIN)),
-        ("JLORE_LADDER_LOSS", json!(c::JLORE_LADDER_LOSS)),
-        ("JLORE_PRACTICE_WIN", json!(c::JLORE_PRACTICE_WIN)),
-        ("JLORE_PRACTICE_LOSS", json!(c::JLORE_PRACTICE_LOSS)),
-        ("JLORE_GAMES_DAILY_CAP", json!(c::JLORE_GAMES_DAILY_CAP)),
-        ("XP_PER_ACTION", json!(c::XP_PER_ACTION)),
         ("XP_WIN_BONUS", json!(c::XP_WIN_BONUS)),
-        ("XP_GAME_CAP", json!(c::XP_GAME_CAP)),
-        ("XP_PRACTICE_SCALE", json!(c::XP_PRACTICE_SCALE)),
-        ("XP_LADDER_TARGET_MEAN", json!(c::XP_LADDER_TARGET_MEAN)),
-        ("PRACTICE_SEED_TTL_SECONDS", json!(c::PRACTICE_SEED_TTL_SECONDS)),
-        ("PRACTICE_SEEDS_OPEN_MAX", json!(c::PRACTICE_SEEDS_OPEN_MAX)),
-        ("QUEST_INTERVAL_HOURS", json!(c::QUEST_INTERVAL_HOURS)),
         ("QUEST_MAX_HELD", json!(c::QUEST_MAX_HELD)),
-        ("QUEST_JLORE_MIN", json!(c::QUEST_JLORE_MIN)),
-        ("QUEST_JLORE_MAX", json!(c::QUEST_JLORE_MAX)),
-        ("QUEST_XP_PER_JLORE", json!(c::QUEST_XP_PER_JLORE)),
-        ("QUEST_REPLACES_PER_DAY", json!(c::QUEST_REPLACES_PER_DAY)),
         ("ECONOMY_LIVE", json!(c::ECONOMY_LIVE)),
         // #2875's news (§14.13, R2875001, R2875003): how long an entry lives and what each reward pays.
         ("NEWS_TTL_DAYS", json!(c::NEWS_TTL_DAYS)),
-        ("NEWS_REWARD_JLORE", json!(c::NEWS_REWARD_JLORE)),
-        ("NEWS_REWARD_CARD_PACKS", json!(c::NEWS_REWARD_CARD_PACKS)),
-        ("NEWS_REWARD_CARD_TOKENS", json!(c::NEWS_REWARD_CARD_TOKENS)),
-        (
-            "NEWS_REWARD_COSMETIC_TOKENS",
-            json!(c::NEWS_REWARD_COSMETIC_TOKENS),
-        ),
-        ("NEWS_REWARD_COSMETIC_PACKS", json!(c::NEWS_REWARD_COSMETIC_PACKS)),
         // #3074's dev dashboard (R3074000, R3074001, R3074003): each dev grant's cap, the hand-set
         // rating's range, and a post's caps beside the news summary's sentences.
-        ("DEV_JLORE_PER_REQUEST_MAX", json!(c::DEV_JLORE_PER_REQUEST_MAX)),
-        ("DEV_XP_PER_REQUEST_MAX", json!(c::DEV_XP_PER_REQUEST_MAX)),
-        ("DEV_RATING_MIN", json!(c::DEV_RATING_MIN)),
-        ("DEV_RATING_MAX", json!(c::DEV_RATING_MAX)),
-        ("NEWS_POST_TITLE_MAX_CHARS", json!(c::NEWS_POST_TITLE_MAX_CHARS)),
-        (
-            "NEWS_POST_SUMMARY_MAX_CHARS",
-            json!(c::NEWS_POST_SUMMARY_MAX_CHARS),
-        ),
-        ("NEWS_SUMMARY_MAX_SENTENCES", json!(c::NEWS_SUMMARY_MAX_SENTENCES)),
         // The going live's (#1310): the starter cards a new account owns (R1310000).
         ("STARTER_CARDS", json!(c::STARTER_CARDS)),
         // The pack roll's (#1301): the global pack's name.
         ("GLOBAL_PACK_NAME", json!(c::GLOBAL_PACK_NAME)),
         // The cosmetic pack's (#1306): how its card leans.
-        (
-            "COSMETIC_PACK_CARD_WEIGHTS",
-            json!({
-                "owned": c::COSMETIC_PACK_CARD_WEIGHTS.owned,
-                "unowned": c::COSMETIC_PACK_CARD_WEIGHTS.unowned,
-            }),
-        ),
         // #1339's tiered roll (R1339000): the total, the two weight tables, the floored slot and
         // both floors.
-        ("TIER_WEIGHT_TOTAL", json!(c::TIER_WEIGHT_TOTAL)),
-        (
-            "CARD_TIER_WEIGHTS",
-            json!({
-                "rare": c::CARD_TIER_WEIGHTS.rare,
-                "epic": c::CARD_TIER_WEIGHTS.epic,
-                "legendary": c::CARD_TIER_WEIGHTS.legendary,
-                "mythic": c::CARD_TIER_WEIGHTS.mythic,
-            }),
-        ),
-        (
-            "COSMETIC_TIER_WEIGHTS",
-            json!({
-                "rare": c::COSMETIC_TIER_WEIGHTS.rare,
-                "epic": c::COSMETIC_TIER_WEIGHTS.epic,
-                "legendary": c::COSMETIC_TIER_WEIGHTS.legendary,
-                "mythic": c::COSMETIC_TIER_WEIGHTS.mythic,
-            }),
-        ),
-        ("PACK_FLOORED_SLOT", json!(c::PACK_FLOORED_SLOT)),
         ("PACK_FLOOR_RARITY", json!(c::PACK_FLOOR_RARITY)),
         ("COSMETIC_PACK_FLOOR_RARITY", json!(c::COSMETIC_PACK_FLOOR_RARITY)),
         // #1661's global cosmetic roll (R1661000, R1661001): its weight and its floor.
-        (
-            "GLOBAL_COSMETIC_ROLL_WEIGHT",
-            json!(c::GLOBAL_COSMETIC_ROLL_WEIGHT),
-        ),
-        (
-            "GLOBAL_COSMETIC_FLOOR_RARITY",
-            json!(c::GLOBAL_COSMETIC_FLOOR_RARITY),
-        ),
         // end the collection economy
         // R1935000: how often `/stats`'s open Daily runs tab asks for the daily runs again.
-        ("CI_RUNS_CACHE_TTL_SECONDS", json!(c::CI_RUNS_CACHE_TTL_SECONDS)),
     ]
 }
 
@@ -453,7 +299,6 @@ fn every_name_is_listed_once() {
         // #3730: LOBBY_START_COUNTDOWN_SECONDS (R3730002).
         // #3767: SEAT_TAKEN_CLOSE_CODE (R3767000).
         // #3619: CLIENT_ERROR_MESSAGE_MAX_CHARS and CLIENT_ERROR_STACK_MAX_CHARS.
-        // #4677: PUBLIC_STATS_PATCHES_LINE_BEFORE and PUBLIC_STATS_PATCHES_NEWEST (R4677000).
         listed,
         87 + 35
             + 1
@@ -479,7 +324,9 @@ fn every_name_is_listed_once() {
             + 1
             + 2
             + 1
-            + 2,
+            // #4702's audit: less the 69 that no file under apps/ or e2e/ read any more (the economy's and
+            // Duos's numbers reach the client through the WebAssembly module, CLAUDE.md rule 9).
+            - 69,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -506,8 +353,7 @@ fn every_name_is_listed_once() {
          PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001), and #3213's \
          POST_GAME_FRAME_VERSION (R3213000), and #3694's MATCH_OVER_CLOSE_CODE (R3694000), and #3730's \
          LOBBY_START_COUNTDOWN_SECONDS (R3730002), and #3767's SEAT_TAKEN_CLOSE_CODE (R3767000), and #3619's CLIENT_ERROR_MESSAGE_MAX_CHARS and \
-         CLIENT_ERROR_STACK_MAX_CHARS, and #4669's TOTP_CODE_FORMAT (R4669000), and #4677's \
-         PUBLIC_STATS_PATCHES_LINE_BEFORE and PUBLIC_STATS_PATCHES_NEWEST (R4677000)"
+         CLIENT_ERROR_STACK_MAX_CHARS, and #4669's TOTP_CODE_FORMAT (R4669000)"
     );
 }
 

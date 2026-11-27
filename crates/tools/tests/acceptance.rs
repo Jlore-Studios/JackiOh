@@ -3462,6 +3462,107 @@ fn r4702000_r1006000_r1012004_r3112000_the_ai_extracts_no_features() {
     );
 }
 
+/// The sources of the AI (`crates/ai/src`) that name one of `names`, each as "path: `name`".
+fn ai_sources_naming(names: &[&str]) -> Vec<String> {
+    sources_naming("crates/ai/src", 15, names)
+}
+
+/// The sources under `dir`, more than `floor` of them, that name one of `names`, each as "path: `name`".
+fn sources_naming(dir: &str, floor: usize, names: &[&str]) -> Vec<String> {
+    let root = repo();
+    let mut files = Vec::new();
+    sources(&root.join(dir), &mut files);
+    assert!(
+        files.len() > floor,
+        "{dir}: only {} source files found",
+        files.len()
+    );
+    let mut found: Vec<String> = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for name in names {
+            if text.contains(name) {
+                found.push(format!(
+                    "{}: `{name}`",
+                    file.strip_prefix(&root).unwrap_or(file).display()
+                ));
+            }
+        }
+    }
+    found
+}
+
+/// R4702001: the retired unban lane's deck shaping is gone with the command that fitted its table: no
+/// source of the AI or of the tools names the table, its weight, its option or `stats fit-dealt`.
+#[test]
+fn r4702001_the_unban_lanes_deck_shaping_and_its_refit_are_gone() {
+    let names = [
+        concat!("DEALT", "_Q"),
+        concat!("shaped", "_weight"),
+        concat!("UNBANNED", "_PREFER"),
+        concat!("DEAL_SHAPE", "_"),
+        concat!("pub shape", ": bool"),
+        concat!("Fit", "Dealt"),
+        concat!("fit", "-dealt"),
+        concat!("dealt", "_fit"),
+    ];
+    let mut found = ai_sources_naming(&names);
+    found.extend(sources_naming("crates/tools/src", 30, &names));
+    assert!(
+        found.is_empty(),
+        "the unban lane's deck shaping is back (R4702001): {found:?}"
+    );
+    assert!(
+        !repo().join(concat!("crates/tools/src/dealt", "_fit.rs")).exists(),
+        "crates/tools/src: the refit's file is back (R4702001)"
+    );
+}
+
+/// R4702003: the evaluation's two terms that shipped at weight 0 are gone: no source of the AI names
+/// either weight or the read only they used.
+#[test]
+fn r4702003_the_evaluations_zero_weight_terms_are_gone() {
+    let found = ai_sources_naming(&[
+        concat!("enemy_face_down", "_per_cost"),
+        concat!("fatigue", "_draw:"),
+        concat!("fn shown", "_cost("),
+    ]);
+    assert!(
+        found.is_empty(),
+        "a zero-weight term of the evaluation is back (R4702003): {found:?}"
+    );
+}
+
+/// R4608000: the lone-win rule ships with no switch (#5027): no source of the AI names one.
+#[test]
+fn r4608000_the_lone_win_switch_is_gone() {
+    let found = ai_sources_naming(&[concat!("confirm", "_lone_win"), concat!("confirm", ": bool")]);
+    assert!(
+        found.is_empty(),
+        "the lone-win switch is back (R4608000): {found:?}"
+    );
+}
+
+/// R4515000: the spread order of the reply's visible tries ships with no switch (#5027).
+#[test]
+fn r4515000_the_spread_switch_is_gone() {
+    let found = ai_sources_naming(&[concat!("spread", "_activations"), concat!("spread", ": bool")]);
+    assert!(
+        found.is_empty(),
+        "the spread switch is back (R4515000): {found:?}"
+    );
+}
+
+/// R5027000: the reply's open lethal ships on with no switch (#5027): no source of the AI names one.
+#[test]
+fn r5027000_the_open_lethal_switch_is_gone() {
+    let found = ai_sources_naming(&[concat!("open", "_lethal"), concat!("simulate_reply", "_with")]);
+    assert!(
+        found.is_empty(),
+        "the open-lethal switch is back (R5027000): {found:?}"
+    );
+}
+
 /// R4159000, R1010000, R1010001, R1011000, R1171001, R3112001: the AI compiles no network and no prior.
 /// `crates/ai` has no build script, no `learned` or `policy` module and no weights file, and no source of
 /// the AI or of the three WebAssembly crates names what only they used.
@@ -3631,5 +3732,69 @@ fn ts_the_dev_dependency_scan_finds_a_dropped_feature() {
     assert_eq!(
         dev_dependencies_missing_ts("[package]\nname = \"x\"\n"),
         ["jackioh-run", "jackioh-shared"]
+    );
+}
+
+/// R4702002, R1085: the engine's verbs, reads and tables that no card, rule or other crate reached are
+/// gone, Keenus's old verb among them: no source of the engine defines one.
+#[test]
+fn r4702002_r1085_the_engines_unreached_verbs_reads_and_tables_are_gone() {
+    let root = repo();
+    let mut files = Vec::new();
+    sources(&root.join("crates/engine/src"), &mut files);
+    assert!(files.len() > 100, "only {} source files found", files.len());
+    let functions = [
+        "convert_healing",
+        "lock_own_zone",
+        "grant_keywords_random_unit",
+        "swap_health",
+        "swap_board",
+        "steal_all",
+        "shuffle_copies_of_self",
+        "consume_modifier",
+        "drop_delayed",
+        "peek_work",
+        "is_owed",
+        "unpark_work",
+        "enchantments_of_kind",
+        "trigger_holders_for_event",
+        "grade_name_of",
+        "chaos_effect_by_name",
+        "card_drills_of",
+        "hand_leftmost",
+        "hand_rightmost",
+        "hand_neighbor",
+        "is_rightmost_in_hand",
+        "clone_state",
+        "ky_test_script",
+        "papaya_begin",
+        "papaya_answered",
+        "into_owned",
+    ];
+    let mut gone: Vec<String> = functions.iter().map(|name| format!("fn {name}(")).collect();
+    gone.extend(
+        [
+            concat!("const ", "PORTRAITS:"),
+            concat!("struct ", "PortraitEntry"),
+            concat!("type ", "VoiceEmoteId"),
+            concat!("const ", "PARAM_PLACEHOLDER"),
+        ]
+        .map(String::from),
+    );
+    let mut found: Vec<String> = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for name in &gone {
+            if text.contains(name.as_str()) {
+                found.push(format!(
+                    "{}: `{name}`",
+                    file.strip_prefix(&root).unwrap_or(file).display()
+                ));
+            }
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "an item nothing reaches is back in the engine (R4702002): {found:?}"
     );
 }

@@ -10,13 +10,15 @@ its live games.
 
 ## How it runs
 
-On two of GitHub's runners since #3740, `gather.yml` plays without a pause, `stats --series gather` on
-the newest version on `main`, game `n` of run `r` being `gather:<(r - 1) × 100,000 + n>` and each of a
-run's two parts playing its own half of that range, while the repository variable `GATHER_ON_PATCH` is
-`true`. Each part plays five hours (`GATHER_HOURS`) and files its games as totals only into both
-projects' databases 400 at a time as they finish (`GATHER_FILE_GAMES`, about an hour), through
-`training/file-records.sh` (R1976000, R1933001), so the newest version's figures grow every hour; each
-run starts the next as it ends. Until #3740 it played 5,000 games of each new patch or set (never a
+On GitHub's runners since #3740 (two, five since 2026-11-26), `gather.yml` plays without a pause,
+`stats --series gather` on the newest version on `main`, game `n` of run `r` being
+`gather:<(r - 1) × 100,000 + n>` and each of a run's five parts playing its own fifth of that range, while the repository variable `GATHER_ON_PATCH` is
+`true`. Each part plays five hours (`GATHER_HOURS`) in one `stats --out-every` that `timeout` stops at
+the deadline, and files its games as totals only into both projects' databases 50 to a file
+(`GATHER_FILE_GAMES`), each file as soon as all its games have finished, through
+`training/file-records.sh` (R1976000, R1933001), so the newest version's figures grow every few
+minutes. Every part stops at the same deadline, so no run waits on a part that stopped early, and a
+slow game holds back only its own file (#5175); each run starts the next as it ends. Until #3740 it played 5,000 games of each new patch or set (never a
 micro) once, on the owner's PC, and until 2026-11-04 the training box ran it too (`loop.sh gather`,
 which #4701 removed).
 
@@ -50,7 +52,7 @@ which #4701 removed).
 ## What it leaves
 
 - Both projects' card statistics, as totals: no row per game (`stats-import --totals-only`, R1976000).
-- Each batch's records file, a `GameRecord` per line, kept as the run's artifact `gather-<run>-<part>`
+- Each file's records, a `GameRecord` per line, kept as the run's artifact `gather-<run>-<part>`
   for `GATHER_RETENTION_DAYS`.
 
 `training/README.md` (The gather lane) says how to read them.

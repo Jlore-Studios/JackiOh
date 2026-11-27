@@ -1,8 +1,8 @@
 // The Infinite Assault screen's client-owned names and numbers (CLAUDE.md rule 9). The mode's
 // levels, Commanders, checkpoints and history length come from `assaultConstants()` instead.
 
-/** The release flips this on; before then the route exists but no player-facing entry points do. */
-export let ASSAULT_OPEN = false;
+/** IA7: on since the release (#4597): the Play hub's card and the command menu's entry show. */
+export let ASSAULT_OPEN = true;
 
 /** Test seam for both sides of the release gate. */
 export function setAssaultOpenForTests(open: boolean): void {

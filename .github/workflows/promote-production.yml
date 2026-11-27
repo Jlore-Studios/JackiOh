@@ -397,6 +397,15 @@ jobs:
           commit: ${{ steps.deploy.outputs.sha }}
           seconds: ${{ env.LIVE_SECONDS }}
 
+      # #5174: the new server answers the /stats page's first read within the client's timeout; a deploy
+      # whose card statistics do not load fails, and `report` hands it on. A production from before the
+      # check has no action to run.
+      - name: the card statistics load
+        if: hashFiles('.github/actions/check-stats/action.yml') != ''
+        uses: ./.github/actions/check-stats
+        with:
+          site: ${{ env.SITE }}
+
       # R3074000: the dev dashboard (apps/admin), a Worker of its own that binds this one, so it goes
       # after the site's, from apps/admin/.env.production. Its address, admin.jackioh.com, and the
       # Access application in front of it are infra/cloudflare.tf's; until they are applied the

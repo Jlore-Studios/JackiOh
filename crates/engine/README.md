@@ -26,6 +26,7 @@ What the other crates call:
 | `last_board_for`, `seat_played_by`, `seats_swapped`, `mulligan_owed` | the facts the server and practice read at the edges of a game (R417, R677, R265) |
 | `registered_catalog()` | the catalog `jackioh_cards::register_all()` installed |
 | `combat_forecast(&GameState, PlayerId) -> CombatForecast` (`query.rs`, R3100000) | what each attack that player may declare would do (the damage after Armor and Divine Shield, the strike back, whether it kills, whether the attacker lives (both counting the state check's passes after the combat, R4379000; `attack_deaths` lists them), whether a shield breaks, a Cleave attack's splash on each neighbour and a Trample attack's overflow onto the hero, R4290000) and whether the attackers that reach the enemy hero finish it, projected from the board through the damage pipeline's own readers; the tutorial's coach names its attacks by it |
+| `reborn_body_of(&GameState, &CardInstance) -> CardInstance` (`state_check.rs`, R4798000) | the card a Unit with its Reborn unspent would come back as were it destroyed now, read ahead as §4.5 step 4 makes it before placing it (its keeper's card, R2618000; a unit token's summoned X/X, R175); the AI prices a kill by it |
 | `validator::*` | deck and trio checks (§9.4: D1–D4, T1–T3, L1–L6, R250–R253, R340), shared by the server and, through WASM, the client |
 | `duos::*` (`duos_create`, `duos_begin`, `duos_reduce`, `duos_legal_actions`, `duos_seats_to_act`, `duos_view_for`, `duos_hash`, `duos_fold`, `duos_fold_from`) | a Duos game (§13): two 1v1 games side by side, below |
 
@@ -64,7 +65,7 @@ of a Cry, Death, turn hook, Whenever trigger or Activate (`prompts::run_resume`,
 `state_check::run_death_pass`, `triggers::run_queued_trigger`), withheld from the trigger loop, and
 `view_for` keeps it from a seat that could not read the card (R2783000). `GameEvent::as_rules_read`
 drops `via`, so neither moves a hash. `effects::gain_hero_armor` reports `armorGained`, withheld the
-same way (R3857000).
+same way (R3857000), and so does `damage::spend_pool` each pool's soak, `damageNullified` (R5045000).
 
 ## Purity (CLAUDE.md rule 4)
 

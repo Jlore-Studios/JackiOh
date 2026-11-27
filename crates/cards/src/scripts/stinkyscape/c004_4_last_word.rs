@@ -98,7 +98,8 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
-    use jackioh_engine::params::step_param;
+    use jackioh_engine::config::MANA_CEILING;
+    use jackioh_engine::params::{ParamValueOptions, param_value, step_param};
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -246,9 +247,10 @@ mod tests {
         #[test]
         fn r1870004_radiant_has_param_mana_that_turn() {
             let s = lethal_attack(4, true);
-            assert_eq!(s.state().players.p1.mana.current, MANA, "100 mana, past MAX_MANA");
+            // R5148000: 100 mana, past MAX_MANA, held at the mana ceiling.
+            assert_eq!(s.state().players.p1.mana.current, MANA_CEILING);
             let s = lethal_attack(4, false);
-            assert!(s.state().players.p1.mana.current < MANA);
+            assert!(s.state().players.p1.mana.current < MANA_CEILING);
         }
 
         #[test]
@@ -265,8 +267,11 @@ mod tests {
                 .cloned()
                 .expect("Last Word is set");
             step_param(s.card_mut(set.id.as_str()), "mana", -1);
+            let declared = param_value(s.state(), Some(s.card(set.id.as_str())), "mana", ParamValueOptions::default());
+            assert_eq!(declared, MANA - 25);
             s.attack(VANILLA, "hero");
-            assert_eq!(s.state().players.p1.mana.current, MANA - 25);
+            // R5148000: 75 mana, its minimum of 25 included, is held at the mana ceiling.
+            assert_eq!(s.state().players.p1.mana.current, MANA_CEILING);
         }
     }
 }

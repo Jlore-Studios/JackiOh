@@ -43,7 +43,7 @@ use jackioh_engine::wire::{
 };
 
 use crate::cli::{connect_one, database_url};
-use crate::db::store::{Db, StatsTotalsQuery, StoreError};
+use crate::db::store::{CardRows, Db, StatsTotalsQuery, StoreError};
 use crate::env::quoted;
 
 const USAGE: &str = "Usage: jackioh-server stats-cards [options]
@@ -215,6 +215,7 @@ pub async fn card_stats_window(
         mode: None,
         patch: None,
         drills: false,
+        cards: CardRows::All,
     };
     let mut tx = db.begin(None).await?;
     let totals = tx.stats_totals_load(&query).await?;
@@ -250,6 +251,7 @@ pub async fn card_stats_versions(
         mode: None,
         patch: None,
         drills: false,
+        cards: CardRows::All,
     };
     let mut tx = db.begin(None).await?;
     let totals = tx.stats_totals_load(&query).await?;
@@ -279,6 +281,7 @@ async fn load_totals(db: &Db, options: &CardStatsOptions) -> Result<StatsTotals,
         mode: options.filter.mode,
         patch: options.filter.patch.clone(),
         drills: false,
+        cards: CardRows::All,
     };
     let mut tx = db.begin(None).await?;
     let totals = tx.stats_totals_load(&query).await?;

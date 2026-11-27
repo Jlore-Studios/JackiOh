@@ -6,7 +6,7 @@
 // cue, or a new full-screen part, fails here before it ships. The daily component spec (fx-phone-layers.cy.tsx) measures
 // the same in a real browser.
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { ANOMALY_CODES } from "../cards/anomalies.ts";
 import { DIORAMAS } from "../cards/art/dioramas/index.ts";
@@ -212,7 +212,7 @@ const CASES: { readonly [K in FxDomCue["kind"]]: readonly Extract<FxDomCue, { ki
 
 const fx = parseSheet(readSheet("src/fx/fx.css"));
 
-/** The design tokens (`:root`'s custom properties) the board's sheets set, on the document, as the app's stylesheets set them. */
+/** The design tokens (`:root`'s custom properties) the board's sheets set, on the document, as the app's stylesheets set them: once for the file (the describe's beforeAll), since no cue writes the document element's style. */
 function installTokens(): void {
   for (const path of ["src/index.css", "src/typescale.css", "src/surfaces.css"]) {
     for (const rule of parseSheet(readSheet(path)).rules) {
@@ -228,7 +228,6 @@ afterEach(() => {
 
 /** `cue` mounted in an effects layer as FxLayer renders it, its promoted parts estimated from `sheet`. */
 function layersOf(cue: FxDomCue, sheet: Sheet = fx): LayerPart[] {
-  installTokens();
   const layer = document.createElement("div");
   layer.className = "fx-layer";
   layer.setAttribute("data-fx", "on");
@@ -266,8 +265,12 @@ function estimate(cue: FxDomCue): LayerPart[] {
 }
 
 describe("R4493000 R4493001 every DOM cue's layers on a phone (390x844 at 3x)", () => {
-  it("R4493000 no element of any DOM cue covers more than FX_LAYER_MAX_SCREENS", () => {
-    const problems = ALL.flatMap((cue) => layerProblems(nameOf(cue), estimate(cue), VIEW, DPR)).filter((p) => p.endsWith("FX_LAYER_MAX_SCREENS"));
+  beforeAll(installTokens);
+
+  // One test a kind, so no one test estimates every cue: the one that did ran past vitest's 5 s on a loaded runner (#5085).
+  it.each(Object.keys(CASES) as FxDomCue["kind"][])("R4493000 no element of any %s cue covers more than FX_LAYER_MAX_SCREENS", (kind) => {
+    const cues: readonly FxDomCue[] = CASES[kind];
+    const problems = cues.flatMap((cue) => layerProblems(nameOf(cue), estimate(cue), VIEW, DPR)).filter((p) => p.endsWith("FX_LAYER_MAX_SCREENS"));
     expect(problems).toEqual([]);
   });
 

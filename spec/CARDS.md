@@ -39,9 +39,9 @@ The cards and tokens that print each keyword on either face, as the catalog's `k
 | Equip | M #65 Keymaster Keenus, M #67 Sentient Cat Ears | none |
 | Ranged | C+ #51 Jlockeed's J15 Fighter, S #68 Stratos, S #72 Paragon Mk1, S #73 Paragon Mk2, S #74 Paragon-X, S #107 RR-5000, S #108 Trila 3, S #128 Jlockeed's Yamato Cannon, S T-dormant-starship Dormant Starship, S+ #36 Duo, S+ #37 Scorch, S+ #72 Foreshadow, S+ #73 Ripple, S+ #90 Meltdown, S+ #91 Tsunami, S+ #106 Spectre, S+ #107 Fuse, S+ #108 Swarmer, S+ #110 Dagger, S+ #111 Mace, S+ #112 Fortress, S+ #113 Scepter, S+ #114 Reign, S+ #115 Flare, S+ #116 Horizon, S+ #117 Zenith, S+ #118 Antumbra, S+ #119 Eclipse, S+ #124 Sei, S+ #125 Omura, IA #11 Quickgen Turret | S #150.1 Stinkyscape Golem, S T-drone-interceptor Drone Interceptor, S T-drone-corvette Drone Corvette, S T-shield-layer Drone Battleship (Shield Layer), S T-propagation-layer Drone Battleship (Propagation Layer), S T-meltdown-layer Drone Battleship (Meltdown Layer), S+ #26.1 Conscript, S+ #133.1 Daglare, S+ #133.2 Macizon, S+ #133.3 Fortnith, S+ #133.4 Sceptumbra, S+ #133.5 Reignclipse, S+ #142.1 Mindustrial Golem, S+ T-terminus-starship-ark-of-ashes Ark of Ashes, S+ T-terminus-starship-dying-ember Dying Ember, S+ T-terminus-starship-heat-death-pilgrim Heat Death Pilgrim, S+ T-terminus-starship-entropys-wake Entropy's Wake, S+ T-terminus-starship-red-giant-requiem Red Giant Requiem, S+ T-terminus-starship-cold-exodus Cold Exodus, S+ T-terminus-starship-omega-drift Omega Drift, S+ T-terminus-starship-farthest-shore Farthest Shore, S+ T-terminus-starship-nightfall-covenant Nightfall Covenant, S+ T-terminus-starship-vacuum-psalm Vacuum Psalm |
 | Flying | C+ #51 Jlockeed's J15 Fighter, S #68 Stratos, S #69 Falcon, S #72 Paragon Mk1, S #73 Paragon Mk2, S #74 Paragon-X, S #77 Yuma, S #79 Orca, S #80 Galaxy, S T-dormant-starship Dormant Starship, S+ #115 Flare, S+ #116 Horizon, S+ #117 Zenith, S+ #118 Antumbra, S+ #119 Eclipse, S+ #122 Quad, S+ #123 Oct | S #150.1 Stinkyscape Golem, S T-drone-interceptor Drone Interceptor, S T-drone-corvette Drone Corvette, S T-shield-layer Drone Battleship (Shield Layer), S T-propagation-layer Drone Battleship (Propagation Layer), S T-meltdown-layer Drone Battleship (Meltdown Layer), S T-AI-1 Escort Protocol, S+ #133.1 Daglare, S+ #133.2 Macizon, S+ #133.3 Fortnith, S+ #133.4 Sceptumbra, S+ #133.5 Reignclipse, S+ T-terminus-starship-ark-of-ashes Ark of Ashes, S+ T-terminus-starship-dying-ember Dying Ember, S+ T-terminus-starship-heat-death-pilgrim Heat Death Pilgrim, S+ T-terminus-starship-entropys-wake Entropy's Wake, S+ T-terminus-starship-red-giant-requiem Red Giant Requiem, S+ T-terminus-starship-cold-exodus Cold Exodus, S+ T-terminus-starship-omega-drift Omega Drift, S+ T-terminus-starship-farthest-shore Farthest Shore, S+ T-terminus-starship-nightfall-covenant Nightfall Covenant, S+ T-terminus-starship-vacuum-psalm Vacuum Psalm |
-| Cloaked | C #6 Cloaked Toe Cracker, S #103 Vxyl, S #123 Gokugains, S #177 Cloaking Module, S+ #75 J-lease S-Space EX-plorer, IA #26 Phantom Lancer, IA #46 Mirage Sovereign, IA #134 Rootkit Runner, IA #217 Echo-1, First Hallucination | S+ #76.1 Ayy |
+| Cloaked | C #6 Cloaked Toe Cracker, M #45 Knowledge Breaker, S #103 Vxyl, S #123 Gokugains, S #177 Cloaking Module, S+ #75 J-lease S-Space EX-plorer, IA #26 Phantom Lancer, IA #46 Mirage Sovereign, IA #134 Rootkit Runner, IA #217 Echo-1, First Hallucination | S+ #76.1 Ayy |
 | Crater | C #80 BOOM! Big Max, C #84 Lockdown, C+ #1 Doom Shroom, S #155 Comet Crash, S+ #119 Eclipse, S+ #121 Toxopid | S+ #121.1 Toxopid Leg, S+ #133.5 Reignclipse |
-| Flashback | #26 Glowy Jelly Bean, M+ #5 Spirit Lash, S #13 Asphyxiants Cloud, S #21 Moonberry, S #121 System Schematic, S #144 Prepare For Liftoff, IA #104 Stack Trace | none |
+| Flashback | #26 Glowy Jelly Bean, M+ #5 Spirit Lash, S #13 Asphyxiants Cloud, S #21 Moonberry, S #121 System Schematic, S #144 Prepare For Liftoff, S+ #120 Crawler, IA #104 Stack Trace | none |
 | Tradable | #26 Glowy Jelly Bean, C #11 Mind Melt, C #23 Devil's Pact, C #37 Last Hurrah, C+ #33 Ivory Tower, M #11 Double Header, M #20 Aestheticize the Game, M #48 Tranquility, M #53 Prestige, M #98 Showdown, S #6 Tylannt, S #87 Siva 1, S #121 System Schematic, S #144 Prepare For Liftoff, S #164 The Syndicate, S #165 The Trade Union, S+ #32 Z-Patch | none |
 | Starship Piece | S #38 Shield Amplifier, S #40 Poison Capsule, S #43 Healing Capsule, S #48 Ultralight Chassis, S #49 Spacemine, S #50 Beam v3, S #51 Repeater v3, S #52 Cannon v3, S #53 Flak v3, S #54 Beam v4, S #55 Repeater v4, S #56 Cannon v4, S #57 Flak v4, S #58 Beam v5, S #59 Repeater v5, S #60 Cannon v5, S #61 Flak v5, S #62 Miner v1, S #63 Miner v2, S #64 Miner v3, S #65 Miner v4, S #66 Miner v5, S #67 Tractor Beam, S #90 After Burner, S #93 Patcher Nanobots, S #98 Hull Booster, S #100 AP Rounds, S #101 Overdrive Module, S #104 Reflective Plating, S #105 Disintegrex, S #106 Warpfield Amplifier, S #107 RR-5000, S #108 Trila 3, S #122 Vamp Rounds, S #131 Spacerace Stimulus, S #132 Defensive Crystal, S #133 Ultra Capacitor, S #134 Felinor Containment Chamber, S #136 Magic Module, S #140 Rush Token Launcher, S #141 Fruit Launcher, S #142 Jade Launcher, S #143 Book Launcher, S #175 Frost Module, S #177 Cloaking Module, S+ #8 Drone Assembler v3, S+ #9 Drone Assembler v4, S+ #10 Drone Assembler v5, S+ #11 Energy Booster, S+ #12 Shield Booster, S+ #13 Shield Repairer, S+ #14 Hull Repairer, S+ #15 Hull Repairer mk2, S+ #16 Servo Surge, S+ #19 Normalization Module, S+ #143 Fire Beam v3, S+ #144 Fire Beam v4, S+ #145 Fire Beam v5, S+ #146 Scourge Mortar v3, S+ #147 Scourge Mortar v4, S+ #148 Scourge Mortar v5, S+ #149 Flaming Rounds, S+ #150 Scorching Rounds, S+ #151 Volcanic Rounds, S+ #152 Venomous Rounds, S+ #153 Noxious Rounds, S+ #154 Chaos Accelerator, S+ #156 Horizon Breaker, S+ #161 Space Invader (Radiant) | S T-AI-10 Salvage Protocol |
 | Starship | none | none |
@@ -50,7 +50,7 @@ The cards and tokens that print each keyword on either face, as the catalog's `k
 | Burn | none | none |
 | Toxic | none | none |
 | GIGA | S+ #52 Airblast Drill, S+ #53 Laser Drill, S+ #56 Impact Reactor, S+ #106 Spectre, IA #210 Matrioshka Brain | S+ T-AI-4 Jlockeed Large Language Model |
-| Flexible | S+ #35 Scatter, S+ #36 Duo, S+ #58 Phase Conveyer, S+ #72 Foreshadow, S+ #73 Ripple, S+ #90 Meltdown, S+ #91 Tsunami, S+ #108 Swarmer, S+ #109 Lancer | none |
+| Flexible | S+ #35 Scatter, S+ #36 Duo, S+ #58 Phase Conveyer, S+ #72 Foreshadow, S+ #73 Ripple, S+ #90 Meltdown, S+ #91 Tsunami, S+ #108 Swarmer, S+ #109 Lancer | S+ #121.1 Toxopid Leg |
 | Frenzy | S #94 Tmack Trav | C+ #73.1 Classic Golem |
 | Evasive | C+ #51 Jlockeed's J15 Fighter | M #39.5 Jade Beauty, S+ T-AI-3 Jlockeed Loitering Munition |
 | Tipsy | none | C+ #65.1 Rotten Grape, S+ #6.1 Fine Fermented Grape, S+ T-AI-1 Hallucinated Kiwi |
@@ -147,6 +147,14 @@ Drawn by: C+ #48 Jlockeed's Lobbyist, C+ #52 Jlockeed's Permanent Defense Contra
 
 Cards: #13 Jlockeed Shredder-10, #14 Jlockeed's Weapons, C #4 Palantir, C+ #48 Jlockeed's Lobbyist, C+ #51 Jlockeed's J15 Fighter, C+ #52 Jlockeed's Permanent Defense Contract, M #87 Tatches the Totem, M #97 Jlockeed's Evil Blueprints, M+ #4 Jlockeed's Supply Drop, S #124 Jlockeed's Shipbuilding Grant, S #125 Jlockeed's Spacerace Propaganda, S #126 Jlockeed's Permanent Procurement Lobbying, S #127 Jlockeed's Siege Tank, S #128 Jlockeed's Yamato Cannon, S #129 Jlockeed's Missile Pod, S #130 Jlockeed's Starship Retrofitting Program, TG #45 Legacy: Jlockeed's Weapons, TG #48 Legacy: Jlockeed Shredder-10, S+ #21 Jlockeed Shredder-12, S+ #26 Jlockeed’s Forever War.
 
+### jlockeed-units
+
+The Jlockeed Units (R278): every non-token Unit tagged Jlockeed, from the sets that ship (R380, R1420).
+
+Drawn by: M #97.9 Jlockeed's Headquarters.
+
+Cards: #13 Jlockeed Shredder-10, C+ #48 Jlockeed's Lobbyist, C+ #51 Jlockeed's J15 Fighter, M #87 Tatches the Totem, S #127 Jlockeed's Siege Tank, S #128 Jlockeed's Yamato Cannon, S #129 Jlockeed's Missile Pod, TG #48 Legacy: Jlockeed Shredder-10, S+ #21 Jlockeed Shredder-12.
+
 ### weapons
 
 The Weapons (R1862002): the Weapon-tagged Stinkyscape cards of the rarity the text names, the pool naming its set (R1420).
@@ -185,7 +193,7 @@ Cards: #95 Call to Chaos (Core Edition), C+ #73 Call to Chaos (Classic+ Edition)
 
 The War Doctrines (R3869001): every token tagged War Doctrine (R1857002), from the sets that ship.
 
-Drawn by: S #137 Starfleet Commander, S #176 Preemptive Strike.
+Drawn by: none.
 
 Cards: S #137.1 Land Doctrine, S #137.2 Sea Doctrine, S #137.3 Air Doctrine, S #137.4 Space Doctrine.
 

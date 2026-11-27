@@ -5,17 +5,19 @@
 // `drag-landing` keeps a played card out of the fan until a newer view arrives, so animation delay
 // does not look like a refusal.
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactElement } from "react";
 
 import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 
 import { getFxSettings, normalizeSpeed } from "../../fx/settings.ts";
 import { readSettings } from "../../settings/index.ts";
 import { IDLE, boardKeyOf, isBuilding, type Interaction } from "../actions.ts";
+import { arrowCurve } from "../arrowCurve.ts";
 import { currentCardMotion } from "../cardMotion.ts";
-import { MatchCardsProvider, useCardInfo, useCopiedDef } from "../catalog.ts";
+import { CatalogContext, MatchCardsProvider, useCardInfo, useCopiedDef, type CardLookup } from "../catalog.ts";
 import { byTestid, testid, type ClickTarget } from "../contract.ts";
 import { useLiveFace } from "../faces.ts";
+import { anchorOfTestid, gigaFootprintTestids, isGigaHandCard } from "../giga.ts";
 import BlockedMark, { type Blocked } from "./BlockedMark.tsx";
 import { dragCue } from "./cues.ts";
 import { setLanding } from "./landing.ts";
@@ -99,24 +101,60 @@ function centerOf(element: Element): Point | null {
 }
 
 /** Heroes are ringed at their health gem; other targets are ringed at center. */
-function reticleFor(spot: DropSpot): Box | null {
+function reticleFor(spot: DropSpot, footprint: readonly string[] | null): Box | null {
   if (spot.at !== "target") return null;
   const element = byTestid(spot.testid);
   if (element === null) return null;
   const rect = element.getBoundingClientRect();
-  const gem = spot.testid.startsWith("hero-") ? element.querySelector(HERO_GEM) : null;
-  const aim = gem === null ? rect : gem.getBoundingClientRect();
-  const size =
-    gem === null
-      ? Math.max(RETICLE_MIN_PX, Math.min(rect.width, rect.height))
-      : Math.max(RETICLE_GEM_MIN_PX, Math.max(aim.width, aim.height) + RETICLE_GEM_MARGIN_PX);
+  if (footprint === null) {
+    const gem = spot.testid.startsWith("hero-") ? element.querySelector(HERO_GEM) : null;
+    const aim = gem === null ? rect : gem.getBoundingClientRect();
+    const size =
+      gem === null
+        ? Math.max(RETICLE_MIN_PX, Math.min(rect.width, rect.height))
+        : Math.max(RETICLE_GEM_MIN_PX, Math.max(aim.width, aim.height) + RETICLE_GEM_MARGIN_PX);
+    return {
+      x: aim.left + aim.width / 2,
+      y: aim.top + aim.height / 2,
+      size,
+      width: rect.width,
+      height: rect.height,
+    };
+  }
+  // #4995: a dragged GIGA hand card's pad spans the hovered anchor's whole 2×2 block.
+  const rects: DOMRect[] = [];
+  for (const id of footprint) {
+    const zone = byTestid(id);
+    if (zone === null) return null;
+    rects.push(zone.getBoundingClientRect());
+  }
+  if (rects.length === 0) return null;
+  const left = Math.min(...rects.map((zone) => zone.left));
+  const top = Math.min(...rects.map((zone) => zone.top));
+  const right = Math.max(...rects.map((zone) => zone.right));
+  const bottom = Math.max(...rects.map((zone) => zone.bottom));
+  const width = right - left;
+  const height = bottom - top;
   return {
-    x: aim.left + aim.width / 2,
-    y: aim.top + aim.height / 2,
-    size,
-    width: rect.width,
-    height: rect.height,
+    x: left + width / 2,
+    y: top + height / 2,
+    size: Math.max(RETICLE_MIN_PX, Math.min(width, height)),
+    width,
+    height,
   };
+}
+
+/**
+ * #4995: the 2×2 footprint a dragged GIGA hand card's pad spans over this spot, or null for
+ * every other drag (CLAUDE.md rule 7: the anchors come from the offered drop set, never from
+ * re-deciding legality — the spot is already one the plan offers).
+ */
+function gigaPadFor(view: PlayerView, lookup: CardLookup | null, plan: DragPlan, spot: DropSpot): readonly string[] | null {
+  if (plan.kind !== "play" || plan.source.on !== "hand" || spot.at !== "target") return null;
+  const anchor = anchorOfTestid(spot.testid);
+  if (anchor === null) return null;
+  if (!isGigaHandCard(view, lookup, plan.source.instanceId)) return null;
+  return gigaFootprintTestids("you", anchor);
 }
 
 function isValidSpot(plan: DragPlan, spot: DropSpot): boolean {
@@ -143,6 +181,13 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
   // Listeners read this ref so a mid-drag render does not drop the drag.
   const latest = useRef(props);
   latest.current = props;
+  // #4995: the catalog for the dragged card's printed GIGA keyword. The listeners below read
+  // it off this ref, synced after every render (a commit always lands before the next event).
+  const lookup = useContext(CatalogContext);
+  const lookupRef = useRef(lookup);
+  useEffect(() => {
+    lookupRef.current = lookup;
+  });
 
   const [drawn, setDrawn] = useState<Flight | null>(null);
   const [landed, setLanded] = useState<Landed | null>(null);
@@ -330,7 +375,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
           pointer,
           from: centerOf(flight.element) ?? flight.from,
           spot,
-          reticle: reticleFor(spot),
+          reticle: reticleFor(spot, gigaPadFor(latest.current.view, lookupRef.current, flight.plan, spot)),
           tilt,
         };
         setDrawn(flight);
@@ -378,7 +423,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         from: centerOf(element) ?? start,
         touch: event.pointerType === "touch",
         spot,
-        reticle: reticleFor(spot),
+        reticle: reticleFor(spot, gigaPadFor(view, lookupRef.current, plan, spot)),
         tilt: 0,
         liftedOn: boardKeyOf(view),
       };
@@ -402,7 +447,7 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
         const result = resolveDrop(view, legal, flight.plan, spot);
         const refused = result.action === undefined ? lockedZoneAt(hits(event.clientX, event.clientY), flight.plan) : null;
         const { plan } = flight;
-        const reticle = reticleFor(spot);
+        const reticle = reticleFor(spot, gigaPadFor(view, lookupRef.current, plan, spot));
         const at = reticle === null ? { x: event.clientX, y: event.clientY } : { x: reticle.x, y: reticle.y };
         const released = ghostCenter() ?? { x: event.clientX, y: event.clientY };
         // Played, or built on (a target still to pick), or refused: a card let go over nothing goes home.
@@ -703,25 +748,7 @@ function DragArrow(props: {
   stop: ArrowStop | null;
 }): ReactElement {
   const { from, to } = props;
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy) || 1;
-
-  const bend = Math.min(ARROW_BEND_MAX_PX, length * ARROW_BEND_SHARE);
-  let nx = -dy / length;
-  let ny = dx / length;
-  if (ny > 0) {
-    nx = -nx;
-    ny = -ny;
-  }
-  const cx = (from.x + to.x) / 2 + nx * bend;
-  const cy = (from.y + to.y) / 2 + ny * bend;
-
-  const tx = to.x - cx;
-  const ty = to.y - cy;
-  const tangent = Math.hypot(tx, ty) || 1;
-  const ux = tx / tangent;
-  const uy = ty / tangent;
+  const { length, cx, cy, ux, uy } = arrowCurve(from, to, ARROW_BEND_SHARE, ARROW_BEND_MAX_PX);
 
   const withHead = props.stop === null;
   const head = Math.min(ARROW_HEAD_PX, length);

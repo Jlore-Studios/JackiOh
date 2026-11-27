@@ -26,6 +26,7 @@ import type { AttackForecast, SplashHit, TrampleOverflow } from "@jackioh/shared
 import type { ReactElement } from "react";
 
 import { KEYWORD_MARK } from "../cards/keywordMarks.ts";
+import { Icon } from "../icons/Icon.tsx";
 import { useFxSettings } from "../fx/settings.ts";
 import { t } from "../i18n/i18n.ts";
 import { reducedMotionNow } from "../settings/motion.ts";
@@ -36,7 +37,6 @@ import "./attackOutcome.css";
 /** What each marker's title and accessible name end on: the forecast is no promise. */
 export const ATTACK_OUTCOME_NOTE = "What the face-up board predicts. A face-down trap can still change it.";
 
-const SKULL = "☠";
 /** The chip's minus (U+2212), kept in every variant: color never carries meaning on its own. */
 const MINUS = "−";
 
@@ -64,7 +64,7 @@ function PreviewMark({ amount, skull }: { amount: number; skull?: "kills" | "fal
         <span className="fx-splat" data-amount={`${MINUS}${amount}`} data-tentative="true" aria-hidden="true" />
         {skull !== undefined && (
           <span className="attack-outcome-skull" data-mark={skull} aria-hidden="true">
-            {SKULL}
+            <Icon name="skull" />
           </span>
         )}
       </>
@@ -74,7 +74,7 @@ function PreviewMark({ amount, skull }: { amount: number; skull?: "kills" | "fal
     <span className="damage-pop" data-tentative="true" aria-hidden="true">
       {MINUS}
       {amount}
-      {skull !== undefined && <span data-mark={skull}>{SKULL}</span>}
+      {skull !== undefined && <span data-mark={skull}><Icon name="skull" /></span>}
     </span>
   );
 }

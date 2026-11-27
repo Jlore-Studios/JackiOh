@@ -3,7 +3,7 @@
 // objects, weather and light, and R3391000's craft: the ships, drones and vehicles of Stinkyscape's
 // pass, whose parts of every kind follow the first kit's). Each part draws one to twelve filled shapes
 // about its anchor, scaled and faced as it is placed, varied by the scene's stream and never by the face: a Radiant face draws
-// the same shapes, only repainted (scene.ts `withScene`). Every colour is a palette.css name, none in
+// the same shapes, only repainted (scene.ts `withScene`). Every colour is a SCENE_PALETTE name, none in
 // Radiant's gold window (no `gold-*`, `yellow-400` or `parchment`); a glow is a stack of translucent
 // shapes, never a gradient. A terrain part spans the box from its placement's height down; the rest
 // stand on their anchor (a plant, a building, an object), hang from it (a lantern, a light shaft) or

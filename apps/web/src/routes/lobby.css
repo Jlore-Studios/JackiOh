@@ -23,7 +23,7 @@
 
 .lobby .lobby-modes__legend {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
   padding: 0;
   margin-bottom: 4px;
 }
@@ -35,7 +35,7 @@
   margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   color: var(--text);
   cursor: var(--cursor-glove-point, pointer);
@@ -61,12 +61,12 @@
 
 .lobby .lobby-mode__name {
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--type-lg);
 }
 
 .lobby .lobby-mode__hint {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .lobby .lobby-select {
@@ -74,7 +74,7 @@
   color: var(--text);
   background: var(--bg-sunken);
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   min-height: 44px;
   max-width: 100%;
@@ -83,15 +83,15 @@
 .lobby .lobby-note {
   margin: 4px 0 0;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .lobby .lobby-verdict {
   margin: 6px 0 0;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .lobby .lobby-verdict[data-ready="true"] {
@@ -135,8 +135,8 @@
    than the plain lobby rules above, which the series screen still relies on. */
 
 .tavern.play-screen {
-  --play-panel-edge: rgba(201, 149, 63, 0.55);
-  --play-tile: linear-gradient(180deg, rgba(58, 34, 18, 0.9), rgba(26, 15, 8, 0.95));
+  --play-panel-edge: color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
+  --play-tile: linear-gradient(180deg, rgba(58, 34, 18, 0.9), color-mix(in srgb, var(--pal-wood-900) 95%, transparent));
   --play-ready: var(--tavern-teal);
 }
 
@@ -183,14 +183,14 @@
   min-width: 0;
   padding: 20px 20px 22px;
   border: 1px solid var(--play-panel-edge);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background:
-    radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.08), transparent 70%),
-    linear-gradient(180deg, rgba(52, 30, 16, 0.94), rgba(22, 13, 7, 0.96));
+    radial-gradient(ellipse 90% 40% at 50% 0%, color-mix(in srgb, var(--pal-brass-300) 8%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-800) 94%, transparent), color-mix(in srgb, var(--pal-wood-900) 96%, transparent));
   box-shadow:
-    inset 0 0 0 3px rgba(18, 11, 7, 0.85),
-    inset 0 0 0 4px rgba(201, 149, 63, 0.22),
-    0 18px 44px rgba(0, 0, 0, 0.55);
+    inset 0 0 0 3px color-mix(in srgb, var(--pal-wood-900) 85%, transparent),
+    inset 0 0 0 4px color-mix(in srgb, var(--pal-brass-500) 22%, transparent),
+    0 18px 44px color-mix(in srgb, var(--pal-black) 55%, transparent);
 }
 
 .tavern.play-screen .play-panel__heading {
@@ -198,15 +198,15 @@
   align-items: center;
   gap: 10px;
   margin: 0;
-  font-family: var(--tavern-serif);
-  font-size: 20px;
+  font-family: var(--font-display);
+  font-size: var(--type-2xl);
   font-weight: 700;
   color: var(--tavern-gold-pale);
 }
 
 .tavern.play-screen .play-panel__heading--sub {
   margin-top: 8px;
-  font-size: 17px;
+  font-size: var(--type-xl);
 }
 
 .tavern.play-screen .play-step {
@@ -216,10 +216,10 @@
   width: 26px;
   height: 26px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #fff0bf, var(--tavern-gold) 45%, #a86a1f);
+  border-radius: var(--radius-round);
+  background: radial-gradient(circle at 40% 35%, var(--pal-brass-200), var(--tavern-gold) 45%, var(--pal-brass-600));
   color: var(--tavern-ink);
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 800;
   box-shadow: 0 2px 0 #4a2a0e;
 }
@@ -261,8 +261,8 @@
   gap: 4px 12px;
   min-height: 100%;
   padding: 12px 40px 12px 14px;
-  border: 1px solid rgba(201, 149, 63, 0.35);
-  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 35%, transparent);
+  border-radius: var(--radius-md);
   background: var(--play-tile);
   color: var(--tavern-parchment);
   cursor: var(--cursor-glove-point, pointer);
@@ -299,9 +299,9 @@
 .tavern.play-screen .play-mode-tile[data-selected="true"] {
   border-color: var(--tavern-gold);
   background:
-    radial-gradient(ellipse 100% 60% at 50% 0%, rgba(243, 201, 105, 0.16), transparent 70%),
+    radial-gradient(ellipse 100% 60% at 50% 0%, color-mix(in srgb, var(--pal-brass-300) 16%, transparent), transparent 70%),
     var(--play-tile);
-  box-shadow: 0 0 0 1px var(--tavern-gold), 0 0 24px rgba(243, 201, 105, 0.22);
+  box-shadow: 0 0 0 1px var(--tavern-gold), 0 0 24px color-mix(in srgb, var(--pal-brass-300) 22%, transparent);
 }
 
 .tavern.play-screen .play-mode-tile:has(input:focus-visible) {
@@ -320,7 +320,7 @@
   margin: 0;
   appearance: none;
   border: 2px solid var(--tavern-brass);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--tavern-well);
   cursor: var(--cursor-glove-point, pointer);
 }
@@ -333,7 +333,7 @@
 .tavern.play-screen .play-mode-tile__icon {
   width: 34px;
   height: 34px;
-  fill: rgba(243, 201, 105, 0.16);
+  fill: color-mix(in srgb, var(--pal-brass-300) 16%, transparent);
   stroke: var(--tavern-gold);
   stroke-width: 1.6;
   stroke-linejoin: round;
@@ -345,25 +345,25 @@
 }
 
 .tavern.play-screen .play-mode-tile .lobby-mode__name {
-  font-family: var(--tavern-serif);
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: var(--type-xl);
   font-weight: 700;
   color: var(--tavern-gold-pale);
 }
 
 .tavern.play-screen .play-mode-tile .lobby-mode__hint {
   color: var(--tavern-text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
   line-height: 1.4;
 }
 
 .tavern.play-screen .play-mode-tile__waiting {
   grid-area: wait;
   padding: 2px 9px;
-  border: 1px solid rgba(63, 182, 168, 0.45);
-  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--pal-verdigris-400) 45%, transparent);
+  border-radius: var(--radius-pill);
   color: #9fe3da;
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -377,7 +377,7 @@
 
 .tavern.play-screen .play-pick label {
   color: color-mix(in srgb, var(--tavern-parchment) 80%, transparent);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 600;
   letter-spacing: 0.03em;
 }
@@ -386,12 +386,12 @@
   width: 100%;
   min-height: 46px;
   padding: 10px 14px;
-  border: 1px solid rgba(201, 149, 63, 0.5);
-  border-radius: 10px;
-  background: linear-gradient(180deg, #0b0704, var(--tavern-well));
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 50%, transparent);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--pal-wood-950), var(--tavern-well));
   color: var(--tavern-parchment);
   font: inherit;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.65);
+  box-shadow: inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent);
   transition: border-color 140ms, box-shadow 140ms;
 }
 
@@ -402,12 +402,12 @@
 .tavern.play-screen .lobby-select:focus-visible {
   outline: none;
   border-color: var(--tavern-gold);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.65), 0 0 0 3px rgba(243, 201, 105, 0.25);
+  box-shadow: inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent), 0 0 0 3px color-mix(in srgb, var(--pal-brass-300) 25%, transparent);
 }
 
 .tavern.play-screen .play-pick-summary {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--type-md);
   font-variant-numeric: tabular-nums;
 }
 
@@ -427,11 +427,11 @@
 .tavern.play-screen .play-trio-deck {
   max-width: 100%;
   padding: 3px 10px;
-  border: 1px solid rgba(201, 149, 63, 0.45);
-  border-radius: 999px;
-  background: rgba(14, 9, 5, 0.7);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
   color: var(--tavern-parchment);
-  font-size: 13px;
+  font-size: var(--type-md);
   overflow-wrap: anywhere;
 }
 
@@ -443,7 +443,7 @@
 .tavern.play-screen .lobby-note {
   margin: 0;
   color: var(--tavern-text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .tavern.play-screen .lobby-verdict {
@@ -453,18 +453,18 @@
   gap: 4px;
   margin: 2px 0 0;
   padding: 10px 14px;
-  border: 1px solid rgba(232, 102, 79, 0.55);
-  border-radius: 10px;
-  background: rgba(14, 9, 5, 0.6);
+  border: 1px solid color-mix(in srgb, var(--pal-lacquer-400) 55%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-wood-950) 60%, transparent);
   color: var(--tavern-parchment);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .tavern.play-screen .lobby-verdict[data-ready="true"] {
   flex-direction: row;
   align-items: center;
   gap: 8px;
-  border-color: rgba(63, 182, 168, 0.6);
+  border-color: color-mix(in srgb, var(--pal-verdigris-400) 60%, transparent);
   color: #9fe3da;
   font-weight: 700;
 }
@@ -474,10 +474,10 @@
   place-items: center;
   width: 20px;
   height: 20px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--play-ready);
   color: var(--tavern-ink);
-  font-size: 12px;
+  font-size: var(--type-sm);
 }
 
 .tavern.play-screen .lobby-verdict__lead {
@@ -492,7 +492,7 @@
 
 .tavern.play-screen .play-leave {
   align-self: center;
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 .tavern.play-screen .play-search {
@@ -500,9 +500,9 @@
   align-items: center;
   gap: 14px;
   padding: 12px 14px;
-  border: 1px solid rgba(63, 182, 168, 0.45);
-  border-radius: 12px;
-  background: rgba(14, 9, 5, 0.6);
+  border: 1px solid color-mix(in srgb, var(--pal-verdigris-400) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-wood-950) 60%, transparent);
 }
 
 .tavern.play-screen .play-search__beacon {
@@ -510,7 +510,7 @@
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle, #d8fff8 0 3px, var(--tavern-teal) 4px 6px, transparent 7px);
 }
 
@@ -518,7 +518,7 @@
   position: absolute;
   inset: 0;
   border: 2px solid var(--tavern-teal);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   opacity: 0;
   animation: play-search-ping calc(1800ms * var(--anim-scale)) ease-out infinite;
 }
@@ -583,8 +583,8 @@
 .tavern.play-screen .series-panel__label {
   margin: 4px 0 0;
   color: var(--tavern-gold-pale);
-  font-family: var(--tavern-serif);
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-size: var(--type-lg);
   font-weight: 700;
 }
 
@@ -595,13 +595,13 @@
   gap: 4px 12px;
   margin: 0;
   color: var(--tavern-parchment);
-  font-size: 22px;
+  font-size: var(--type-3xl);
   font-weight: 800;
 }
 
 .tavern.play-screen .series-score__first {
   color: var(--tavern-text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 500;
 }
 
@@ -624,11 +624,11 @@
 
 .tavern.play-screen .series-deck__standing {
   color: var(--tavern-text-dim);
-  font-size: 12px;
+  font-size: var(--type-sm);
 }
 
 .tavern.play-screen .play-trio-deck.series-deck[data-won="true"] {
-  border-color: rgba(63, 182, 168, 0.75);
+  border-color: color-mix(in srgb, var(--pal-verdigris-400) 75%, transparent);
   color: #9fe3da;
 }
 
@@ -649,7 +649,7 @@
 }
 
 .tavern.play-screen .play-mode-tile.series-picker__deck[data-won="true"]:hover {
-  border-color: rgba(201, 149, 63, 0.35);
+  border-color: color-mix(in srgb, var(--pal-brass-500) 35%, transparent);
   transform: none;
 }
 
@@ -658,7 +658,7 @@
 }
 
 .tavern.play-screen .series-picker__standing[data-won="false"] {
-  border-color: rgba(201, 149, 63, 0.45);
+  border-color: color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
   color: var(--tavern-text-dim);
 }
 
@@ -680,7 +680,7 @@
 
 .tavern.play-screen .series-picker__clock {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 .tavern.play-screen .series-history {
@@ -702,8 +702,8 @@
 }
 
 .tavern.play-screen .series-result__word {
-  font-family: var(--tavern-serif);
-  font-size: 26px;
+  font-family: var(--font-display);
+  font-size: var(--type-3xl);
   font-weight: 800;
   color: var(--tavern-gold-pale);
 }
@@ -725,7 +725,7 @@
 }
 
 .tavern.play-screen .conquest-explainer__dismiss {
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 .tavern.play-screen .conquest-explainer__list {
@@ -734,14 +734,14 @@
   margin: 4px 0 0;
   padding-left: 18px;
   color: var(--tavern-parchment);
-  font-size: 14px;
+  font-size: var(--type-md);
   line-height: 1.45;
 }
 
 .tavern.play-screen .series-explainer-toggle {
   align-self: center;
   margin: 0 auto 16px;
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 /* --- the board's series banner -------------------------------------------------------------- */
@@ -753,9 +753,9 @@
   gap: 8px 14px;
   padding: 6px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-raised);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .series-banner__score {
@@ -779,7 +779,7 @@
   width: 10px;
   height: 10px;
   border: 1px solid var(--line-bright);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 .series-banner__pip[data-won="true"] {

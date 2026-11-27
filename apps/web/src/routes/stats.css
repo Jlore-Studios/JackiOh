@@ -7,7 +7,7 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 16px 20px 60px;
-  color: var(--text, #e8eaf2);
+  color: var(--text, var(--pal-slate-100));
 }
 
 /* Summary tiles */
@@ -22,39 +22,37 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px 16px;
-  border: 1px solid var(--line-bright, #454d66);
-  border-radius: 10px;
-  background: rgba(18, 22, 34, 0.7);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--line-bright, var(--pal-slate-700));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-slate-900) 70%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--pal-black) 25%, transparent);
 }
 
 .stats-summary-label {
-  font-size: 11.5px;
+  font-size: var(--type-xs);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim, var(--pal-slate-400));
 }
 
 .stats-summary-value {
-  font-size: 20px;
+  font-size: var(--type-2xl);
   font-weight: 700;
-  color: var(--text, #fff);
+  color: var(--text, var(--pal-white));
 }
 
 /* R1994000: the Games panel, boxed, at the head of the Cards tab's panel. */
 .stats-games-panel {
-  border: 1px solid var(--line, #2c3245);
-  border-radius: 8px;
-  background: rgba(11, 13, 19, 0.5);
+  border: 1px solid var(--line, var(--pal-slate-800));
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--pal-wood-900) 50%, transparent);
   padding: 10px 14px;
 }
 
 .stats-games-title {
   margin: 0 0 6px;
-  font-size: 13.5px;
+  font-size: var(--type-md);
   font-weight: 600;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim, var(--pal-slate-400));
 }
 
 .stats-games-lines {
@@ -64,14 +62,14 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 14px;
-  color: var(--text, #e8eaf2);
+  font-size: var(--type-md);
+  color: var(--text, var(--pal-slate-100));
 }
 
 .stats-games-status {
   margin: 0;
-  font-size: 13px;
-  color: var(--text-dim, #9aa1b8);
+  font-size: var(--type-md);
+  color: var(--text-dim, var(--pal-slate-400));
 }
 
 .stats-games-status p {
@@ -94,11 +92,11 @@
 .stats-search-input {
   min-height: var(--hit-min);
   padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--line-bright, #454d66);
-  background: rgba(11, 13, 19, 0.8);
-  color: var(--text, #fff);
-  font-size: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-bright, var(--pal-slate-700));
+  background: color-mix(in srgb, var(--pal-wood-900) 80%, transparent);
+  color: var(--text, var(--pal-white));
+  font-size: var(--type-md);
   width: 100%;
   max-width: 400px;
 }
@@ -134,9 +132,9 @@
 }
 
 .stats-sort-label {
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim, var(--pal-slate-400));
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: var(--type-sm);
 }
 
 .stats-grid {
@@ -182,26 +180,26 @@
   grid-template-columns: auto 1fr;
   gap: 2px 8px;
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--type-sm);
 }
 
 .stats-grid-figures dt {
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim, var(--pal-slate-400));
 }
 
 .stats-grid-figures dd {
   margin: 0;
   text-align: right;
-  color: var(--text, #fff);
+  color: var(--text, var(--pal-white));
   font-variant-numeric: tabular-nums;
 }
 
 /* Tables */
 .stats-table-wrapper {
   overflow-x: auto;
-  border: 1px solid var(--line, #2c3245);
-  border-radius: 10px;
-  background: rgba(11, 13, 19, 0.6);
+  border: 1px solid var(--line, var(--pal-slate-800));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-wood-900) 60%, transparent);
   margin-top: 16px;
 }
 
@@ -215,19 +213,17 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 13.5px;
+  font-size: var(--type-md);
   font-variant-numeric: tabular-nums;
 }
 
 .stats-th {
   padding: 12px 14px;
-  background: rgba(18, 22, 34, 0.95);
-  border-bottom: 1px solid var(--line, #2c3245);
-  color: var(--text-dim, #9aa1b8);
-  font-size: 12px;
+  background: color-mix(in srgb, var(--pal-slate-900) 95%, transparent);
+  border-bottom: 1px solid var(--line, var(--pal-slate-800));
+  color: var(--text-dim, var(--pal-slate-400));
+  font-size: var(--type-sm);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
@@ -243,19 +239,19 @@
 
 .stats-th--sortable:hover,
 .stats-th--sortable:focus {
-  color: var(--text, #fff);
+  color: var(--text, var(--pal-white));
   outline: none;
-  background: rgba(30, 36, 54, 0.95);
+  background: color-mix(in srgb, var(--pal-ink-900) 95%, transparent);
 }
 
 .stats-tr {
-  border-bottom: 1px solid rgba(44, 50, 69, 0.5);
+  border-bottom: 1px solid color-mix(in srgb, var(--pal-slate-800) 50%, transparent);
   cursor: var(--cursor-glove-point, pointer);
   transition: background 100ms ease;
 }
 
 .stats-tr:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--pal-white) 4%, transparent);
 }
 
 .stats-tr:focus {
@@ -279,16 +275,16 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--line-bright, #454d66);
-  font-size: 12px;
+  border-radius: var(--radius-round);
+  background: color-mix(in srgb, var(--pal-black) 40%, transparent);
+  border: 1px solid var(--line-bright, var(--pal-slate-700));
+  font-size: var(--type-sm);
   font-weight: 700;
 }
 
 .stats-card-thumb-badge[data-rarity="Legendary"] {
-  border-color: #ffd24a;
-  color: #ffd24a;
+  border-color: var(--pal-gold-300);
+  color: var(--pal-gold-300);
 }
 
 .stats-card-thumb-badge[data-rarity="Mythic"] {
@@ -297,8 +293,8 @@
 }
 
 .stats-card-thumb-badge[data-rarity="Epic"] {
-  border-color: #c084fc;
-  color: #c084fc;
+  border-color: var(--pal-amethyst-300);
+  color: var(--pal-amethyst-300);
 }
 
 .stats-card-thumb-badge[data-rarity="Rare"] {
@@ -311,7 +307,7 @@
 }
 
 .stats-card-name-link {
-  color: var(--text, #fff);
+  color: var(--text, var(--pal-white));
   text-decoration: none;
 }
 
@@ -338,8 +334,8 @@
 .stats-confidence-bar {
   flex: 1;
   height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  background: color-mix(in srgb, var(--pal-white) 10%, transparent);
+  border-radius: var(--radius-xs);
   overflow: hidden;
   max-width: 80px;
 }
@@ -350,14 +346,14 @@
 }
 
 .stats-not-enough {
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-style: italic;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim, var(--pal-slate-400));
 }
 
 .stats-sample-hint {
-  font-size: 11.5px;
-  color: var(--text-dim, #9aa1b8);
+  font-size: var(--type-xs);
+  color: var(--text-dim, var(--pal-slate-400));
 }
 
 /* R3022000: a card's balance tier chip is stats/tier.css's, which the card detail shares (R3185000) */
@@ -388,22 +384,22 @@
 .stats-empty,
 .stats-empty-sub {
   margin: 20px 0;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim, var(--pal-slate-400));
   font-style: italic;
 }
 
 .stats-error {
   margin: 20px 0;
-  color: #f87171;
+  color: var(--pal-lacquer-400);
 }
 
 .stats-retry-btn {
   margin-top: 8px;
   padding: 6px 14px;
-  border-radius: 6px;
-  border: 1px solid #f87171;
-  background: rgba(248, 113, 113, 0.15);
-  color: #fff;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--pal-lacquer-400);
+  background: color-mix(in srgb, var(--pal-lacquer-400) 15%, transparent);
+  color: var(--pal-white);
   cursor: var(--cursor-glove-point, pointer);
 }
 
@@ -417,11 +413,11 @@
 
 .stats-pager-btn {
   padding: 6px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--line-bright, #454d66);
-  background: rgba(18, 22, 34, 0.8);
-  color: var(--text, #fff);
-  font-size: 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-bright, var(--pal-slate-700));
+  background: color-mix(in srgb, var(--pal-slate-900) 80%, transparent);
+  color: var(--text, var(--pal-white));
+  font-size: var(--type-md);
   cursor: var(--cursor-glove-point, pointer);
 }
 
@@ -431,8 +427,8 @@
 }
 
 .stats-pager-page {
-  font-size: 13px;
-  color: var(--text-dim, #9aa1b8);
+  font-size: var(--type-md);
+  color: var(--text-dim, var(--pal-slate-400));
   font-variant-numeric: tabular-nums;
 }
 
@@ -441,7 +437,7 @@
 .dialog.stats-drilldown-modal {
   align-items: stretch;
   gap: 0;
-  background: #11141e;
+  background: var(--pal-slate-900);
   border-radius: var(--radius-md);
   max-width: 760px;
   width: 100%;
@@ -453,7 +449,7 @@
 
 .dialog.stats-drilldown-modal .dialog__title {
   padding: var(--space-7) calc(var(--space-11) + var(--space-6)) var(--space-7) var(--space-8);
-  border-bottom: 1px solid var(--line, #2c3245);
+  border-bottom: 1px solid var(--line, var(--pal-slate-800));
 }
 
 /* The row keeps its items at their own height: stretched to the details column, the preview gave
@@ -510,11 +506,9 @@
 }
 
 .stats-drilldown-caption {
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim, var(--pal-slate-400));
 }
 
 /* Show Radiant is a button with no role and View in Almanac a `button-secondary` link, both the
@@ -556,8 +550,6 @@
   margin: 0;
   font-size: var(--type-sm);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--text-dim);
   text-align: left;
 }
@@ -583,10 +575,25 @@
   font-size: var(--type-sm);
 }
 
+/* R4679001: the Outputs table scrolls in the box every /stats table does, set flush under the panel's Segmented as
+   the Choices tables are, its caption inset from the box's edge. A card's name wraps between its words, never inside
+   one: the box scrolls sideways on a phone rather than break "School" in two. */
+.stats-extended .stats-table-wrapper {
+  margin-top: 0;
+}
+
+.stats-extended .stats-table-wrapper caption {
+  padding: var(--space-2) var(--space-3) 0;
+}
+
+.stats-extended-table tbody th .stats-card-name-link {
+  overflow-wrap: normal;
+}
+
 /* Pressed, it wears the Radiant gold. As long as the tavern's bare-button size rule, and later, so it wins. */
 .tavern.app-shell.stats-page .stats-drilldown-actions button.stats-drilldown-action[aria-pressed="true"] {
-  border-color: var(--radiant, #ffd24a);
-  color: var(--radiant, #ffd24a);
+  border-color: var(--radiant, var(--pal-gold-300));
+  color: var(--radiant, var(--pal-gold-300));
 }
 
 .stats-drilldown-token-list {
@@ -614,7 +621,7 @@
 }
 
 .stats-drilldown-token-name {
-  font-size: 12px;
+  font-size: var(--type-sm);
   text-align: center;
 }
 
@@ -627,11 +634,9 @@
 
 .stats-drilldown-section h3 {
   margin: 0 0 8px;
-  font-size: 13.5px;
+  font-size: var(--type-md);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim, var(--pal-slate-400));
 }
 
 .stats-drilldown-list {
@@ -644,15 +649,15 @@
 }
 
 .stats-drilldown-item {
-  font-size: 13px;
+  font-size: var(--type-md);
   padding: 6px 10px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--pal-white) 4%, transparent);
 }
 
 .stats-drilldown-label {
   font-weight: 600;
-  color: var(--text, #fff);
+  color: var(--text, var(--pal-white));
 }
 
 /* Mobile responsive */
@@ -695,17 +700,17 @@
   }
 
   .stats-sets-leaders .stats-summary-label {
-    font-size: 10px;
+    font-size: var(--type-xs);
   }
 
   .stats-sets-leaders .stats-summary-value {
-    font-size: 16px;
+    font-size: var(--type-lg);
   }
 }
 
 /* R1966000: the Sets tab: the highest set's star, each set's change since the previous patch, and the strongest and weakest cards. */
 .stats-sets-leader {
-  color: #facc15;
+  color: var(--pal-gold-400);
 }
 
 .stats-sets-change {
@@ -713,11 +718,11 @@
 }
 
 .stats-sets-change--up {
-  color: #4ade80;
+  color: var(--pal-jade-400);
 }
 
 .stats-sets-change--down {
-  color: #f87171;
+  color: var(--pal-lacquer-400);
 }
 
 .stats-sets-outliers {
@@ -729,7 +734,7 @@
 
 .stats-sets-outlier-title {
   margin: 0 0 8px;
-  font-size: 15px;
+  font-size: var(--type-lg);
   font-weight: 700;
 }
 
@@ -834,6 +839,11 @@
   color: var(--text-dim);
 }
 
+/* R5040000: the Experimental tab's four views wrap onto a second row where the window is narrower than them. */
+.stats-experimental-views {
+  flex-wrap: wrap;
+}
+
 /* R4680000: a card's live play version, marked in its span as the header marks the current patch. */
 .stats-version-live {
   padding: 0 var(--space-3);
@@ -917,5 +927,117 @@
   border-color: var(--selected);
   background: color-mix(in srgb, var(--selected) 12%, var(--bg-raised));
   box-shadow: inset 0 0 0 1px var(--selected);
+}
+
+/* R4681001: the Hall of Fame's four sections, each entry one row: its rank, the before/after faces with the
+   arrow between, and the versions, figures and balance line beside them. */
+.hall-title {
+  font-size: var(--type-md);
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.hall-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.hall-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  width: 100%;
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--text);
+  text-align: left;
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.hall-rank {
+  flex: none;
+  width: 2ch;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.hall-faces {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.hall-face {
+  display: block;
+  width: 96px;
+}
+
+.hall-face .patch-face {
+  display: block;
+  width: 100%;
+}
+
+.hall-face-card--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 5 / 7;
+  font-size: var(--type-sm);
+  color: var(--text-dim);
+}
+
+.hall-arrow {
+  color: var(--text-dim);
+}
+
+.hall-details {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hall-versions {
+  font-weight: 600;
+}
+
+.hall-figures {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.hall-changes {
+  font-size: var(--type-sm);
+  color: var(--text-dim);
+}
+
+.hall-balance {
+  font-size: var(--type-md);
+  font-style: italic;
+}
+
+/* R4681001: on a phone each entry stacks the faces above the figures. */
+@media (max-width: 600px) {
+  .hall-entry {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hall-rank {
+    width: auto;
+  }
+
+  .hall-faces {
+    justify-content: center;
+  }
 }
 

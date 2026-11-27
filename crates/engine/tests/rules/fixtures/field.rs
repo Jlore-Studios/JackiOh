@@ -11,8 +11,8 @@
 use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
-    animate, choose_target, damage, destroy_all, flicker, lock_lane, lock_own_zone, lock_played_zone,
-    lock_random_zone, unlock_all,
+    animate, choose_target, damage, destroy_all, flicker, lock_lane, lock_played_zone, lock_random_zone,
+    unlock_all,
 };
 use jackioh_engine::testkit::*;
 
@@ -488,7 +488,7 @@ pub static FIELD_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::ne
             doom.id.clone(),
             both(Script {
                 triggers: vec![TriggerDef::new("fd-doom", &[GameEventType::CardPlayed], |_ctx, _event| {
-                    vec![note("doomed"), lock_own_zone()]
+                    vec![note("doomed")]
                 })
                 .with_when(enemy_play)],
                 ..Script::default()

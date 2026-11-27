@@ -22,14 +22,14 @@
 use std::ops::{Index, IndexMut};
 use std::sync::Arc;
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use jackioh_engine::WinRateTable;
 use jackioh_engine::wire::{
-    Action, ActionType, EmoteId, GameEventType, GameMode, GameOverReason, GameRecord, LeanPick, ListTotal,
-    PlayerId, PortraitId, SourceFilter, StatsTotals,
+    Action, ActionType, CardTotal, EmoteId, GameEventType, GameMode, GameOverReason, GameRecord, LeanPick,
+    ListTotal, PlayerId, PortraitId, SourceFilter, StatsTotals, TotalsKey,
 };
 use jackioh_shared::host::daily::{DailyBoard, DailyClock};
 
@@ -691,7 +691,7 @@ pub struct ReplayRow {
     pub actions: i64,
 }
 
-/// R768: one `replays_list` row as the batched `replays_list_with_modes` reads it in one query, for the
+/// R768: one row of the replays list as `replays_list_with_modes` reads it in one query, for the
 /// replays list (`GET /api/replays`) and the recently played list (`GET /api/friends/recent`): the
 /// match's seats, catalog version, ranked flag and portraits, its result, its log's length and what
 /// `matches_mode_of` answers for it. The decks, boards, loadouts and win-rate snapshot a replay's fold
@@ -898,6 +898,147 @@ pub struct StatsTotalsQuery {
     /// One patch, or null for every patch.
     pub patch: Option<String>,
     pub drills: bool,
+    /// R4965000: which card totals the read keeps, and under which patch. Records and game totals, one
+    /// row per key and none per card, are read whole whatever it says.
+    #[serde(default)]
+    pub cards: CardRows,
+}
+
+/// R4965000: which card totals a read keeps, and the patch each is kept under.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum CardRows {
+    /// Every card total, under its own patch.
+    #[default]
+    All,
+    /// No card total: the records and game totals alone.
+    None,
+    /// Every card total under one patch, `MERGED_PATCH`: a read that sums every patch alike (R1583000's
+    /// play rates) holds one total per card and key, however many patches there are.
+    Merged,
+    /// As `CardFiling::file` files them: the kept snapshot's (R3067000) and a dev account's older
+    /// patch's.
+    Filed(CardFiling),
+}
+
+/// R4965000: the patch `CardRows::Merged` keeps every card total under, which no version is.
+pub const MERGED_PATCH: &str = "*";
+
+impl CardRows {
+    /// The patch a total of `card` filed under `patch` is kept under, or `None` when the read drops it.
+    pub fn file<'a>(&'a self, patch: &'a str, card: &str) -> Option<&'a str> {
+        match self {
+            CardRows::All => Some(patch),
+            CardRows::None => None,
+            CardRows::Merged => Some(MERGED_PATCH),
+            CardRows::Filed(filing) => filing.file(patch, card),
+        }
+    }
+
+    /// SPEC §11 R5174000: the patches whose card totals the read keeps, when that is a list: none for no card
+    /// total, and a filing's own (`CardFiling::patches`). `None` when it may keep a total of any patch, so a
+    /// store reads every patch's rows. Postgres reads only the listed patches' rows, by the primary key.
+    pub fn patches(&self) -> Option<Vec<String>> {
+        match self {
+            CardRows::All | CardRows::Merged => None,
+            CardRows::None => Some(Vec::new()),
+            CardRows::Filed(filing) => filing.patches(),
+        }
+    }
+}
+
+/// R4965000: the card totals a read keeps by the shipped version they are filed under: a run of
+/// versions kept as filed, and before it each card's play versions (R4675000) folded into one total
+/// apiece, filed under the play version's first version, so the play versions' table (R4675001) sums
+/// what it summed. Every other total is dropped.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CardFiling {
+    /// Every shipped version, in `patches.json`'s order.
+    pub versions: IndexSet<String>,
+    /// The first and the last of `versions`, by place, whose totals are kept as filed.
+    pub kept_from: usize,
+    pub kept_to: usize,
+    /// Versions `versions` lacks whose totals are kept too: the build's own, when it is none of them.
+    pub also_kept: Vec<String>,
+    /// Each card's play versions that begin before `kept_from`, as the places of their first and last
+    /// versions.
+    pub folded: IndexMap<String, Vec<(usize, usize)>>,
+}
+
+impl CardFiling {
+    /// The patch a total of `card` filed under `patch` is kept under: its own inside the kept run, its
+    /// play version's first before it, or `None`.
+    pub fn file<'a>(&'a self, patch: &'a str, card: &str) -> Option<&'a str> {
+        if self.also_kept.iter().any(|kept| kept == patch) {
+            return Some(patch);
+        }
+        let at = self.versions.get_index_of(patch)?;
+        if at > self.kept_to {
+            return None;
+        }
+        if at >= self.kept_from {
+            return Some(patch);
+        }
+        let (first, _) = self
+            .folded
+            .get(card)?
+            .iter()
+            .find(|(first, last)| *first <= at && at <= *last)?;
+        self.versions.get_index(*first).map(String::as_str)
+    }
+
+    /// SPEC §11 R5174000: every patch `file` keeps a total of, when it folds no play version: the run kept as
+    /// filed and `also_kept`. `None` while it folds any, since a folded total may come from any patch before
+    /// the run.
+    pub fn patches(&self) -> Option<Vec<String>> {
+        if !self.folded.is_empty() {
+            return None;
+        }
+        let run = self
+            .versions
+            .iter()
+            .skip(self.kept_from)
+            .take(self.kept_to.saturating_add(1).saturating_sub(self.kept_from));
+        Some(run.chain(&self.also_kept).cloned().collect())
+    }
+}
+
+/// R4965000: `totals`' card totals as `rows` files them, two filed under one patch added together. The
+/// fake store's read; Postgres files each row as it arrives, so no dropped row is ever held.
+pub fn file_card_totals(totals: StatsTotals, rows: &CardRows) -> StatsTotals {
+    if *rows == CardRows::All {
+        return totals;
+    }
+    let mut filed = StatsTotals {
+        records: totals.records,
+        cards: IndexMap::new(),
+        lists: totals.lists,
+        game_totals: totals.game_totals,
+    };
+    for (key, cards) in totals.cards {
+        for (card, total) in cards {
+            let Some(patch) = rows.file(&key.patch, &card) else {
+                continue;
+            };
+            let key = TotalsKey {
+                patch: patch.to_string(),
+                ..key.clone()
+            };
+            add_card_total(filed.cards.entry(key).or_default(), card, total);
+        }
+    }
+    filed
+}
+
+/// R4965000: `total` of `card` added into `cards`, beside any total of it already there.
+pub fn add_card_total(cards: &mut IndexMap<String, CardTotal>, card: String, total: CardTotal) {
+    match cards.get_mut(&card) {
+        Some(held) => held.add(&total),
+        None => {
+            cards.insert(card, total);
+        }
+    }
 }
 
 /// R1715000: what a fold of the records written before the totals did: how many it folded, and each
@@ -1932,26 +2073,16 @@ impl Tx<'_> {
 
     // replays (R768)
 
-    /// The finished matches `profile_id` held a seat in that have a result and a log the retention
-    /// purge has not taken, newest ended first (the id breaking a tie), `limit` of them from
-    /// `offset`.
-    pub async fn replays_list(
-        &mut self,
-        profile_id: &str,
-        limit: i64,
-        offset: i64,
-    ) -> StoreResult<Vec<ReplayRow>> {
-        dispatch!(self, replays_list(profile_id, limit, offset))
-    }
-
     /// One finished match with a result, whatever is left of its log; `None` for any other id.
     pub async fn replays_get(&mut self, match_id: &str) -> StoreResult<Option<ReplayRow>> {
         dispatch!(self, replays_get(match_id))
     }
 
-    /// R768: the same rows, order, limit and offset semantics as `replays_list`, each as the list reads
-    /// it (`ReplayListRow`, no deck, board, loadout or win-rate snapshot) with what `matches_mode_of`
-    /// answers for its match, in one query rather than one per row.
+    /// R768: the finished matches `profile_id` held a seat in that have a result and a log the
+    /// retention purge has not taken, newest ended first (the id breaking a tie), `limit` of them from
+    /// `offset`, each as the list reads it (`ReplayListRow`, no deck, board, loadout or win-rate
+    /// snapshot) with what `matches_mode_of` answers for its match, in one query rather than one per
+    /// row.
     pub async fn replays_list_with_modes(
         &mut self,
         profile_id: &str,
@@ -2016,11 +2147,6 @@ impl Tx<'_> {
 
     pub async fn tickets_count_open(&mut self) -> StoreResult<i64> {
         dispatch!(self, tickets_count_open())
-    }
-
-    /// R257: open tickets per mode. Every mode is present. No route answers it (R640002).
-    pub async fn tickets_count_open_by_mode(&mut self) -> StoreResult<PerMode<i64>> {
-        dispatch!(self, tickets_count_open_by_mode())
     }
 
     /// R640002: the wait of every ticket claimed at or after `since` (epoch ms), whether a person's

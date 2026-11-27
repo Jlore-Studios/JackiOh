@@ -634,6 +634,41 @@ pub struct TransformBeneathArgs {
     pub of: Option<TargetSpec>,
 }
 
+/// R57's copy takes `old`'s place as a Transform result: `old`'s position, a new body this turn
+/// (§4.1), `old`'s controller; `old` ceases to exist (R35), then its `transformed`, hidden as `old`
+/// was (R177), and the copy's arrival clause (R4816000). Nothing when the zone refuses it.
+fn copy_takes_place(ctx: &mut EffectContext<'_>, old: &CardInstance, mut copy: CardInstance) {
+    if old.position.is_some() {
+        copy.position = old.position;
+    }
+    copy.summoned_turn = Some(ctx.state.turn);
+    let hidden_from = unreadable_by(ctx, old);
+    let copy_id = copy.id.clone();
+    let copy_def_id = copy.def_id.clone();
+    if !replace_in_zone(&mut *ctx.state, old, &mut copy) {
+        return;
+    }
+    if let Some(live) = find_instance_mut(ctx.state, &copy_id) {
+        live.controller = old.controller;
+    }
+    let mut retired = old.clone();
+    cease_to_exist(&mut *ctx.state, &mut retired);
+    ctx.events.push(GameEvent::Transformed {
+        instance_id: old.id.clone(),
+        from_def_id: old.def_id.clone(),
+        to_def_id: copy_def_id,
+        new_instance_id: copy_id.clone(),
+        hidden_from: if hidden_from.is_empty() {
+            None
+        } else {
+            Some(hidden_from)
+        },
+        creator: None,
+    });
+    crate::generators::credit_creator(ctx, &copy_id);
+    run_arrival_clause(ctx, &copy_id);
+}
+
 /// E24, Classic+ #4 Juhan Biggest Bat: "the cards beneath it become copies of this". Each card dormant
 /// beneath the top of the pile `of` names (default the running card, which must be that top) is Replaced
 /// (§6.3) by R57's copy of the top, keeping its owner, controller, position and place in the pile, and
@@ -661,37 +696,8 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
             if crate::layers::is_immutable(ctx.state, old) || crate::slumber::is_slumbering(old) {
                 continue;
             }
-            let mut copy = clone_of(ctx, &top, old.owner, &json_as(json!({ "of": { "of": "self" } })));
-            if old.position.is_some() {
-                copy.position = old.position;
-            }
-            // A new body in the pile, like any Transform result (§4.1).
-            copy.summoned_turn = Some(ctx.state.turn);
-            let hidden_from = unreadable_by(ctx, old);
-            let copy_id = copy.id.clone();
-            let copy_def_id = copy.def_id.clone();
-            if !replace_in_zone(&mut *ctx.state, old, &mut copy) {
-                continue;
-            }
-            if let Some(live) = find_instance_mut(ctx.state, &copy_id) {
-                live.controller = old.controller;
-            }
-            let mut retired = old.clone();
-            cease_to_exist(&mut *ctx.state, &mut retired);
-            ctx.events.push(GameEvent::Transformed {
-                instance_id: old.id.clone(),
-                from_def_id: old.def_id.clone(),
-                to_def_id: copy_def_id,
-                new_instance_id: copy_id.clone(),
-                hidden_from: if hidden_from.is_empty() {
-                    None
-                } else {
-                    Some(hidden_from)
-                },
-                creator: None,
-            });
-            crate::generators::credit_creator(ctx, &copy_id);
-            run_arrival_clause(ctx, &copy_id);
+            let copy = clone_of(ctx, &top, old.owner, &json_as(json!({ "of": { "of": "self" } })));
+            copy_takes_place(ctx, old, copy);
         }
     })
 }
@@ -727,35 +733,7 @@ pub fn transform_into_copy(args: TransformIntoCopyArgs) -> Effect {
         if args.radiant == Some(true) {
             copy.radiant = true;
         }
-        if old.position.is_some() {
-            copy.position = old.position;
-        }
-        copy.summoned_turn = Some(ctx.state.turn);
-        let hidden_from = unreadable_by(ctx, &old);
-        let copy_id = copy.id.clone();
-        let copy_def_id = copy.def_id.clone();
-        if !replace_in_zone(&mut *ctx.state, &old, &mut copy) {
-            return;
-        }
-        if let Some(live) = find_instance_mut(ctx.state, &copy_id) {
-            live.controller = old.controller;
-        }
-        let mut retired = old.clone();
-        cease_to_exist(&mut *ctx.state, &mut retired);
-        ctx.events.push(GameEvent::Transformed {
-            instance_id: old.id.clone(),
-            from_def_id: old.def_id.clone(),
-            to_def_id: copy_def_id,
-            new_instance_id: copy_id.clone(),
-            hidden_from: if hidden_from.is_empty() {
-                None
-            } else {
-                Some(hidden_from)
-            },
-            creator: None,
-        });
-        crate::generators::credit_creator(ctx, &copy_id);
-        run_arrival_clause(ctx, &copy_id);
+        copy_takes_place(ctx, &old, copy);
     })
 }
 

@@ -75,12 +75,6 @@ func newCliBase(binary string, login *logins.Login, popen Popen, cli string) cli
 	return cliBase{Binary: binary, Login: login, popen: popen, cli: cli}
 }
 
-// ClaudeBin is the name older callers used.
-func (x *cliBase) ClaudeBin() string { return x.Binary }
-
-// CLI is the class's `cli`: which CLI this backend runs.
-func (x *cliBase) CLI() string { return x.cli }
-
 // Env is the environment the CLI gets: every secret stripped, and its own login.
 func (x *cliBase) Env() map[string]string {
 	env := copyEnv(config.ChildEnv(nil, nil))

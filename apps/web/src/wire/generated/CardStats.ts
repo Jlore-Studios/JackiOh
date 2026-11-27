@@ -14,6 +14,17 @@ playedRadiant: Tally,
  */
 playedNormal: Tally, 
 /**
+ * R5054000: seen (`seen`: played, cast or summoned, or reached the hand and never played) and Radiant at
+ * least once while seen: held Radiant in the hand, played Radiant, or cast or summoned Radiant. Counted
+ * only from the records that keep the face a card was seen on (`SeatSummary::held_radiant`), and absent
+ * while empty, so a total folded before it reads and is stored as before.
+ */
+seenRadiant?: Tally, 
+/**
+ * R5054000: seen, never Radiant, from the same records.
+ */
+seenNormal?: Tally, 
+/**
  * R2089000: a seat made a Created copy of the card and used one. The four Created tallies are
  * kept beside the deck's, under the same key, and read apart from them (`card_stats_of`'s
  * `created`); each is absent while empty, so a deck row reads and is stored as before.

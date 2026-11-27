@@ -243,7 +243,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
 
   it("R277 a keyword line prints the radiant form's whole list and marks what it adds (core-056, core-025, core-019)", () => {
     const jilliax = face("core-056", true);
-    expect(jilliax.text.full).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (3): Equip.");
+    expect(jilliax.text.full).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (+1): Equip.");
     expect(marksOf("core-056")).toEqual(["Reborn"]);
     expect(marksOf("core-025")).toEqual(["Reborn"]);
     expect(marksOf("core-019")).toEqual(["Immutable"]);
@@ -375,7 +375,13 @@ describe("B8: faceModel cost", () => {
     expect(face("core-059", false, { liveEmbiggenCost: 6 }).cost.alt).toBe("6");
   });
 
-  it("B8 an embiggen card's gem shows the view's live number, toned against its base price, and drops the embiggen price", () => {
+  it("R5109001 under a discount the second badge is the view's embiggenCost, the Embiggened version's realized price", () => {
+    // A discount of 3 on a 2 embiggen 4: the engine prices (0) and (0) plus the premium of 2.
+    expect(face("core-059", false, { liveCost: 0, liveEmbiggenCost: 2 }).cost).toEqual({ text: "0", value: "0", tone: "down", alt: "2" });
+    expect(face("core-059", false, { liveCost: 3, liveEmbiggenCost: 5 }).cost).toEqual({ text: "3", value: "3", tone: "up", alt: "5" });
+  });
+
+  it("B8 an embiggen card's gem shows the view's live number, toned against its base price, and drops the embiggen price the view does not give", () => {
     // /fullsend's "your cards cost 1 less" makes one cost 1 in hand: the gem says 1, not 2.
     expect(face("core-059", false, { liveCost: 1 }).cost).toEqual({ text: "1", value: "1", tone: "down", alt: null });
     expect(face("core-059", false, { liveCost: 3 }).cost).toEqual({ text: "3", value: "3", tone: "up", alt: null });
@@ -622,10 +628,11 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(f.stats).toMatchObject({ attack: 5, health: 5 });
   });
 
-  it("R102 R277 a radiant fused face marks each ingredient's radiant line against its own base line", () => {
+  it("R102 R277 R5049000 a radiant fused face marks each ingredient's radiant line against its own base line", () => {
     const fused = fusedDef([def("core-011"), def("core-002")]);
     const f = faceModel({ defId: fused.id, def: fused, radiant: true, inPlay: {} });
-    expect(f.text.full.split("\n")).toEqual([def("core-011").radiant.text, def("core-002").radiant.text]);
+    // R5049000: each line its own ingredient's, filled with that ingredient's numbers (Speciesist's Overload).
+    expect(f.text.full.split("\n")).toEqual([fillParams(def("core-011"), "radiant"), fillParams(def("core-002"), "radiant")]);
     // Tempo Timmy's Charge, and Speciesist's "all … Units", each against its own base line.
     expect(markedText(f.text.full, legacyText(f.text).marks)).toEqual(["Charge", "all", "Units"]);
   });
@@ -690,9 +697,14 @@ describe("R3045000: a Starship keeps its hull's name", () => {
 
   it("R3045000 the hull itself and every other fusion are named as they were", () => {
     expect(faceModel({ defId: hull.id, def: hull, radiant: false, inPlay: {} }).name).toBe("Dormant Starship");
-    const equipped = fusedDef([def(BEAM), def("core-020")]);
-    expect(faceModel({ defId: equipped.id, def: equipped, radiant: false, inPlay: {} }).name).toBe("Beam v3 + Pointmaster");
+    const joined = fusedDef([def("core-011"), def("core-020")]);
+    expect(faceModel({ defId: joined.id, def: joined, radiant: false, inPlay: {} }).name).toBe(`${def("core-011").name} + Pointmaster`);
     expect(face("core-020", false).name).toBe("Pointmaster");
+  });
+
+  it("R5050000 a unit holding gear is named for the card it was equipped into", () => {
+    const equipped = fusedDef([def(BEAM), def("core-020")]);
+    expect(faceModel({ defId: equipped.id, def: equipped, radiant: false, inPlay: {} }).name).toBe("Pointmaster");
   });
 });
 

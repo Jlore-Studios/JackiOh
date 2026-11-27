@@ -497,8 +497,8 @@ fn b10_an_unfinished_game_and_a_setup_the_engine_refuses_are_refused() {
 
 /// `scripted_game`'s decks and handicaps; both hands kept, P1 ends its turns, P2 puts a Glitch in its
 /// hand and plays it, on the first seed whose Glitch voids. A sandbox only to put the Glitch in hand; a
-/// run's fight is never one.
-fn voided_game() -> ReplayInput {
+/// run's fight is never one; the Assault's fight tests read it too.
+pub(crate) fn voided_game() -> ReplayInput {
     jackioh_cards::register_all();
     let decks = (
         ["058", "042", "043", "001", "008"].map(tg).to_vec(),
@@ -599,15 +599,6 @@ fn r4852000_a_fight_a_glitch_voided_is_refused_not_reported_as_a_lost_fight() {
         run_fight_report(&game, PlayerId::P2),
         Err(VOIDED_FIGHT.to_string())
     );
-}
-
-#[test]
-fn a_voided_game_still_reads_as_a_lost_assault_fight_until_4576_rules_on_it() {
-    // #4852 left the Infinite Assault's reading of a void to #4576: until then it is a lost fight.
-    assert!(matches!(
-        assault_fight_report(&voided_game(), PlayerId::P1),
-        Ok(AssaultAction::FightOver { won: false, .. })
-    ));
 }
 
 #[test]

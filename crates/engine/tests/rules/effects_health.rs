@@ -1,7 +1,7 @@
-//! B5 E7 set health and E8 heal into damage, the verbs a card writes (`effects/health.rs`): `setHealth`
-//! (Classic #29) and `convertHealing`; the replacement that turns a heal into damage is `replacements.rs`'s.
+//! B5 E7 set health, the verb a card writes (`effects/health.rs`, Classic #29), and E8 heal into damage:
+//! the this-turn modifier `replacements.rs` leaves once a heal was converted, and what a heal meets under it.
 
-use jackioh_engine::effects::{convert_healing, heal, set_health};
+use jackioh_engine::effects::{heal, set_health};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{
@@ -136,8 +136,21 @@ mod e7_set_health {
 mod e8_convert_healing {
     use super::*;
 
+    /// The modifier a converting replacement leaves for the rest of the turn (`replacements::healing_replaced`).
+    fn convert_heals(sink: &mut Bench, state: &mut GameState, converter: &CardInstance) {
+        let turn = state.turn;
+        add_modifier(
+            &mut sink.sink(state),
+            PlayerId::P2,
+            ModifierExpiry::ThisTurn { turn },
+            ModifierKind::HealToDamage {
+                converter_id: converter.id.clone(),
+            },
+        );
+    }
+
     #[test]
-    fn installs_a_this_turn_modifier_heals_on_its_controller_s_enemies_become_pierce_damage_from_the_card() {
+    fn under_the_this_turn_modifier_heals_on_its_controller_s_enemies_become_pierce_damage_from_the_card() {
         let mut state = playing("dc-convert");
         let moon = put(
             &mut state,
@@ -149,12 +162,7 @@ mod e8_convert_healing {
             .expect("the card is in the state")
             .face_up = Some(true);
         let mut sink = Bench::new(&state);
-        apply(
-            &mut sink,
-            &mut state,
-            &[convert_healing(Default::default())],
-            Some(moon.id.as_str()),
-        );
+        convert_heals(&mut sink, &mut state, &moon);
         let mods = serde_json::to_value(&state.players[PlayerId::P2].mods).expect("mods serialize");
         let Value::Array(mods) = mods else {
             panic!("a list of modifiers");
@@ -225,12 +233,7 @@ mod e8_convert_healing {
             json!({}),
         );
         let mut sink = Bench::new(&state);
-        apply(
-            &mut sink,
-            &mut state,
-            &[convert_healing(Default::default())],
-            Some(moon.id.as_str()),
-        );
+        convert_heals(&mut sink, &mut state, &moon);
         put(
             &mut state,
             &gambit.id,
@@ -243,28 +246,5 @@ mod e8_convert_healing {
         assert_eq!(state.players[PlayerId::P1].hero.health, 3);
         assert_eq!(state.players[PlayerId::P2].hero.health, 25);
         assert_eq!(events_of_type(&sink.events, GameEventType::Redirected).len(), 1);
-    }
-
-    #[test]
-    fn with_no_card_to_come_from_it_does_nothing() {
-        let mut state = playing("dc-convert-none");
-        let mut sink = Bench::new(&state);
-        apply(
-            &mut sink,
-            &mut state,
-            &[convert_healing(Default::default())],
-            None,
-        );
-        assert_eq!(state.players[PlayerId::P1].mods, Vec::<PlayerModifier>::new());
-        deal_damage(
-            &mut sink.sink(&mut state),
-            DamageArgs {
-                source: None,
-                target: DamageTarget::Hero { player: PlayerId::P1 },
-                amount: 1,
-                flags: None,
-            },
-        );
-        assert_eq!(state.players[PlayerId::P1].hero.health, 29);
     }
 }

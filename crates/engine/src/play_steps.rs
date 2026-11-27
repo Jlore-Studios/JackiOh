@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 use crate::animated::animate_on_entry;
 use crate::announce::{begin_announce, end_announce, is_announce_live};
 use crate::catalog::def_of;
-use crate::config::{FENG_SHUI_BRITTLE, MIN_CHOSEN_X, QUICKSTRIKER_COMBO_MULTIPLE};
+use crate::config::{FENG_SHUI_BRITTLE, MANA_CEILING, MIN_CHOSEN_X, QUICKSTRIKER_COMBO_MULTIPLE};
 use crate::cost_rules::why_play_banned;
 use crate::damage::{DamageArgs, DamageTarget, deal_damage};
 use crate::draw::{add_to_hand, draw};
@@ -95,9 +95,10 @@ fn snapshot(state: &GameState, instance_id: &str) -> Option<CardInstance> {
     find_instance(state, instance_id).cloned()
 }
 
+/// R5148000: a cast's X, at most `MANA_CEILING`.
 fn set_x(state: &mut GameState, instance_id: &str, value: i32) {
     if let Some(card) = find_instance_mut(state, instance_id) {
-        card.x = Some(value);
+        card.x = Some(value.min(MANA_CEILING));
     }
 }
 
@@ -842,7 +843,8 @@ fn tributes_an_enemy(state: &GameState, run: &PlayRun) -> bool {
 /// is (§8 #52's base face) takes the opponent's leftmost open unit zone (R64); with none it stays where
 /// named (R3837001). R360: #55's base face, when its Tribute took an opposing unit, takes the
 /// opponent's zone in the named lane if open, else their leftmost open unit zone (R15); with none it
-/// stays where named. A Flying Golem named into the backrow goes to the unit row (R1081000).
+/// stays where named. A GIGA Golem needs all four zones open there (R4990000). A Flying Golem named
+/// into the backrow goes to the unit row (R1081000).
 fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Option<ZoneSlot> {
     // R4265000: a Cloaked play is set face-down in its player's own backrow, its text inert (§6.1
     // Cloaked), so no hand-over moves it, and its reveal animates it on its controller's side.
@@ -863,6 +865,15 @@ fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Op
         row: Row::Units,
         lane: zone.lane,
     };
+    // R4990000: a Golem that enters GIGA takes the named lane only where all four of its zones are open,
+    // else the opponent's leftmost such anchor, as a cast GIGA does; with none it stays where named (R360).
+    if crate::giga::enters_giga(state, card) {
+        return if crate::giga::fits(same_lane, |slot| is_open(state, slot)) {
+            Some(same_lane)
+        } else {
+            crate::giga::first_anchor(opponent, Row::Units, |slot| is_open(state, slot))
+        };
+    }
     if is_open(state, same_lane) {
         Some(same_lane)
     } else {
@@ -2284,7 +2295,7 @@ fn cast_x_chosen(
     if !chooses_x(sink.state, card) || card.x.is_some() {
         return true;
     }
-    let most = MIN_CHOSEN_X.max(sink.state.players[run.player].mana.current);
+    let most = MIN_CHOSEN_X.max(sink.state.players[run.player].mana.current.min(MANA_CEILING));
     if let Some(cast_x) = run.cast_x {
         set_x(sink.state, &card.id, MIN_CHOSEN_X.max(most.min(cast_x)));
         return true;
@@ -2294,38 +2305,19 @@ fn cast_x_chosen(
         return true;
     }
     let values: Vec<String> = (MIN_CHOSEN_X..=most).map(|value| value.to_string()).collect();
-    run.awaiting = Some(Awaiting::CastX);
     let name = def_of(Some(&*sink.state), &card.def_id).name.clone();
-    let opened = open_prompt(
+    let prompt = format!("{}: choose X", ask_label(step, &name, None));
+    if ask_mode_options(
         sink,
-        OpenPromptArgs {
-            player: run.player,
-            kind: PromptKind::Number,
-            aim: None,
-            prompt: format!("{}: choose X", ask_label(step, &name, None)),
-            options: values
-                .iter()
-                .map(|option| PromptOption {
-                    key: format!("mode:{option}"),
-                    label: option.clone(),
-                    selection: Selection::Mode {
-                        option: option.clone(),
-                    },
-                    cost: None,
-                    radiant: None,
-                })
-                .collect(),
-            min: None,
-            max: None,
-            budget: None,
-            owner: None,
-            resume: resume_for(run, step_index(step)),
-        },
-    );
-    if opened.is_some() {
+        run,
+        step,
+        Awaiting::CastX,
+        PromptKind::Number,
+        prompt,
+        &values,
+    ) {
         return false;
     }
-    run.awaiting = None;
     set_x(sink.state, &card.id, most);
     true
 }
@@ -2662,6 +2654,52 @@ fn ask_repeat_targets(
     true
 }
 
+/// R81: a play step's prompt over fixed `mode` options, each its own key and label, the run awaiting
+/// `awaiting` and resumed at `step`. True while it waits; when nobody can be asked, false, awaiting
+/// nothing.
+fn ask_mode_options(
+    sink: &mut EngineSink<'_>,
+    run: &mut PlayRun,
+    step: PlayStepName,
+    awaiting: Awaiting,
+    kind: PromptKind,
+    prompt: String,
+    options: &[String],
+) -> bool {
+    run.awaiting = Some(awaiting);
+    let opened = open_prompt(
+        sink,
+        OpenPromptArgs {
+            player: run.player,
+            kind,
+            aim: None,
+            prompt,
+            options: options
+                .iter()
+                .map(|option| PromptOption {
+                    key: format!("mode:{option}"),
+                    label: option.clone(),
+                    selection: Selection::Mode {
+                        option: option.clone(),
+                    },
+                    cost: None,
+                    radiant: None,
+                })
+                .collect(),
+            min: None,
+            max: None,
+            budget: None,
+            owner: None,
+            resume: resume_for(run, step_index(step)),
+        },
+    );
+    if opened.is_some() {
+        return true;
+    }
+    run.awaiting = None;
+    false
+}
+
 /// The repeat's mode declarations, each offered in turn; false while one is waiting (R81).
 fn ask_repeat_modes(
     sink: &mut EngineSink<'_>,
@@ -2697,37 +2735,10 @@ fn ask_repeat_modes(
             }
             continue;
         }
-        run.awaiting = Some(Awaiting::EchoMode);
-        let opened = open_prompt(
-            sink,
-            OpenPromptArgs {
-                player: run.player,
-                kind: decl.kind,
-                aim: None,
-                prompt: ask_label(step, &name, Some(&*run)),
-                options: allowed
-                    .iter()
-                    .map(|option| PromptOption {
-                        key: format!("mode:{option}"),
-                        label: option.clone(),
-                        selection: Selection::Mode {
-                            option: option.clone(),
-                        },
-                        cost: None,
-                        radiant: None,
-                    })
-                    .collect(),
-                min: None,
-                max: None,
-                budget: None,
-                owner: None,
-                resume: resume_for(run, step_index(step)),
-            },
-        );
-        if opened.is_some() {
+        let prompt = ask_label(step, &name, Some(&*run));
+        if ask_mode_options(sink, run, step, Awaiting::EchoMode, decl.kind, prompt, &allowed) {
             return false;
         }
-        run.awaiting = None;
     }
     true
 }
@@ -3228,7 +3239,7 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
     // R452, R453: a random cast's X is the caster's current mana, at least MIN_CHOSEN_X (R348); any
     // other cast's caster chooses it as the cast's first choice (`cast_x_chosen`).
     if random && chooses_x(sink.state, &card) && card.x.is_none() {
-        let x = MIN_CHOSEN_X.max(sink.state.players[player].mana.current);
+        let x = MIN_CHOSEN_X.max(sink.state.players[player].mana.current.min(MANA_CEILING));
         set_x(sink.state, &card.id, x);
         card.x = Some(x);
     }

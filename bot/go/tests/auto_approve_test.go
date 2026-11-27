@@ -141,8 +141,18 @@ func TestAutoApprove_DecisionsJoinTheWindowEachOnceAsItEnded(t *testing.T) {
 
 // ---------------------------------------------------------------------------- JudgeTests
 
+// waitingFor is the committed `suggestions` with a judge-approved suggestion waiting `hours` for a
+// person before it approves itself (the committed config waits none, #5104).
+func waitingFor(hours int) *pyjson.Object {
+	suggestions := testsupport.RawConfig().Obj("suggestions").Copy()
+	auto := suggestions.Obj("auto_approve").Copy()
+	auto.Set("wait_hours", hours)
+	suggestions.Set("auto_approve", auto)
+	return pyjson.New("suggestions", suggestions)
+}
+
 func TestAutoApprove_TheJudgeReadsTheWindowAndItsWordLandsOnTheIssue(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Overrides: waitingFor(24)})
 	h.gh.AddIssue(30, fakes.Issue{Title: "Patch: an old idea", Labels: []string{config.LabelSuggestion}})
 	flowAsk(h, 30, "reject\nWhy: nothing acts on it.", 61)
 	testsupport.IdleFor(h.ctx)
@@ -163,6 +173,42 @@ func TestAutoApprove_TheJudgeReadsTheWindowAndItsWordLandsOnTheIssue(t *testing.
 	assertIn(t, "at `priority:low` (at most 3 a day)", approve.Str("body"))
 	assertIn(t, "**Judge:** leaves it to a person: A design call.", person.Str("body"))
 	assertEqual(t, pendingAuto(h), []string{strconv.Itoa(approve.Int("number"))})
+}
+
+// #5104: with no wait, as committed, one the judge would approve is queued as it opens, and the
+// judge read the open issues and pull requests to find work already in flight.
+func TestAutoApprove_WithNoWaitTheJudgesApprovalQueuesItAsItOpens(t *testing.T) {
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll})
+	h.gh.AddIssue(31, fakes.Issue{Title: "Patch: a fix already in flight"})
+	testsupport.IdleFor(h.ctx)
+	r := autoSurvey(`<!-- judgements: [{"n": 1, "verdict": "approve", "why": "It fixes a rules bug, confirmed at a.rs:1."}, `+
+		`{"n": 2, "verdict": "person", "why": "A design call."}] -->`,
+		"Patch: the AI counts Lifesteal", "Patch: a puzzle mode")
+	h.night(r)
+	judge := r.Calls[1]
+	assertEqual(t, judge.Role, "judge")
+	assertIn(t, "## The open issues and pull requests", judge.Prompt)
+	assertIn(t, "Patch: a fix already in flight", judge.Prompt)
+	byTitle := map[string]*pyjson.Object{}
+	for _, thread := range h.gh.Threads.Values() {
+		byTitle[pyjson.Str(thread.Get("title"))] = thread
+	}
+	approve, person := byTitle["Patch: the AI counts Lifesteal"], byTitle["Patch: a puzzle mode"]
+	assertIn(t, "**Judge:** would approve it: It fixes a rules bug, confirmed at a.rs:1, so it is approved by "+
+		"itself as it opens, at `priority:low` (at most 3 a day", approve.Str("body"))
+	labels := h.gh.LabelNames(approve.Int("number"))
+	assertIn(t, config.LabelBuild, labels)
+	assertIn(t, config.LabelPriorityLow, labels)
+	assertNotIn(t, config.LabelSuggestion, labels)
+	replies := flowBotReplies(h, approve.Int("number"))
+	assertTrue(t, strings.HasPrefix(replies[len(replies)-1],
+		"Approved by itself: the judge, which argues against every suggestion before it approves one, "+
+			"would approve it (It fixes a rules bug, confirmed at a.rs:1)."), replies)
+	decided := declined.DecidedEntries(h.ctx.Store.Load())
+	assertEqual(t, decided[len(decided)-1].Get("verdict"), declined.VerdictAutoApproved)
+	assertEqual(t, len(pendingAuto(h)), 0)
+	assertIn(t, config.LabelSuggestion, h.gh.LabelNames(person.Int("number")))
+	assertEqual(t, person.Get("state"), "open")
 }
 
 func TestAutoApprove_AJudgeThatFailsLosesNoSuggestion(t *testing.T) {
@@ -201,7 +247,7 @@ func TestAutoApprove_ThePromptAsksForEveryPlaceholder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"repo", "count", "decided", "suggestions"} {
+	for _, name := range []string{"repo", "count", "decided", "existing", "suggestions"} {
 		assertTrue(t, names[name], name)
 	}
 	survey, err := prompts.Load("suggest", config.PromptsDir)
@@ -219,12 +265,13 @@ func TestAutoApprove_TheConfigDefaultsToOff(t *testing.T) {
 	committed := config.Parse(testsupport.RawConfig(), config.RepoRoot, map[string]string{}, nil)
 	assertTrue(t, committed.AutoApprove.Enabled)
 	assertEqual(t, committed.AutoApprove.Window, 100)
+	assertEqual(t, committed.AutoApprove.WaitHours, 0) // #5104: approved as it opens
 }
 
 // ---------------------------------------------------------------------------- SweepTests
 
 func TestAutoApprove_ItGoesAheadAfterTheWaitAtLowPriority(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Overrides: waitingFor(24)})
 	awaiting(h, 40, 25*time.Hour, config.LabelPriorityMedium)
 	notes := plan.AutoApprove(h.ctx)
 	assertEqual(t, notes, []string{"#40 approved itself"})
@@ -242,7 +289,7 @@ func TestAutoApprove_ItGoesAheadAfterTheWaitAtLowPriority(t *testing.T) {
 }
 
 func TestAutoApprove_NothingBeforeTheWait(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Overrides: waitingFor(24)})
 	awaiting(h, 40, 23*time.Hour)
 	assertEqual(t, len(plan.AutoApprove(h.ctx)), 0)
 	assertIn(t, config.LabelSuggestion, h.gh.LabelNames(40))

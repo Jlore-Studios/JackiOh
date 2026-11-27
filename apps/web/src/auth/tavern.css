@@ -17,27 +17,27 @@
 .tavern,
 .screen-nav,
 .menu-shell {
-  --tavern-brass: #c9953f;
-  --tavern-gold: #f3c969;
-  --tavern-gold-pale: #fbe7b0;
+  --tavern-brass: var(--pal-brass-500);
+  --tavern-gold: var(--pal-brass-300);
+  --tavern-gold-pale: var(--pal-brass-200);
 }
 
 .tavern {
-  --tavern-night: #120b07;
-  --tavern-wood-deep: #2b170c;
-  --tavern-wood: #5a341b;
+  --tavern-night: var(--pal-wood-900);
+  --tavern-wood-deep: var(--pal-wood-800);
+  --tavern-wood: var(--pal-wood-700);
   --tavern-wood-light: #8a5a33;
   --tavern-ember: #ff7a2f;
-  --tavern-flame: #ffb347;
-  --tavern-parchment: #efe0bf;
-  --tavern-ink: #24160c;
-  --tavern-teal: #3fb6a8;
+  --tavern-flame: var(--pal-gold-400);
+  --tavern-parchment: var(--pal-parchment);
+  --tavern-ink: var(--pal-wood-800);
+  --tavern-teal: var(--pal-verdigris-400);
 
   /* Derived: a problem, a dimmed line of prose, the sunken well a field sits in. */
-  --tavern-danger: #e8664f;
+  --tavern-danger: var(--pal-lacquer-400);
   --tavern-danger-text: #ffab96;
   --tavern-text-dim: color-mix(in srgb, var(--tavern-parchment) 72%, transparent);
-  --tavern-well: #0e0905;
+  --tavern-well: var(--pal-wood-950);
 
   --tavern-serif: var(--font-display);
   --tavern-gutter: 16px;
@@ -64,8 +64,8 @@
   color: var(--tavern-parchment);
   background:
     radial-gradient(ellipse 70% 40% at 50% 100%, rgba(255, 150, 60, 0.2), transparent 70%),
-    radial-gradient(ellipse 90% 55% at 50% 0%, rgba(90, 52, 27, 0.38), transparent 70%),
-    linear-gradient(180deg, #1c110a 0%, var(--tavern-night) 55%, #0c0704 100%);
+    radial-gradient(ellipse 90% 55% at 50% 0%, color-mix(in srgb, var(--pal-wood-700) 38%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--pal-wood-900) 0%, var(--tavern-night) 55%, var(--pal-wood-950) 100%);
 }
 
 /* The table the board rests on: planks laid away from the viewer, fading into the dark. */
@@ -81,12 +81,12 @@
   transform: perspective(700px) rotateX(58deg);
   transform-origin: 50% 100%;
   background:
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0 3px, transparent 3px 12.5%),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 17px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-black) 50%, transparent) 0 3px, transparent 3px 12.5%),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-black) 14%, transparent) 0 1px, transparent 1px 17px),
     linear-gradient(180deg, var(--tavern-wood-deep) 0%, var(--tavern-wood) 60%, var(--tavern-wood-light) 100%);
   opacity: 0.55;
-  -webkit-mask-image: linear-gradient(0deg, #000 25%, transparent 100%);
-  mask-image: linear-gradient(0deg, #000 25%, transparent 100%);
+  -webkit-mask-image: linear-gradient(0deg, var(--pal-black) 25%, transparent 100%);
+  mask-image: linear-gradient(0deg, var(--pal-black) 25%, transparent 100%);
 }
 
 .tavern.app-shell > * {
@@ -134,15 +134,15 @@
   padding: 28px 26px 30px;
   gap: 14px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background:
-    radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.1), transparent 70%),
-    linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
+    radial-gradient(ellipse 90% 40% at 50% 0%, color-mix(in srgb, var(--pal-brass-300) 10%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-800) 96%, transparent), color-mix(in srgb, var(--pal-wood-900) 97%, transparent));
   box-shadow:
-    inset 0 0 0 3px rgba(18, 11, 7, 0.9),
-    inset 0 0 0 4px rgba(201, 149, 63, 0.4),
-    inset 0 1px 0 4px rgba(251, 231, 176, 0.06),
-    0 24px 60px rgba(0, 0, 0, 0.6),
+    inset 0 0 0 3px color-mix(in srgb, var(--pal-wood-900) 90%, transparent),
+    inset 0 0 0 4px color-mix(in srgb, var(--pal-brass-500) 40%, transparent),
+    inset 0 1px 0 4px color-mix(in srgb, var(--pal-brass-200) 6%, transparent),
+    0 24px 60px color-mix(in srgb, var(--pal-black) 60%, transparent),
     0 0 90px rgba(255, 150, 60, 0.08);
 }
 
@@ -151,8 +151,8 @@
   position: absolute;
   inset: 9px;
   pointer-events: none;
-  border-radius: 12px;
-  --stud: radial-gradient(circle at 42% 38%, #fff3c4 0 1px, #e3b35a 2px, #8a5a1f 4px, #2a1709 4.6px, transparent 5.2px);
+  border-radius: var(--radius-md);
+  --stud: radial-gradient(circle at 42% 38%, var(--pal-brass-200) 0 1px, #e3b35a 2px, #8a5a1f 4px, var(--pal-wood-800) 4.6px, transparent 5.2px);
   background:
     var(--stud) 0 0 / 11px 11px no-repeat,
     var(--stud) 100% 0 / 11px 11px no-repeat,
@@ -171,9 +171,9 @@
 /* The account this browser already holds, set apart from the form it would be replaced by. */
 .tavern.app-shell .auth-signed-in {
   padding: 11px 14px;
-  border: 1px solid rgba(201, 149, 63, 0.3);
-  border-radius: 10px;
-  background: rgba(239, 224, 191, 0.05);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-parchment) 5%, transparent);
 }
 
 /* The wordmark, as the landing's: gold leaf with a dark engraved edge and hearth glow. */
@@ -182,7 +182,7 @@
 }
 
 .tavern.app-shell .brand__word {
-  font-family: var(--tavern-serif);
+  font-family: var(--font-display);
   font-size: 44px;
   font-weight: 700;
   line-height: 1.05;
@@ -191,11 +191,11 @@
   background: linear-gradient(
     180deg,
     var(--tavern-gold-pale) 0%,
-    #ffe39a 22%,
+    var(--pal-brass-200) 22%,
     var(--tavern-gold) 44%,
     var(--tavern-brass) 64%,
-    #9b6423 84%,
-    #d9a44c 100%
+    var(--pal-brass-600) 84%,
+    var(--pal-brass-500) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -210,9 +210,9 @@
 /* An even brass hairline all round, as `.auth-signed-in` has, not a stripe down the left. */
 .tavern.app-shell .notice {
   max-width: none;
-  border: 1px solid rgba(201, 149, 63, 0.45);
-  border-radius: 10px;
-  background: linear-gradient(90deg, rgba(201, 149, 63, 0.12), rgba(201, 149, 63, 0.04));
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pal-brass-500) 12%, transparent), color-mix(in srgb, var(--pal-brass-500) 4%, transparent));
   color: color-mix(in srgb, var(--tavern-parchment) 90%, transparent);
   line-height: 1.45;
 }
@@ -230,7 +230,7 @@
 .tavern.app-shell .notice[role="alert"],
 .tavern.app-shell [role="alert"] > .notice {
   border-color: var(--tavern-danger);
-  background: linear-gradient(90deg, rgba(232, 102, 79, 0.16), rgba(232, 102, 79, 0.05));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pal-lacquer-400) 16%, transparent), color-mix(in srgb, var(--pal-lacquer-400) 5%, transparent));
   color: var(--tavern-parchment);
 }
 
@@ -252,7 +252,7 @@
 .tavern.app-shell .form-card label {
   margin-top: 8px;
   color: color-mix(in srgb, var(--tavern-parchment) 80%, transparent);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 600;
   letter-spacing: 0.03em;
 }
@@ -260,12 +260,12 @@
 .tavern.app-shell .form-card input:not(.code-field__input) {
   min-height: 46px;
   padding: 10px 14px;
-  border: 1px solid rgba(201, 149, 63, 0.5);
-  border-radius: 10px;
-  background: linear-gradient(180deg, #0b0704, var(--tavern-well));
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 50%, transparent);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--pal-wood-950), var(--tavern-well));
   color: var(--tavern-parchment);
   caret-color: var(--tavern-gold);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(251, 231, 176, 0.05);
+  box-shadow: inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent), 0 1px 0 color-mix(in srgb, var(--pal-brass-200) 5%, transparent);
   transition: border-color 140ms, box-shadow 140ms;
 }
 
@@ -274,7 +274,7 @@
 }
 
 .tavern.app-shell .form-card input:not(.code-field__input):hover {
-  border-color: rgba(243, 201, 105, 0.7);
+  border-color: color-mix(in srgb, var(--pal-brass-300) 70%, transparent);
 }
 
 .tavern.app-shell .form-card input:not(.code-field__input):focus,
@@ -282,9 +282,9 @@
   outline: none;
   border-color: var(--tavern-gold);
   box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.65),
-    0 0 0 3px rgba(243, 201, 105, 0.22),
-    0 0 16px rgba(243, 201, 105, 0.18);
+    inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--pal-brass-300) 22%, transparent),
+    0 0 16px color-mix(in srgb, var(--pal-brass-300) 18%, transparent);
 }
 
 .tavern.app-shell .form-card input:not(.code-field__input)[aria-invalid="true"] {
@@ -294,8 +294,8 @@
 .tavern.app-shell .form-card input:not(.code-field__input)[aria-invalid="true"]:focus {
   border-color: var(--tavern-danger);
   box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.65),
-    0 0 0 3px rgba(232, 102, 79, 0.25);
+    inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--pal-lacquer-400) 25%, transparent);
 }
 
 .tavern.app-shell .auth-field-error {
@@ -310,7 +310,7 @@
    way, so the field does not jump when it is pressed. */
 .tavern.app-shell .affix-button {
   min-width: 68px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-weight: 600;
 }
 
@@ -327,9 +327,9 @@
   min-height: 50px;
   padding: 10px 20px;
   border-width: 2px;
-  border-radius: 12px;
-  font-family: var(--tavern-serif);
-  font-size: 19px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--type-2xl);
   font-weight: 700;
   letter-spacing: 0.02em;
   transition: transform 90ms ease-out, box-shadow 140ms ease-out, filter 140ms ease-out;
@@ -355,9 +355,9 @@
 .tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):where(:not(.dialog__close, .together-group__toggle)) {
   min-height: 44px;
   padding: 8px 18px;
-  border-radius: 10px;
-  font-family: var(--tavern-serif);
-  font-size: 16px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--type-lg);
   font-weight: 700;
 }
 
@@ -368,9 +368,9 @@
   justify-content: center;
   min-height: 44px;
   padding: 8px 18px;
-  border-radius: 10px;
-  font-family: var(--tavern-serif);
-  font-size: 16px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--type-lg);
   font-weight: 700;
 }
 
@@ -423,7 +423,7 @@
 /* An anchor in prose ("play vs AI"). */
 .tavern.app-shell a:not(.link-button):not(.button-primary):not(.button-secondary):where(:not(.button-danger)) {
   color: var(--tavern-gold);
-  border-bottom: 1px solid rgba(201, 149, 63, 0.55);
+  border-bottom: 1px solid color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
 }
 
 .tavern.app-shell a:not(.link-button):not(.button-primary):not(.button-secondary):where(:not(.button-danger)):hover {
@@ -440,7 +440,7 @@
 .tavern.app-shell .panel--auth > .auth-links,
 .tavern.app-shell .panel--auth > .auth-board__body > .auth-links {
   padding-top: 14px;
-  border-top: 1px solid rgba(201, 149, 63, 0.22);
+  border-top: 1px solid color-mix(in srgb, var(--pal-brass-500) 22%, transparent);
 }
 
 /* ---- the shell's own panels (main.tsx): the gate's waits and refusals, the 404 --------------- */
@@ -514,12 +514,12 @@
 .tavern.app-shell .row .button-primary {
   min-height: 44px;
   padding: 8px 18px;
-  font-size: 16px;
+  font-size: var(--type-lg);
 }
 
 .tavern.app-shell .notice code {
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--tavern-well);
   color: var(--tavern-gold-pale);
 }
@@ -536,8 +536,8 @@
   flex: 0 0 auto;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
-  border: 2px solid rgba(201, 149, 63, 0.3);
+  border-radius: var(--radius-round);
+  border: 2px solid color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
   border-top-color: var(--tavern-gold);
   animation: tavern-spin 900ms linear infinite;
 }
@@ -556,21 +556,19 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px 14px;
-  border: 1px solid rgba(201, 149, 63, 0.3);
-  border-radius: 10px;
-  background: rgba(239, 224, 191, 0.05);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-parchment) 5%, transparent);
 }
 
 .tavern.app-shell .account-label {
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--type-md);
 }
 
 .tavern.app-shell .account-email {
   color: var(--tavern-gold-pale);
-  font-family: var(--tavern-serif);
-  font-size: 19px;
+  font-family: var(--font-display);
+  font-size: var(--type-2xl);
   overflow-wrap: anywhere;
   word-break: normal;
 }
@@ -580,28 +578,28 @@
   margin-top: 4px;
   padding: 3px 10px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 999px;
-  background: rgba(201, 149, 63, 0.14);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--pal-brass-500) 14%, transparent);
   color: var(--tavern-gold-pale);
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 600;
 }
 
 .tavern.app-shell .account-status[data-status="active"] {
   border-color: var(--tavern-teal);
-  background: rgba(63, 182, 168, 0.14);
+  background: color-mix(in srgb, var(--pal-verdigris-400) 14%, transparent);
 }
 
 .tavern.app-shell .account-status[data-status="banned"] {
   border-color: var(--tavern-danger);
-  background: rgba(232, 102, 79, 0.14);
+  background: color-mix(in srgb, var(--pal-lacquer-400) 14%, transparent);
   color: var(--tavern-danger-text);
 }
 
 .tavern.app-shell .account-heading {
   margin: 4px 0 0;
-  font-family: var(--tavern-serif);
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: var(--type-xl);
   color: var(--tavern-gold-pale);
 }
 
@@ -614,13 +612,13 @@
 
 /* The record: the stat tiles set in the board's wells. */
 .tavern.app-shell .stat {
-  border-color: rgba(201, 149, 63, 0.3);
+  border-color: color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
   background: var(--tavern-well);
 }
 
 .tavern.app-shell .stat-value {
   color: var(--tavern-gold-pale);
-  font-family: var(--tavern-serif);
+  font-family: var(--font-display);
 }
 
 .tavern.app-shell .stat-label {
@@ -647,7 +645,7 @@
   flex-direction: column;
   gap: 10px;
   padding-top: 14px;
-  border-top: 1px solid rgba(201, 149, 63, 0.22);
+  border-top: 1px solid color-mix(in srgb, var(--pal-brass-500) 22%, transparent);
 }
 
 /* ---- wider screens ------------------------------------------------------------------------- */
@@ -757,7 +755,7 @@
   /* A brass seam between the two parts. */
   .tavern.app-shell .panel--split > .auth-board__body {
     padding-left: 24px;
-    border-left: 1px solid rgba(201, 149, 63, 0.25);
+    border-left: 1px solid color-mix(in srgb, var(--pal-brass-500) 25%, transparent);
   }
 
   .tavern.app-shell .panel--split > .auth-board__head {

@@ -48,7 +48,7 @@ hands back on every call; a run's `RunState` crosses the same way, as plain JSON
 | `run_seed(source)`, `run_daily_seed(date, n)` | a seed of capital letters, or the daily run's seed |
 | `assault_day_seed(date)` | `"2026-11-23"` -> `"assault-2026-11-23"`, or refused |
 | `assault_catalog_content(catalog)`, `assault_placeholder_content(catalog)` | the set's cards by tag + assault.json, or shipped stand-ins until the release |
-| `assault_content()` | `AssaultContent`: `assault_placeholder_content` over the compiled-in catalog until the release |
+| `assault_content()` | `AssaultContent`: `assault_catalog_content` over the compiled-in catalog since the release (R4597000); `assault_content_at` answers it for a carried version too |
 | `assault_content_at(version)` | R3496000: `AssaultContent` for a catalog version: the build's own, a carried version's, or `null` when this build carries it no longer |
 | `assault_day(date, content)` | `AssaultDay`: the day's deal (20 levels and their escalations), or refused |
 | `assault_create(setup, record, day)` | `{ state }` for an attempt started, `{ error }` for a setup the attempt refuses |

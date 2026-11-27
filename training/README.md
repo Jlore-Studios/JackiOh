@@ -88,10 +88,11 @@ src/practice/claim.test.ts`, after `sh scripts/build-wasm.sh`) and commits it wi
 ## The gather lane
 
 `.github/workflows/gather.yml` plays without a pause since #3740
-(it played 5,000 games of each new patch or set, once, on the PC's gather half, before): two of
-GitHub's runners each play `GATHER_HOURS` (5) hours of the newest version on `main`, `GATHER_FILE_GAMES`
-(400, about an hour) at a time, and file each batch the same way as it finishes, so the card statistics
-take fresh games of the version that is live every hour. As a run ends it starts the next on `main` as
+(it played 5,000 games of each new patch or set, once, on the PC's gather half, before): five of
+GitHub's runners (two until 2026-11-26) each play `GATHER_HOURS` (5) hours of the newest version on
+`main` in one `stats --out-every` stopped at the deadline, which writes each `GATHER_FILE_GAMES` (50)
+games to a file of their own as soon as all of them have finished, and file each file the same way as
+it appears, so the card statistics take fresh games of the version that is live every few minutes. As a run ends it starts the next on `main` as
 it is then, so a version shipped meanwhile is played from the next run on, within five hours, and a
 schedule every six hours starts the lane again should that chain stop. It runs only while the
 repository variable `GATHER_ON_PATCH` is `true`: each version's development totals take about 3 MB of
@@ -103,8 +104,8 @@ the number before), so its 95% interval is about ±5 points. `cargo jackioh stat
 this build's deal pool, and the number grows with the catalog: 29000 at 633 cards when it landed.
 `--explain` shows the working, `--sigma` and `--rho` set its two guesses, and
 `crates/tools/README.md` has the formula. The lane playing without a pause reaches it for a version
-that stays the newest about a day and a half (two runners at about 400 games an hour). A change to `gather.yml` is a person's, since the bots never edit `.github/`;
-so is growing `GATHER_STRIDE` (100,000), which a run's games pass only past about 50,000 a part.
+that stays the newest about 12 hours (five runners at about 500 games an hour, #5103). A change to `gather.yml` is a person's, since the bots never edit `.github/`;
+so is growing `GATHER_STRIDE` (100,000), which a run's games pass only past 20,000 a part.
 
 The games are `stats --series gather` (R378): the AI on `main` against itself on R258's All Random
 deals at the browser's budget, each finished game a record with `source: "dev"`, mode `random`, both
@@ -125,7 +126,7 @@ repository variable `GATHER_ON_PATCH` to `true`.
 
 ### Reading the figures
 
-Each run keeps its batches' record files as artifacts, `gather-<run>-<part>`
+Each run keeps its record files as artifacts, `gather-<run>-<part>`
 (`gh run download <run> --pattern 'gather-*'`):
 
 ```sh
@@ -156,7 +157,7 @@ decision rests on them only with that in view.
 The live games' records are what the gather lane's figures sit beside, and they are filed already:
 
 - Every finished live match files a record, and no switch turns that off: `api::results::record_result`
-  calls `api::game_records::record_live_game` once the result is in, and `LADDER_BOTS` only decides
+  calls `api::game_records::record_finished_game` once the result is in, and `LADDER_BOTS` only decides
   who is seated, not whether the game is filed. The ones that file none are a match no series, room or
   queue ticket made, a log that never reaches a result and one already filed; a failure to file is
   logged as `game.record.failed` and the result stands.
@@ -185,7 +186,7 @@ change to the AI does not wait for it.
 | What | Where |
 |---|---|
 | Every game the arena plays: one `GameRecord` (R376) per line, `source: "dev"`, `mode: "random"` | `$JACKIOH_TRAINING_OUT/<date>.jsonl`; without it, stdout |
-| The gather lane's records, a file a batch | the run's artifacts, `gather-<run>-<part>`, and both projects' card statistics as totals (`stats-import --totals-only`, R1976000) |
+| The gather lane's records, a file each 50 games | the run's artifacts, `gather-<run>-<part>`, and both projects' card statistics as totals (`stats-import --totals-only`, R1976000) |
 | A retired lane's promotions | `training/history/<lane>.jsonl` and `crates/ai/generation.json` |
 
 ## Reading the history

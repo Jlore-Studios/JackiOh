@@ -2,7 +2,7 @@
 //! scope, never twice the same, kept in every zone and through leaving the field (R78's reset leaves
 //! them alone), carried by a copy and a Fuse, gone with a Transform, and shown where the card is read.
 
-use jackioh_engine::effects::{enchant, shuffle_copies_of_self, summon_copy, transform};
+use jackioh_engine::effects::{enchant, shuffle_into, summon_copy, transform};
 use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
@@ -111,8 +111,11 @@ mod b5_e39_enchant_r443 {
         ));
         assert!(!add_enchantment(card, &RETURN));
         assert_eq!(
-            enchantments_of_kind(&live(&state, &deck_card.id), EnchantmentKind::ReturnAfterResolve).to_vec(),
-            vec![RETURN, Enchantment::ReturnAfterResolve { floor: 1 }]
+            enchantments_of(&live(&state, &deck_card.id))
+                .iter()
+                .filter(|entry| enchantment_kind(entry) == EnchantmentKind::ReturnAfterResolve)
+                .collect::<Vec<_>>(),
+            vec![&RETURN, &Enchantment::ReturnAfterResolve { floor: 1 }]
         );
     }
 
@@ -217,7 +220,9 @@ mod b5_e39_enchant_r443 {
         let spell_now = live(&state, &spell.id).clone();
         run(
             &mut state,
-            shuffle_copies_of_self(json_as(json!({ "count": 1 }))),
+            shuffle_into(json_as(
+                json!({ "defId": echo_bolt.id, "count": 1, "copyOf": spell.id }),
+            )),
             Some(&spell_now),
             HookOptions::default(),
         );

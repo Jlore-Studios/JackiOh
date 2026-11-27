@@ -311,6 +311,23 @@ type ExtractProps = {
   send: SendRunAction;
 };
 
+/** Both extract screens' way to take nothing out of the run. */
+function ExtractNothing({ send }: { send: SendRunAction }): ReactElement {
+  return (
+    <div className="dungeon-run-actions">
+      <button
+        type="button"
+        data-testid={dungeonMapTestid.extractNone}
+        onClick={() => {
+          send({ type: "extract", index: null });
+        }}
+      >
+        {t("Extract nothing")}
+      </button>
+    </div>
+  );
+}
+
 /** After a mini-boss: one of the deck's cards, or none. */
 export function ExtractCardScreen({ run, content, send }: ExtractProps): ReactElement {
   return (
@@ -326,17 +343,7 @@ export function ExtractCardScreen({ run, content, send }: ExtractProps): ReactEl
           send({ type: "extract", index });
         }}
       />
-      <div className="dungeon-run-actions">
-        <button
-          type="button"
-          data-testid={dungeonMapTestid.extractNone}
-          onClick={() => {
-            send({ type: "extract", index: null });
-          }}
-        >
-          {t("Extract nothing")}
-        </button>
-      </div>
+      <ExtractNothing send={send} />
     </section>
   );
 }
@@ -366,17 +373,7 @@ export function ExtractArtifactScreen({ run, content, send }: ExtractProps): Rea
           </li>
         ))}
       </ul>
-      <div className="dungeon-run-actions">
-        <button
-          type="button"
-          data-testid={dungeonMapTestid.extractNone}
-          onClick={() => {
-            send({ type: "extract", index: null });
-          }}
-        >
-          {t("Extract nothing")}
-        </button>
-      </div>
+      <ExtractNothing send={send} />
     </section>
   );
 }

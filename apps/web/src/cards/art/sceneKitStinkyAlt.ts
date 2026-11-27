@@ -3,7 +3,7 @@
 // scene of the kit and a brief's subject is no stand-in: a swarm of nanobots, a hull plate, a cartridge, an overdrive
 // engine, a warp ring, a rail gun, a great cannon, a missile pod, a capacitor cell, a flank pod, a launcher tube, a
 // hundred-sided die, a pineapple, an escalator and a seashell. sceneKit.ts spreads them into `SCENE_KIT` after every
-// other module. Every colour is a palette.css name, none in Radiant's gold window; a glow is a stack of translucent
+// other module. Every colour is a SCENE_PALETTE name, none in Radiant's gold window; a glow is a stack of translucent
 // shapes, never a gradient; shapes are filled even-odd, so a hole is a second sub-path and no two sub-paths of one
 // shape overlap otherwise.
 

@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MATCH_FOUND_NAV_DELAY_MS, SERIES_POLL_SECONDS } from "@jackioh/server-config";
 import type { MeResponse } from "./api.ts";
 import { MATCH_FOUND_STATUS, readQueued, rememberQueued, useQueueFollow } from "./liveGame.ts";
-import { guardLeaving, leaveFirst, navigate, paths, usePathname } from "./navigate.ts";
+import { guardLeaving, leaveFirst, navigate, paths, useLeaveGuard, usePathname } from "./navigate.ts";
 import { at, signIn } from "../test/stubServer.ts";
 
 function me(currentMatchId: string | null): MeResponse {
@@ -113,6 +113,50 @@ describe("R1754000 a page that holds work a move would lose is asked before it i
     for (const release of releases.splice(0)) release();
     expect(leaveFirst(ran)).toBe(true);
     expect(ran).toHaveBeenCalledTimes(3);
+  });
+
+  it("R1754000 useLeaveGuard holds a move while its screen has work at stake, and lets go once it has none", () => {
+    at(paths.collection);
+    const { result, rerender, unmount } = renderHook(({ atStake }: { atStake: boolean }) => useLeaveGuard(atStake), {
+      initialProps: { atStake: true },
+    });
+    expect(result.current[0]).toBeNull();
+
+    // At stake: the move is held for the screen to ask about, and the page stays.
+    act(() => {
+      expect(navigate("/decks")).toBe(false);
+    });
+    expect(window.location.pathname).toBe(paths.collection);
+    expect(result.current[0]).not.toBeNull();
+
+    // Staying drops the held move; the guard still holds the next one, and letting it go makes it.
+    act(() => {
+      result.current[1](null);
+    });
+    expect(result.current[0]).toBeNull();
+    act(() => {
+      navigate("/decks");
+    });
+    act(() => {
+      result.current[0]?.leave();
+    });
+    expect(window.location.pathname).toBe("/decks");
+
+    // Nothing at stake: the guard is released and the held move dropped, so a move goes at once.
+    act(() => {
+      navigate(paths.play);
+    });
+    expect(result.current[0]).not.toBeNull();
+    rerender({ atStake: false });
+    expect(result.current[0]).toBeNull();
+    expect(navigate(paths.play)).toBe(true);
+    expect(window.location.pathname).toBe(paths.play);
+
+    // At stake again, then unmounted: the guard goes with the screen.
+    rerender({ atStake: true });
+    unmount();
+    expect(navigate(paths.collection)).toBe(true);
+    expect(window.location.pathname).toBe(paths.collection);
   });
 
   it("R1754000 the browser's Back off a guarded page puts its address back, and the held move goes back unheld", async () => {

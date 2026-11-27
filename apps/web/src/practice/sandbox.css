@@ -5,7 +5,7 @@
 .sandbox-panel {
   position: fixed;
   z-index: 40;
-  color: var(--text, #efe0bf);
+  color: var(--text, var(--pal-parchment));
   font-size: 14px;
 }
 
@@ -14,8 +14,8 @@
   bottom: 16px;
   min-height: 40px;
   padding: 8px 14px;
-  border: 1px solid var(--line, #4a4335);
-  border-radius: 8px;
+  border: 1px solid var(--line, var(--pal-brass-800));
+  border-radius: var(--radius-sm);
   background: var(--bg-raised, #2a241c);
   cursor: var(--cursor-glove-point, pointer);
   font: inherit;
@@ -33,10 +33,10 @@
   padding: 12px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border: 1px solid var(--line, #4a4335);
-  border-radius: 10px;
+  border: 1px solid var(--line, var(--pal-brass-800));
+  border-radius: var(--radius-md);
   background: var(--bg-raised, #2a241c);
-  box-shadow: 0 8px 28px rgb(0 0 0 / 45%);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--pal-black) 45%, transparent);
 }
 
 .sandbox-panel__head {
@@ -56,13 +56,13 @@
   flex-direction: column;
   gap: 6px;
   padding-top: 10px;
-  border-top: 1px solid var(--line, #4a4335);
+  border-top: 1px solid var(--line, var(--pal-brass-800));
 }
 
 .sandbox-panel__heading {
   margin: 0;
   font-size: 13px;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim, var(--pal-slate-400));
   overflow-wrap: anywhere;
 }
 
@@ -80,7 +80,7 @@
 .sandbox-panel__close {
   min-height: 32px;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font: inherit;
 }
 
@@ -89,8 +89,8 @@
 .sandbox-panel__select,
 .sandbox-panel__number,
 .sandbox-panel__close {
-  border: 1px solid var(--line, #4a4335);
-  background: var(--bg-sunken, #1a1612);
+  border: 1px solid var(--line, var(--pal-brass-800));
+  background: var(--bg-sunken, var(--pal-wood-800));
   color: inherit;
 }
 
@@ -124,7 +124,7 @@
 
 .sandbox-panel__note {
   margin: 0;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim, var(--pal-slate-400));
 }
 
 .sandbox-panel__results {
@@ -141,13 +141,13 @@
   width: 100%;
   padding: 2px;
   border: 2px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: none;
   cursor: var(--cursor-glove-point, pointer);
 }
 
 .sandbox-panel__pick[aria-pressed="true"] {
-  border-color: var(--glow, #e8c46a);
+  border-color: var(--glow, var(--pal-brass-300));
 }
 
 @media (max-width: 600px) {
@@ -158,6 +158,6 @@
     left: 0;
     width: auto;
     max-height: 60vh;
-    border-radius: 10px 10px 0 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
 }

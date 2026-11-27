@@ -5,7 +5,7 @@
 // it), a cracked hand mirror, a heart-shaped bomb and a torn sack spilling booster packs. The boulder, the skull,
 // the melon, the dragon fruit and the sack stand on their anchor (it is their bottom centre); the disc, the die, the
 // bottle and the bomb centre on it; the mirror lies with its handle's end on it. sceneKit.ts spreads the table into
-// `SCENE_KIT`. Every colour is a palette.css name, none in Radiant's gold window; a glow is a stack of translucent
+// `SCENE_KIT`. Every colour is a SCENE_PALETTE name, none in Radiant's gold window; a glow is a stack of translucent
 // shapes, never a gradient; shapes are filled even-odd, so a hole is a second sub-path and no two sub-paths of one
 // shape overlap otherwise.
 

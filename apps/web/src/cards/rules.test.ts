@@ -143,6 +143,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Damage chains",
     "Sweep",
     "Summon onto an occupied zone",
+    // R5048000: Crush is a verb a card's text calls, no keyword ("destroying the Units there"), and the
+    // backrow summon stands Toxopid's Flexible Legs; neither is printed as a term.
+    "Crush",
+    "Summon into a backrow zone",
     "Summon Starships",
     "Launch a random Starship",
     "Exile a whole board",
@@ -430,7 +434,7 @@ describe("B10: tokenizeRules and termsIn", () => {
     }
   });
 
-  it("R4353000 R4353001 R4353002 R781003 Indestructible, Immutable, Evasive and Vanilla read the rules the SPEC rows give", () => {
+  it("R4353000 R4353001 R4353002 R781003 R5113000 Indestructible, Immutable, Evasive and Vanilla read the rules the SPEC rows give", () => {
     expect(termsOf("Indestructible, Immutable")).toEqual([
       { text: "Indestructible", term: "Indestructible" },
       { text: "Immutable", term: "Immutable" },
@@ -445,7 +449,7 @@ describe("B10: tokenizeRules and termsIn", () => {
         "§6.1",
         "Can't be destroyed or damaged, can't be in Defense Position and never has Taunt, and a Unit with it is Immutable; can be exiled or tributed",
       ],
-      ["§6.1", "Text can't be changed or transformed"],
+      ["§6.1", "Text, stats and keywords can't be changed by other cards"],
       [
         "§6.1",
         "No attack may target it, and it can't be in Defense Position. While in play, Spells and Field Spells can't target it",

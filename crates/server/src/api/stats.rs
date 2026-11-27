@@ -36,6 +36,14 @@
 //! R4675001: `GET /api/stats/versions` is every play version's figures (R4675000), through the engine's
 //! `play_version_figures`, one table per `?pilot=` and `?mode=` cut from the same snapshot and cached as
 //! long. It sends figures only: a client reads a version's definition from its catalog at `last`.
+//! R5040000: `?scope=major` sends the live play versions alone, each cut to the newest major's line
+//! (`major_line_versions`) and read against those rows' own field, one table per scope too.
+//!
+//! R5174000 (amends R4965000): the snapshot the cards, the game figures, the drill-down and the win-rate
+//! snapshot read loads the card totals of the versions it keeps as filed alone (`Reach::Kept`), a read of
+//! those patches' rows. The play versions' table and the Hall of Fame read the older play versions folded
+//! too (`Reach::Folded`), the one read that goes over every version's card totals, made only when one of
+//! them is asked for.
 
 use std::cmp::Ordering;
 use std::hash::Hash;
@@ -44,23 +52,27 @@ use std::sync::{Arc, Mutex};
 use axum::body::Body;
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::Response;
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde_json::{Map, Value, json};
 use tokio::sync::OnceCell;
 
-use jackioh_cards::{deck_play_versions, patch_history};
+use jackioh_cards::{
+    change_totals_since, deck_play_versions, patch_balance_lines, patch_history, patch_ship_dates,
+};
+use jackioh_engine::wire::stats::PlayVersion;
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
-    GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures,
-    PlayVersionQuery, PlayVersionTable, SourceFilter, StatsFace, StatsField, StatsTotals, SwingReport,
-    SwingRows, SwingTally, Tally, TotalsKey, VariantKind, WindowQuery, WindowRequest, WindowSource,
-    WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats, card_family, card_stats_of,
-    card_window, collapse_gameless, created_face_adjusted, created_face_field, created_face_side,
-    face_adjusted, face_drills_of, face_side, face_stats_field, held_adjusted, not_drawn, patch_windows,
-    play_version_figures, radiant_gap, round_share, seen, sources_of, stats_field, swing_baseline,
-    swing_report, tier_in, variant_field, variant_figures, variant_rows, wilson_interval, win_rate,
-    windowed_card_stats, windowed_game_figures, windowed_swing_rows,
+    GameMode, GameSource, HallPair, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures,
+    PlayVersionFigures, PlayVersionQuery, PlayVersionTable, RolledKind, SourceFilter, StatsFace, StatsField,
+    StatsTotals, SwingReport, SwingRows, SwingTally, Tally, TotalsKey, VariantKind, WindowQuery,
+    WindowRequest, WindowSource, WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats,
+    card_family, card_stats_of, card_window, collapse_gameless, created_face_adjusted, created_face_field,
+    created_face_side, face_adjusted, face_drills_of, face_side, face_stats_field, hall_of_fame,
+    held_adjusted, major_line_versions, not_drawn, output_field, output_figures, patch_windows, play_rate,
+    play_version_figures, radiant_gap, rolled_field, rolled_figures, round_share, seen, sources_of,
+    stats_field, swing_baseline, swing_report, tier_in, variant_field, variant_figures, variant_rows,
+    wilson_interval, win_rate, windowed_card_stats, windowed_game_figures, windowed_swing_rows,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -76,11 +88,12 @@ use crate::api::http::{
 use crate::app::App;
 use crate::config::{
     CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CO_PLAYED_TOP, CARD_STATS_CURVE_TOP, CARD_STATS_KEPT_REPORTS,
-    CARD_STATS_MIN_SAMPLE, MS_PER_SECOND, PLAY_RATES_MIN_GAMES, PLAY_RATES_REFRESH_SECONDS,
-    PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT,
-    PUBLIC_STATS_MIN_LIVE_GAMES, PUBLIC_STATS_PATCHES_LINE_BEFORE, PUBLIC_STATS_PATCHES_NEWEST,
+    CARD_STATS_MIN_SAMPLE, HALL_OF_FAME_LIST_LEN, MS_PER_SECOND, PLAY_RATES_MIN_GAMES,
+    PLAY_RATES_REFRESH_SECONDS, PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS,
+    PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES, PUBLIC_STATS_PATCHES_LINE_BEFORE,
+    PUBLIC_STATS_PATCHES_NEWEST,
 };
-use crate::db::store::{PlayerStatsListOptions, StatsTotalsQuery};
+use crate::db::store::{CardFiling, CardRows, PlayerStatsListOptions, StatsTotalsQuery};
 use crate::env::js_number;
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -301,6 +314,24 @@ impl PublicStatsPilot {
             PublicStatsPilot::Merged => PilotFilter::Unified,
             PublicStatsPilot::Human => PilotFilter::Human,
             PublicStatsPilot::Ai => PilotFilter::Ai,
+        }
+    }
+}
+
+/// SPEC §11 R5040000: which play versions `GET /api/stats/versions` sends: every one over its whole span
+/// (`?scope=` missing or unrecognized), or the live ones cut to the newest major's line (`?scope=major`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum PublicStatsScope {
+    All,
+    Major,
+}
+
+impl PublicStatsScope {
+    /// `?scope=`: `major`, or every play version when missing or unrecognized.
+    pub fn parse(raw: Option<&str>) -> PublicStatsScope {
+        match raw.map(|value| value.trim().to_lowercase()).as_deref() {
+            Some("major") => PublicStatsScope::Major,
+            _ => PublicStatsScope::All,
         }
     }
 }
@@ -547,22 +578,12 @@ fn card_figures(
 /// games (played, or drawn and never played; the engine's `seen`), in every mode. A card only a rule
 /// makes (R3070000) reads its used Created games over the games a seat made one. 0 when it was never seen.
 fn play_rate_of(report: &WindowedReport, id: &str, stat: Option<&CardStats>, made: Option<&Tally>) -> f64 {
-    let (played, seen_games) = match made {
-        Some(made) => {
-            let used = report
-                .created
-                .iter()
-                .find(|row| row.stats.card == id)
-                .map_or(0, |row| row.stats.created_played.games);
-            (used, made.games)
-        }
-        None => stat.map_or((0, 0), |stat| (stat.played.games, seen(stat).games)),
-    };
-    if seen_games > 0 {
-        f64::from(played) / f64::from(seen_games)
-    } else {
-        0.0
-    }
+    let created = report
+        .created
+        .iter()
+        .find(|row| row.stats.card == id)
+        .map(|row| &row.stats);
+    play_rate(stat, created, made).unwrap_or(0.0)
 }
 
 /// R3022000: what `GET /api/stats/cards`' tiers are read against: the field (`stats_field`) of every card
@@ -740,6 +761,12 @@ pub struct CardDrillDownResponse {
     /// R4676000: the card's choices at the page's patch on the face asked, one group per kind it has; empty
     /// for a card that offers none.
     pub variants: Vec<PublicVariantGroup>,
+    /// R4679000: each card it made or offered at the page's patch on the face asked, best adjusted first;
+    /// empty for a card that made and offered none.
+    pub outputs: Vec<PublicOutputRow>,
+    /// R4707001: each outcome its plays rolled at the page's patch on the face asked, one group per kind it
+    /// has (its table's effects, its coins, its dice), best adjusted first; empty for a card that rolls none.
+    pub rolled: Vec<PublicRolledGroup>,
 }
 
 /// R4676000: one choice of a card, as Extended stats shows it.
@@ -768,6 +795,58 @@ pub struct PublicVariantRow {
 pub struct PublicVariantGroup {
     pub kind: VariantKind,
     pub rows: Vec<PublicVariantRow>,
+}
+
+/// R4679000: one card a card made or offered, as Extended stats' Outputs shows it.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicOutputRow {
+    /// The output's catalog id, which its drill-down opens.
+    pub key: String,
+    pub label: String,
+    pub cost: i32,
+    pub rarity: String,
+    pub games: i64,
+    /// Its games over every output's on the face: how often the card gives it.
+    pub share: f64,
+    pub adjusted_win_rate: Option<f64>,
+    pub adjusted_low: Option<f64>,
+    pub adjusted_high: Option<f64>,
+    pub tier: Option<CardTier>,
+    pub has_enough_games: bool,
+    /// A Discover-like card's: the seat-games the output was offered in; absent for a card that offers none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offered: Option<i64>,
+    /// Picked over offered; absent when it was never offered.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pick_rate: Option<f64>,
+}
+
+/// R4707001: one outcome a card rolled, as Extended stats' Outputs shows it.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicRolledRow {
+    /// `<table>:<outcome>`: the card whose table, coins or dice it is, and the outcome's key there.
+    pub key: String,
+    /// The outcome's words; a Recursion's edition's own entry is prefixed with that edition's name.
+    pub label: String,
+    /// How often its table expects it per roll, and how often it came up.
+    pub expected: f64,
+    pub share: f64,
+    pub games: i64,
+    pub adjusted_win_rate: Option<f64>,
+    pub adjusted_low: Option<f64>,
+    pub adjusted_high: Option<f64>,
+    pub tier: Option<CardTier>,
+    pub has_enough_games: bool,
+}
+
+/// R4707001: one kind of a card's rolled outcomes, its rows best adjusted first.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicRolledGroup {
+    pub kind: RolledKind,
+    pub rows: Vec<PublicRolledRow>,
 }
 
 /// R4676000: a card's baseline, the games a variant is read against, and its played games on `face`, a
@@ -846,6 +925,94 @@ fn card_variants(app: &App, report: &WindowedReport, id: &str, face: StatsFace) 
         group.rows.sort_by_key(|row| std::cmp::Reverse(row.games));
     }
     groups
+}
+
+/// R4679000: each card the card made or offered on `face` over the windowed report, read against its other
+/// outputs and the output field of every source of the report the catalog holds, whatever the page filters
+/// (`output_field`), in `output_figures`' order. A card the catalog lacks is left out, so every row's
+/// drill-down opens.
+fn card_outputs(app: &App, report: &WindowedReport, id: &str, face: StatsFace) -> Vec<PublicOutputRow> {
+    let Some(choices) = report.choices.get(id) else {
+        return Vec::new();
+    };
+    let floor = i32::try_from(CARD_STATS_MIN_SAMPLE).unwrap_or(i32::MAX);
+    let field = output_field(
+        report
+            .choices
+            .iter()
+            .filter(|(card, _)| app.catalog.defs.contains_key(*card))
+            .map(|(_, choices)| choices),
+        face,
+        floor,
+    );
+    output_figures(choices, face, &field)
+        .into_iter()
+        .filter_map(|row| {
+            let def = app.catalog.defs.get(&row.card)?;
+            Some(PublicOutputRow {
+                label: def.name.clone(),
+                cost: numeric_cost(def),
+                rarity: def.rarity.as_str().to_string(),
+                games: i64::from(row.games),
+                share: row.share,
+                adjusted_win_rate: row.adjusted.map(|(rate, _)| rate),
+                adjusted_low: row.adjusted.map(|(_, (low, _))| low),
+                adjusted_high: row.adjusted.map(|(_, (_, high))| high),
+                tier: row.tier,
+                has_enough_games: row.has_enough_games,
+                offered: row.offered.map(i64::from),
+                pick_rate: row.pick_rate,
+                key: row.card,
+            })
+        })
+        .collect()
+}
+
+/// R4707001: each outcome the card's plays rolled on `face` over the windowed report, read against its
+/// group's other outcomes and the rolled field of every card of the report the catalog holds, whatever the
+/// page filters (`rolled_field`), one group per kind in `RolledKind`'s order, each in `rolled_figures`'
+/// order. An outcome of another edition's table (a Recursion's cast, R28) names that edition first.
+fn card_rolled(app: &App, report: &WindowedReport, id: &str, face: StatsFace) -> Vec<PublicRolledGroup> {
+    let Some(choices) = report.choices.get(id) else {
+        return Vec::new();
+    };
+    let floor = i32::try_from(CARD_STATS_MIN_SAMPLE).unwrap_or(i32::MAX);
+    let field = rolled_field(
+        report
+            .choices
+            .iter()
+            .filter(|(card, _)| app.catalog.defs.contains_key(*card))
+            .map(|(_, choices)| choices),
+        face,
+        floor,
+    );
+    let rows = rolled_figures(choices, face, &field);
+    RolledKind::ALL
+        .iter()
+        .map(|kind| PublicRolledGroup {
+            kind: *kind,
+            rows: rows
+                .iter()
+                .filter(|row| row.kind == *kind)
+                .map(|row| PublicRolledRow {
+                    key: format!("{}:{}", row.table, row.key),
+                    label: match app.catalog.defs.get(&row.table) {
+                        Some(def) if row.table != id => format!("{}: {}", def.name, row.label),
+                        _ => row.label.clone(),
+                    },
+                    expected: row.expected,
+                    share: row.share,
+                    games: i64::from(row.games),
+                    adjusted_win_rate: row.adjusted.map(|(rate, _)| rate),
+                    adjusted_low: row.adjusted.map(|(_, (low, _))| low),
+                    adjusted_high: row.adjusted.map(|(_, (_, high))| high),
+                    tier: row.tier,
+                    has_enough_games: row.has_enough_games,
+                })
+                .collect(),
+        })
+        .filter(|group| !group.rows.is_empty())
+        .collect()
 }
 
 /// A `public, max-age=…` answer for a route that knows nothing about its caller.
@@ -996,8 +1163,13 @@ fn tally_of(tally: &Tally) -> (i64, i64) {
 }
 
 /// R1044000: one patch's totals (every patch's with `None`) over both sources and every mode, each
-/// card's turn and co-played counts only with `drills`.
-async fn totals_for(app: &App, patch: Option<&str>, drills: bool) -> Result<StatsTotals, ApiError> {
+/// card's turn and co-played counts only with `drills`, and (R4965000) the card totals `cards` keeps.
+async fn totals_for(
+    app: &App,
+    patch: Option<&str>,
+    drills: bool,
+    cards: CardRows,
+) -> Result<StatsTotals, ApiError> {
     let mut tx = app.db.begin(None).await?;
     let totals = tx
         .stats_totals_load(&StatsTotalsQuery {
@@ -1005,6 +1177,7 @@ async fn totals_for(app: &App, patch: Option<&str>, drills: bool) -> Result<Stat
             mode: None,
             patch: patch.map(str::to_string),
             drills,
+            cards,
         })
         .await?;
     tx.commit().await?;
@@ -1013,16 +1186,90 @@ async fn totals_for(app: &App, patch: Option<&str>, drills: bool) -> Result<Stat
 
 /// R3067000: every patch's totals as kept: one load when none was made in the last
 /// `CARD_STATS_CACHE_TTL_SECONDS`, once however many requests miss it together. A load that fails is
-/// kept for no one: the next request makes it again.
-async fn kept_snapshot(app: &App) -> Result<KeptTotals, ApiError> {
-    let (made_at, cell) = app.card_stats.totals_cell(now_ms());
-    let totals = cell
-        .get_or_try_init(|| async { totals_for(app, None, false).await.map(Arc::new) })
+/// kept for no one: the next request makes it again. R4965000: the records and game totals are read
+/// first, and the card totals then as `snapshot_filing` files them by those records. R5174000: only the
+/// versions kept as filed unless `reach` asks for the older play versions too, which only the play
+/// versions' table does, so the page's own read costs the patches it shows and not every version filed.
+async fn kept_snapshot(app: &App, reach: Reach) -> Result<KeptTotals, ApiError> {
+    let (made_at, cell, folds) = app.card_stats.totals_cell(now_ms(), reach);
+    let snapshot = cell
+        .get_or_try_init(|| async {
+            let history = patch_history();
+            let records = totals_for(app, None, false, CardRows::None).await?;
+            let mut filing = snapshot_filing(&history, &records, &deck_play_versions(), &app.catalog.version);
+            if !folds {
+                filing.folded.clear();
+            }
+            let totals = totals_for(app, None, false, CardRows::Filed(filing.clone())).await?;
+            Ok::<_, ApiError>(Arc::new(Snapshot::new(&history, totals, filing)))
+        })
         .await?;
     Ok(KeptTotals {
         made_at,
-        totals: Arc::clone(totals),
+        held: Arc::clone(snapshot),
     })
+}
+
+/// SPEC §11 R4965000: how the kept snapshot files the card totals (R3067000), by the records' patches
+/// (`patch_windows`, R1973002). It keeps as filed the totals of every version from the first of the
+/// window before the oldest patch anyone may read (`public_patch_count`, R4677000) through the newest:
+/// the windows every card's figures at a public patch reach (R1367000: a card's own window, or the one
+/// before it, never opens before the window every card shares before its own). Before them it keeps one
+/// total per deck card's play version (R4675000) and key, filed under the play version's first version,
+/// which the play versions' table sums as it summed each version's (R4675001), and drops the rest. The
+/// build's own version, when it is no shipped one, is kept too.
+pub fn snapshot_filing(
+    history: &[PatchStep],
+    records: &StatsTotals,
+    plays: &[PlayVersion],
+    current: &str,
+) -> CardFiling {
+    let windows = patch_windows(
+        history,
+        |version| records.games(version),
+        |version| records.live_games(version),
+    );
+    let reach = (public_patch_count(&windows) + 1).min(windows.len());
+    let versions: IndexSet<String> = history.iter().map(|step| step.version.clone()).collect();
+    let kept_from = windows[..reach]
+        .last()
+        .and_then(|window| window.versions.first())
+        .and_then(|first| versions.get_index_of(first))
+        .unwrap_or(0);
+    let mut folded: IndexMap<String, Vec<(usize, usize)>> = IndexMap::new();
+    for play in plays {
+        if let (Some(first), Some(last)) = (
+            versions.get_index_of(play.first()),
+            versions.get_index_of(play.last()),
+        ) && first < kept_from
+        {
+            folded.entry(play.card.clone()).or_default().push((first, last));
+        }
+    }
+    CardFiling {
+        kept_to: versions.len().saturating_sub(1),
+        also_kept: if versions.contains(current) {
+            Vec::new()
+        } else {
+            vec![current.to_string()]
+        },
+        versions,
+        kept_from,
+        folded,
+    }
+}
+
+/// SPEC §11 R4965000: the versions, as places in `versions`, whose card totals the figures at `at`
+/// read (R1367000): from the first of the window every card shares before `at`'s own through `at`.
+/// `None` for a version no window holds.
+pub fn reach_of(windows: &[PatchWindow], versions: &IndexSet<String>, at: &str) -> Option<(usize, usize)> {
+    let to = versions.get_index_of(at)?;
+    let own = windows
+        .iter()
+        .position(|window| window.versions.iter().any(|version| version == at))?;
+    let oldest = windows.get(own + 1).unwrap_or(&windows[own]);
+    let from = versions.get_index_of(oldest.versions.first()?)?;
+    Some((from, to))
 }
 
 /// R1451, amended by R807000: the seats of a record the public figures count. Development games
@@ -1159,12 +1406,92 @@ struct ReportKey {
 type KeptCell = Arc<OnceCell<Arc<PatchReport>>>;
 
 /// R3067000: every patch's totals, filled by the first request that needs them; the others wait on it.
-type KeptTotalsCell = Arc<OnceCell<Arc<StatsTotals>>>;
+type KeptTotalsCell = Arc<OnceCell<Arc<Snapshot>>>;
+
+/// SPEC §11 R5174000: which card totals a read of the kept snapshot needs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Reach {
+    /// The versions kept as filed (R4965000) alone: what the cards, the game figures, the drill-down and
+    /// the win-rate snapshot read.
+    Kept,
+    /// Those, and every deck card's play versions before them folded (R4965000): what the play versions'
+    /// table (R4675001), and the Hall of Fame cut from it (R4681001), read.
+    Folded,
+}
+
+/// R3067000, R5174000: the cells of every patch's totals made at one time.
+struct TotalsCells {
+    made_at: i64,
+    /// The cell every read takes first.
+    kept: KeptTotalsCell,
+    /// Whether `kept` folds the older play versions in: it does when the play versions' table asked first.
+    kept_folds: bool,
+    /// The cell that folds them in, made when the play versions' table asks after a read of `kept` that
+    /// does not.
+    folded: Option<KeptTotalsCell>,
+}
 
 /// R3067000: every patch's totals, and when their cell was first asked for.
 struct KeptTotals {
     made_at: i64,
-    totals: Arc<StatsTotals>,
+    held: Arc<Snapshot>,
+}
+
+/// R4965000: the kept snapshot: the totals, how their card totals were filed (`snapshot_filing`), and
+/// the windows every card shares over their records (`patch_windows`).
+struct Snapshot {
+    totals: StatsTotals,
+    filing: CardFiling,
+    windows: Vec<PatchWindow>,
+}
+
+impl Snapshot {
+    fn new(history: &[PatchStep], totals: StatsTotals, filing: CardFiling) -> Snapshot {
+        let windows = patch_windows(
+            history,
+            |version| totals.games(version),
+            |version| totals.live_games(version),
+        );
+        Snapshot {
+            totals,
+            filing,
+            windows,
+        }
+    }
+
+    /// R4965000: whether `version`'s card totals are held as filed.
+    fn holds_patch(&self, version: &str) -> bool {
+        self.filing.also_kept.iter().any(|kept| kept == version)
+            || self
+                .filing
+                .versions
+                .get_index_of(version)
+                .is_some_and(|at| (self.filing.kept_from..=self.filing.kept_to).contains(&at))
+    }
+
+    /// R4965000: whether the figures at `at` can be cut from the snapshot: every version they read
+    /// (`reach_of`) is held as filed. A version no window holds reads its own totals alone (R1367000).
+    fn holds(&self, at: &str) -> bool {
+        match reach_of(&self.windows, &self.filing.versions, at) {
+            Some((from, to)) => from >= self.filing.kept_from && to <= self.filing.kept_to,
+            None => self.holds_patch(at),
+        }
+    }
+
+    /// R4965000: the card totals the figures at `at` read, a patch past the snapshot's (a dev account's,
+    /// R4677000): every patch's records and game totals, and the card totals of `at`'s reach alone, so
+    /// the load holds no more than that reach.
+    fn reach_rows(&self, at: &str) -> CardRows {
+        let (kept_from, kept_to) =
+            reach_of(&self.windows, &self.filing.versions, at).unwrap_or((usize::MAX, usize::MAX));
+        CardRows::Filed(CardFiling {
+            versions: self.filing.versions.clone(),
+            kept_from,
+            kept_to,
+            also_kept: Vec::new(),
+            folded: IndexMap::new(),
+        })
+    }
 }
 
 /// R978000: the computed per-patch reports, each with when it was first asked for, the one kept
@@ -1178,11 +1505,15 @@ pub struct KeptReports {
     /// R2491000: the card drill-downs' patch histories, one per `?pilot=` and `?mode=` (R4673001: and
     /// `?face=`).
     histories: Kept<(PublicStatsPilot, PublicStatsMode, StatsFace), Arc<KeptHistory>>,
-    /// R4675001: the play versions' tables `GET /api/stats/versions` reads, one per `?pilot=` and `?mode=`.
-    versions: Kept<(PublicStatsPilot, PublicStatsMode), Arc<PlayVersionTable>>,
+    /// R4675001: the play versions' tables `GET /api/stats/versions` reads, one per `?pilot=` and `?mode=`
+    /// (R5040000: and `?scope=`).
+    versions: Kept<(PublicStatsPilot, PublicStatsMode, PublicStatsScope), Arc<PlayVersionTable>>,
+    /// R4681001: the Hall of Fame's bodies `GET /api/stats/hall-of-fame` reads, one per `?mode=`.
+    hall: Kept<PublicStatsMode, Arc<HallOfFameBody>>,
     /// R3067000: every patch's totals, which every kept window and history is cut from, with when they
-    /// were first asked for.
-    totals: Mutex<Option<(i64, KeptTotalsCell)>>,
+    /// were first asked for. R5174000: beside them, the same totals with the older play versions folded in,
+    /// when the play versions' table asked for those after the cards.
+    totals: Mutex<Option<TotalsCells>>,
     /// R1583000: the play rates `GET /api/stats/play-rates` reads, with when they were first asked for.
     play_rates: Mutex<Option<(i64, PlayRatesCell)>>,
 }
@@ -1219,22 +1550,42 @@ impl KeptReports {
         kept_cell(&self.histories, key, now)
     }
 
-    fn versions_cell(&self, key: (PublicStatsPilot, PublicStatsMode), now: i64) -> KeptVersionsCell {
+    fn versions_cell(
+        &self,
+        key: (PublicStatsPilot, PublicStatsMode, PublicStatsScope),
+        now: i64,
+    ) -> KeptVersionsCell {
         kept_cell(&self.versions, key, now)
     }
 
+    fn hall_cell(&self, key: PublicStatsMode, now: i64) -> KeptHallCell {
+        kept_cell(&self.hall, key, now)
+    }
+
     /// R3067000: the cell of every patch's totals made less than `CARD_STATS_CACHE_TTL_SECONDS` before
-    /// `now`, or a new empty one in its place, with when it was made.
-    fn totals_cell(&self, now: i64) -> (i64, KeptTotalsCell) {
+    /// `now`, or a new empty one in its place, with when it was made. R5174000: and whether it folds the
+    /// older play versions in. A read that needs them takes a cell that does: the one there when it folds,
+    /// or one made beside it with its time, so everything cut from either is kept and dropped together.
+    fn totals_cell(&self, now: i64, reach: Reach) -> (i64, KeptTotalsCell, bool) {
         let mut kept = lock(&self.totals);
-        if let Some((made_at, cell)) = kept.as_ref()
-            && now - *made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND
+        if let Some(cells) = kept.as_mut()
+            && now - cells.made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND
         {
-            return (*made_at, Arc::clone(cell));
+            if reach == Reach::Kept || cells.kept_folds {
+                return (cells.made_at, Arc::clone(&cells.kept), cells.kept_folds);
+            }
+            let folded = cells.folded.get_or_insert_with(|| Arc::new(OnceCell::new()));
+            return (cells.made_at, Arc::clone(folded), true);
         }
         let cell: KeptTotalsCell = Arc::new(OnceCell::new());
-        *kept = Some((now, Arc::clone(&cell)));
-        (now, cell)
+        let folds = reach == Reach::Folded;
+        *kept = Some(TotalsCells {
+            made_at: now,
+            kept: Arc::clone(&cell),
+            kept_folds: folds,
+            folded: None,
+        });
+        (now, cell, folds)
     }
 
     /// R1583000: the play rates' cell made less than `PLAY_RATES_REFRESH_SECONDS` before `now`, or a
@@ -1332,7 +1683,7 @@ async fn shipped_window(
     pilot: PublicStatsPilot,
     mode: PublicStatsMode,
 ) -> Result<Arc<KeptWindow>, ApiError> {
-    let snapshot = kept_snapshot(app).await?;
+    let snapshot = kept_snapshot(app, Reach::Kept).await?;
     let key = ReportKey {
         patch: at.to_string(),
         source,
@@ -1342,14 +1693,20 @@ async fn shipped_window(
     let cell = app.card_stats.window_cell(key, snapshot.made_at);
     let kept = cell
         .get_or_try_init(|| async {
-            Ok::<_, ApiError>(Arc::new(window_over(
-                &snapshot.totals,
-                history,
-                at,
-                source,
-                pilot,
-                mode,
-            )))
+            let held = &snapshot.held;
+            if held.holds(at) {
+                return Ok::<_, ApiError>(Arc::new(window_over(
+                    &held.totals,
+                    history,
+                    at,
+                    source,
+                    pilot,
+                    mode,
+                )));
+            }
+            // R4965000: a patch past the snapshot's reads its own reach, loaded now.
+            let own = totals_for(app, None, false, held.reach_rows(at)).await?;
+            Ok(Arc::new(window_over(&own, history, at, source, pilot, mode)))
         })
         .await?;
     Ok(Arc::clone(kept))
@@ -1381,7 +1738,7 @@ async fn kept_window(
         PublicStatsMode::All,
     )
     .await?;
-    let own = totals_for(app, Some(at), false).await?;
+    let own = totals_for(app, Some(at), false, CardRows::All).await?;
     let mut window = window_over(&own, history, at, source, pilot, mode);
     window.history.clone_from(&shared.history);
     window.patches.clone_from(&shared.patches);
@@ -1482,7 +1839,7 @@ async fn kept_report(
     let current = patch == app.catalog.version;
     let compute = || async move {
         let with_drills = current && source == SourceParam::Default;
-        let totals = totals_for(app, Some(patch), with_drills).await?;
+        let totals = totals_for(app, Some(patch), with_drills, CardRows::All).await?;
         Ok::<_, ApiError>(Arc::new(patch_report(
             &totals,
             patch,
@@ -1564,13 +1921,19 @@ async fn kept_history(
     mode: PublicStatsMode,
     face: StatsFace,
 ) -> Result<Arc<KeptHistory>, ApiError> {
-    let snapshot = kept_snapshot(app).await?;
+    let snapshot = kept_snapshot(app, Reach::Kept).await?;
     let cell = app.card_stats.history_cell((pilot, mode, face), snapshot.made_at);
     let kept = cell
         .get_or_try_init(|| async {
+            // R4965000: the patches whose card totals the snapshot holds as filed.
+            let held: Vec<String> = versions
+                .iter()
+                .filter(|version| snapshot.held.holds_patch(version))
+                .cloned()
+                .collect();
             Ok::<_, ApiError>(Arc::new(history_over(
-                &snapshot.totals,
-                versions,
+                &snapshot.held.totals,
+                &held,
                 pilot,
                 mode,
                 face,
@@ -1583,21 +1946,32 @@ async fn kept_history(
 type KeptVersionsCell = Arc<OnceCell<Arc<PlayVersionTable>>>;
 
 /// R4675001: every deck card's play versions' figures for `pilot` and `mode`, as kept: read off every
-/// patch's totals (R3067000: `kept_snapshot`, the one load the cards' windows and histories share), kept
-/// as long as that snapshot, once however many requests miss it together.
+/// patch's totals (R3067000: `kept_snapshot`; R5174000: with the older play versions folded in, the one
+/// read that needs them, made beside the cards' with its time, or shared with them when it came first), kept
+/// as long as that snapshot, once however many requests miss it together. R5040000: under
+/// `PublicStatsScope::Major`, the live ones alone, each cut to the newest major's line, read against
+/// their own field. R4965000's snapshot keeps the whole newest line as filed (`public_patch_count`
+/// reaches every patch of it), so a cut span reads its own versions' totals.
 async fn kept_versions(
     app: &App,
     pilot: PublicStatsPilot,
     mode: PublicStatsMode,
+    scope: PublicStatsScope,
 ) -> Result<Arc<PlayVersionTable>, ApiError> {
-    let snapshot = kept_snapshot(app).await?;
-    let cell = app.card_stats.versions_cell((pilot, mode), snapshot.made_at);
+    let snapshot = kept_snapshot(app, Reach::Folded).await?;
+    let cell = app
+        .card_stats
+        .versions_cell((pilot, mode, scope), snapshot.made_at);
     let kept = cell
         .get_or_try_init(|| async {
-            let versions = deck_play_versions();
+            let every = deck_play_versions();
             let history = patch_history();
+            let versions = match scope {
+                PublicStatsScope::All => every,
+                PublicStatsScope::Major => major_line_versions(&every, &history),
+            };
             Ok::<_, ApiError>(Arc::new(play_version_figures(
-                &snapshot.totals,
+                &snapshot.held.totals,
                 &PlayVersionQuery {
                     versions: &versions,
                     history: &history,
@@ -1624,16 +1998,127 @@ struct PublicStatsVersionsResponse<'a> {
 
 /// GET /api/stats/versions (R4675001): every play version of every deck card (R4675000) with its figures,
 /// the live ones marked, over `?pilot=` (R807000) and `?mode=` (R377), read against one field.
+/// R5040000: `?scope=major` sends the live ones cut to the newest major's line; the body never names it.
 pub async fn get_versions(app: &Arc<App>, req: Req) -> ApiResult {
     let pilot = PublicStatsPilot::parse(req.query.get("pilot").map(String::as_str));
     let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
-    let table = kept_versions(app, pilot, mode).await?;
+    let scope = PublicStatsScope::parse(req.query.get("scope").map(String::as_str));
+    let table = kept_versions(app, pilot, mode, scope).await?;
     let response = PublicStatsVersionsResponse {
         pilot,
         mode,
         table: &table,
     };
     Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
+}
+
+/// R4681001: one Hall of Fame entry: its before and after play-version rows with figures, their ship
+/// dates, the patch's player-facing balance line, and, on the changed list alone, how many changes
+/// lie between.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicHallEntry {
+    pub before: PlayVersionFigures,
+    pub after: PlayVersionFigures,
+    pub before_date: Option<String>,
+    pub after_date: Option<String>,
+    pub balance: Option<String>,
+    pub changes_between: Option<usize>,
+}
+
+/// R4681001: `GET /api/stats/hall-of-fame`'s body: the query it answers and the four lists.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HallOfFameBody {
+    pub pilot: PublicStatsPilot,
+    pub mode: PublicStatsMode,
+    pub min_sample: i64,
+    pub band_low: f64,
+    pub band_high: f64,
+    pub broken: Vec<PublicHallEntry>,
+    pub nerfed: Vec<PublicHallEntry>,
+    pub buffed: Vec<PublicHallEntry>,
+    pub changed: Vec<PublicHallEntry>,
+}
+
+type KeptHallCell = Arc<OnceCell<Arc<HallOfFameBody>>>;
+
+/// R4681001: the Hall of Fame's body over `table`: R4681000's lists, each entry joined to its rows,
+/// dates from `patches.json`, and the balance line matched per R4681001.
+fn hall_body_of(table: &PlayVersionTable, mode: PublicStatsMode) -> HallOfFameBody {
+    let dates = patch_ship_dates();
+    let mut firsts: IndexMap<String, String> = IndexMap::new();
+    for row in &table.versions {
+        firsts
+            .entry(row.card.clone())
+            .or_insert_with(|| row.first.clone());
+    }
+    let hall = hall_of_fame(table, HALL_OF_FAME_LIST_LEN, &change_totals_since(&firsts));
+    let by_id: IndexMap<&str, &PlayVersionFigures> =
+        table.versions.iter().map(|row| (row.id.as_str(), row)).collect();
+    let entry = |pair: &HallPair, changes_between: Option<usize>| {
+        let before = by_id[pair.before.as_str()].clone();
+        let after = by_id[pair.after.as_str()].clone();
+        // The first `player.balance` line of the after patch naming the card; a line that names no
+        // card is no entry's line rather than a wrong one, and none where before equals after.
+        let balance = if pair.before == pair.after {
+            None
+        } else {
+            let wanted = after.name.to_lowercase();
+            if wanted.is_empty() {
+                None
+            } else {
+                patch_balance_lines(&after.first)
+                    .into_iter()
+                    .find(|line| line.to_lowercase().contains(&wanted))
+            }
+        };
+        PublicHallEntry {
+            before_date: dates.get(&before.first).cloned(),
+            after_date: dates.get(&after.first).cloned(),
+            before,
+            after,
+            balance,
+            changes_between,
+        }
+    };
+    HallOfFameBody {
+        pilot: PublicStatsPilot::Merged,
+        mode,
+        min_sample: table.min_sample,
+        band_low: table.band_low,
+        band_high: table.band_high,
+        broken: hall.broken.iter().map(|pair| entry(pair, None)).collect(),
+        nerfed: hall.nerfed.iter().map(|pair| entry(pair, None)).collect(),
+        buffed: hall.buffed.iter().map(|pair| entry(pair, None)).collect(),
+        changed: hall
+            .changed
+            .iter()
+            .map(|(pair, lines)| entry(pair, Some(*lines)))
+            .collect(),
+    }
+}
+
+/// R4681001: one `?mode=`'s Hall of Fame body, as kept: R4681000's lists over the kept versions'
+/// table (`kept_versions`, over the snapshot that folds the older play versions in, R5174000), kept as
+/// long as that snapshot, once however many requests miss it together.
+async fn kept_hall(app: &App, mode: PublicStatsMode) -> Result<Arc<HallOfFameBody>, ApiError> {
+    let table = kept_versions(app, PublicStatsPilot::Merged, mode, PublicStatsScope::All).await?;
+    let snapshot = kept_snapshot(app, Reach::Folded).await?;
+    let cell = app.card_stats.hall_cell(mode, snapshot.made_at);
+    let kept = cell
+        .get_or_try_init(|| async { Ok::<_, ApiError>(Arc::new(hall_body_of(&table, mode))) })
+        .await?;
+    Ok(Arc::clone(kept))
+}
+
+/// GET /api/stats/hall-of-fame (R4681001): the Hall of Fame's four lists (R4681000) over `?mode=`
+/// (R377), open to everyone and cached as the versions are. The merged pilots, as the tab's versions
+/// fetch: only `?mode=` is read.
+pub async fn get_hall_of_fame(app: &Arc<App>, req: Req) -> ApiResult {
+    let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
+    let body = kept_hall(app, mode).await?;
+    Ok(cached_ok(to_json(&body)?, CARD_STATS_CACHE_TTL_SECONDS))
 }
 
 /// GET /api/stats/cards: public card win rates (R654, R1367000).
@@ -2030,6 +2515,10 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let faces = card_faces(app, &window.report, &card_id, def, mode);
     // R4676000: its choices off the same window, on the face asked.
     let variants = card_variants(app, &window.report, &card_id, face);
+    // R4679000: what it made and offered, off the same window, on the face asked.
+    let outputs = card_outputs(app, &window.report, &card_id, face);
+    // R4707001: what its plays rolled, off the same window, on the face asked.
+    let rolled = card_rolled(app, &window.report, &card_id, face);
 
     let body = CardDrillDownResponse {
         card: DrillDownCard {
@@ -2044,6 +2533,8 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         face,
         faces,
         variants,
+        outputs,
+        rolled,
     };
     Ok(reader_ok(to_json(&body)?, reader))
 }
@@ -2153,6 +2644,8 @@ pub async fn get_play_rates(app: &Arc<App>, _req: Req) -> ApiResult {
                     mode: None,
                     patch: None,
                     drills: false,
+                    // R4965000: every patch's live totals summed alike, so one total per card and key.
+                    cards: CardRows::Merged,
                 })
                 .await?;
             tx.commit().await?;

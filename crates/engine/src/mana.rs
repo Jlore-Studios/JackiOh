@@ -1,7 +1,7 @@
 //! Mana refresh, temporary mana and the cost calculation (SPEC §2.3, §6.3 Cost, R65, R396, R455).
 
 use crate::catalog::def_of;
-use crate::config::GLITCH_DEF_ID;
+use crate::config::{GLITCH_DEF_ID, MANA_CEILING};
 use crate::cost_rules::{climb_price_rules, cost_floor_of, price_rules_for};
 use crate::graveyard_play::playable_from_graveyard;
 use crate::script::{CostArgs, EngineSink};
@@ -15,11 +15,17 @@ use crate::wire::{CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PL
 /// modifiers, floored at 0; with no handicap, §2.3's "min(number of turns you have started, 4), plus
 /// persistent modifiers". `nextTurnMod` is a one-shot rider the refresh spends, never max mana; other
 /// modifiers apply on top of the capped value as for a human. R1854003: moved crystals count in the cap;
-/// R4331001: stolen crystals count on top of it.
+/// R4331001: stolen crystals count on top of it. R5148000: never above `MANA_CEILING`.
 pub fn max_mana_for(side: &PlayerState) -> i32 {
     let handicap = handicap_of(side);
     let base = mana_crystal_count(side).min(handicap.mana_cap);
-    (base + stolen_mana_crystals_of(side) + side.mana.perm_mod).max(0)
+    held_mana(base + stolen_mana_crystals_of(side) + side.mana.perm_mod)
+}
+
+/// §2.3, R5148000: a mana amount as a player may hold it, current or maximum, temporary mana included:
+/// never below 0 nor above `MANA_CEILING`, what passes it lost as Hearthstone loses mana past its 10.
+pub fn held_mana(mana: i32) -> i32 {
+    mana.clamp(0, MANA_CEILING)
 }
 
 /// R1854003: a player's mana crystals before the cap (Hearthstone's count): the turns they have started
@@ -80,7 +86,7 @@ pub fn move_mana_crystals(
             }
         }
         side.mana.max = max_mana_for(side);
-        side.mana.current += side.mana.max - held;
+        side.mana.current = held_mana(side.mana.current + side.mana.max - held);
     }
     (lost, gained)
 }
@@ -119,7 +125,7 @@ pub fn move_some_mana_crystals(
         let held = side.mana.max;
         side.stolen_mana_crystals = Some(stolen_mana_crystals_of(side) + gained);
         side.mana.max = max_mana_for(side);
-        side.mana.current += side.mana.max - held;
+        side.mana.current = held_mana(side.mana.current + side.mana.max - held);
     }
     (lost, gained)
 }
@@ -175,15 +181,16 @@ pub fn refreshed_mana(side: &PlayerState, max: i32, natural: bool) -> i32 {
 }
 
 /// R4440052: `refreshed_mana` with `bonus` more, which counts as the rider does: with it under MD-B2's
-/// aura, against it when it is negative, and not at all on a lost refresh. Never below 0.
+/// aura, against it when it is negative, and not at all on a lost refresh. Never below 0, nor above
+/// `MANA_CEILING` (R5148000).
 pub fn refreshed_mana_with_bonus(side: &PlayerState, max: i32, natural: bool, bonus: i32) -> i32 {
-    let rider = side.mana.next_turn_mod + bonus;
+    let rider = side.mana.next_turn_mod.saturating_add(bonus);
     if refresh_is_lost(side) {
         0
     } else if natural {
-        (max + rider).max(0)
+        held_mana(max.saturating_add(rider))
     } else {
-        rider.max(0)
+        held_mana(rider)
     }
 }
 
@@ -248,9 +255,9 @@ pub fn refresh_some_mana(side: &mut PlayerState, amount: i32) {
     side.mana.current = side.mana.max.min(side.mana.current.saturating_add(amount));
 }
 
-/// Temporary mana may take current above max (§2.3).
+/// Temporary mana may take current above max (§2.3), never above `MANA_CEILING` (R5148000).
 pub fn gain_mana(side: &mut PlayerState, amount: i32) {
-    side.mana.current = (side.mana.current + amount).max(0);
+    side.mana.current = held_mana(side.mana.current.saturating_add(amount));
 }
 
 pub fn spend_mana(side: &mut PlayerState, amount: i32) {
@@ -318,6 +325,18 @@ pub fn is_x_cost(state: &GameState, instance: &CardInstance) -> bool {
     def_of(Some(state), &instance.def_id).cost == CardCost::X
 }
 
+/// R5148000: the X a card counts on the field and as it resolves (`tuning::x_of`, its X steps
+/// included), an X-cost card's at most `MANA_CEILING`. An X that is no price is not mana and is not
+/// capped: the X/X a summoner sets from a count (M+ #20.1 Lil' Kenny's right answers).
+pub fn counted_x(state: &GameState, instance: &CardInstance) -> i32 {
+    let x = crate::tuning::x_of(instance);
+    if is_x_cost(state, instance) {
+        x.min(MANA_CEILING)
+    } else {
+        x
+    }
+}
+
 /// R48: a modifier for a player's *next* turn (#77: "during **your** next turn") is live only once that
 /// player is active on a later turn, not on the turn it was made nor the opponent's between. Expiry
 /// ends it at that turn's cleanup, a separate question.
@@ -366,6 +385,8 @@ struct Price {
 /// threshold rules on the number the flat ones left (as R363 reads Curvature), then "costs (N)" sets, then
 /// the card's own floor (Forever&'s), which holds in every zone and alone reaches X, then 0. R4285000: last,
 /// a play by Flashback from the graveyard costs at least FLASHBACK_MIN_PRICE (`flashback_floor`), X included.
+/// R5109000: an embiggen card's Embiggened version costs its normal version's finished price, every rung
+/// above applied, plus its Embiggen premium (`dearer_premium`), then Flashback's floor.
 pub fn effective_cost(state: &GameState, instance: &CardInstance, options: CostOptions) -> i32 {
     price_of(state, instance, options).cost
 }
@@ -441,27 +462,42 @@ pub fn garden_offers_radiant(state: &GameState, card: &CardInstance) -> bool {
         && garden_premium_for(state, card).is_some()
 }
 
-/// R1181002, R1563004: the price a Garden sets on the dearer play of a card that is not Radiant: its
-/// normal price plus the premium, in place of an embiggen card's Embiggened price; else `None`.
-/// R4350000: a card with no Embiggen premium (Meditative+ #23) pays no Garden premium either, so its
-/// dearer choice costs its normal price, and is still the Garden's (`Some`, which stamps it Radiant).
-pub fn garden_dearer_price(state: &GameState, card: &CardInstance) -> Option<i32> {
+/// R1181002, R1563004, R5109000: the premium a Garden sets on the dearer play of a card that is not
+/// Radiant, in place of an embiggen card's own Embiggen premium (`dearer_premium`); else `None`. `Some`
+/// is the Garden's dearer choice, which stamps the play Radiant (`play_made_radiant`).
+pub fn garden_dearer_premium(state: &GameState, card: &CardInstance) -> Option<i32> {
     if card.embiggened != Some(true) || card.radiant {
         return None;
     }
     let premium = garden_premium_for(state, card)?;
-    // R4350000: a card with no Embiggen premium (M+ #23) has none under a Garden either.
-    let waived = card.no_embiggen_premium == Some(true);
-    let premium = if waived { 0 } else { premium };
-    match def_of(Some(state), &card.def_id).cost {
-        CardCost::Embiggen { base, .. } => Some(base + premium),
-        _ if garden_offers_radiant(state, card) => Some(printed_cost(state, card) + premium),
-        _ => None,
+    (crate::play_choices::has_embiggen_price(state, card) || garden_offers_radiant(state, card))
+        .then_some(premium)
+}
+
+/// R5109000: what the dearer version of this card costs on top of its normal version's finished price,
+/// or `None` for a play at its normal price: an embiggen card's Embiggen premium (B − A), which a Garden's
+/// premium replaces (R1181002, R1563004, `garden_dearer_premium`) and no Embiggen premium makes 0
+/// (R4350000). R1181003: a card kept with an `embiggenCostOverride` (games of v0.6.9 and before) has none,
+/// since that override prices its Embiggened version on R65's ladder as it did.
+pub fn dearer_premium(state: &GameState, card: &CardInstance) -> Option<i32> {
+    if card.embiggened != Some(true) || card.embiggen_cost_override.is_some() {
+        return None;
     }
+    let premium = garden_dearer_premium(state, card)
+        .or_else(|| def_of(Some(state), &card.def_id).cost.embiggen_premium())?;
+    // R4350000: a card with no Embiggen premium (M+ #23) has none, under a Garden too.
+    Some(if card.no_embiggen_premium == Some(true) {
+        0
+    } else {
+        premium
+    })
 }
 
 /// R65, R1181003: the override a price starts from: for the Embiggened version its own price
 /// (`embiggenCostOverride`, Meditative+ #23) before `costOverride`; for every other play `costOverride`.
+/// R5109000: only a kept `embiggenCostOverride` card prices its Embiggened version from here; any other
+/// Embiggened version is its normal version's price plus the premium (`dearer_premium`), so a
+/// `costOverride` prices the normal version, and the premium rides on it.
 pub fn override_of(card: &CardInstance) -> Option<i32> {
     if card.embiggened == Some(true) {
         card.embiggen_cost_override.or(card.cost_override)
@@ -493,6 +529,20 @@ fn priced(state: &GameState, instance: &CardInstance, options: CostOptions, flas
             used_rules: Vec::new(),
         };
     }
+    // R5109000: the dearer version costs the normal version's finished price, every rung of R65 and R455
+    // and the floor at 0 applied, plus its premium; the rules it spends are the normal price's. R4285000:
+    // Flashback's floor reads the sum.
+    if let Some(premium) = dearer_premium(state, instance) {
+        let normal = CardInstance {
+            embiggened: Some(false),
+            ..instance.clone()
+        };
+        let Price { cost, used_rules } = priced(state, &normal, options, false);
+        return Price {
+            cost: floored(cost + premium),
+            used_rules,
+        };
+    }
 
     // R65: X-cost cards cost exactly X and ignore modifiers, but an override makes one free. R455: a
     // floor the card carries is its own, and holds.
@@ -509,11 +559,8 @@ fn priced(state: &GameState, instance: &CardInstance, options: CostOptions, flas
         };
     }
 
-    // R1181002: under a Garden the dearer play of a card that is not Radiant starts from the normal
-    // price plus the premium.
-    let mut cost = override_.unwrap_or_else(|| {
-        garden_dearer_price(state, instance).unwrap_or_else(|| printed_cost(state, instance))
-    }) + instance.cost_mod
+    let mut cost = override_.unwrap_or_else(|| printed_cost(state, instance))
+        + instance.cost_mod
         + crate::hand_order::hand_aura_cost_delta(state, instance);
     // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
     // graveyard, while a permission lets its player play it from there (E11, R454).
@@ -639,7 +686,8 @@ pub fn cost_now(state: &GameState, card: &CardInstance) -> i32 {
         } else {
             card.fixed_x.unwrap_or(0)
         };
-        return 0.max(x).max(floor);
+        // R5148000: an X counts at most `MANA_CEILING`.
+        return x.clamp(0, MANA_CEILING).max(floor);
     }
     if card.embiggened == Some(true) && !matches!(card.zone, Zone::Resolving { .. }) {
         let unembiggened = CardInstance {

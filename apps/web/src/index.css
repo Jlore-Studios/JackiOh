@@ -29,19 +29,16 @@
   --legal: var(--pal-jade-400);
   --selected: var(--pal-gold-400);
   --radiant: var(--pal-gold-300);
-  --plague: var(--pal-violet-500);
-  --grade: var(--pal-sky-400);
+  --plague: var(--pal-amethyst-500);
+  --grade: var(--pal-ink-400);
   --burn: var(--pal-ember-500);
-  --toxic: var(--pal-green-500);
+  --toxic: var(--pal-jade-500);
   --mana: var(--pal-blue-600);
-  --locked: var(--pal-grey-500);
+  --locked: var(--pal-stone-500);
 
   --card-w: 82px;
   --card-h: 112px;
   --gap: var(--space-3);
-  /* Frozen for non-board sheets (duos/, the deck builder): board sheets name surfaces.css.
-     Nothing in board scope uses it. */
-  --radius: 7px;
 
   /* R2122000: the least a control's hit area spans on a phone, either way (WCAG 2.5.5); e2e
      spec 47's HIT_MIN_PX is the same number. */
@@ -74,6 +71,15 @@
   transition-duration: 0s !important;
   transition-delay: 0s !important;
   scroll-behavior: auto !important;
+}
+
+/* R5128000: Low graphics (settings/store.ts puts the attribute on <html>): no surface blurs what is behind it, the
+   costliest thing a compositor draws each frame. The effects it holds off are fx/settings.ts's. */
+:root[data-low-graphics="true"] *,
+:root[data-low-graphics="true"] *::before,
+:root[data-low-graphics="true"] *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 /* #1954: the glove on a fine pointer only; every former pointer, grab or grabbing names one of these.
@@ -112,7 +118,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-text);
-  font-size: var(--type-md);
+  font-size: var(--type-lg);
   line-height: 1.35;
   overflow-x: hidden;
 }
@@ -201,14 +207,41 @@ h3,
   text-wrap-style: balance;
 }
 
+/* #5013: the game's words, its headings and its dialogs' titles, in the display face. */
+h1,
+h2,
+h3,
+.prompt-title,
+.hero-inspect-title {
+  font-family: var(--font-display);
+}
+
+/* #5013: the small-caps labels, one style: a short tag over or beside what it names. Every other
+   label and title is in sentence case (typography.test.ts, UPPERCASE). */
+.hero-seat,
+.pile-label,
+.clock-side-label,
+.clock-grace-label,
+.modifier-list__who,
+.stats-th,
+.stats-extended-table thead th,
+.patch-change__label,
+.patch-text__tag,
+.coach__eyebrow,
+.tutorial-lesson__kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 /* ---------------------------------------------------------------------------------------------
    The shell chrome: /, /login, /invite, /decks, /play and the header of /match/<id>.
    Nothing here is a game element — the board brings its own layout in game/board.css.
 
    SCOPED ON PURPOSE. Every rule below is inside `.app-shell`, `.form-card` or a shell-only class.
-   `body`'s 13px and the --card-* tokens are left exactly as they were, because BUILD M5-T1's
-   acceptance is a PIXEL measurement of the 10/10 board in a real browser: a global type or
-   spacing change would move the board and fail a test that is not about the shell at all.
+   The board keeps its own base, `.app-shell--wide`'s --type-md (14px), under the page's 16px
+   body (#5013), and the --card-* tokens are left as they were, because BUILD M5-T1's acceptance
+   is a PIXEL measurement of the 10/10 board in a real browser: a global type or spacing change
+   would move the board and fail a test that is not about the shell at all.
    --------------------------------------------------------------------------------------------- */
 
 .app-shell {

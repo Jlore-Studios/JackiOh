@@ -174,7 +174,7 @@ pub fn assault_placeholder_content(catalog_json: &str) -> Result<String, JsError
     js(wasm_core::assault_placeholder_content(catalog_json))
 }
 
-/// The Assault's content for the browser: `assault_placeholder_content` until the release.
+/// R4597000: the Assault's content for the browser: `assault_catalog_content`, since the release.
 #[wasm_bindgen]
 pub fn assault_content() -> Result<String, JsError> {
     js(wasm_core::assault_content())

@@ -542,15 +542,21 @@ mod r423_c_plus_73s_table {
         let mut state = game(&seed, None, None);
         let me = plus_card(&mut state, true, None);
         let events = run(&mut state, call_to_chaos(plus_table()), Some(me.clone()));
-        let expected = labels_of(&roll_chaos_effects(
-            &mut Rng::new(&seed, 0),
-            true,
-            Some(CHAOS_PLUS_EFFECTS),
-        ));
+        let roll = roll_chaos_effects(&mut Rng::new(&seed, 0), true, Some(CHAOS_PLUS_EFFECTS));
+        let expected = labels_of(&roll);
+        // R4707000: each rolled entry's place in the table, and the table's size, for the game record.
+        let indices: Vec<usize> = roll
+            .iter()
+            .filter_map(|rolled| {
+                CHAOS_PLUS_EFFECTS
+                    .iter()
+                    .position(|entry| entry.name == rolled.name)
+            })
+            .collect();
         assert_eq!(
             events.first().map(json_of),
             Some(
-                json!({ "type": "chaosRolled", "player": "p1", "instanceId": me.id, "defId": plus.id, "effects": expected })
+                json!({ "type": "chaosRolled", "player": "p1", "instanceId": me.id, "defId": plus.id, "effects": expected, "indices": indices, "tableSize": CHAOS_PLUS_EFFECTS.len() })
             )
         );
     }

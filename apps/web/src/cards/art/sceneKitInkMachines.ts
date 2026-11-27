@@ -5,7 +5,7 @@
 // tower crane, which Meditative's Alt art (#3404) added. Each stands on its anchor, its bottom centre there, but
 // for two: the blueprint table, the centre of whose front edge is the anchor, and the barbell, centred on it at
 // its bar. sceneKit.ts spreads them into `SCENE_KIT`. Every
-// colour is a palette.css name, none in Radiant's gold window; a glow (a lens, a screen, a lit window) is a
+// colour is a SCENE_PALETTE name, none in Radiant's gold window; a glow (a lens, a screen, a lit window) is a
 // stack of translucent shapes, never a gradient; shapes are filled even-odd, so a hole is a second sub-path
 // and no two sub-paths of one shape overlap otherwise.
 

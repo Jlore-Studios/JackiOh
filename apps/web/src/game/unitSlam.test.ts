@@ -46,7 +46,7 @@ describe("unit slam stats", () => {
     expect(printedTributes("Cry: Tribute one of your other Units and remember it.")).toBe(0);
     expect(printedTributes(undefined)).toBe(0);
     // Stinkyscape+ #138: a Tribute the card gives the cards it adds is not its own cost.
-    expect(printedTributes("Add 2 Automa-δ cards to your hand.\nEmbiggened (4): They have Tribute 1.")).toBe(0);
+    expect(printedTributes("Add 2 Automa-δ cards to your hand.\nEmbiggened (+2): They have Tribute 1.")).toBe(0);
   });
 
   it("finds a Tribute cost on every catalog face that prints one", () => {

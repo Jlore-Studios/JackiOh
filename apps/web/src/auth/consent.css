@@ -14,7 +14,7 @@
 
 .consent-birth legend {
   padding: 0;
-  color: color-mix(in srgb, var(--tavern-parchment, #efe0bf) 80%, transparent);
+  color: color-mix(in srgb, var(--tavern-parchment, var(--pal-parchment)) 80%, transparent);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -42,25 +42,25 @@
 .consent-birth select {
   min-height: 44px;
   padding: 8px 10px;
-  border: 1px solid rgba(201, 149, 63, 0.5);
-  border-radius: 10px;
-  background: linear-gradient(180deg, #0b0704, var(--tavern-well, #0e0905));
-  color: var(--tavern-parchment, #efe0bf);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 50%, transparent);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, var(--pal-wood-950), var(--tavern-well, var(--pal-wood-950)));
+  color: var(--tavern-parchment, var(--pal-parchment));
   font: inherit;
   font-size: max(16px, 1em);
 }
 
 .consent-birth select:hover:not(:disabled) {
-  border-color: rgba(243, 201, 105, 0.7);
+  border-color: color-mix(in srgb, var(--pal-brass-300) 70%, transparent);
 }
 
 .consent-birth select:focus-visible {
-  outline: 2px solid var(--tavern-gold, #f3c969);
+  outline: 2px solid var(--tavern-gold, var(--pal-brass-300));
   outline-offset: 2px;
 }
 
 .consent-birth select[aria-invalid="true"] {
-  border-color: var(--tavern-danger, #e8664f);
+  border-color: var(--tavern-danger, var(--pal-lacquer-400));
 }
 
 .consent-agree {
@@ -81,17 +81,17 @@
   width: 22px;
   height: 22px;
   margin: 1px 0 0;
-  accent-color: var(--tavern-gold, #f3c969);
+  accent-color: var(--tavern-gold, var(--pal-brass-300));
 }
 
 .consent-agree input[type="checkbox"]:focus-visible {
-  outline: 2px solid var(--tavern-gold, #f3c969);
+  outline: 2px solid var(--tavern-gold, var(--pal-brass-300));
   outline-offset: 2px;
 }
 
 .tavern.app-shell .consent-agree label {
   margin-top: 0;
-  color: var(--tavern-parchment, #efe0bf);
+  color: var(--tavern-parchment, var(--pal-parchment));
   font-size: 14px;
   font-weight: 400;
   letter-spacing: normal;
@@ -113,7 +113,7 @@
 .consent-link:focus-visible {
   outline: 2px solid #9cc8ff;
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .consent-error {

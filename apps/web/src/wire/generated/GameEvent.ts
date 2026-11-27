@@ -20,6 +20,7 @@ import type { Position } from "./Position";
 import type { PredictOutcome } from "./PredictOutcome";
 import type { PromptKind } from "./PromptKind";
 import type { RedirectWhat } from "./RedirectWhat";
+import type { RollHit } from "./RollHit";
 import type { RollKind } from "./RollKind";
 import type { RollResult } from "./RollResult";
 import type { RotationDirection } from "./RotationDirection";
@@ -231,13 +232,23 @@ carried?: true, } | { "type": "deanimated", player: PlayerId, instanceId: string
 /**
  * Always "field".
  */
-zone: "field", } | { "type": "degraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "upgraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "numberChanged", instanceId: string, defId: string, key: string, value: number, hiddenFrom?: Array<PlayerId>, } | { "type": "redirected", what: RedirectWhat, fromId: string, toId: string, byInstanceId: string | null, } | { "type": "healthSet", player: PlayerId, health: number, sourceId: string | null, } | { "type": "questProgressed", player: PlayerId, instanceId: string, quest: string, progress: number, goal: number, } | { "type": "questCompleted", player: PlayerId, instanceId: string, quest: string, } | { "type": "rolledBack", player: PlayerId, turnsAgo: number, sides: Array<PlayerId>, } | { "type": "chaosRolled", player: PlayerId, instanceId: string, defId: string, effects: Array<string>, } | { "type": "flickered", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, } | { "type": "drawLimited", player: PlayerId, } | { "type": "turnCutShort", player: PlayerId, byInstanceId: string | null, } | { "type": "glitched", player: PlayerId, outcome: GlitchOutcome, } | { "type": "fengShui", instanceId: string, sourceId: string, player: PlayerId, outcome: FengShuiOutcome, } | { "type": "marked", instanceId: string, mark: string, color: string, added: boolean, } | { "type": "translated", instanceId: string, } | { "type": "discardPrevented", player: PlayerId, count: number, } | { "type": "deradianted", instanceId: string, defId: string, zone: Zone, } | { "type": "manaSpent", player: PlayerId, amount: number, for: ManaSpentFor, } | { "type": "damageAbsorbed", sourceId: string | null, targetId: string, absorbed: number, combat: boolean, 
+zone: "field", } | { "type": "degraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "upgraded", instanceId: string, defId: string, change: TuningChange, hiddenFrom?: Array<PlayerId>, } | { "type": "numberChanged", instanceId: string, defId: string, key: string, value: number, hiddenFrom?: Array<PlayerId>, } | { "type": "redirected", what: RedirectWhat, fromId: string, toId: string, byInstanceId: string | null, } | { "type": "healthSet", player: PlayerId, health: number, sourceId: string | null, } | { "type": "questProgressed", player: PlayerId, instanceId: string, quest: string, progress: number, goal: number, } | { "type": "questCompleted", player: PlayerId, instanceId: string, quest: string, } | { "type": "rolledBack", player: PlayerId, turnsAgo: number, sides: Array<PlayerId>, } | { "type": "chaosRolled", player: PlayerId, instanceId: string, defId: string, effects: Array<string>, 
+/**
+ * R4707000: each rolled effect's place in its card's table, beside `effects`; absent for a list
+ * done whole, which drew nothing. The game record's: no rule reads it (`as_rules_read`), no view
+ * forwards it.
+ */
+indices?: Array<number>, 
+/**
+ * R4707000: how many entries the table holds, set with `indices`; the game record's likewise.
+ */
+tableSize?: number, } | { "type": "flickered", player: PlayerId, instanceId: string, defId: string, row: Row, lane: number, } | { "type": "drawLimited", player: PlayerId, } | { "type": "turnCutShort", player: PlayerId, byInstanceId: string | null, } | { "type": "glitched", player: PlayerId, outcome: GlitchOutcome, } | { "type": "fengShui", instanceId: string, sourceId: string, player: PlayerId, outcome: FengShuiOutcome, } | { "type": "marked", instanceId: string, mark: string, color: string, added: boolean, } | { "type": "translated", instanceId: string, } | { "type": "discardPrevented", player: PlayerId, count: number, } | { "type": "deradianted", instanceId: string, defId: string, zone: Zone, } | { "type": "manaSpent", player: PlayerId, amount: number, for: ManaSpentFor, } | { "type": "damageAbsorbed", sourceId: string | null, targetId: string, absorbed: number, combat: boolean, 
 /**
  * R2783001: the keyword behind this event — the route of the hit Armor took, as on `damage` — for
  * the client's cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5).
  * No rule reads it (`as_rules_read`), and a view that hides the card hides it too (R97).
  */
-via?: KeywordKind, } | { "type": "armorGained", player: PlayerId, amount: number, armor: number, } | { "type": "loopCapped", player: PlayerId, } | { "type": "jadeChanged", player: PlayerId, value: number, } | { "type": "secretChosen", player: PlayerId, secretId: string, } | { "type": "secretRevealed", player: PlayerId, secretId: string, choice: SecretChoice, } | { "type": "predicted", player: PlayerId, secretId: string, guess: SecretChoice, outcome: PredictOutcome, } | { "type": "curveDrawn", player: PlayerId, cells: Array<ZoneRef>, } | { "type": "lineDrawn", player: PlayerId, cells: Array<ZoneRef>, laser?: boolean, } | { "type": "autopilotEngaged", player: PlayerId, turn: number, } | { "type": "awakened", player: PlayerId, instanceId: string, defId: string, } | { "type": "evolved", player: PlayerId, instanceId: string, defId: string, } | { "type": "traded", player: PlayerId, } | { "type": "marketCreditsChanged", player: PlayerId, value: number, } | { "type": "marketBought", player: PlayerId, instanceId: string, defId: string, 
+via?: KeywordKind, } | { "type": "damageNullified", instanceId: string, sourceId: string | null, targetId: string, amount: number, combat: boolean, } | { "type": "armorGained", player: PlayerId, amount: number, armor: number, } | { "type": "loopCapped", player: PlayerId, } | { "type": "jadeChanged", player: PlayerId, value: number, } | { "type": "secretChosen", player: PlayerId, secretId: string, } | { "type": "secretRevealed", player: PlayerId, secretId: string, choice: SecretChoice, } | { "type": "predicted", player: PlayerId, secretId: string, guess: SecretChoice, outcome: PredictOutcome, } | { "type": "curveDrawn", player: PlayerId, cells: Array<ZoneRef>, } | { "type": "lineDrawn", player: PlayerId, cells: Array<ZoneRef>, laser?: boolean, } | { "type": "autopilotEngaged", player: PlayerId, turn: number, } | { "type": "awakened", player: PlayerId, instanceId: string, defId: string, } | { "type": "evolved", player: PlayerId, instanceId: string, defId: string, } | { "type": "traded", player: PlayerId, } | { "type": "marketCreditsChanged", player: PlayerId, value: number, } | { "type": "marketBought", player: PlayerId, instanceId: string, defId: string, 
 /**
  * Set when the card bought is Radiant (a Radiant lot, R1853001). It is the card's, so a view
  * that hides the card hides this too (R97). Only ever `Some(true)`.
@@ -252,7 +263,12 @@ radiant?: true, credits: number, } | { "type": "starshipFused", player: PlayerId
  * Found! and Call to Chaos (Scape Edition); absent for any other replacement and in older
  * logs. Public, as the laid board is.
  */
-anomaly?: string, } | { "type": "rolled", player: PlayerId, instanceId: string, defId: string, kind: RollKind, sides: number, rolls: Array<RollResult>, faceDown?: true, } | { "type": "hookResolving", sourceId: string, defId: string, controller: PlayerId, hook: HookKind, 
+anomaly?: string, } | { "type": "rolled", player: PlayerId, instanceId: string, defId: string, kind: RollKind, sides: number, rolls: Array<RollResult>, faceDown?: true, 
+/**
+ * R4707000: the faces the card checks its dice for, when it branches on them (Dice of Doom's 67).
+ * The game record's: no view forwards it, and the trigger loop never holds a `rolled`.
+ */
+hit?: RollHit, } | { "type": "hookResolving", sourceId: string, defId: string, controller: PlayerId, hook: HookKind, 
 /**
  * R2783000, R177: the seats that could not read the card where it stood as the hook began.
  * Engine bookkeeping: the view uses it and never forwards it.

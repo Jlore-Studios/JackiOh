@@ -1,6 +1,6 @@
 //! #84 Going Long (SPEC §8.4 row 84): Field Spell, cost 2 embiggen 4, Rare (no Quickdraw since #2521).
-//!   Base:    "Your hero has Armor 2 (Embiggened (4): 5)"
-//!   Radiant: "Armor 4 (Embiggened (4): 10)" — the cell changes only the two numbers (§8 Conventions).
+//!   Base:    "Aura: Your hero has Armor 2 (Embiggened (+2): 5)"
+//!   Radiant: "Armor 4 (Embiggened (+2): 10)" — the cell changes only the two numbers (§8 Conventions).
 //!   (Embiggened 4 and 8 until #2657.)
 //!   Engine:  "Hero armor in pipeline step 2".
 //!
@@ -33,7 +33,7 @@ fn going_long() -> Script {
 
 pub fn script() -> CardScripts {
     let base = going_long();
-    // "Armor 4 (Embiggened (4): 10)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
+    // "Armor 4 (Embiggened (+2): 10)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
     let radiant = going_long();
     CardScripts { base, radiant }
 }

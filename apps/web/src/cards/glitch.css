@@ -8,7 +8,7 @@
 
 .cf[data-glitch="true"] .cf-glitch-void {
   background:
-    repeating-linear-gradient(0deg, rgb(255 255 255 / 0.05) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--pal-white) 5%, transparent) 0 1px, transparent 1px 3px),
     radial-gradient(circle at 50% 50%, #1a0f2e, #050308 70%);
 }
 
@@ -37,13 +37,13 @@
   width: 60%;
   height: 46%;
   display: block;
-  border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+  border-radius: var(--radius-blob-a);
   animation: cf-glitch-morph 2.6s steps(7, jump-none) infinite;
 }
 
 .cf-glitch-blob--core {
   background:
-    repeating-linear-gradient(90deg, rgb(0 0 0 / 0.35) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-black) 35%, transparent) 0 2px, transparent 2px 7px),
     radial-gradient(circle at 38% 35%, #f6f0ff, #9a5cff 35%, #2a0b52 70%, transparent 72%);
 }
 
@@ -75,10 +75,10 @@
 }
 
 @keyframes cf-glitch-morph {
-  0% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; }
-  33% { border-radius: 63% 37% 41% 59% / 58% 36% 64% 42%; }
-  66% { border-radius: 37% 63% 55% 45% / 35% 62% 38% 65%; }
-  100% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; }
+  0% { border-radius: var(--radius-blob-a); }
+  33% { border-radius: var(--radius-blob-b); }
+  66% { border-radius: var(--radius-blob-c); }
+  100% { border-radius: var(--radius-blob-a); }
 }
 
 @keyframes cf-glitch-jitter-red {

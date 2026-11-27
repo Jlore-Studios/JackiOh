@@ -9,12 +9,12 @@
 .pack-object {
   --pack-px: 0.5;
   --pack-py: 0.5;
-  --pack-foil-a: #3a3f5c;
-  --pack-foil-b: #171a2b;
-  --pack-accent: #bba8dc;
-  --pack-crimp-a: #c9ced9;
+  --pack-foil-a: var(--pal-slate-700);
+  --pack-foil-b: var(--pal-slate-900);
+  --pack-accent: var(--pal-amethyst-300);
+  --pack-crimp-a: var(--pal-ink-200);
   --pack-crimp-b: #7d8496;
-  --pack-ink: #f2f4fa;
+  --pack-ink: var(--pal-slate-100);
 
   position: relative;
   display: block;
@@ -34,16 +34,16 @@
 /* ---------------------------------------------------------------------------- colors per pack --- */
 
 .pack-object[data-pack="Core"] {
-  --pack-foil-a: #3b4a6e;
-  --pack-foil-b: #171d33;
-  --pack-accent: #9fb4e8;
+  --pack-foil-a: var(--pal-slate-700);
+  --pack-foil-b: var(--pal-slate-900);
+  --pack-accent: var(--pal-ink-300);
 }
 
 .pack-object[data-pack="Classic"] {
-  --pack-foil-a: #6b4a1c;
-  --pack-foil-b: #2a1906;
+  --pack-foil-a: var(--pal-wood-600);
+  --pack-foil-b: var(--pal-brass-950);
   --pack-accent: #e6b35c;
-  --pack-crimp-a: #e6c46e;
+  --pack-crimp-a: var(--pal-brass-300);
   --pack-crimp-b: #8c7220;
 }
 
@@ -51,35 +51,35 @@
   --pack-foil-a: #2c5a2a;
   --pack-foil-b: #0f2e0a;
   --pack-accent: #9dff8a;
-  --pack-crimp-a: #e6c46e;
+  --pack-crimp-a: var(--pal-brass-300);
   --pack-crimp-b: #8c7220;
 }
 
 .pack-object[data-pack="Meditative"] {
-  --pack-foil-a: #efe6d2;
+  --pack-foil-a: var(--pal-parchment);
   --pack-foil-b: #b8ad93;
-  --pack-accent: #c8322b;
-  --pack-crimp-a: #c8322b;
-  --pack-crimp-b: #5a0f0b;
-  --pack-ink: #17130f;
+  --pack-accent: var(--pal-red-600);
+  --pack-crimp-a: var(--pal-red-600);
+  --pack-crimp-b: var(--pal-lacquer-900);
+  --pack-ink: var(--pal-wood-900);
 }
 
 /* Meditative's paper turned to ink, its red seal kept: the set beside it, as Classic+ is Classic's. */
 .pack-object[data-pack="Meditative+"] {
   --pack-foil-a: #3a332b;
-  --pack-foil-b: #14110d;
-  --pack-accent: #e8dcc0;
-  --pack-crimp-a: #c8322b;
-  --pack-crimp-b: #5a0f0b;
+  --pack-foil-b: var(--pal-wood-900);
+  --pack-accent: var(--pal-parchment);
+  --pack-crimp-a: var(--pal-red-600);
+  --pack-crimp-b: var(--pal-lacquer-900);
 }
 
 /* Stinkyscape (#1884): the set mark's deep-space disc and its green planet. */
 .pack-object[data-pack="Stinkyscape"] {
-  --pack-foil-a: var(--pal-green-900);
+  --pack-foil-a: var(--pal-jade-900);
   --pack-foil-b: var(--pal-slate-900);
-  --pack-accent: var(--pal-lime-400);
-  --pack-crimp-a: var(--pal-green-500);
-  --pack-crimp-b: var(--pal-green-900);
+  --pack-accent: var(--pal-jade-400);
+  --pack-crimp-a: var(--pal-jade-500);
+  --pack-crimp-b: var(--pal-jade-900);
 }
 
 /* Training Grounds (#2204): the set mark's practice-sword wood, its straw target and the target's red rings. */
@@ -87,23 +87,23 @@
   --pack-foil-a: var(--pal-wood-600);
   --pack-foil-b: var(--pal-wood-900);
   --pack-accent: var(--pal-gold-300);
-  --pack-crimp-a: var(--pal-red-500);
-  --pack-crimp-b: var(--pal-red-900);
+  --pack-crimp-a: var(--pal-red-600);
+  --pack-crimp-b: var(--pal-lacquer-900);
 }
 
 /* Stinkyscape+ (#3573): the Mindustrial set's riveted slate plate and its brass and ember trim. */
 .pack-object[data-pack="Stinkyscape+"] {
   --pack-foil-a: var(--pal-slate-700);
   --pack-foil-b: var(--pal-slate-900);
-  --pack-accent: var(--pal-orange-400);
+  --pack-accent: var(--pal-copper-400);
   --pack-crimp-a: var(--pal-brass-600);
   --pack-crimp-b: var(--pal-brass-950);
 }
 
 .pack-object[data-pack="global"] {
   --pack-foil-a: #5b3fa0;
-  --pack-foil-b: #1d1530;
-  --pack-accent: #bba8dc;
+  --pack-foil-b: var(--pal-slate-900);
+  --pack-accent: var(--pal-amethyst-300);
 }
 
 .pack-object[data-pack="cosmetic"] {
@@ -118,9 +118,9 @@
 .pack-object[data-pack="dungeon-enemy"] {
   --pack-foil-a: var(--pal-red-600);
   --pack-foil-b: var(--pal-wood-950);
-  --pack-accent: var(--pal-orange-400);
+  --pack-accent: var(--pal-copper-400);
   --pack-crimp-a: var(--pal-ember-500);
-  --pack-crimp-b: var(--pal-red-900);
+  --pack-crimp-b: var(--pal-lacquer-900);
 }
 
 /* Near-black foil with a gold face and a red seal for the boss's deck. */
@@ -129,23 +129,23 @@
   --pack-foil-b: var(--pal-black);
   --pack-accent: var(--pal-gold-300);
   --pack-crimp-a: var(--pal-red-600);
-  --pack-crimp-b: var(--pal-red-900);
+  --pack-crimp-b: var(--pal-lacquer-900);
 }
 
 /* Deep water blue for the random pack. */
 .pack-object[data-pack="dungeon-random"] {
   --pack-foil-a: var(--pal-blue-800);
   --pack-foil-b: var(--pal-slate-900);
-  --pack-accent: var(--pal-cyan-400);
-  --pack-crimp-a: var(--pal-sky-300);
-  --pack-crimp-b: var(--pal-blue-900);
+  --pack-accent: var(--pal-verdigris-400);
+  --pack-crimp-a: var(--pal-ink-300);
+  --pack-crimp-b: var(--pal-ink-900);
 }
 
 /* Aged brass for the type, tag or rarity pack. */
 .pack-object[data-pack="dungeon-filter"] {
   --pack-foil-a: var(--pal-brass-600);
   --pack-foil-b: var(--pal-brass-950);
-  --pack-accent: var(--pal-gold-200);
+  --pack-accent: var(--pal-brass-200);
   --pack-crimp-a: var(--pal-brass-500);
   --pack-crimp-b: var(--pal-brass-800);
 }
@@ -168,7 +168,7 @@
   position: absolute;
   inset: 0;
   display: block;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-sm);
   box-shadow: 0 0 1.5rem var(--pack-glow, var(--pack-accent));
   transform-origin: 50% 70%;
   transition: transform 80ms ease-out;
@@ -188,9 +188,9 @@
   gap: 0.35rem;
   padding: 16% 0.5rem;
   border: 2px solid var(--pack-accent);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-sm);
   background:
-    radial-gradient(circle at 50% 38%, rgb(255 255 255 / 0.16), transparent 55%),
+    radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--pal-white) 16%, transparent), transparent 55%),
     linear-gradient(160deg, var(--pack-foil-a), var(--pack-foil-b));
   text-align: center;
 }
@@ -199,7 +199,7 @@
   display: block;
   width: 38%;
   height: auto;
-  filter: drop-shadow(0 0.15rem 0.25rem rgb(0 0 0 / 0.5));
+  filter: drop-shadow(0 0.15rem 0.25rem color-mix(in srgb, var(--pal-black) 50%, transparent));
 }
 
 .pack-object__name {
@@ -219,19 +219,19 @@
   display: block;
   height: 11%;
   background: repeating-linear-gradient(90deg, var(--pack-crimp-a) 0 0.2rem, var(--pack-crimp-b) 0.2rem 0.4rem);
-  box-shadow: inset 0 -0.2rem 0.25rem rgb(0 0 0 / 0.35);
+  box-shadow: inset 0 -0.2rem 0.25rem color-mix(in srgb, var(--pal-black) 35%, transparent);
 }
 
 .pack-object__seal--top {
   top: 0;
-  border-radius: 0.5rem 0.5rem 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   transform-origin: 0 100%;
 }
 
 .pack-object__seal--bottom {
   bottom: 0;
-  border-radius: 0 0 0.5rem 0.5rem;
-  box-shadow: inset 0 0.2rem 0.25rem rgb(0 0 0 / 0.35);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  box-shadow: inset 0 0.2rem 0.25rem color-mix(in srgb, var(--pal-black) 35%, transparent);
 }
 
 /* The sheen is a soft highlight twice the face's size, clipped to it; the pointer slides it by
@@ -241,7 +241,7 @@
   inset: 0;
   display: block;
   overflow: hidden;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-sm);
   pointer-events: none;
 }
 
@@ -249,7 +249,7 @@
   content: "";
   position: absolute;
   inset: -50%;
-  background: radial-gradient(circle at 50% 50%, rgb(255 255 255 / 0.42), transparent 42%);
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--pal-white) 42%, transparent), transparent 42%);
   transform: translate(calc((var(--pack-px) - 0.5) * 50%), calc((var(--pack-py) - 0.5) * 50%));
   transition: transform 120ms ease-out;
 }
@@ -258,8 +258,8 @@
   position: absolute;
   inset: -20%;
   display: block;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(255 255 255 / 0.95), transparent 62%);
+  border-radius: var(--radius-round);
+  background: radial-gradient(circle, color-mix(in srgb, var(--pal-white) 95%, transparent), transparent 62%);
   opacity: 0;
   pointer-events: none;
 }

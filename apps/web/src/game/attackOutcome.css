@@ -43,7 +43,7 @@
 .damage-pop[data-tentative="true"] {
   animation: none;
   opacity: 0.55;
-  color: color-mix(in srgb, var(--pal-red-400) 60%, var(--pal-white));
+  color: color-mix(in srgb, var(--pal-lacquer-400) 60%, var(--pal-white));
   filter: saturate(0.4);
 }
 

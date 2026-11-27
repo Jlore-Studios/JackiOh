@@ -48,7 +48,7 @@
      `HAND_LIFT_SCALE` in game/config.ts state them. */
   --hand-lift-scale: 1.22;
   --hand-lift-rise: 0.1;
-  --selected: var(--pal-sky-300);
+  --selected: var(--pal-ink-300);
   --seat-radius: var(--radius-md);
   --board-notices-max-w: 480px;
   --board-notices-bottom: var(--space-2);
@@ -144,7 +144,7 @@
   border: 1px solid var(--line-bright);
   /* Round at a pill's height, but a hero whose power and badges wrap to a second line stays a
      rounded plate instead of swelling into a capsule. */
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--bg-sunken);
   box-shadow: var(--shadow-inset-top), var(--shadow-2);
 }
@@ -179,10 +179,8 @@
 
 .hero-seat {
   color: color-mix(in srgb, var(--text) 78%, transparent);
-  text-transform: uppercase;
-  font-size: var(--type-2xs-em);
+  font-size: var(--type-xs-em);
   font-weight: 650;
-  letter-spacing: 0.08em;
   /* A long name is cut with an ellipsis, so it cannot push the hero's width (#3698). */
   min-width: 0;
   max-width: 18ch;
@@ -216,13 +214,13 @@
 }
 
 .hero-armor {
-  border: 1px solid color-mix(in srgb, var(--pal-blue-200) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pal-ink-200) 50%, transparent);
   background: var(--pal-slate-700);
 }
 
 .hero-jade {
   border: 1px solid color-mix(in srgb, var(--pal-jade-400) 55%, transparent);
-  background: var(--pal-green-700);
+  background: var(--pal-jade-700);
 }
 
 /* R3540000: the hero's Burn and Toxic, ember and green beside the Jade Counter's. #4251: the
@@ -314,12 +312,10 @@
   color: var(--text);
   font-size: var(--type-xs-em);
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .power-x {
-  color: var(--pal-sky-300);
+  color: var(--pal-ink-300);
   font-weight: 700;
 }
 
@@ -349,7 +345,7 @@
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--mana) 14%, var(--bg-sunken));
   color: var(--text-dim);
-  font-size: var(--type-2xs-em);
+  font-size: var(--type-xs-em);
 }
 
 /* #2321: a modifier badge is a button (game/ModifierBadge.tsx), whose press opens its whole label.
@@ -409,7 +405,9 @@ button.modifier-badge[data-open="true"] {
 
 /* One row, however many entries the seat carries: the wrappers never wrap, and every chip has a
    fixed width with an ellipsis. The base is the tablet's 14ch; the desktop and phone queries
-   below widen and narrow it. */
+   below widen and narrow it. #5013: the chip's text is 11px, the smallest step off a card, on a
+   tighter line, so the chip is no taller than the 10px one was (a 13.5px line) and the tray
+   still clears the backrow it hangs toward; the phone query below sets its own line. */
 .hero-tray .modifiers {
   flex-wrap: nowrap;
 }
@@ -417,6 +415,7 @@ button.modifier-badge[data-open="true"] {
 .hero-tray .modifier-badge {
   flex: none;
   max-width: 14ch;
+  line-height: 1.2;
 }
 
 /* #4251: the hero's counters ride the tray as labelled chips beside the modifiers, outside the
@@ -467,7 +466,7 @@ button.modifier-badge[data-open="true"] {
   min-width: 22px;
   height: 22px;
   padding: 0 var(--space-2);
-  font-size: var(--type-2xs-em);
+  font-size: var(--type-xs-em);
 }
 
 .hero-portrait .hero-jade {
@@ -531,11 +530,11 @@ button.modifier-badge[data-open="true"] {
 
 .mana-crystal[data-filled="true"] {
   background: var(--pal-blue-600);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--pal-sky-400) 70%, transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--pal-ink-400) 70%, transparent);
 }
 
 .mana-text {
-  color: var(--pal-blue-200);
+  color: var(--pal-ink-200);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -606,9 +605,7 @@ button.modifier-badge[data-open="true"] {
 
 .pile-label {
   color: var(--text-dim);
-  font-size: var(--type-2xs-em);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: var(--type-xs-em);
 }
 
 .pile-n {
@@ -883,11 +880,9 @@ button.modifier-badge[data-open="true"] {
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--pal-white) 2%, transparent);
   color: var(--text-dim);
-  font-size: var(--type-3xs-em);
+  font-size: var(--type-xs-em);
   font-weight: 650;
-  letter-spacing: 0.08em;
   text-align: center;
-  text-transform: uppercase;
   opacity: 0.75;
   pointer-events: none;
 }
@@ -984,7 +979,7 @@ button.modifier-badge[data-open="true"] {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(circle at 12% 23%, color-mix(in srgb, var(--pal-gold-200) 9%, transparent) 0 1px, transparent 2px),
+    radial-gradient(circle at 12% 23%, color-mix(in srgb, var(--pal-brass-200) 9%, transparent) 0 1px, transparent 2px),
     radial-gradient(circle at 71% 61%, color-mix(in srgb, var(--pal-wood-800) 18%, transparent) 0 1px, transparent 2px),
     radial-gradient(110% 80% at 50% 50%, color-mix(in srgb, var(--pal-brass-500) 46%, transparent), transparent 72%),
     linear-gradient(180deg, var(--pal-wood-600), var(--pal-brass-800) 50%, var(--pal-wood-600));
@@ -1030,13 +1025,13 @@ button.modifier-badge[data-open="true"] {
   width: var(--sand-size);
   height: calc(var(--sand-size) * (0.64 + var(--sand-variation) * 0.2));
   border: 1px solid color-mix(in srgb, var(--pal-wood-800) 48%, transparent);
-  border-radius: 50% 43% 52% 45%;
+  border-radius: var(--radius-sand);
   background:
     radial-gradient(ellipse at 38% 34%, color-mix(in srgb, var(--pal-wood-900) 58%, transparent), transparent 54%),
     radial-gradient(ellipse at 66% 68%, color-mix(in srgb, var(--pal-gold-400) 36%, transparent), transparent 60%);
   box-shadow:
-    calc(var(--sand-size) * 0.42) calc(var(--sand-size) * -0.16) 0 -1px color-mix(in srgb, var(--pal-gold-200) 45%, transparent),
-    calc(var(--sand-size) * -0.55) calc(var(--sand-size) * 0.4) 0 -1px color-mix(in srgb, var(--pal-gold-200) 38%, transparent);
+    calc(var(--sand-size) * 0.42) calc(var(--sand-size) * -0.16) 0 -1px color-mix(in srgb, var(--pal-brass-200) 45%, transparent),
+    calc(var(--sand-size) * -0.55) calc(var(--sand-size) * 0.4) 0 -1px color-mix(in srgb, var(--pal-brass-200) 38%, transparent);
   opacity: 0.88;
   rotate: calc(var(--sand-variation) * 47deg);
   translate: -50% -50%;
@@ -1072,7 +1067,7 @@ button.modifier-badge[data-open="true"] {
 .sand-mark--crater {
   width: calc(var(--sand-zone) * 1.25);
   background:
-    radial-gradient(circle, color-mix(in srgb, var(--pal-wood-800) 55%, transparent) 0 46%, color-mix(in srgb, var(--pal-gold-200) 38%, transparent) 54%, transparent 68%);
+    radial-gradient(circle, color-mix(in srgb, var(--pal-wood-800) 55%, transparent) 0 46%, color-mix(in srgb, var(--pal-brass-200) 38%, transparent) 54%, transparent 68%);
 }
 
 @keyframes sand-settle {
@@ -1139,7 +1134,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .tap-mark--parchment {
-  border-radius: 52% 46% 55% 44%;
+  border-radius: var(--radius-parchment);
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-brass-800) 62%, transparent), color-mix(in srgb, var(--pal-wood-600) 38%, transparent) 55%, transparent 75%);
   rotate: calc(var(--sand-variation) * 90deg);
   animation: tap-bleed 2400ms var(--ease-out) forwards;
@@ -1369,6 +1364,33 @@ button.modifier-badge[data-open="true"] {
   background: transparent;
 }
 
+/* R5053000: a GIGA unit in Defense Position lies on its side across the same four zones. The quarter
+   turn (Card.tsx) spins a card about its own centre, so the card's box is the footprint with its sides
+   swapped (two rows and the gap wide, two lanes and the gap tall) and centred on the footprint's
+   centre, and `--def-scale` is 1: turned, it fills the four zones exactly, as large as an ATK GIGA,
+   where turning the footprint itself stood it on end across both heroes. Only percentages along
+   the same axis exist, so the anchor zone answers its size to the card (`cqw`/`cqh`) while the
+   card is on its side or turning. */
+.zone[data-giga="anchor"]:has(> .card:is([data-position="DEF"], [data-animating="positionSwitched"])) {
+  container-type: size;
+}
+
+.zone[data-side="you"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"],
+.zone[data-side="opponent"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"] {
+  --def-scale: 1;
+  left: calc(100cqw - 100cqh);
+  width: calc(200cqh + var(--gap));
+  height: calc(200cqw + var(--gap));
+}
+
+.zone[data-side="you"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"] {
+  top: calc(100cqh - 100cqw);
+}
+
+.zone[data-side="opponent"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"] {
+  bottom: calc(100cqh - 100cqw);
+}
+
 /* R3554000: the Black Hole lane is a dark well that breathes, with its swallowed count; still under
    `prefers-reduced-motion` (BUILD M5-T6). The well is a layer of its own whose opacity loops, so the
    loop composites (#3706). R3554002: the slashed lane is a deep red edge over a
@@ -1392,7 +1414,7 @@ button.modifier-badge[data-open="true"] {
 
 .black-hole-count {
   align-self: center;
-  color: var(--pal-violet-300);
+  color: var(--pal-amethyst-300);
   font-size: var(--type-sm);
 }
 
@@ -1407,9 +1429,9 @@ button.modifier-badge[data-open="true"] {
 }
 
 .lane[data-lane-mark="slashed"] {
-  border-left: 3px solid var(--pal-red-900);
-  border-right: 3px solid var(--pal-red-900);
-  background: color-mix(in srgb, var(--pal-blue-900) 40%, var(--pal-black));
+  border-left: 3px solid var(--pal-lacquer-900);
+  border-right: 3px solid var(--pal-lacquer-900);
+  background: color-mix(in srgb, var(--pal-ink-900) 40%, var(--pal-black));
 }
 
 .lane[data-lane-mark="slashed"] > .zone {
@@ -1417,17 +1439,17 @@ button.modifier-badge[data-open="true"] {
 }
 
 .zone[data-chain="shared"] > .card {
-  outline: 2px dashed var(--pal-sky-400);
+  outline: 2px dashed var(--pal-ink-400);
   outline-offset: 2px;
 }
 
 .zone[data-chain="split"] > .card {
-  outline: 2px dashed var(--pal-orange-400);
+  outline: 2px dashed var(--pal-copper-400);
   outline-offset: 2px;
 }
 
 .zone[data-chain="both"] > .card {
-  outline: 2px dashed var(--pal-purple-400);
+  outline: 2px dashed var(--pal-amethyst-300);
   outline-offset: 2px;
 }
 
@@ -1526,9 +1548,9 @@ button.modifier-badge[data-open="true"] {
   margin: auto;
   width: 34%;
   aspect-ratio: 1;
-  border: 2px solid color-mix(in srgb, var(--pal-yellow-400) 55%, transparent);
+  border: 2px solid color-mix(in srgb, var(--pal-gold-400) 55%, transparent);
   border-radius: var(--radius-xs);
-  background: color-mix(in srgb, var(--pal-yellow-400) 25%, transparent);
+  background: color-mix(in srgb, var(--pal-gold-400) 25%, transparent);
   transform: rotate(45deg);
 }
 
@@ -1547,9 +1569,9 @@ button.modifier-badge[data-open="true"] {
   height: 1.44em;
   border: 1px solid color-mix(in srgb, var(--pal-slate-100) 80%, transparent);
   border-radius: var(--radius-round);
-  background: var(--pal-blue-700);
+  background: var(--pal-blue-800);
   color: var(--pal-white);
-  font-size: var(--type-2xs-em);
+  font-size: var(--type-xs-em);
   font-weight: 800;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -1600,10 +1622,8 @@ button.modifier-badge[data-open="true"] {
    to half a line when the text below runs long. The text is what gives way. */
 .card-type {
   flex: 0 0 auto;
-  color: color-mix(in srgb, var(--pal-violet-300) 70%, var(--text-dim));
-  font-size: var(--type-2xs-em);
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  color: color-mix(in srgb, var(--pal-amethyst-300) 70%, var(--text-dim));
+  font-size: var(--type-xs-em);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -1677,7 +1697,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .stat-armor {
-  background: var(--pal-grey-500);
+  background: var(--pal-stone-500);
 }
 
 /* ATK is the default and says nothing; DEF is already a sideways card, and keeps its tag. */
@@ -1687,7 +1707,7 @@ button.modifier-badge[data-open="true"] {
   left: 50%;
   translate: -50% 0;
   color: var(--text-dim);
-  font-size: var(--type-3xs-em);
+  font-size: var(--type-xs-em);
   font-weight: 700;
   letter-spacing: 0.06em;
 }
@@ -1700,7 +1720,7 @@ button.modifier-badge[data-open="true"] {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
-  font-size: var(--type-3xs-em);
+  font-size: var(--type-xs-em);
   line-height: 1.15;
 }
 
@@ -1716,9 +1736,9 @@ button.modifier-badge[data-open="true"] {
 .shield-icon {
   position: absolute;
   inset: 0;
-  border: 2px solid var(--pal-blue-200);
+  border: 2px solid var(--pal-ink-200);
   border-radius: var(--radius-sm);
-  box-shadow: inset 0 0 10px color-mix(in srgb, var(--pal-blue-200) 45%, transparent);
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--pal-ink-200) 45%, transparent);
   pointer-events: none;
 }
 
@@ -1731,7 +1751,7 @@ button.modifier-badge[data-open="true"] {
   height: 14px;
   border-radius: var(--radius-round);
   color: var(--pal-white);
-  font-size: var(--type-3xs-em);
+  font-size: var(--type-xs-em);
   font-weight: 700;
 }
 
@@ -1795,7 +1815,7 @@ button.modifier-badge[data-open="true"] {
   padding: 0 var(--space-1);
   border-radius: var(--radius-xs);
   background: var(--bg-raised);
-  font-size: var(--type-3xs-em);
+  font-size: var(--type-xs-em);
   font-weight: 700;
 }
 
@@ -1868,7 +1888,7 @@ button.modifier-badge[data-open="true"] {
   background: var(--pal-slate-700);
   box-shadow: var(--shadow-2);
   color: var(--pal-slate-100);
-  font-size: var(--type-2xs);
+  font-size: var(--type-xs);
   font-weight: 700;
   line-height: 1;
   pointer-events: none;
@@ -1935,7 +1955,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .damage-pop {
-  color: var(--pal-red-400);
+  color: var(--pal-lacquer-400);
 }
 
 /* Damage feel is data-driven in game/damageFeel.ts. The number stays readable at the old size for
@@ -1971,7 +1991,7 @@ button.modifier-badge[data-open="true"] {
   z-index: var(--z-clock);
   inset: 0;
   pointer-events: none;
-  background: color-mix(in srgb, var(--pal-red-900) 38%, transparent);
+  background: color-mix(in srgb, var(--pal-lacquer-900) 38%, transparent);
   mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
   -webkit-mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
   animation: giga-vignette-flash 400ms var(--ease-out) both;
@@ -2261,13 +2281,13 @@ button.modifier-badge[data-open="true"] {
 /* R3389000: a Mythic whose takeover has a look of its own stills in it: In Too Deep's "abyss", the spiral
    shaft's shrine lights in rings of violet over black-blue water. Static: nothing here animates. */
 .takeover-still[data-takeover-look="abyss"] {
-  background: color-mix(in srgb, var(--pal-blue-900) 55%, transparent);
+  background: color-mix(in srgb, var(--pal-ink-900) 55%, transparent);
 }
 
 .takeover-still[data-takeover-look="abyss"] .takeover-still-rays {
   background: repeating-radial-gradient(
     circle,
-    color-mix(in srgb, var(--pal-violet-500) 40%, transparent) 0 2%,
+    color-mix(in srgb, var(--pal-amethyst-500) 40%, transparent) 0 2%,
     transparent 3% 9%
   );
   opacity: 0.6;
@@ -2339,11 +2359,11 @@ button.modifier-badge[data-open="true"] {
 }
 
 .heal-pop {
-  color: var(--pal-green-400);
+  color: var(--pal-jade-400);
 }
 
 .loss-pop {
-  color: var(--pal-purple-400);
+  color: var(--pal-amethyst-300);
 }
 
 /* ----------------------------------------------------------------- controls and the log --- */
@@ -2404,7 +2424,7 @@ button.modifier-badge[data-open="true"] {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-round);
-  background: var(--pal-red-500);
+  background: var(--pal-red-600);
 }
 
 .match-menu {
@@ -2497,7 +2517,7 @@ button.modifier-badge[data-open="true"] {
 
 .board-rail .series-banner {
   padding: var(--space-1) var(--space-3);
-  border-color: color-mix(in srgb, var(--pal-gold-200) 28%, transparent);
+  border-color: color-mix(in srgb, var(--pal-brass-200) 28%, transparent);
   background: color-mix(in srgb, var(--pal-wood-900) 48%, transparent);
 }
 
@@ -2558,7 +2578,7 @@ button.modifier-badge[data-open="true"] {
   border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   color: var(--text-dim);
-  font-size: var(--type-3xs-em);
+  font-size: var(--type-xs-em);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2572,7 +2592,7 @@ button.modifier-badge[data-open="true"] {
   border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   color: var(--text-dim);
-  font-size: var(--type-3xs-em);
+  font-size: var(--type-xs-em);
   font-style: italic;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2609,7 +2629,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .board .control.control-end-turn[data-turn-state="ready"] {
-  box-shadow: var(--primary-shadow), 0 0 13px color-mix(in srgb, var(--pal-yellow-400) 36%, transparent);
+  box-shadow: var(--primary-shadow), 0 0 13px color-mix(in srgb, var(--pal-gold-400) 36%, transparent);
 }
 
 /* The waiting pulse is a yellow halo drawn once on the button's `::after`, whose opacity breathes
@@ -2619,7 +2639,7 @@ button.modifier-badge[data-open="true"] {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: 0 0 18px color-mix(in srgb, var(--pal-yellow-400) 62%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--pal-gold-400) 62%, transparent);
   opacity: 0;
   pointer-events: none;
   animation: end-turn-ready-pulse 1.2s var(--ease-in-out) infinite;
@@ -2674,11 +2694,11 @@ button.modifier-badge[data-open="true"] {
   right: 8px;
   bottom: 5px;
   padding: 0 var(--space-2);
-  border: 1px solid color-mix(in srgb, var(--pal-gold-200) 28%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-200) 28%, transparent);
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-wood-900) 65%, transparent);
-  color: var(--pal-gold-200);
-  font-size: var(--type-3xs-em);
+  color: var(--pal-brass-200);
+  font-size: var(--type-xs-em);
   font-weight: 750;
 }
 
@@ -2688,8 +2708,8 @@ button.modifier-badge[data-open="true"] {
   bottom: 4px;
   gap: var(--space-1);
   max-width: calc(100% - 12px);
-  color: var(--pal-gold-200);
-  font-size: var(--type-3xs-em);
+  color: var(--pal-brass-200);
+  font-size: var(--type-xs-em);
 }
 
 .turn-mechanism > .clock .clock-side-label {
@@ -2720,10 +2740,8 @@ button.modifier-badge[data-open="true"] {
 
   .turn-plate-number {
     color: var(--text-dim);
-    font-size: var(--type-2xs-em);
+    font-size: var(--type-xs-em);
     font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
   }
 
   .turn-plate-whose {
@@ -2970,7 +2988,7 @@ button.modifier-badge[data-open="true"] {
   }
 
   .card {
-    font-size: var(--type-2xs-em);
+    font-size: var(--type-xs-em);
   }
 
   .pile-label {
@@ -3324,7 +3342,7 @@ button.modifier-badge[data-open="true"] {
   }
 
   .card {
-    font-size: var(--type-2xs-em);
+    font-size: var(--type-xs-em);
     padding: var(--space-1) var(--space-2);
   }
 
@@ -3358,7 +3376,7 @@ button.modifier-badge[data-open="true"] {
   }
 
   .board .zone > .switch-button > .switch-glyph {
-    font-size: var(--type-3xs);
+    font-size: var(--type-xs);
   }
 
   .field {
@@ -3706,7 +3724,7 @@ button.modifier-badge[data-open="true"] {
      wrapper is none either, activate.css). */
   .field-badges .keywords {
     display: contents;
-    font-size: var(--type-3xs);
+    font-size: var(--type-xs);
     line-height: 1;
     pointer-events: none;
   }
@@ -3871,7 +3889,7 @@ button.modifier-badge[data-open="true"] {
   .game[data-rail-top="true"] .match-ranks {
     flex: 1 1 0;
     min-width: 0;
-    font-size: var(--type-2xs);
+    font-size: var(--type-xs);
   }
 
   .game[data-rail-top="true"] .match-ranks__short {
@@ -4053,12 +4071,15 @@ button.modifier-badge[data-open="true"] {
     padding: var(--space-2) var(--space-4);
   }
 
-  /* A tile here is about 56px square, so its numbers come down a size to stay inside it. */
+  /* A tile here is about 56px square, so its numbers come down a size to stay inside it.
+     R5053000: a GIGA's face spans four tiles, so its gems keep the face's own size (cards.css),
+     round in either position, where the tile's 13px squeezed them into slivers; `:where` keeps
+     the rule's weight. */
   .zone .stats {
     gap: 0;
   }
 
-  .zone .stat {
+  .zone:where(:not([data-giga="anchor"])) .stat {
     min-width: 13px;
     padding: 0 var(--space-1);
     font-size: var(--type-xs-em);

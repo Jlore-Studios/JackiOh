@@ -18,8 +18,8 @@
   background-repeat: no-repeat;
   background-size: cover;
   box-shadow:
-    inset 0 0 0 1px rgb(0 0 0 / 0.35),
-    inset 0 -0.6em 1.2em rgb(0 0 0 / 0.22);
+    inset 0 0 0 1px color-mix(in srgb, var(--pal-black) 35%, transparent),
+    inset 0 -0.6em 1.2em color-mix(in srgb, var(--pal-black) 22%, transparent);
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
@@ -32,7 +32,7 @@
  */
 .cf-art[data-art-pending="true"] {
   background-image:
-    radial-gradient(ellipse at 50% 45%, transparent 55%, rgb(0 0 0 / 0.38)),
+    radial-gradient(ellipse at 50% 45%, transparent 55%, color-mix(in srgb, var(--pal-black) 38%, transparent)),
     linear-gradient(var(--art-sky-1, #11131b), var(--art-sky-2, #11131b));
 }
 
@@ -63,17 +63,17 @@
 
 /* Unit, full card: an upright oval-topped portrait. */
 .cf-art--portrait {
-  border-radius: 48% 48% 40% 40% / 55% 55% 45% 45%;
+  border-radius: var(--radius-art-portrait);
 }
 
 /* Spell: a framed window with softened corners. */
 .cf-art--window {
-  border-radius: 6% / 8%;
+  border-radius: var(--radius-art-window);
 }
 
 /* Field Spell: a round-topped arch. */
 .cf-art--arch {
-  border-radius: 50% 50% 4% 4% / 40% 40% 4% 4%;
+  border-radius: var(--radius-art-arch);
 }
 
 /* Trap and Field Trap: a window with chamfered corners. */
@@ -90,7 +90,7 @@
 
 /* Board minion: a full oval. */
 .cf-art--oval {
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 /* #3341: a board unit's art that is not full art: the picture up to the face's frame, a rectangle the face's own panel
@@ -112,8 +112,8 @@
 .cf-art--strip {
   background-position: center 38%;
   box-shadow: none;
-  -webkit-mask-image: linear-gradient(to left, #000 40%, transparent 100%);
-  mask-image: linear-gradient(to left, #000 40%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to left, var(--pal-black) 40%, transparent 100%);
+  mask-image: linear-gradient(to left, var(--pal-black) 40%, transparent 100%);
 }
 
 .cf-art--strip .cf-art-img {

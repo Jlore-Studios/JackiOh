@@ -517,7 +517,7 @@ fn swapper() -> Script {
             TriggerDef::new(
                 "edge-r6-swapper",
                 &[GameEventType::AttackDeclared],
-                |_ctx, _event| vec![effects::swap_board()],
+                |_ctx, _event| vec![effects::swap(json_as(json!({ "what": "board" })))],
             )
             .with_when(|_ctx, event| unforced_declaration(event).is_some()),
         ],

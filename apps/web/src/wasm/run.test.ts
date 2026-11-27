@@ -13,7 +13,6 @@ import {
   runCreate,
   runDailySeed,
   runEmbers,
-  runFightReport,
   runFightSetup,
   runFold,
   runLevelCost,
@@ -22,7 +21,6 @@ import {
   runScore,
   runSeed,
   runShopPrices,
-  type ReplayInput,
 } from "./index.ts";
 
 describe("B12 the run bindings", () => {
@@ -68,17 +66,6 @@ describe("B12 the run bindings", () => {
     expect(fight.humanDeck).toHaveLength(starter.length);
     // R3586000: the first row's fight is tier 1.
     expect(fight.enemy.tier).toBe(1);
-
-    const game: ReplayInput = {
-      seed: fight.seed,
-      decks: [fight.humanDeck, fight.enemyDeck],
-      handicaps: { p1: fight.humanHandicap, p2: fight.enemyHandicap },
-      deckMarks: { p1: fight.humanMarks },
-      log: [],
-    };
-    const report = runFightReport(game, "p1");
-    if (!("error" in report)) throw new Error("an unfinished fight reports nothing");
-    expect(report.error.length).toBeGreaterThan(0);
 
     const file: RunFile = { setup, unlocks, log: [go] };
     const folded = runFold(file, content);

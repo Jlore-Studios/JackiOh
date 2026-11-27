@@ -67,24 +67,25 @@ fn lane_of(action: &ActionBody) -> Option<i32> {
     }
 }
 
-/// One zone as B14's placement reads it: `|` past the board's edge, else the id of the card acting
-/// there (`-` for none), the Unit a carrier holds there, how many cards lie beneath and `L` when it is
-/// Locked.
+/// One zone as B14's placement reads it: `|` past the board's edge, else the id of the card a lane read
+/// meets there, a GIGA covering it included (`-` for none, R4799001), the Unit a carrier holds there, how
+/// many cards lie beneath and `L` when it is Locked.
 fn zone_reading(state: &GameState, slot: ZoneSlot) -> String {
     if slot.lane < 1 || slot.lane > row_size(slot.row) {
         return "|".to_string();
     }
     format!(
         "{}{}:{}{}",
-        card_at(state, slot).map_or("-", |card| card.id.as_str()),
+        occupant_at(state, slot).map_or("-", |card| card.id.as_str()),
         carried_at(state, slot).map_or(String::new(), |unit| format!("+{}", unit.id)),
         beneath_at(state, slot).len(),
         if is_locked(state, slot) { "L" } else { "" },
     )
 }
 
-/// B14's placement of a play into `zone` (#1014): the seat's zones beside it in its row, left then
-/// right, or the board's edge, then the lane's four zones.
+/// B14's placement of a play into `zone` (#1014): the half of a slashed board its lane is on
+/// (R4799001), the seat's zones beside it in its row, left then right, or the board's edge, then the
+/// lane's four zones.
 fn placement(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
     let other_row = if zone.row == Row::Units {
         Row::Backrow
@@ -92,7 +93,7 @@ fn placement(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
         Row::Units
     };
     let enemy = seat.opponent();
-    [
+    let zones = [
         (seat, zone.row, zone.lane - 1),
         (seat, zone.row, zone.lane + 1),
         (seat, zone.row, zone.lane),
@@ -103,7 +104,8 @@ fn placement(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
     .into_iter()
     .map(|(player, row, lane)| zone_reading(state, ZoneSlot { player, row, lane }))
     .collect::<Vec<_>>()
-    .join("/")
+    .join("/");
+    format!("{:?}/{zones}", half_of_lane(state, zone.lane))
 }
 
 /// The lanes `candidate_actions` offers the AI's hand card of `def_id`, lowest first.
@@ -1227,17 +1229,21 @@ mod lanes_that_play_differently {
     }
 
     /// #1635: a finalist that opens with a play only the root offers is replayed on another world, not
-    /// cut at its first action: `score_line` checks a line's first action against the root's set.
+    /// cut at its first action: `replay_line` checks a line's first action against the root's set.
     #[test]
-    fn score_line_replays_a_first_action_only_the_root_offers() {
+    fn replay_line_replays_a_first_action_only_the_root_offers() {
         let state = lane_eater_board();
         let play = root_candidate_actions(&state, AI, Prices::NONE)
             .into_iter()
             .find(|action| lane_of(action) == Some(4))
             .expect("the root offers lane 4");
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let played = score_line(&state, AI, &[play], &counter, false, None, Prices::NONE).expect("in budget");
-        let passed = score_line(&state, AI, &[], &counter, false, None, Prices::NONE).expect("in budget");
+        let played = replay_line(&state, AI, &[play], &counter, None, Prices::NONE, ReplayFill::OFF)
+            .map(|replay| replay.score)
+            .expect("in budget");
+        let passed = replay_line(&state, AI, &[], &counter, None, Prices::NONE, ReplayFill::OFF)
+            .map(|replay| replay.score)
+            .expect("in budget");
         assert!(played > passed, "{played} > {passed}");
     }
 
@@ -2020,6 +2026,32 @@ mod r3498000_wrap_up {
         root_expansion(state, AI, AI_BUDGET.root_branching, Prices::NONE)
     }
 
+    /// R4604014: the beam's slice lets the moves at its root draw on the parent however many nodes they
+    /// cost, and binds once the root is tried; the parent's own limit still stops it, and a plain slice
+    /// (`create_wrap_up_counter`'s) binds at once.
+    #[test]
+    fn r4604014_the_beam_s_slice_binds_once_its_root_is_tried_and_the_parent_s_limit_always() {
+        let root = create_node_counter(10, None);
+        let beam = create_beam_counter(&root, 2, None);
+        for _ in 0..5 {
+            assert!(beam.take(), "the root takes past its slice of 2");
+        }
+        assert_eq!(beam.limit(), 10, "the root reads the parent's limit");
+        beam.end_root();
+        assert!(!beam.take(), "past its slice once the root is tried");
+        assert!(root.take(), "the parent runs on");
+
+        let root = create_node_counter(10, None);
+        let plain = create_wrap_up_counter(&root, 2, None);
+        assert!(plain.take() && plain.take());
+        assert!(!plain.take(), "a plain slice binds before its root is tried");
+
+        let small = create_node_counter(3, None);
+        let beam = create_beam_counter(&small, 2, None);
+        assert!(beam.take() && beam.take() && beam.take());
+        assert!(!beam.take(), "the parent's limit stops the root");
+    }
+
     #[test]
     fn r4801000_a_wrap_up_counter_is_first_polled_once_the_root_is_tried_and_the_hard_stop_still_is() {
         let root = create_node_counter(100, None);
@@ -2458,7 +2490,16 @@ mod rescored_own_prompts_1636 {
 
     /// `line` scored on `world` after the opponent's reply, as `decide` re-scores a finalist.
     fn rescore(world: &GameState, line: &[ActionBody], counter: &dyn NodeCounter) -> Option<f64> {
-        score_line(world, AI, line, counter, true, None, Prices::NONE)
+        replay_line(
+            world,
+            AI,
+            line,
+            counter,
+            Some(&hidden_card_ids(world, AI)),
+            Prices::NONE,
+            ReplayFill::OFF,
+        )
+        .map(|replay| replay.score)
     }
 
     /// #1636: the line [Scarab, its answer] found on one world, scored on a world whose offer lacks
@@ -2792,4 +2833,57 @@ fn r1829000_two_positions_that_differ_only_in_summoning_sickness_sign_apart() {
         .expect("the unit")
         .summoned_turn = Some(turn - 1);
     assert_eq!(search_signature(&state, AI), search_signature(&earlier, AI));
+}
+
+/// R4799001: a placement reads a zone a GIGA covers as the GIGA (`occupant_at`, R3546001) and the half of
+/// a slashed board its lane is on (R3554003), so a lane that plays differently is tried. The AI plays Mr.
+/// Vanilla (Core #8) with its own row empty; the GIGA is the Jlockeed Large Language Model token (S+
+/// #T-AI-4), a 2/5 GIGA Taunt.
+mod placements_beside_a_giga_or_a_slash {
+    use super::*;
+
+    const VANILLA: &str = "core-008";
+    const GIGA_WALL: &str = "stinkyscapeplus-t-ai-04";
+    /// The lane the slash voids: lanes 1 and 2 are the Left half, 4 and 5 the Right.
+    const SLASH_LANE: i32 = 3;
+
+    /// The lanes the search's root tries the AI's Mr. Vanilla in (every placement, #1635), against the
+    /// human's `field`, the board slashed at `SLASH_LANE` when `slashed`.
+    fn root_lanes(field: Value, slashed: bool) -> Vec<i32> {
+        jackioh_cards::register_all();
+        let mut s = scenario(json!({
+            "seed": "search-r4799001",
+            "p1": { "hand": [VANILLA] },
+            "p2": { "field": field },
+        }));
+        if slashed {
+            s.state_mut().slashed_lane = Some(SLASH_LANE);
+        }
+        let state = s.state().clone();
+        lanes_of(&state, VANILLA, &root_candidate_set(&state, AI))
+    }
+
+    #[test]
+    fn r4799001_the_lane_beside_an_enemy_giga_is_a_placement_of_its_own() {
+        // The GIGA anchored in lane 2 covers lane 3 too: lanes 2 and 3 face it, and lane 4, the only inner
+        // lane that does not, read as open beside lane 3 and was never tried.
+        let lanes = root_lanes(json!([{ "def": GIGA_WALL, "lane": 2 }]), false);
+        assert_eq!(
+            lanes,
+            vec![1, 3, 4, 5],
+            "lanes 2 and 3 face the GIGA, the midlane kept"
+        );
+    }
+
+    #[test]
+    fn r4799001_each_half_of_a_slashed_board_is_a_placement_of_its_own() {
+        // Lanes 2 and 4, each beside the void with nothing else near, attack different halves.
+        assert_eq!(root_lanes(json!([]), true), vec![1, 2, 4, 5]);
+    }
+
+    #[test]
+    fn r4799001_a_board_with_no_giga_and_no_slash_keeps_its_placements() {
+        // The inner lanes, alike, are one placement, its midlane lane kept (R2203001).
+        assert_eq!(root_lanes(json!([]), false), vec![1, 3, 5]);
+    }
 }

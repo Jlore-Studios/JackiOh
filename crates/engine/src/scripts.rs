@@ -216,10 +216,10 @@ pub fn sync_fused_scripts(state: &mut GameState) {
 }
 
 /// R77, R179: a fused definition's two scripts, the state's (`sync_fused_scripts`) or composed now.
+/// #5136: the state's entry is looked for before the id is parsed: `sync_fused_scripts` keeps one only
+/// for an id `fused_ingredient_count` admits, so the answer is the same, and a long game's fused ids,
+/// read for every aura and every card a view lists, are not walked again on each read.
 fn fused_scripts(state: &GameState, def_id: &str) -> Option<CardScripts> {
-    if fused_ingredient_count(state, def_id)? < FUSE_MIN_INGREDIENTS {
-        return None;
-    }
     let def = state.transient_defs.get(def_id)?;
     if let Some(entry) = state.fused_scripts.entry(def_id, &def.ingredients) {
         return Some(CardScripts {
@@ -227,18 +227,22 @@ fn fused_scripts(state: &GameState, def_id: &str) -> Option<CardScripts> {
             radiant: Script::clone(&entry.radiant),
         });
     }
-    Some(crate::subsystems::fuse::compose_fused_scripts(state, def))
-}
-
-/// One face of `fused_scripts(state, def_id)`: the state's, shared, or composed alone.
-fn fused_face(state: &GameState, def_id: &str, radiant: bool) -> Option<ScriptRef> {
     if fused_ingredient_count(state, def_id)? < FUSE_MIN_INGREDIENTS {
         return None;
     }
+    Some(crate::subsystems::fuse::compose_fused_scripts(state, def))
+}
+
+/// One face of `fused_scripts(state, def_id)`: the state's, shared, or composed alone (the entry
+/// looked for first, as there).
+fn fused_face(state: &GameState, def_id: &str, radiant: bool) -> Option<ScriptRef> {
     let def = state.transient_defs.get(def_id)?;
     if let Some(entry) = state.fused_scripts.entry(def_id, &def.ingredients) {
         let face = if radiant { &entry.radiant } else { &entry.base };
         return Some(ScriptRef::Composed(face.clone()));
+    }
+    if fused_ingredient_count(state, def_id)? < FUSE_MIN_INGREDIENTS {
+        return None;
     }
     Some(ScriptRef::Composed(Arc::new(
         crate::subsystems::fuse::compose_fused_face(state, def, radiant),
@@ -266,16 +270,6 @@ impl std::ops::Deref for ScriptRef {
         match self {
             ScriptRef::Static(script) => script,
             ScriptRef::Composed(script) => script,
-        }
-    }
-}
-
-impl ScriptRef {
-    /// The script, owned: a copy of a borrowed or a shared one.
-    pub fn into_owned(self) -> Script {
-        match self {
-            ScriptRef::Static(script) => script.clone(),
-            ScriptRef::Composed(script) => Arc::unwrap_or_clone(script),
         }
     }
 }

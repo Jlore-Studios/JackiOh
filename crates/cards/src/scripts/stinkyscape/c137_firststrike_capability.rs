@@ -1,5 +1,5 @@
 //! S #137 Starfleet Commander (SPEC §8.10 row 137; R1, R70, R113, R1839002, R1852003, R1852005,
-//! R1852006, R1857002, R1859006, R3869001): (4) Unit, Human, Legendary, 7/7 → 14/14 (9/9 → 18/18 until issue
+//! R1852006, R1857002, R1859006, R3869001, R5106000): (4) Unit, Human, Legendary, 7/7 → 14/14 (9/9 → 18/18 until issue
 //! #4440), First Strike, a card of the Stinkyscape set. It was Firststrike Capability, a Common with no tag, until #2521 renamed it; its
 //! Cry is unchanged, and its file keeps the old name.
 //!
@@ -16,17 +16,22 @@
 //! Dormant Starship, nothing: no launch and no Discover. Declares no numbers. R4189000: in hand the
 //! card glows while its controller has a Dormant Starship. The Discover's prompt names
 //! the card as the game's catalog version spells it (`def_of`, R767000), so a replay of a game before
-//! the rename asks as it asked then. S #176 Preemptive Strike casts the same effect as a Spell.
+//! the rename asks as it asked then. S #176 Preemptive Strike casts the same effect as a Spell: both
+//! run `crate::war_doctrine`'s text.
+//!
+//! R5106000: the Dormant Starship is read once, as the Cry begins, so a fused Cry that asks during the
+//! launch (S #40 Poison Capsule's placement) is answered and the Discover follows. Before issue #5106
+//! (`script_before_launch_read_once`, R767000) the rebuild after that answer found the Starship
+//! launched, and the Discover was lost.
 
 use jackioh_engine::prelude::*;
 
+use crate::war_doctrine::{PICKED, Read, cast_the_pick, doctrine_text, launch_then_discover};
+
 pub const ID: &str = "stinkyscape-137";
 
-/// The resume step the Discover's answer comes back to (§10.6).
-const PICKED: &str = "picked";
-
-fn firststrike(radiant: bool) -> Script {
-    let doctrine = if radiant { "a Radiant War Doctrine" } else { "a War Doctrine" };
+fn firststrike(radiant: bool, read: Read) -> Script {
+    let doctrine = doctrine_text(radiant);
     Script {
         // R4189000: in hand the card glows while its controller has a Dormant Starship, the same
         // fact the Cry branches on.
@@ -35,37 +40,28 @@ fn firststrike(radiant: bool) -> Script {
                 && dormant_starship_of(ctx.state, ctx.controller).is_some()
         })),
         cry: Some(hook(move |ctx| {
-            let Some(ship) = dormant_starship_of(&*ctx.state, ctx.controller) else {
-                return vec![];
-            };
             let name = &def_of(Some(&*ctx.state), ID).name;
             let prompt = format!("{name}: Discover {doctrine} to cast");
-            vec![
-                awaken(json_as(json!({ "target": { "of": "instance", "instanceId": ship.id } }))),
-                discover_from_catalog(json_as(json!({
-                    "step": PICKED,
-                    "query": crate::query::war_doctrines(),
-                    "prompt": prompt,
-                }))),
-            ]
+            launch_then_discover(ctx, prompt, read)
         })),
-        resume: IndexMap::from([(
-            PICKED,
-            hook(move |ctx| {
-                let Some(picked) = chosen_options(ctx).into_iter().next() else {
-                    return vec![];
-                };
-                vec![cast_new(json_as(json!({ "def": picked, "radiant": radiant })))]
-            }),
-        )]),
+        resume: IndexMap::from([(PICKED, cast_the_pick(radiant))]),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: firststrike(false),
-        radiant: firststrike(true),
+        base: firststrike(false, Read::Once),
+        radiant: firststrike(true, Read::Once),
+    }
+}
+
+/// R767000: what it ran before issue #5106, its Dormant Starship read again each time the Cry's
+/// list was built, so a fused Cry that asked during the launch lost the Discover (R5106000).
+pub fn script_before_launch_read_once() -> CardScripts {
+    CardScripts {
+        base: firststrike(false, Read::EachBuild),
+        radiant: firststrike(true, Read::EachBuild),
     }
 }
 
@@ -97,6 +93,7 @@ mod tests {
     const CHASSIS: &str = "stinkyscape-048"; // Ultralight Chassis: Starship Piece, Rush: keywords only
     const CAPACITOR: &str = "stinkyscape-133"; // Ultra Capacitor: When launched: +attack/+health per other piece.
     const VANILLA: &str = "core-008"; // Mr. Vanilla
+    const CAPSULE: &str = "stinkyscape-040"; // Poison Capsule: Starship Piece, Cry: place Plague Counters (asks where).
 
     /// p1's Starship (an Ultralight Chassis and an Ultra Capacitor) and Starfleet Commander (Radiant
     /// if `radiant`) in hand, played into lane 4.
@@ -115,6 +112,57 @@ mod tests {
             "the launch costs nothing beside the card"
         );
         (s, ship)
+    }
+
+    /// p1's Starship fused from a Poison Capsule and an Ultralight Chassis, and Starfleet Commander
+    /// played into lane 4: the launch runs the Capsule's fused Cry, which asks where its counters go,
+    /// and the answer puts them on the Starship.
+    fn played_with_a_capsule(seed: &str) -> (Scenario, String) {
+        let (mut s, ship) = built_starship(
+            seed,
+            json!([{ "def": CAPSULE, "lane": 1 }, { "def": CHASSIS, "lane": 2 }]),
+            json!({ "hand": [ID] }),
+            json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
+        );
+        s.play(ID, json!({ "zone": 4 }));
+        assert!(is_launched_starship(s.card(ship.as_str())));
+        let prompt = &s.state().pending.as_ref().expect("the Capsule's placement").prompt;
+        assert!(!prompt.starts_with("Starfleet Commander:"), "the placement asks first: {prompt}");
+        s.answer(json!(ship));
+        (s, ship)
+    }
+
+    /// R5106000: the Dormant Starship is read once, as the Cry begins, so a fused Cry that asks
+    /// during the launch delays the Discover and loses nothing.
+    #[test]
+    fn r5106000_a_fused_cry_that_asks_during_the_launch_is_answered_then_the_discover_opens() {
+        let (mut s, ship) = played_with_a_capsule("r5106000-s137");
+        assert_eq!(s.card(ship.as_str()).counters.plague, Some(2), "the Capsule's counters");
+        let prompt = &s.state().pending.as_ref().expect("the Discover").prompt;
+        assert!(prompt.starts_with("Starfleet Commander:"), "{prompt}");
+        let options = s.prompt_modes();
+        assert!(options.iter().all(|option| WAR_DOCTRINES.contains(&option.as_str())), "{options:?}");
+        let pick = options[0].clone();
+        s.answer(json!(pick));
+        assert!(
+            s.state().players.p1.graveyard.iter().any(|card| card.def_id == pick),
+            "the Doctrine cast"
+        );
+    }
+
+    /// R767000: the script kept for the replays from before issue #5106 rebuilt its list after the
+    /// Capsule's answer, found the Starship launched, and lost the Discover (R5106000).
+    #[test]
+    fn r767000_r5106000_the_kept_script_loses_the_discover_after_a_fused_cry_asks() {
+        crate::under_kept(ID, super::script_before_launch_read_once(), || {
+            let (s, _ship) = played_with_a_capsule("r767000-s137-kept");
+            assert!(s.state().pending.is_none(), "no Discover");
+            let graveyard = &s.state().players.p1.graveyard;
+            assert!(
+                !graveyard.iter().any(|card| WAR_DOCTRINES.contains(&card.def_id.as_str())),
+                "no Doctrine cast"
+            );
+        });
     }
 
     #[test]

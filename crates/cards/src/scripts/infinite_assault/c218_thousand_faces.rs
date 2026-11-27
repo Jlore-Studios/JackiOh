@@ -1,9 +1,9 @@
 //! IA #218 Thousand Faces (SPEC §8.13 row 218), a card of the held Infinite Assault set
 //! (R4577000).
-//!   Base:    "Your face-down cards can't be destroyed. Once per turn, when you set a card
-//!            face-down, draw a card."
-//!   Radiant: "Your face-down cards can't be destroyed. Twice per turn, when you set a card
-//!            face-down, draw a card."
+//!   Base:    "Aura: Your face-down cards can't be destroyed. Once per turn, when you set a
+//!            card face-down, draw a card."
+//!   Radiant: "Aura: Your face-down cards can't be destroyed. Twice per turn, when you set a
+//!            card face-down, draw a card."
 //!
 //! The guard is `StaticFlags.face_down_indestructible`: a destroy from either side is stopped at
 //! §4.5 step 1, but reveal, Exile, bounce, steal and transform are not (R4594001). A card its

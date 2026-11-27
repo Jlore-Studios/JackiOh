@@ -10,7 +10,7 @@ import { usePatchSource } from "../patches/context.tsx";
 import type { PatchSource, Snapshot } from "../patches/source.ts";
 
 /** R4680000: the catalog a shipped version left: the browser's own history's file, else the server's. */
-export async function snapshotAt(source: PatchSource, version: string): Promise<Snapshot> {
+async function snapshotAt(source: PatchSource, version: string): Promise<Snapshot> {
   return (await source.snapshot(version)) ?? (await getCatalogAt(version)).defs;
 }
 

@@ -16,6 +16,8 @@ import type {
   RunUnlocks,
 } from "@jackioh/run";
 
+import { EMPTY_RUN_STATS } from "../emptyStats.ts";
+
 /** Ten starting cards of the catalog's Training Grounds, so their faces draw as the deck builder draws them. */
 export const STARTERS = [
   "traininggrounds-001",
@@ -125,35 +127,7 @@ export function unlocks(over: Partial<RunUnlocks> = {}): RunUnlocks {
   return { level: 1, cards: [], artifacts: [], owned: null, ...over };
 }
 
-export const ZERO_STATS: RunStats = {
-  nodesVisited: 0,
-  fightsWon: 0,
-  elitesWon: 0,
-  ghostsWon: 0,
-  miniBossesWon: 0,
-  bossesWon: 0,
-  damageDealt: 0,
-  healingDone: 0,
-  cardsDrawn: 0,
-  turns: 0,
-  damageTaken: 0,
-  healed: 0,
-  coinsEarned: 0,
-  coinsSpent: 0,
-  ticketsEarned: 0,
-  ticketsSpent: 0,
-  cardsKept: 0,
-  cardsBought: 0,
-  cardsRemoved: 0,
-  cardsMadeRadiant: 0,
-  cardsBuffed: 0,
-  packsSkipped: 0,
-  artifactsTaken: 0,
-  artifactsLeveled: 0,
-  blessingsTaken: 0,
-  eventsSeen: 0,
-  chestsOpened: 0,
-};
+export const ZERO_STATS: RunStats = EMPTY_RUN_STATS;
 
 export function runState(over: Partial<RunState> = {}): RunState {
   return {

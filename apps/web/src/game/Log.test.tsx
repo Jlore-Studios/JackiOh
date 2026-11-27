@@ -723,8 +723,8 @@ describe("R3045000 a fused Dormant Starship is named for its hull in the log", (
     expect(kept(twice)?.face?.name).toBe("Dormant Starship");
   });
 
-  it("R3045000 any other fused card is named by what it was fused of", () => {
-    expect(kept(equipped)?.text.full).toBe("2 cards fused into Beam v3 + Pointmaster");
+  it("R3045000 any other fused card is named by what it was fused of; R5050000 a unit holding gear by its host", () => {
+    expect(kept(equipped)?.text.full).toBe("2 cards fused into Pointmaster");
   });
 
   it("R3045000 a reader of Chinese reads the hull's Chinese name", async () => {

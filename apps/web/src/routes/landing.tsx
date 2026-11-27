@@ -388,7 +388,8 @@ function useUnroll(motion: LandingMotion): {
   open: boolean;
   root: RefObject<HTMLDivElement | null>;
   bookmark: RefObject<HTMLButtonElement | null>;
-  close: () => void;
+  /** Rolls the scroll up and hands the focus back to its bookmark, as Back does. */
+  rollUp: () => void;
   toggle: () => void;
 } {
   const [phase, setPhase] = useState<UnrollPhase>("closed");
@@ -397,6 +398,10 @@ function useUnroll(motion: LandingMotion): {
   const close = useCallback((): void => {
     setPhase(motion === "reduced" ? "closed" : "closing");
   }, [motion]);
+  const rollUp = useCallback((): void => {
+    close();
+    bookmark.current?.focus();
+  }, [close]);
 
   useEffect(() => {
     if (phase !== "closing") return undefined;
@@ -432,13 +437,13 @@ function useUnroll(motion: LandingMotion): {
     if (open) close();
     else setPhase("open");
   };
-  return { phase, open, root, bookmark, close, toggle };
+  return { phase, open, root, bookmark, rollUp, toggle };
 }
 
 /** R2035000: the account's quests behind a bookmark on the doors' box, read once on mount (CLAUDE.md rule 7). */
 function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotion }): ReactElement | null {
   const { quests, error, reread, replace } = useQuests(token);
-  const { phase, open, root, bookmark, close, toggle } = useUnroll(motion);
+  const { phase, open, root, bookmark, rollUp, toggle } = useUnroll(motion);
   const panelId = useId();
 
   // Nothing held and nothing due (R1304002): nothing to show, as on `/collection`.
@@ -449,14 +454,7 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
   return (
     <div ref={root} className="landing-quests" style={UNROLL_STYLE}>
       {/* R2127000: Back rolls the scroll up, as Escape does; a layer only while it is open, not while it closes. */}
-      {open ? (
-        <BackLayer
-          onClose={() => {
-            close();
-            bookmark.current?.focus();
-          }}
-        />
-      ) : null}
+      {open ? <BackLayer onClose={rollUp} /> : null}
       <button
         ref={bookmark}
         type="button"
@@ -497,7 +495,7 @@ function QuestsBookmark({ token, motion }: { token: string; motion: LandingMotio
  */
 function NewsBookmark({ token, motion }: { token: string; motion: LandingMotion }): ReactElement | null {
   const { news, claim, claimAll } = useNews(token);
-  const { phase, open, root, bookmark, close, toggle } = useUnroll(motion);
+  const { phase, open, root, bookmark, rollUp, toggle } = useUnroll(motion);
   const panelId = useId();
 
   if (news === null || news.length === 0) return null;
@@ -507,14 +505,7 @@ function NewsBookmark({ token, motion }: { token: string; motion: LandingMotion 
   return (
     <div ref={root} className="landing-news" style={UNROLL_STYLE}>
       {/* R2127000: Back rolls the scroll up, as Escape does; a layer only while it is open, not while it closes. */}
-      {open ? (
-        <BackLayer
-          onClose={() => {
-            close();
-            bookmark.current?.focus();
-          }}
-        />
-      ) : null}
+      {open ? <BackLayer onClose={rollUp} /> : null}
       <button
         ref={bookmark}
         type="button"

@@ -1,7 +1,7 @@
 // `node scripts/shard-specs.mjs [--smoke | --component] <k> <K>` (from e2e/): the e2e specs shard k of K runs in
 // CI, as one comma-separated `--spec` list (.github/actions/e2e-shard). The daily super run
 // (.github/workflows/super.yml) splits every spec over K jobs; a pull request's `e2e smoke`
-// (.github/workflows/ci.yml) runs only SMOKE, with `--smoke`. Each job boots its own client and
+// (.github/workflows/ci.yml) runs SMOKE plus the specs its changed cards reach (#5099), with `--smoke`. Each job boots its own client and
 // server, so R144's reseed at boot still gives every shard a fresh server.
 //
 // The split balances measured time: longest spec first, each to the shard with the least so far
@@ -10,12 +10,16 @@
 // shard for any K, so a new spec is never left out; refresh WEIGHTS when the timings drift. `--component` splits
 // cypress/component/*.cy.tsx by COMPONENT_WEIGHTS the same way, for the super run's component jobs (#3439).
 
-import { readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SPEC_DIR = "cypress/e2e";
 const COMPONENT_DIR = "cypress/component";
+const DECK_DIR = "fixtures/decks";
+const JACKIOH_BIN = "target/release/jackioh";
+const CHANGED_CARDS_TIMEOUT_MS = 60_000;
 
 /**
  * The per-pull-request smoke list (docs/v0.3.0/README.md §7), one spec per user-facing flow: 01 a
@@ -26,6 +30,13 @@ const COMPONENT_DIR = "cypress/component";
  * and 5.6-6.0 minutes) and set the slowest chain through CI. Spec number prefixes, as WEIGHTS keys them.
  */
 export const SMOKE = ["01", "06", "10", "13", "19", "51"];
+
+/**
+ * Seconds of WEIGHTS a pull request's extra specs may add per shard (#5099); today's heaviest smoke
+ * shard is 82 s, and shards of about 285 s ran 8m 7s and 8m 57s (#3764).
+ */
+export const SMOKE_EXTRA_BUDGET_S = 120;
+const NEVER_ADDED = ["46", "47"];
 
 /**
  * Seconds per spec on ubuntu-latest, Chrome and Electron's slower: CI run 36973335249 (main at
@@ -72,7 +83,11 @@ export function componentWeight(spec) {
   return COMPONENT_WEIGHTS[spec] ?? DEFAULT_COMPONENT_WEIGHT;
 }
 
-export function shardSpecs(specs, k, count, weight = (spec) => WEIGHTS[spec.slice(0, 2)] ?? DEFAULT_WEIGHT) {
+export function specWeight(spec) {
+  return WEIGHTS[spec.slice(0, 2)] ?? DEFAULT_WEIGHT;
+}
+
+export function shardSpecs(specs, k, count, weight = specWeight) {
   const shards = Array.from({ length: count }, () => ({ load: 0, specs: [] }));
   const byWeight = [...specs].sort((a, b) => weight(b) - weight(a) || (a < b ? -1 : 1));
   for (const spec of byWeight) {
@@ -93,6 +108,95 @@ export function smokeSpecs(specs) {
     }
     return matches[0];
   });
+}
+
+function quotes(text, word) {
+  return ['"', "'", "`"].some((quote) => text.includes(`${quote}${word}${quote}`));
+}
+
+/** Spec -> { how, cards }: "names" when its source quotes a changed card's id or catalog name, else "deals" when it quotes the id of a fixture deck holding one. */
+export function reachedSpecs(ids, specs, { sources, decks, names }) {
+  const reached = new Map();
+  for (const spec of specs) {
+    if (NEVER_ADDED.includes(spec.slice(0, 2))) continue;
+    const text = sources[spec];
+    const named = ids.filter((id) => quotes(text, id) || (names[id] !== undefined && quotes(text, names[id])));
+    const dealt = ids.filter((id) => Object.entries(decks).some(([deck, cards]) => cards.includes(id) && quotes(text, deck)));
+    if (named.length > 0) reached.set(spec, { how: "names", cards: named });
+    else if (dealt.length > 0) reached.set(spec, { how: "deals", cards: dealt });
+  }
+  return reached;
+}
+
+/** SMOKE, then the reached specs, "names" before "deals", each lightest first (ties by file name), while their weights total at most SMOKE_EXTRA_BUDGET_S * count. The first spec past the budget and all after it are `left` to the daily run. */
+export function smokeSelection(every, ids, count, world) {
+  const smoke = smokeSpecs(every);
+  const reached = reachedSpecs(ids, every.filter((spec) => !smoke.includes(spec)), world);
+  const rank = (spec) => (reached.get(spec).how === "names" ? 0 : 1);
+  const order = [...reached.keys()].sort((a, b) => rank(a) - rank(b) || specWeight(a) - specWeight(b) || (a < b ? -1 : 1));
+  const budget = SMOKE_EXTRA_BUDGET_S * count;
+  const added = [];
+  const left = [];
+  let load = 0;
+  for (const spec of order) {
+    if (left.length === 0 && load + specWeight(spec) <= budget) {
+      added.push(spec);
+      load += specWeight(spec);
+    } else {
+      left.push(spec);
+    }
+  }
+  return { specs: [...smoke, ...added], added, left, load, budget, reached };
+}
+
+/** `root` is e2e/. */
+export function readWorld(root, ids) {
+  const sources = {};
+  for (const name of readdirSync(join(root, SPEC_DIR))) {
+    if (name.endsWith(".cy.ts")) sources[name] = readFileSync(join(root, SPEC_DIR, name), "utf8");
+  }
+  const decks = {};
+  for (const name of readdirSync(join(root, DECK_DIR))) {
+    if (!name.endsWith(".json")) continue;
+    const deck = JSON.parse(readFileSync(join(root, DECK_DIR, name), "utf8"));
+    decks[deck.id ?? name.slice(0, -".json".length)] = deck.cards;
+  }
+  const catalog = JSON.parse(readFileSync(join(root, "..", "crates/cards/catalog.json"), "utf8"));
+  const names = Object.fromEntries(ids.filter((id) => catalog[id]?.name !== undefined).map((id) => [id, catalog[id].name]));
+  return { sources, decks, names };
+}
+
+function log(line) {
+  process.stderr.write(`smoke: ${line}\n`);
+}
+
+/** `jackioh changed-cards --json` from JACKIOH_BIN (default ../target/release/jackioh); undefined with no binary (a local run) or when it fails: the list then stays SMOKE. */
+function changedCards(root) {
+  const bin = process.env.JACKIOH_BIN ?? join(root, "..", JACKIOH_BIN);
+  if (!existsSync(bin)) return undefined;
+  try {
+    const out = execFileSync(bin, ["changed-cards", "--json", "--root", join(root, "..")], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "inherit"],
+      timeout: CHANGED_CARDS_TIMEOUT_MS,
+    });
+    const changed = JSON.parse(out);
+    if (!Array.isArray(changed.ids) || !Array.isArray(changed.notes)) throw new Error("no ids and notes in its output");
+    return changed;
+  } catch (error) {
+    log(`${bin} changed-cards failed (${error.message}); the list stays SMOKE`);
+    return undefined;
+  }
+}
+
+function logSelection(changed, { added, left, load, budget, reached }) {
+  log(`${changed.ids.length} changed cards: ${changed.ids.join(", ")}`);
+  for (const spec of added) {
+    const { how, cards } = reached.get(spec);
+    log(`+ ${spec} (${specWeight(spec)} s) ${how} ${cards.join(", ")}`);
+  }
+  log(`${added.length} extra specs, ${load} of ${budget} s (${SMOKE_EXTRA_BUDGET_S} s a shard)`);
+  if (left.length > 0) log(`left to the daily run: ${left.join(", ")}`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -116,6 +220,15 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     } catch (error) {
       process.stderr.write(`${error.message}; update SMOKE in scripts/shard-specs.mjs\n`);
       process.exit(1);
+    }
+    const changed = changedCards(root);
+    if (changed !== undefined && changed.ids.length > 0) {
+      const selection = smokeSelection(every, changed.ids, count, readWorld(root, changed.ids));
+      specs = selection.specs;
+      logSelection(changed, selection);
+    } else if (changed !== undefined) {
+      const why = changed.warning ? [...changed.notes, changed.warning] : changed.notes;
+      log(`no changed cards${why.map((note) => `; ${note}`).join("")}`);
     }
   }
   const picked = component ? shardSpecs(specs, k, count, componentWeight) : shardSpecs(specs, k, count);

@@ -168,50 +168,60 @@ pub struct BotFacts {
     pub cosmetics: Option<BotCosmetics>,
 }
 
-impl BotRecord for BotFacts {
-    fn profile_id(&self) -> &str {
-        &self.profile_id
-    }
-    fn created_at(&self) -> i64 {
-        self.created_at
-    }
-    fn retired_at(&self) -> Option<i64> {
-        self.retired_at
-    }
-    fn grinding(&self) -> bool {
-        self.grinding
-    }
-    fn rating_for(&self, ladder: BotLadder) -> f64 {
-        match ladder {
-            BotLadder::Constructed => self.rating,
-            BotLadder::Random => self.random_rating,
+/// Implements `BotRecord` for a host's row type that holds `BotFacts`'s fields under their names and
+/// types, as `BotFacts` does: one reading of a bot's fields for every host (the server's store row
+/// among them), so no host restates it (R1454).
+#[macro_export]
+macro_rules! bot_record_of_fields {
+    ($row:ty) => {
+        impl $crate::bots::pool::BotRecord for $row {
+            fn profile_id(&self) -> &str {
+                &self.profile_id
+            }
+            fn created_at(&self) -> i64 {
+                self.created_at
+            }
+            fn retired_at(&self) -> Option<i64> {
+                self.retired_at
+            }
+            fn grinding(&self) -> bool {
+                self.grinding
+            }
+            fn rating_for(&self, ladder: $crate::bots::pool::BotLadder) -> f64 {
+                match ladder {
+                    $crate::bots::pool::BotLadder::Constructed => self.rating,
+                    $crate::bots::pool::BotLadder::Random => self.random_rating,
+                }
+            }
+            fn active_from_hour(&self) -> i32 {
+                self.active_from_hour
+            }
+            fn active_hours(&self) -> i32 {
+                self.active_hours
+            }
+            fn in_match_id(&self) -> Option<&str> {
+                self.in_match_id.as_deref()
+            }
+            fn decks(&self) -> &[$crate::bots::pool::BotDeck] {
+                &self.decks
+            }
+            fn decks_catalog_version(&self) -> Option<&str> {
+                self.decks_catalog_version.as_deref()
+            }
+            fn trio(&self) -> Option<&$crate::deck::FrozenTrio> {
+                self.trio.as_ref()
+            }
+            fn trio_catalog_version(&self) -> Option<&str> {
+                self.trio_catalog_version.as_deref()
+            }
+            fn cosmetics(&self) -> Option<&$crate::bots::cosmetics::BotCosmetics> {
+                self.cosmetics.as_ref()
+            }
         }
-    }
-    fn active_from_hour(&self) -> i32 {
-        self.active_from_hour
-    }
-    fn active_hours(&self) -> i32 {
-        self.active_hours
-    }
-    fn in_match_id(&self) -> Option<&str> {
-        self.in_match_id.as_deref()
-    }
-    fn decks(&self) -> &[BotDeck] {
-        &self.decks
-    }
-    fn decks_catalog_version(&self) -> Option<&str> {
-        self.decks_catalog_version.as_deref()
-    }
-    fn trio(&self) -> Option<&FrozenTrio> {
-        self.trio.as_ref()
-    }
-    fn trio_catalog_version(&self) -> Option<&str> {
-        self.trio_catalog_version.as_deref()
-    }
-    fn cosmetics(&self) -> Option<&BotCosmetics> {
-        self.cosmetics.as_ref()
-    }
+    };
 }
+
+bot_record_of_fields!(BotFacts);
 
 /// R1454: the pool's size for `weekly` people who finished a live game in the last
 /// `BOT_POOL_ACTIVE_WINDOW_DAYS`.

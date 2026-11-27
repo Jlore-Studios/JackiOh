@@ -14,9 +14,9 @@ import { ArrowIcon } from "../../routes/ArrowIcon.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { DECK_SIZE } from "./deckSize.ts";
 import { deckListOrder, tileCost } from "./filters.ts";
+import { LoadoutErrorList } from "./LoadoutErrorList.tsx";
 import { UNTITLED_TRIO, type DeckItem, type TrioItem, type WorkshopLimits } from "./sync.ts";
 import {
-  LOADOUT_ERRORS,
   TRIO_CODE_OUTPUT,
   TRIO_COMPARE,
   TRIO_COPY_CODE,
@@ -26,7 +26,6 @@ import {
   TRIO_NAME_INPUT,
   TRIO_VERDICT,
   WORKSHOP_BACK,
-  loadoutErrorId,
   trioCardId,
   trioOpenDeckId,
   trioSlotId,
@@ -203,29 +202,7 @@ export default function TrioEditor(props: TrioEditorProps): ReactElement {
           <h3 className="ws-verdict-title" id={verdictTitleId}>
             {verdict.ok ? t("Ready for Conquest") : t("Before this trio can queue Conquest")}
           </h3>
-          <ul
-            className="db-errors"
-            data-testid={LOADOUT_ERRORS}
-            data-count={String(errors.length)}
-            data-tone="hint"
-            aria-labelledby={verdictTitleId}
-          >
-            {errors.map((issue, position) => (
-              <li
-                key={`${issue.rule}:${String(issue.deck ?? "")}:${issue.cardId ?? ""}:${String(position)}`}
-                data-testid={loadoutErrorId(issue.rule)}
-                data-rule={issue.rule}
-                data-deck={issue.deck === undefined ? undefined : String(issue.deck)}
-                data-card={issue.cardId}
-                data-source="client"
-              >
-                {t(issue.message)}
-              </li>
-            ))}
-          </ul>
-          {collection === null ? (
-            <p className="ws-hint">{t("Your collection couldn't be loaded, so cards you don't own aren't flagged here.")}</p>
-          ) : null}
+          <LoadoutErrorList errors={errors} labelledBy={verdictTitleId} collectionRead={collection !== null} />
         </section>
 
         <div className="ws-compare-grid" data-testid={TRIO_COMPARE} role="group" aria-label={t("The three decks side by side")}>

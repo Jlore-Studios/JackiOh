@@ -27,7 +27,7 @@
   grid-row: 1;
   grid-column: 2;
   font-size: 13px;
-  color: var(--tavern-text-dim, rgb(239 224 191 / 0.72));
+  color: var(--tavern-text-dim, color-mix(in srgb, var(--pal-parchment) 72%, transparent));
   font-variant-numeric: tabular-nums;
 }
 
@@ -43,15 +43,15 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  border: 1px solid rgb(201 149 63 / 0.45);
-  border-radius: 7px;
-  background: var(--tavern-well, #0e0905);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--tavern-well, var(--pal-wood-950));
 }
 
 .fill-bar__fill {
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, var(--tavern-brass, #c9953f), var(--tavern-gold, #f3c969));
+  background: linear-gradient(90deg, var(--tavern-brass, var(--pal-brass-500)), var(--tavern-gold, var(--pal-brass-300)));
   transform-origin: 0 50%;
 }
 
@@ -63,8 +63,8 @@
   width: 28px;
   height: 28px;
   margin: -14px -14px 0 0;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--tavern-gold-pale, #fbe7b0) 0%, var(--tavern-flame, #ffb347) 40%, transparent 70%);
+  border-radius: var(--radius-round);
+  background: radial-gradient(circle, var(--tavern-gold-pale, var(--pal-brass-200)) 0%, var(--tavern-flame, var(--pal-gold-400)) 40%, transparent 70%);
   opacity: 0;
   pointer-events: none;
 }
@@ -126,17 +126,17 @@
   width: min(100% - 2rem, 32rem);
   margin: 0 auto;
   padding: 10px 16px 12px;
-  border: 1px solid rgb(201 149 63 / 0.45);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
   border-top: 0;
-  border-radius: 0 0 12px 12px;
-  background: rgb(14 9 5 / 0.94);
-  color: var(--tavern-parchment, #efe0bf);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: color-mix(in srgb, var(--pal-wood-950) 94%, transparent);
+  color: var(--tavern-parchment, var(--pal-parchment));
 }
 
 /* A full bar's glow while it bursts in the HUD; the pulse is the gate's. */
 .opening-hud[data-motion="full"] .fill-bar[data-state="bursting"] .fill-bar__well {
-  border-color: var(--tavern-gold, #f3c969);
-  box-shadow: 0 0 14px 2px var(--tavern-flame, #ffb347);
+  border-color: var(--tavern-gold, var(--pal-brass-300));
+  box-shadow: 0 0 14px 2px var(--tavern-flame, var(--pal-gold-400));
 }
 
 /* One slot's points, from its slot's center (`--flight-x`, `--flight-y`) to the HUD's
@@ -152,7 +152,7 @@
   font-size: 22px;
   font-weight: 700;
   color: var(--flight-color);
-  text-shadow: 0 0 10px var(--flight-color), 0 1px 0 #000;
+  text-shadow: 0 0 10px var(--flight-color), 0 1px 0 var(--pal-black);
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
@@ -189,9 +189,9 @@
 
 .reward-reveal__item {
   padding: 6px 12px;
-  border: 1px solid var(--tavern-brass, #c9953f);
-  border-radius: 999px;
-  background: rgb(239 224 191 / 0.08);
+  border: 1px solid var(--tavern-brass, var(--pal-brass-500));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--pal-parchment) 8%, transparent);
   font-weight: 600;
 }
 

@@ -88,7 +88,6 @@ export type FxShot =
   | { motion: "bolt"; trail: FxPreset; wave?: true }
   | { motion: "beam" }
   | { motion: "swipe" };
-export type FxShotMotion = FxShot["motion"];
 /** #1442: a flavor's shot in `colors` (hot first), bursting `preset` where it lands; `density` as the projectile's. */
 export type FxShotCue = {
   kind: "shot";
@@ -529,6 +528,7 @@ export type FxRecipe =
   | "brand"
   | "rewind"
   | "armor"
+  | "nullify"
   | "curve"
   | "line";
 

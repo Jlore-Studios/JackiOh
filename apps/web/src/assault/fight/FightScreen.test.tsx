@@ -1,4 +1,4 @@
-// R4582000–R4582002 (issue #4582): an Infinite Assault fight's screen. The Assault's setup comes
+// R4582000–R4582002 (issue #4582), R5125000 (issue #5125): an Infinite Assault fight's screen. The Assault's setup comes
 // from a mocked `assaultFightSetup` (part B's binding), the worker is a scripted host as in
 // `routes/practice.test.tsx`, and the attempt's `onAction` records what the screen sends it.
 
@@ -19,6 +19,7 @@ import type { PracticeRequestBody, PracticeResponse, PracticeSnapshot, PracticeS
 import { CONCEDE_BODY } from "../../game/ConfirmConcede.tsx";
 import { modifierListTestid } from "../../game/ModifierList.tsx";
 import { testid } from "../../game/contract.ts";
+import { replayTestid } from "../../replay/ReplayPlayer.tsx";
 import { baseView, emptySide, opponentModifiers } from "../../test/fixtures.ts";
 import { AssaultFightScreen } from "./FightScreen.tsx";
 import { assaultFightTestid } from "./testids.ts";
@@ -125,7 +126,8 @@ type AssaultFightHost = {
  * `assaultReport` answers each of `reports` in turn with an error, then the action matching how the
  * game ended. `resume` answers `started` only when asked, else `failed`; the first `startFails`
  * starts fail. Every snapshot lists `modifiers` on its sides' views (R169), and `lethal` lights
- * the lethal hint on each (R2102000).
+ * the lethal hint on each (R2102000). With `kept`, a conceded game is kept as game 3, of two steps,
+ * whose replay the worker answers (R5125000).
  */
 function fightHost(
   reports: ("action" | "error")[] = [],
@@ -133,6 +135,7 @@ function fightHost(
   startFails = 0,
   modifiers: SideModifiers = {},
   lethal = false,
+  kept = false,
 ): AssaultFightHost {
   const requests: PracticeRequestBody[] = [];
   let id = 0;
@@ -160,7 +163,19 @@ function fightHost(
       }
       if (body.type === "act" && body.action.type === "concede") {
         ended = "lost";
-        response = { id: mine, type: "snapshot", snapshot: snapshotFor({ winner: "p2", reason: "concede" }, false, modifiers, lethal) };
+        const conceded = snapshotFor({ winner: "p2", reason: "concede" }, false, modifiers, lethal);
+        response = { id: mine, type: "snapshot", snapshot: kept ? { ...conceded, replay: { game: 3, steps: 2 } } : conceded };
+      }
+      if (body.type === "replay") {
+        const views = [snapshotFor().view, snapshotFor({ winner: "p2", reason: "concede" }).view];
+        response = {
+          id: mine,
+          type: "replay",
+          game: body.game,
+          from: body.from,
+          steps: views.slice(body.from, body.from + body.count).map((view, k) => ({ step: body.from + k, turn: 1, view })),
+          total: views.length,
+        };
       }
       if (body.type === "act" && body.action.type === "endTurn") {
         ended = "won";
@@ -519,6 +534,52 @@ describe("R4742000 the Assault fight's result panel offers Main menu", () => {
     expect(window.location.pathname).toBe(paths.play);
     expect(screen.queryByTestId(assaultFightTestid.leaveDialog)).toBeNull();
     at("/");
+  });
+});
+
+describe("R5125000 a finished fight's result offers its replay", () => {
+  /** A conceded fight, its Continue enabled; `kept`, the worker kept it. */
+  async function conceded(kept: boolean, onAction: Mock<(action: AssaultAction) => void> = vi.fn()): Promise<AssaultFightHost> {
+    const host = fightHost([], "failed", 0, {}, false, kept);
+    renderFight(host, onAction);
+    await screen.findByTestId(assaultFightTestid.screen);
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(assaultFightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+    return host;
+  }
+
+  it("R5125000 Watch the replay opens the kept fight through the worker with the enemy's name, and Back returns to the result", async () => {
+    const onAction = vi.fn<(action: AssaultAction) => void>();
+    const host = await conceded(true, onAction);
+    const watch = screen.getByTestId(assaultFightTestid.watchReplay);
+    expect(watch).toHaveTextContent("Watch the replay");
+    // After Continue and Main menu, which keep their places (R4742000).
+    expect(screen.getByTestId(assaultFightTestid.resultMenu).compareDocumentPosition(watch) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(watch);
+    const player = await screen.findByTestId(replayTestid.player);
+    await waitFor(() => {
+      expect(player).toHaveAttribute("data-step", "0");
+    });
+    expect(host.requests.filter((body) => body.type === "replay")[0]).toMatchObject({ type: "replay", game: 3, from: 0 });
+    expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("Rogue Model");
+    // Watching sends nothing to the attempt.
+    expect(onAction).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId(replayTestid.back));
+    const proceed = await screen.findByTestId(assaultFightTestid.continue);
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+    fireEvent.click(proceed);
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(LOST);
+  });
+
+  it("R5125000 a fight the worker did not keep offers no replay", async () => {
+    await conceded(false);
+    expect(screen.queryByTestId(assaultFightTestid.watchReplay)).toBeNull();
   });
 });
 

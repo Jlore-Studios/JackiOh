@@ -21,8 +21,8 @@ resolves them, and the engine is reached only through the `jackioh` binary.
 ## Install
 
 ```
-pnpm install                              # repo root: e2e's packages, and tsx, which the replayHash task runs under
-cargo build --release -p jackioh-tools    # target/release/jackioh, whose `replay` the replayHash task runs
+pnpm install                              # repo root: e2e's packages, and tsx, which the tutorialLessons task (specs 22, 23, 27, 48) runs under
+cargo build --release -p jackioh-tools    # target/release/jackioh, whose `replay-check` the replayHash task runs (no tsx)
 cd e2e && pnpm install                    # on its own, as above; the postinstall fetches the Cypress binary
 pnpm exec cypress verify
 pnpm exec tsc -p tsconfig.json
@@ -58,6 +58,13 @@ starts afresh, against the same server with no restart. CI (`.github/actions/e2e
 then runs its shard's specs on Chrome: the smoke list (01, 06, 10, 13, 19, 51,
 `scripts/shard-specs.mjs`'s `SMOKE`) on every pull request, every spec in the daily super run.
 Specs 46 and 47 run in the daily super run only (#4092): each took a smoke shard to itself, 7 and 6 minutes.
+A pull request that changes a card also plays the specs whose games deal or name it (#5099):
+`--smoke` asks the release `jackioh changed-cards --json` (`JACKIOH_BIN` overrides the path;
+with no binary, as locally, or in the merge queue and on `main`, it stays `SMOKE`). It adds each
+spec that quotes a changed card's id or catalog name, then each that quotes the id of a
+`fixtures/decks/*.json` deck holding one, lightest first by `WEIGHTS`, while their weights total at
+most `SMOKE_EXTRA_BUDGET_S` (120 s) a shard. The rest is printed as left to the daily run; 46 and
+47 never join.
 Specs 46, 47 and 51, and 38's block on the menus' shell, run the menus at each of `MENU_SIZES`
 (`support/config.ts`), issue #3728's device sizes from a 1440x900 desktop to a 390x844 phone (R3728000).
 47 measures the board at BUILD M5-T1's phone alone, and over 600 px emulates touch, as an iPad is held.

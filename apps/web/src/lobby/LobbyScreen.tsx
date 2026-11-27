@@ -28,6 +28,7 @@ import { LOBBY_START_COUNTDOWN_SECONDS } from "@jackioh/server-config";
 import type { LeanPick } from "@jackioh/shared";
 
 import { LeanSetPicker, readPlayLean, writePlayLean } from "../game/LeanNewest.tsx";
+import { Icon } from "../icons/Icon.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { ApiRequestError, joinRoom, type ModeChoice, type QueueMode, type SavedDeck } from "../net/api.ts";
 import { joinDuosRoom } from "../net/duos.ts";
@@ -536,7 +537,7 @@ function Seat({
         {player?.username ?? ""}
         {shown.host ? (
           <span className="lobby-seat__crown" title={t("Host")} aria-label={t("Host")}>
-            ♛
+            <Icon name="crown" />
           </span>
         ) : null}
       </span>
@@ -578,6 +579,7 @@ function SeatDeck({ seat, duel, you }: { seat: LobbySeat; duel: boolean; you: bo
   return (
     <span className="lobby-seat__state" data-state={seat.state}>
       {named ? `${seat.deck ?? t("Random deck")} · ` : null}
+      {seat.state === "ready" ? <><Icon name="check" /> </> : null}
       {deckWords(seat)}
     </span>
   );

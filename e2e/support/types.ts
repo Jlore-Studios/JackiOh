@@ -58,6 +58,8 @@ export type ActionBody =
       tributes?: string[];
       targets?: Selection[];
       modes?: string[];
+      // R1040, R783004: set face-down, and when it reveals (the engine's `RevealAt`).
+      faceDown?: "endOfThisTurn" | "startOfNextTurn" | "endOfNextTurn" | "cloaked";
     }
   | { type: "attack"; attackerId: string; targetId: string }
   | { type: "switchPosition"; instanceId: string }

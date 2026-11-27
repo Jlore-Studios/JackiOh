@@ -146,7 +146,7 @@ mod e26_deck_and_graveyard_triggers_in_r68_order_r464 {
         assert!(!order.contains(&filler.id));
         // Active side first: p2's deck card comes after all of p1's.
         assert!(index_of(&order, &enemy_deck.id) > index_of(&order, &grave.id));
-        let holders = trigger_holders_for_event(&state, GameEventType::CardResolved);
+        let holders = holders_answering(&state, GameEventType::CardResolved);
         assert_eq!(
             holders.iter().map(|holder| &holder.zone).collect::<Vec<_>>(),
             vec![
@@ -429,7 +429,7 @@ mod e26_graveyard_triggers_classic_47 {
         let mut held = board("recur-hand");
         let in_hand_card = in_hand(&mut held, &prompts_fx::recurring().id, PlayerId::P1, 1).remove(0);
         assert!(
-            !trigger_holders_for_event(&held, GameEventType::TrapFired)
+            !holders_answering(&held, GameEventType::TrapFired)
                 .iter()
                 .any(|holder| holder.card.id == in_hand_card.id)
         );

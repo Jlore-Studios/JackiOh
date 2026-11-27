@@ -75,7 +75,7 @@
 .board-backdrop[data-backdrop="field-embers"] .board-backdrop-particle {
   width: 4px;
   height: 4px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: #ff8a3d;
   box-shadow: 0 0 6px 2px rgb(255 138 61 / 60%);
 }
@@ -96,22 +96,22 @@
    glow. They slant down at rain's pace, on a line of their own (the gate below). */
 .board-backdrop[data-backdrop="field-stinkyscape"] {
   background:
-    radial-gradient(80% 70% at 72% 18%, color-mix(in srgb, var(--pal-violet-500) 26%, transparent), transparent 72%),
-    linear-gradient(180deg, color-mix(in srgb, var(--pal-slate-900) 42%, transparent), color-mix(in srgb, var(--pal-blue-900) 48%, transparent));
+    radial-gradient(80% 70% at 72% 18%, color-mix(in srgb, #8b5cf6 26%, transparent), transparent 72%),
+    linear-gradient(180deg, color-mix(in srgb, var(--pal-slate-900) 42%, transparent), color-mix(in srgb, #1e3a8a 48%, transparent));
 }
 
 .board-backdrop[data-backdrop="field-stinkyscape"] .board-backdrop-particle {
   width: 1px;
   height: 20px;
   background: var(--pal-slate-100);
-  box-shadow: 0 0 4px 1px color-mix(in srgb, var(--pal-sky-300) 60%, transparent);
+  box-shadow: 0 0 4px 1px color-mix(in srgb, #7dd3fc 60%, transparent);
   opacity: 0.75;
   rotate: -24deg;
 }
 
 .board-backdrop[data-backdrop="field-stinkyscape"] .board-backdrop-particle:nth-child(4n) {
-  background: var(--pal-orange-400);
-  box-shadow: 0 0 5px 1px color-mix(in srgb, var(--pal-orange-400) 55%, transparent);
+  background: #fb923c;
+  box-shadow: 0 0 5px 1px color-mix(in srgb, #fb923c 55%, transparent);
 }
 
 .board-backdrop[data-backdrop="field-fireflies"] {
@@ -123,7 +123,7 @@
 .board-backdrop[data-backdrop="field-fireflies"] .board-backdrop-particle {
   width: 5px;
   height: 5px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: #d8ff52;
   box-shadow: 0 0 8px 3px rgb(216 255 82 / 50%);
   opacity: 0.85;
@@ -140,7 +140,7 @@
 .board-backdrop[data-backdrop="field-snow"] .board-backdrop-particle {
   width: 5px;
   height: 5px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: #f4f8ff;
   box-shadow: 0 0 4px 1px rgb(244 248 255 / 55%);
   opacity: 0.85;
@@ -167,7 +167,7 @@
 .board-backdrop[data-backdrop="field-cherry-blossoms"] .board-backdrop-particle {
   width: 9px;
   height: 6px;
-  border-radius: 80% 0;
+  border-radius: var(--radius-petal);
   background: linear-gradient(135deg, #ffe0ec, #f78fb3);
   opacity: 0.9;
 }
@@ -194,7 +194,7 @@
 .board-backdrop[data-backdrop="field-autumn-leaves"] .board-backdrop-particle {
   width: 10px;
   height: 10px;
-  border-radius: 0 100%;
+  border-radius: var(--radius-leaf);
   background: linear-gradient(135deg, #f0a040, #c4521f);
   opacity: 0.9;
 }
@@ -227,7 +227,7 @@
   top: calc(var(--y) * 0.45);
   width: 16px;
   height: 140px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: linear-gradient(180deg, transparent, rgb(90 255 190 / 50%) 35%, rgb(80 200 255 / 26%) 70%, transparent);
   transform-origin: 50% 0;
   opacity: 0.6;
@@ -276,7 +276,7 @@
   left: 43%;
   width: 16px;
   height: 72px;
-  background: linear-gradient(180deg, #ffffff, #cfe0ff);
+  background: linear-gradient(180deg, var(--pal-white), #cfe0ff);
   clip-path: polygon(40% 0, 78% 0, 54% 38%, 82% 38%, 20% 100%, 40% 52%, 14% 52%);
 }
 
@@ -292,8 +292,8 @@
 .board-backdrop[data-backdrop="field-cosmic-drift"] .board-backdrop-particle {
   width: 3px;
   height: 3px;
-  border-radius: 50%;
-  background: #ffffff;
+  border-radius: var(--radius-round);
+  background: var(--pal-white);
   box-shadow: 0 0 6px 1px rgb(200 210 255 / 70%);
   transform-origin: -40px 18px;
   opacity: 0.9;
@@ -332,7 +332,7 @@
   position: absolute;
   inset: 50% 0 0;
   z-index: 0;
-  border-radius: 0 0 15px 15px;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   pointer-events: none;
 }
 
@@ -357,7 +357,7 @@
 .field[data-table="table-wood"]::before,
 .field[data-their-table="table-wood"] > .field-their-mat {
   background:
-    linear-gradient(180deg, transparent 40%, rgb(0 0 0 / 28%)),
+    linear-gradient(180deg, transparent 40%, color-mix(in srgb, var(--pal-black) 28%, transparent)),
     repeating-linear-gradient(90deg, #a47142 0 46px, #7d5328 46px 48px, #9a672f 48px 94px, #774e24 94px 96px);
 }
 
@@ -389,11 +389,11 @@
    grid; each mat's own colors sit on its own layer, so neither half's mat reads the other's. */
 .field[data-table="table-stinkyscape"],
 .field[data-their-table="table-stinkyscape"] .zone[data-side="opponent"] {
-  --table-line: color-mix(in srgb, var(--pal-violet-300) 35%, transparent);
-  --table-lane: color-mix(in srgb, var(--pal-orange-400) 75%, transparent);
+  --table-line: color-mix(in srgb, #c4b5fd 35%, transparent);
+  --table-lane: color-mix(in srgb, #fb923c 75%, transparent);
   --table-zone: color-mix(in srgb, var(--pal-blue-600) 8%, transparent);
   --table-slot: color-mix(in srgb, var(--pal-black) 60%, transparent);
-  --table-mark: color-mix(in srgb, var(--pal-violet-300) 45%, transparent);
+  --table-mark: color-mix(in srgb, #c4b5fd 45%, transparent);
 }
 
 .field[data-table="table-stinkyscape"]::before,
@@ -426,13 +426,13 @@
 .field[data-table="table-marble"]::before,
 .field[data-their-table="table-marble"] > .field-their-mat {
   background:
-    linear-gradient(180deg, transparent 45%, rgb(0 0 0 / 22%)),
+    linear-gradient(180deg, transparent 45%, color-mix(in srgb, var(--pal-black) 22%, transparent)),
     linear-gradient(118deg, transparent 31%, rgb(92 88 96 / 38%) 31.2%, transparent 31.6%),
     linear-gradient(104deg, transparent 52%, rgb(120 112 120 / 30%) 52.15%, transparent 52.7%),
     linear-gradient(141deg, transparent 66%, rgb(84 80 90 / 32%) 66.1%, transparent 66.4%),
     radial-gradient(140% 90% at 10% 130%, transparent 60%, rgb(110 104 112 / 30%) 60.3%, transparent 60.9%),
     radial-gradient(120% 110% at 95% -30%, transparent 64%, rgb(120 114 124 / 26%) 64.2%, transparent 64.8%),
-    radial-gradient(60% 80% at 20% 30%, rgb(255 255 255 / 30%), transparent 70%),
+    radial-gradient(60% 80% at 20% 30%, color-mix(in srgb, var(--pal-white) 30%, transparent), transparent 70%),
     radial-gradient(50% 70% at 78% 70%, rgb(200 196 204 / 35%), transparent 70%),
     linear-gradient(160deg, #d8d5cf, #bdb8b0 45%, #cfcbc4);
 }
@@ -450,7 +450,7 @@
 .field[data-table="table-chessboard"]::before,
 .field[data-their-table="table-chessboard"] > .field-their-mat {
   background:
-    linear-gradient(180deg, rgb(0 0 0 / 12%), rgb(0 0 0 / 32%)),
+    linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 12%, transparent), color-mix(in srgb, var(--pal-black) 32%, transparent)),
     conic-gradient(#cdb88f 0 25%, #3d2a1c 0 50%, #cdb88f 0 75%, #3d2a1c 0) 0 0 / 64px 64px,
     #3d2a1c;
 }
@@ -480,15 +480,15 @@
 .field[data-their-table="table-obsidian-slab"] .zone[data-side="opponent"] {
   --table-line: rgb(170 150 220 / 22%);
   --table-lane: rgb(200 190 255 / 60%);
-  --table-zone: rgb(255 255 255 / 4%);
-  --table-slot: rgb(0 0 0 / 45%);
+  --table-zone: color-mix(in srgb, var(--pal-white) 4%, transparent);
+  --table-slot: color-mix(in srgb, var(--pal-black) 45%, transparent);
   --table-mark: rgb(214 204 255 / 45%);
 }
 
 .field[data-table="table-obsidian-slab"]::before,
 .field[data-their-table="table-obsidian-slab"] > .field-their-mat {
   background:
-    linear-gradient(115deg, transparent 22%, rgb(255 255 255 / 9%) 30%, transparent 38%, transparent 62%, rgb(255 255 255 / 6%) 68%, transparent 74%),
+    linear-gradient(115deg, transparent 22%, color-mix(in srgb, var(--pal-white) 9%, transparent) 30%, transparent 38%, transparent 62%, color-mix(in srgb, var(--pal-white) 6%, transparent) 68%, transparent 74%),
     radial-gradient(70% 90% at 50% 0%, rgb(120 90 200 / 18%), transparent 70%),
     linear-gradient(170deg, #1b1724, #0a0910 55%, #15121c);
 }
@@ -534,10 +534,10 @@
 .field[data-table="table-astral"]::before,
 .field[data-their-table="table-astral"] > .field-their-mat {
   background:
-    radial-gradient(circle, rgb(255 255 255 / 90%) 0 1px, transparent 1.6px) 0 0 / 53px 41px,
+    radial-gradient(circle, color-mix(in srgb, var(--pal-white) 90%, transparent) 0 1px, transparent 1.6px) 0 0 / 53px 41px,
     radial-gradient(circle, rgb(200 214 255 / 70%) 0 0.8px, transparent 1.3px) 17px 23px / 37px 29px,
     radial-gradient(circle, rgb(255 236 250 / 85%) 0 1.4px, transparent 2.2px) 31px 7px / 97px 71px,
-    linear-gradient(160deg, transparent 35%, rgb(180 170 255 / 10%) 45%, rgb(255 255 255 / 6%) 50%, transparent 60%),
+    linear-gradient(160deg, transparent 35%, rgb(180 170 255 / 10%) 45%, color-mix(in srgb, var(--pal-white) 6%, transparent) 50%, transparent 60%),
     radial-gradient(50% 80% at 25% 60%, rgb(120 60 200 / 30%), transparent 70%),
     radial-gradient(45% 70% at 75% 35%, rgb(40 120 220 / 26%), transparent 70%),
     linear-gradient(180deg, #0c0a26, #050414);
@@ -710,6 +710,14 @@
   :root:not([data-reduce-motion="true"]) .field[data-their-table] .lane:nth-child(3n) {
     --pad-delay: -2.3s;
   }
+}
+
+/* R5128000: Low graphics stills the chase tables' pads, as Reduce motion does, and its backdrop draws no particles
+   (Backdrop.tsx). The selector weighs what the pad rules above weigh, so coming after them it wins. */
+:root[data-low-graphics="true"] .field[data-table] .zone[data-side][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow], [data-animating])::before,
+:root[data-low-graphics="true"] .field[data-their-table] .zone[data-side][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow], [data-animating])::before {
+  will-change: auto;
+  animation-name: none;
 }
 
 @keyframes backdrop-rise {

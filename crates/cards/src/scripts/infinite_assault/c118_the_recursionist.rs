@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #118 The Recursionist ((3) Unit, Legendary, 4/7 → 8/14), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Your Death triggers and Reborns happen twice."
-//!   Radiant: "Your Death triggers and Reborns happen twice, and your Units have Reborn."
+//!   Base:    "Aura: Your Death triggers and Reborns happen twice."
+//!   Radiant: "Aura: Your Death triggers and Reborns happen twice, and your Units have Reborn."
 //!
 //! `death_extra` and `reborn_extra` both read 1 (`read_hook`, R4589003): its controller's Deaths run
 //! once more (the highest multiplier holds with Double Counting's, R820) and its Reborns come back

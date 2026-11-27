@@ -3,7 +3,7 @@
 // wreckage, a credit chip, a roulette table, a capsule, a kicking sack, loose pages, a blueprint, a reset lever, a
 // pickaxe and lunchbox, a mining drill, a chaos egg, a game board, a cracker, a price chart, an AI's light ring) and
 // the energies between them (a beam of light, magic bolts, a laser, an energy wall, a tractor beam, an engine's
-// plume, a jump flash, a thread of shadow). sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a palette.css
+// plume, a jump flash, a thread of shadow). sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a SCENE_PALETTE
 // name, none in Radiant's gold window; a glow is a stack of translucent shapes, never a gradient; shapes are filled
 // even-odd, so a hole is a second sub-path and no two sub-paths of one shape overlap otherwise.
 

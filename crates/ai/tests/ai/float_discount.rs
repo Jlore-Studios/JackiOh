@@ -9,12 +9,16 @@
 //! Every board is a `scenario()` with the AI as p1 and libraries of uncastable 9-cost stand-ins. p2
 //! holds a 1-cost Unit (or a Unit on the field), so its turn has a play and the line's turn log lasts
 //! until the AI's next turn.
+//!
+//! R4797000 (issue #4797): against an opponent with nothing to do, whose turn the engine ends in the same
+//! step (R82), the AI's sampled worlds hold that turn open (`search_world`), so a line still pays for the
+//! crystals it leaves unspent.
 
 use jackioh_ai::*;
 use jackioh_engine::config::AI_DIFFICULTY;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, act, close};
+use super::support::{AI, HUMAN, act, close, det};
 
 /// A card nobody can cast: the libraries' draws change nothing.
 const INERT: &str = "stand-in (9) 1/1";
@@ -45,11 +49,16 @@ fn on_turn(turn: i32, hand: &[&str], mana: i32) -> GameState {
 
 /// The line that ends the turn from `state`, scored as the search scores a passed line.
 fn passed(state: &GameState) -> f64 {
-    terminal_score(
-        state,
+    static_score(
+        &close_line(
+            state,
+            AI,
+            state.turn,
+            &create_node_counter(10, None),
+            Prices::NONE,
+        ),
         AI,
         state.turn,
-        &create_node_counter(10, None),
         Prices::NONE,
     )
 }
@@ -387,4 +396,124 @@ fn r3695001_r4159000_on_an_empty_board_hard_plays_genn_before_drone_core_x() {
             decision.action
         );
     }
+}
+
+/// R4797000: a 0/1 for one crystal, which the evaluation ranks below the card it was in hand but above
+/// floating the crystal (`AI_EVAL.unspent_mana`).
+const ZERO_ONE: &str = "stand-in (1) 0/1";
+
+/// R4797000: turn 1's one crystal and a (1) 0/1 in hand; the opponent has no unit, no hand and no library,
+/// so its turn has nothing to do but end (R82).
+fn idle_opponent() -> GameState {
+    jackioh_cards::register_all();
+    scenario(json!({
+        "seed": "ai-idle-opponent",
+        "active": "p1",
+        "turn": 1,
+        "p1": { "hand": [ZERO_ONE, INERT], "mana": 1, "library": [INERT, INERT, INERT] },
+        "p2": { "library": [] },
+    }))
+    .state()
+    .clone()
+}
+
+#[test]
+fn r4797000_a_searched_worlds_end_turn_stops_where_the_idle_opponents_turn_begins_its_crystal_still_unspent()
+{
+    let state = idle_opponent();
+    let world = det(&redact(&state, AI), AI, &mut create_rng("r4797000", 0));
+    let closed = |world: &GameState| close_line(world, AI, 1, &create_node_counter(10, None), Prices::NONE);
+
+    // As sampled, the End turn runs on through the opponent's turn into the AI's next, which rebuilds its log.
+    let through = closed(&world);
+    assert_eq!((through.turn, through.active), (3, AI));
+    assert_eq!(through.players[AI].turn_log.unspent_at_end, None);
+
+    // As the search plays it, the End turn stops where the opponent's turn begins, its crystal still counted.
+    let held = closed(&search_world(world.clone(), AI));
+    assert_eq!((held.turn, held.active), (2, HUMAN));
+    assert_eq!(held.players[AI].turn_log.unspent_at_end, Some(1));
+    close(
+        static_score(&held, AI, 1, Prices::NONE),
+        evaluate_priced(&held, AI, NextSwing::Enemy, &AI_EVAL, Prices::NONE) - AI_EVAL.unspent_mana,
+    );
+
+    // Up to the reply, the two agree: the reply ends the opponent's turn where the sampled world's End turn
+    // had, and the line pays for its crystal there.
+    let hidden = hidden_card_ids(&held, AI);
+    let after =
+        simulate_reply(&held, AI, &create_node_counter(10, None), &hidden, Prices::NONE).expect("a reply");
+    assert_eq!((after.turn, after.active), (3, AI));
+    assert_eq!(search_signature(&after, AI), search_signature(&through, AI));
+    let replied = reply_score(
+        &held,
+        AI,
+        1,
+        &create_node_counter(10, None),
+        &hidden,
+        Prices::NONE,
+    )
+    .expect("a score");
+    let unreplied = reply_score(
+        &through,
+        AI,
+        1,
+        &create_node_counter(10, None),
+        &hidden,
+        Prices::NONE,
+    )
+    .expect("a score");
+    close(replied, unreplied - AI_EVAL.unspent_mana);
+}
+
+#[test]
+fn r4797000_against_an_idle_opponent_the_ai_plays_its_one_drop_rather_than_float_its_crystal() {
+    let state = idle_opponent();
+    let zero_one = state.players[AI].hand[0].id.clone();
+    for seed in 0..6 {
+        let mut options = AiOptions::with_budget(create_rng(&format!("r4797000-{seed}"), 0), AI_BUDGET);
+        let decision = decide(&state, AI, &mut options).expect("a decision");
+        assert!(
+            plays(std::slice::from_ref(&decision.action), &zero_one),
+            "seed {seed}: the AI floats its crystal: {:?}",
+            decision.action
+        );
+    }
+}
+
+#[test]
+fn r4797000_a_reply_whose_opponent_turn_ended_by_itself_after_its_attack_plays_that_end_turn_for_one_node() {
+    jackioh_cards::register_all();
+    // p2's 1/1 attacks, and then its turn holds nothing more: the engine ended it inside the attack. The
+    // AI's 1/3 gives its own next turn something to do, so that turn does not end by itself in turn.
+    let state = scenario(json!({
+        "seed": "ai-ended-after-attack",
+        "active": "p1",
+        "turn": 5,
+        "p1": { "hand": [INERT], "field": ["stand-in (2) 1/3"], "mana": 3, "library": [INERT, INERT, INERT] },
+        "p2": { "field": [ONE], "library": [INERT, INERT] },
+    }))
+    .state()
+    .clone();
+    let reply = |world: &GameState| {
+        let end = ended(world);
+        assert_eq!(line_status(&end, AI, 5), LineStatus::Passed);
+        assert_eq!(end.players[AI].turn_log.unspent_at_end, Some(3));
+        let hidden = hidden_card_ids(&end, AI);
+        let counter = create_node_counter(20, None);
+        let after = simulate_reply(&end, AI, &counter, &hidden, Prices::NONE).expect("a reply");
+        let score = reply_score(&end, AI, 5, &create_node_counter(20, None), &hidden, Prices::NONE);
+        (after, counter.used(), score.expect("a score"))
+    };
+    let (through, through_nodes, through_score) = reply(&state);
+    let (held, held_nodes, held_score) = reply(&search_world(state.clone(), AI));
+    assert_eq!((through.turn, through.active), (7, AI));
+    assert_eq!((held.turn, held.active), (7, AI));
+    assert_eq!(search_signature(&held, AI), search_signature(&through, AI));
+    assert_eq!(
+        held_nodes,
+        through_nodes + 1,
+        "the held turn's End turn is one node"
+    );
+    close(held_score, through_score);
 }

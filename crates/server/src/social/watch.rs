@@ -25,11 +25,12 @@
 //! every friend at once (`Tx::presence_watchable`; `Tx::presence_in_duos` and `Tx::presence_duos_blocked`
 //! for a co-op game).
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use serde_json::Value;
 
-use jackioh_engine::{EMOJI_EMOTE_IDS, EmoteId, EmoteLimits, Rng};
+use jackioh_engine::{EMOJI_EMOTE_IDS, EmoteId, EmoteLimits, Rng, emote_gate_within};
 
 use crate::actor::contracts::one_tx;
 use crate::actor::guard::HelloGate;
@@ -134,6 +135,21 @@ pub const SPECTATOR_EMOTE_LIMITS: EmoteLimits = EmoteLimits {
     window_ms: SPECTATOR_EMOTE_WINDOW_MS,
     window_max: SPECTATOR_EMOTE_WINDOW_MAX,
 };
+
+/// R2990002: whether the watching account `profile_id` may send an emote at `now`, on a match or a co-op
+/// game, under `SPECTATOR_EMOTE_LIMITS`. One let through is kept in `sent_at`, by account; one past the
+/// limit is dropped and spends nothing.
+pub fn spectator_emote_allowed(sent_at: &mut BTreeMap<String, Vec<i64>>, profile_id: &str, now: i64) -> bool {
+    let history = sent_at.get(profile_id).map_or(&[][..], Vec::as_slice);
+    let gate = emote_gate_within(history, now, SPECTATOR_EMOTE_LIMITS);
+    if !gate.ok {
+        return false;
+    }
+    let mut kept = gate.sent_at;
+    kept.push(now);
+    sent_at.insert(profile_id.to_string(), kept);
+    true
+}
 
 /// R2990001: the seed of a watcher's own emote stream, the match seed and the watcher's account, so
 /// the deal never draws from the match rng (`state.rng`), and no state, log or replay hash moves.
@@ -562,5 +578,42 @@ mod tests {
         ] {
             assert!(parse_watch_hello(text).is_err(), "{text}");
         }
+    }
+
+    /// R2990002: a watcher's emote past the limit is dropped and spends nothing; one let through is
+    /// kept under its account, whose limit is its own.
+    #[test]
+    fn r2990002_an_emote_past_the_limit_spends_nothing_and_one_let_through_is_kept_by_account() {
+        let mut sent_at = BTreeMap::new();
+        assert!(spectator_emote_allowed(&mut sent_at, "a", 0));
+        assert!(!spectator_emote_allowed(
+            &mut sent_at,
+            "a",
+            SPECTATOR_EMOTE_COOLDOWN_MS - 1
+        ));
+        assert_eq!(sent_at.get("a"), Some(&vec![0]));
+        assert!(spectator_emote_allowed(&mut sent_at, "b", 1));
+        assert!(spectator_emote_allowed(
+            &mut sent_at,
+            "a",
+            SPECTATOR_EMOTE_COOLDOWN_MS
+        ));
+        assert_eq!(sent_at.get("a"), Some(&vec![0, SPECTATOR_EMOTE_COOLDOWN_MS]));
+        assert_eq!(sent_at.get("b"), Some(&vec![1]));
+
+        // The window's count: SPECTATOR_EMOTE_WINDOW_MAX sends, each a cooldown apart, fill it.
+        let max = i64::try_from(SPECTATOR_EMOTE_WINDOW_MAX).expect("a small count");
+        assert!(max * SPECTATOR_EMOTE_COOLDOWN_MS < SPECTATOR_EMOTE_WINDOW_MS);
+        let mut counted = BTreeMap::new();
+        let sends: Vec<i64> = (0..max).map(|k| k * SPECTATOR_EMOTE_COOLDOWN_MS).collect();
+        for at in &sends {
+            assert!(spectator_emote_allowed(&mut counted, "a", *at), "{at}");
+        }
+        assert!(!spectator_emote_allowed(
+            &mut counted,
+            "a",
+            max * SPECTATOR_EMOTE_COOLDOWN_MS
+        ));
+        assert_eq!(counted.get("a"), Some(&sends));
     }
 }

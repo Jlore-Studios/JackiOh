@@ -7,7 +7,7 @@ import type { DailyGameSummary, DailyInvite, DailyList } from "../net/daily.ts";
 import type { Challenge, FriendRequest, SharedReplay } from "../net/social.ts";
 import { INBOX_INVITE_KEEP_MS } from "./config.ts";
 import type { InboxInvite } from "./invites.ts";
-import { INBOX_KINDS, challengeLeftText, inboxBadge, inboxItems, replayKey, type InboxInput } from "./order.ts";
+import { challengeLeftText, inboxBadge, inboxItems, replayKey, type InboxInput } from "./order.ts";
 
 const NOW = Date.parse("2026-11-13T12:00:00.000Z");
 const ME = { profileId: "me", username: "Me#1" };
@@ -67,7 +67,6 @@ const NOTHING: InboxInput = { challenges: [], invites: [], daily: null, requests
 
 describe("R3729002 the inbox's order", () => {
   it("R3729002 the kinds come as challenge, invite, daily move, daily challenge, request, replay", () => {
-    expect(INBOX_KINDS).toEqual(["challenge", "invite", "dailyMove", "dailyChallenge", "request", "replay"]);
     const items = inboxItems(
       {
         shared: [replay("m-shared", 1000)],

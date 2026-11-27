@@ -2,7 +2,7 @@
 //! buys and what both read back.
 //!
 //! A pack opening pays its bars through `jackioh_shared::economy::bars::settle_bars` (step by step,
-//! each step at its own size, R2728000) in its own transaction (`economy::packs::open_pack`,
+//! each step at its own size, R2728000) in its own transaction (`economy::packs::open_pack_once`,
 //! R1305000, R1305001); the cycle's stored position is the `CosmeticTokenCycle` counter. Every
 //! redemption runs under the account's lock (R1301003), so a token spent and a bar paying cannot
 //! interleave, and commits whole or not at all (§14.11).
@@ -208,24 +208,9 @@ pub(crate) fn choice_of(
 /// Mythic, R1333000, so a Legendary token reaches a Legendary chase and no token a Mythic, R2728000): a
 /// per-card cosmetic for a card the account owns, or an account cosmetic ([`Choice`]), in one transaction,
 /// every row with the same `at`. A token outside Rare, Epic and Legendary is 400, as is an unknown cosmetic
-/// id. With no key, [`redeem_cosmetic_token_once`]'s redemption.
-pub async fn redeem_cosmetic_token(
-    app: &App,
-    profile_id: &str,
-    registry: &[Cosmetic],
-    token: CosmeticRarity,
-    cosmetic_id: &str,
-    card_id: Option<&str>,
-) -> Result<(), ApiError> {
-    redeem_cosmetic_token_once(app, profile_id, registry, token, cosmetic_id, card_id, None)
-        .await?
-        .now()?;
-    Ok(())
-}
-
-/// [`redeem_cosmetic_token`] under an `Idempotency-Key` (R2124000), as [`redeem_card_token_once`] runs a
-/// card token's: the key is read in its transaction right after the account's lock, before anything held
-/// is read, and a redemption's answer is kept in its own transaction.
+/// id. Under an `Idempotency-Key` (R2124000), as [`redeem_card_token_once`] runs a card token's: the key
+/// is read in its transaction right after the account's lock, before anything held is read, and a
+/// redemption's answer is kept in its own transaction.
 pub async fn redeem_cosmetic_token_once(
     app: &App,
     profile_id: &str,

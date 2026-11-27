@@ -5,9 +5,10 @@ import { CATALOG_VERSION } from "@jackioh/cards";
 import { describe, expect, it } from "vitest";
 
 import { REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "../replay/config.ts";
-import { REPLAY_JSON_FORMAT, parseReplayJsonFile, readReplayJsonFile } from "../replay/download.ts";
+import { REPLAY_JSON_FORMAT, readReplayJsonFile, replayStepsOf } from "../replay/download.ts";
 import { ReplayFailure } from "../replay/source.ts";
 import { duosView } from "../test/fixtures.ts";
+import { savedReplay } from "../test/savedReplay.ts";
 import type { DuosReplaySteps } from "./DuosReplay.tsx";
 import { DUOS_REPLAY_JSON_FORMAT, DUOS_REPLAY_JSON_VERSION, duosReplayJson, duosReplayJsonFile, parseDuosReplayJson } from "./download.ts";
 
@@ -71,11 +72,11 @@ describe("R1242000 downloading a co-op replay", () => {
       host: { profileId: "profile-a1", username: "teammate-name" },
       matchId: "dm-secret",
     })) as unknown as DuosReplaySteps;
-    const file = duosReplayJsonFile(tainted);
-    expect(file.name).toBe("jackioh-duos-replay.json");
-    expect(file.type).toBe("application/json");
-    const text = await file.text();
-    expect(JSON.parse(text)).toEqual(duosReplayJson(STEPS));
+    const file = await duosReplayJsonFile(tainted);
+    expect(file.name).toBe("jackioh-duos-replay.json.gz");
+    expect(file.type).toBe("application/gzip");
+    const { text, json } = await savedReplay(file);
+    expect(json).toEqual(duosReplayJson(STEPS));
     expect(text).not.toContain("duos-seed-7");
     expect(text).not.toContain("dm-secret");
     expect(text).not.toContain("profile-a1");
@@ -84,7 +85,7 @@ describe("R1242000 downloading a co-op replay", () => {
   });
 
   it("R1242000 a file duosReplayJsonFile wrote opens again as the same views, in order", async () => {
-    expect(parseDuosReplayJson(await readReplayJsonFile(duosReplayJsonFile(STEPS)))).toEqual([...STEPS]);
+    expect(parseDuosReplayJson(await readReplayJsonFile(await duosReplayJsonFile(STEPS)))).toEqual([...STEPS]);
   });
 
   it("R1242000 refuses another format, version or catalog version", async () => {
@@ -95,7 +96,7 @@ describe("R1242000 downloading a co-op replay", () => {
     expect(refusal(fileJson({ catalogVersion: "v0.0.0" }))).toBe(otherPatch);
     expect(refusal(fileJson({ catalogVersion: undefined }))).toBe(otherPatch);
     // The co-op file is no 1v1 replay.
-    const failure: unknown = await parseReplayJsonFile(duosReplayJsonFile(STEPS)).then(
+    const failure: unknown = await readReplayJsonFile(await duosReplayJsonFile(STEPS)).then(replayStepsOf).then(
       () => null,
       (cause: unknown) => cause,
     );

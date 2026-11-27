@@ -56,8 +56,8 @@ use jackioh_ai::{
 };
 use jackioh_engine::config::PERCENT;
 use jackioh_engine::{
-    CreateGameOptions, PerPlayer, PerPlayerOpt, PlayerId, Rng, SetupKind, fold, hash_state,
-    registered_catalog, validate_setup,
+    CreateGameOptions, DeckMark, FoldArgs, FoldResult, Handicap, PerPlayer, PerPlayerOpt, PlayerId, Rng,
+    SetupKind, fold, hash_state, registered_catalog, validate_setup,
 };
 use jackioh_run::config::{
     RUN_ACTS, RUN_ELITE_TIERS, RUN_SLOT_LADDER, RUN_STARTER_CARDS, RUN_STARTER_SIZE, RUN_TIERS,
@@ -175,7 +175,7 @@ pub(crate) fn parse_skill(text: &str) -> Result<f64, String> {
 
 /// The search budget `--budget` names: `tiny` is the tests' (`arena.rs`'s `TEST_BUDGET`, which decides
 /// clean at a fraction of the time), `full` the practice AI's.
-fn budget_of(name: &str) -> SearchBudget {
+pub(crate) fn budget_of(name: &str) -> SearchBudget {
     match name {
         "tiny" => TEST_BUDGET,
         _ => AI_BUDGET,
@@ -185,13 +185,36 @@ fn budget_of(name: &str) -> SearchBudget {
 /// The match a fight's setup plays: the human (P1) is the AI at `skill`, the enemy (P2) the AI at full
 /// skill, both at `budget`, and the human's marks dealt (R2702000; an empty list stores nothing).
 fn fight_config(setup: &RunFightSetup, skill: f64, budget: SearchBudget) -> MatchConfig {
-    MatchConfig {
-        seed: setup.seed.clone(),
-        decks: (setup.human_deck.clone(), setup.enemy_deck.clone()),
-        handicaps: Some(PerPlayerOpt {
+    ai_fight_config(
+        setup.seed.clone(),
+        (setup.human_deck.clone(), setup.enemy_deck.clone()),
+        PerPlayerOpt {
             p1: Some(setup.human_handicap),
             p2: Some(setup.enemy_handicap),
-        }),
+        },
+        PerPlayerOpt {
+            p1: Some(setup.human_marks.clone()),
+            p2: None,
+        },
+        skill,
+        budget,
+    )
+}
+
+/// The match a fight plays, the dungeon run's and Infinite Assault's alike: the human (P1) is the AI at
+/// `skill` and the enemy (P2) the AI at full skill, both at `budget`, with `marks` dealt (R2702000).
+pub(crate) fn ai_fight_config(
+    seed: String,
+    decks: (Vec<String>, Vec<String>),
+    handicaps: PerPlayerOpt<Handicap>,
+    marks: PerPlayerOpt<Vec<DeckMark>>,
+    skill: f64,
+    budget: SearchBudget,
+) -> MatchConfig {
+    MatchConfig {
+        seed,
+        decks,
+        handicaps: Some(handicaps),
         controllers: PerPlayer::new(
             SeatController::Ai {
                 budget: Some(budget),
@@ -204,36 +227,28 @@ fn fight_config(setup: &RunFightSetup, skill: f64, budget: SearchBudget) -> Matc
         ),
         max_actions: None,
         setup: MatchSetup {
-            deck_marks: Some(PerPlayerOpt {
-                p1: Some(setup.human_marks.clone()),
-                p2: None,
-            }),
+            deck_marks: Some(marks),
             ..MatchSetup::default()
         },
     }
 }
 
-/// The fight `state` stands on, played to its end, and the `FightOver` its record reports; or why the
-/// fight is not clean.
-fn play_fight(
-    state: &RunState,
-    content: &RunContent,
-    skill: f64,
-    budget: SearchBudget,
-) -> Result<RunAction, String> {
-    let setup = run_fight_setup(state, content).ok_or("the fight has no setup")?;
-    let config = fight_config(&setup, skill, budget);
+/// `config` played to its end by `play_match`, its fold input and what that folds to; or why the match
+/// is not clean: a setup the engine refuses, a throw, a refusal, a fallback, a caught search panic, no
+/// result, or a record that does not fold to its hash.
+pub(crate) fn play_clean_match(config: &MatchConfig) -> Result<(FoldArgs, FoldResult), String> {
     // `create_game` panics on a setup it refuses, outside the match's `catch_unwind`: refuse it here.
     let options = CreateGameOptions {
         seed: config.seed.clone(),
         decks: config.decks.clone(),
         handicaps: config.handicaps.clone(),
         deck_marks: config.setup.deck_marks.clone(),
+        deck_sets: config.setup.deck_sets.clone(),
         ..CreateGameOptions::default()
     };
     validate_setup(&options, registered_catalog(), SetupKind::New)
         .map_err(|e| format!("the engine refuses the setup: {e}"))?;
-    let record = play_match(&config, &mut MatchHooks::default());
+    let record = play_match(config, &mut MatchHooks::default());
     if let Some(thrown) = record.thrown.first() {
         return Err(format!("{} threw: {}", thrown.seat.as_str(), thrown.message));
     }
@@ -270,6 +285,19 @@ fn play_fight(
     if hash_state(&replayed.state) != record.hash {
         return Err("the record folds to another hash".to_string());
     }
+    Ok((game, replayed))
+}
+
+/// The fight `state` stands on, played to its end, and the `FightOver` its record reports; or why the
+/// fight is not clean.
+fn play_fight(
+    state: &RunState,
+    content: &RunContent,
+    skill: f64,
+    budget: SearchBudget,
+) -> Result<RunAction, String> {
+    let setup = run_fight_setup(state, content).ok_or("the fight has no setup")?;
+    let (game, _) = play_clean_match(&fight_config(&setup, skill, budget))?;
     run_fight_report(&game, PlayerId::P1)
 }
 
@@ -826,7 +854,7 @@ fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
 }
 
 /// `sum / n` to one decimal, or `-` for none.
-fn mean(sum: i64, n: usize) -> String {
+pub(crate) fn mean(sum: i64, n: usize) -> String {
     if n == 0 {
         "-".to_string()
     } else {

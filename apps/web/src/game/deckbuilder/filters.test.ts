@@ -14,6 +14,7 @@ import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 
 import {
   ALMANAC_CHIP_TAGS,
+  ALMANAC_SETS,
   ALMANAC_TAGS,
   ASSAULT_TAGS,
   COST_BUCKETS,
@@ -48,6 +49,7 @@ import {
 } from "./filters.ts";
 import { PATCH_LOG } from "../../patches/ribbon.ts";
 import { poolFrom } from "./loadout.ts";
+import { almanacShows } from "./shelf.ts";
 import {
   filterCostId,
   filterKeywordId,
@@ -804,8 +806,8 @@ describe("the Jlockeed tag (R278)", () => {
 // R630: the Card Almanac's shelf and tag chips
 describe("the almanac's pool (R630)", () => {
   const REAL: CatalogSnapshot = { version: "almanac-test", cards: CORE_CATALOG };
-  /** R1420: the catalog's cards of the sets that ship, the shelf the almanac shows. */
-  const SHIPPED: readonly CardDef[] = Object.values(CORE_CATALOG).filter((d) => setShips(d.set));
+  /** R1420, R5131000: the catalog's cards of the sets that ship and of the Infinite Assault's, the shelf the almanac shows. */
+  const SHOWN: readonly CardDef[] = Object.values(CORE_CATALOG).filter((d) => almanacShows(d.set));
 
   it("R630 shows every catalog card, the token included, filtered and sorted like the pool", () => {
     // The token costs 1 and sorts after Bramble Cat, the other 1-cost card, by name.
@@ -826,8 +828,8 @@ describe("the almanac's pool (R630)", () => {
   it("R630 the Token chip keeps the tokens and nothing else", () => {
     expect(almanacPool(CATALOG, filter({ tags: new Set<Tag>(["Token"]) }), DEFAULT_SORT)).toEqual([TOKEN]);
     const tokens = almanacPool(REAL, filter({ tags: new Set<Tag>(["Token"]) }), DEFAULT_SORT);
-    // R674: every token but Glitch; R1420: of the sets that ship.
-    const realTokens = SHIPPED.filter((d) => d.token && d.id !== GLITCH_DEF_ID);
+    // R674: every token but Glitch; R1420, R5131000: of the sets the almanac shows.
+    const realTokens = SHOWN.filter((d) => d.token && d.id !== GLITCH_DEF_ID);
     expect(tokens).toHaveLength(realTokens.length);
     expect(new Set(tokens)).toEqual(new Set(realTokens.map((d) => d.id)));
   });
@@ -838,11 +840,12 @@ describe("the almanac's pool (R630)", () => {
     for (const id of ai) expect(CORE_CATALOG[id]?.tags, id).toContain("AI");
   });
 
-  it("R630 shows the whole real catalog, the deck builder's pool plus every token (Glitch excepted, R674)", () => {
+  it("R630 shows the whole real catalog, the deck builder's pool plus every token and the Infinite Assault's cards (Glitch excepted, R674)", () => {
     const all = almanacPool(REAL, DEFAULT_FILTER, DEFAULT_SORT);
-    expect([...all].sort()).toEqual(SHIPPED.map((d) => d.id).filter((id) => id !== GLITCH_DEF_ID).sort());
+    expect([...all].sort()).toEqual(SHOWN.map((d) => d.id).filter((id) => id !== GLITCH_DEF_ID).sort());
     const deckable = visiblePool(REAL, null, DEFAULT_FILTER, DEFAULT_SORT);
-    expect(all.length - deckable.length).toBe(SHIPPED.filter((d) => d.token && d.id !== GLITCH_DEF_ID).length);
+    // R5131000: no deck holds an Infinite Assault card (R1846001), so the almanac shows them all beyond the pool.
+    expect(all.length - deckable.length).toBe(SHOWN.filter((d) => (d.token || !setShips(d.set)) && d.id !== GLITCH_DEF_ID).length);
   });
 
   it("R1420 shows no card of a set that has not shipped, on the almanac's shelf or in the deck builder's pool", () => {
@@ -887,12 +890,44 @@ describe("the almanac's pool (R630)", () => {
 
   it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship, Automa-ζ and Token", () => {
     expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", ...ASSAULT_TAGS, "Token"]);
-    // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
-    // its tags when it ships.
-    const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
+    // R1420, R1381: the chips are the tags the cards of the shipped sets carry, and R5131000 the Infinite
+    // Assault's; a set being built adds its tags when it ships.
+    const carried = new Set(SHOWN.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
     expect(new Set(ALMANAC_CHIP_TAGS)).toEqual(carried);
     expect(filterTagId("Token")).toBe("db-filter-tag-token");
     expect(filterTagId("AI")).toBe("db-filter-tag-ai");
+  });
+
+  it("R5131000 shows the Infinite Assault's cards and tokens, with a set chip and its tags' chips, filed after the sets that ship; never Boss's, Boss-X's or a deck's", () => {
+    const assault = Object.values(CORE_CATALOG).filter((d) => d.set === "Infinite Assault");
+    expect(assault.filter((d) => !d.token)).toHaveLength(240);
+    expect(assault.some((d) => d.token)).toBe(true);
+    expect(setShips("Infinite Assault")).toBe(false);
+    // The shelf: every card and token of the set, under any filter that keeps them.
+    const all = almanacPool(REAL, DEFAULT_FILTER, DEFAULT_SORT);
+    for (const d of assault) expect(all, d.id).toContain(d.id);
+    const bySet = almanacPool(REAL, filter({ sets: new Set<SetName>(["Infinite Assault"]) }), DEFAULT_SORT);
+    expect([...bySet].sort()).toEqual(assault.map((d) => d.id).sort());
+    // Boss and Boss-X, the other single-player sets, stay off; and no deck builder's pool holds the set (R1846001).
+    expect(almanacShows("Boss")).toBe(false);
+    expect(almanacShows("Boss-X")).toBe(false);
+    const deckable = visiblePool(REAL, null, filter({ ownedOnly: false }), DEFAULT_SORT);
+    for (const d of assault) expect(deckable, d.id).not.toContain(d.id);
+    // The set chips: the deck builder's, then the Infinite Assault's, which the deck builder never offers.
+    expect([...ALMANAC_SETS]).toEqual([...SHIPPED_SETS, "Infinite Assault"]);
+    expect([...FILTER_SETS]).not.toContain("Infinite Assault");
+    expect(filterSetId("Infinite Assault")).toBe("db-filter-set-infinite-assault");
+    // The tag chips: R4596000's doctrines and Commander are the almanac's now, and still never the deck builder's.
+    for (const tag of ASSAULT_TAGS) {
+      expect(ALMANAC_CHIP_TAGS, tag).toContain(tag);
+      expect(DECK_CHIP_TAGS, tag).not.toContain(tag);
+    }
+    // The "set" sort files the set after every set that ships, both ways round.
+    const sorted = almanacPool(REAL, DEFAULT_FILTER, { key: "set", dir: "asc" });
+    const firstAssault = sorted.findIndex((id) => CORE_CATALOG[id]?.set === "Infinite Assault");
+    expect(sorted.slice(firstAssault).every((id) => CORE_CATALOG[id]?.set === "Infinite Assault")).toBe(true);
+    const reversed = almanacPool(REAL, DEFAULT_FILTER, { key: "set", dir: "desc" });
+    expect(reversed.slice(0, assault.length).every((id) => CORE_CATALOG[id]?.set === "Infinite Assault")).toBe(true);
   });
 });
 
@@ -1033,14 +1068,18 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect([...shippedTags(FILTER_TAGS, [])]).toEqual([]);
   });
 
-  it("R1381 both lists of chips are their full list less the tags no shipped card carries", () => {
-    const carried = new Set(
-      Object.values(CORE_CATALOG)
-        .filter((d) => setShips(d.set) && d.id !== GLITCH_DEF_ID)
-        .flatMap((d) => d.tags),
-    );
+  it("R1381 both lists of chips are their full list less the tags no card they show carries", () => {
+    const carriedBy = (shows: (set: SetName) => boolean): Set<Tag> =>
+      new Set(
+        Object.values(CORE_CATALOG)
+          .filter((d) => shows(d.set) && d.id !== GLITCH_DEF_ID)
+          .flatMap((d) => d.tags),
+      );
+    const carried = carriedBy(setShips);
     expect([...DECK_CHIP_TAGS]).toEqual(FILTER_TAGS.filter((tag) => carried.has(tag)));
-    expect([...ALMANAC_CHIP_TAGS]).toEqual(ALMANAC_TAGS.filter((tag) => carried.has(tag)));
+    // R5131000: the almanac's are the tags of every set it shows, the Infinite Assault's among them.
+    const shown = carriedBy(almanacShows);
+    expect([...ALMANAC_CHIP_TAGS]).toEqual(ALMANAC_TAGS.filter((tag) => shown.has(tag)));
     // Wincon is in the full list now and in the chips only once a shipped card carries it.
     expect(FILTER_TAGS).toContain("Wincon");
     expect(DECK_CHIP_TAGS.includes("Wincon")).toBe(carried.has("Wincon"));

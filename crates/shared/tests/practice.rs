@@ -1,6 +1,6 @@
 //! The practice session's machine (#3099; SPEC §9.9, §9.10, B22, B25, B34, B35, B38, B39, R187, R188, R433,
 //! R508, R668, R677, R679, R768, R923000, R1303000, R1373, R1705005, R2102000, R2560000, R2706000,
-//! R3100000, R3477000, R4582000): played on the real catalog, with a `Session` standing in for a host. It keeps what
+//! R3100000, R3477000, R4582000, R5125000): played on the real catalog, with a `Session` standing in for a host. It keeps what
 //! the machine asks it to store (the save, the kept games), answers the AI's ask with the AI itself and the
 //! lethal ask with nothing, and nothing else decides anything.
 
@@ -13,8 +13,9 @@ use jackioh_engine::{
 use jackioh_shared::config::{PRACTICE_AI_CLOCK_MS, PRACTICE_LETHAL_HINT_CLOCK_MS, PRACTICE_REPLAYS_KEPT};
 use jackioh_shared::host::practice::replays::{ReplayPageResult, ReplayVerdict, list_replays, page_replay};
 use jackioh_shared::host::practice::{
-    ClaimRefusal, KeptAs, LessonDeal, PracticeConfig, PracticeDeckChoice, PracticeEvent, PracticeHost,
-    PracticeOutput, PracticeReplay, PracticeResult, PracticeSave, PracticeSnapshot, check_claim,
+    ClaimRefusal, KeptAs, KeptAssault, LessonDeal, PracticeConfig, PracticeDeckChoice, PracticeEvent,
+    PracticeHost, PracticeOutput, PracticeReplay, PracticeResult, PracticeSave, PracticeSnapshot,
+    check_claim,
 };
 use jackioh_shared::host::timer::{TimerCommand, TimerKey};
 
@@ -1192,10 +1193,10 @@ fn r4582000_an_assault_fight_is_created_from_its_setup_a_game_of_its_own_kind() 
     let marks = args.deck_marks.expect("the enemy's marks");
     assert_eq!((marks.p1, marks.p2), (None, Some(assault.enemy_marks.clone())));
     assert!(args.dealt.is_none() && args.last_boards.is_none());
-    // It leaves no last board, is never kept, and earns nothing; its save clears once it is over.
+    // It leaves no last board and earns nothing; its save clears once it is over. It is kept for
+    // replay (R5125000).
     session.concede();
     assert!(session.snapshot().last_board.is_none());
-    assert!(session.kept.is_empty());
     assert_eq!(session.save, Some(None));
     assert_eq!(session.records.len(), 1);
 }
@@ -1204,7 +1205,7 @@ fn r4582000_an_assault_fight_is_created_from_its_setup_a_game_of_its_own_kind() 
 /// AI's and the hint's determinizations read them; a fight that names none stores nothing
 #[test]
 fn r4595000_an_assault_fight_names_the_enemys_sets_at_the_ais_seat() {
-    // The set is held until its release (R4577000), so a test deals it under a preview.
+    // The set is single-player and ships in no deck a player builds (R4577000), so a test deals it under a preview.
     let _preview = jackioh_engine::testkit::preview_sets(&[jackioh_engine::SetName::InfiniteAssault]);
     let mut setup = assault_config("practice-r4595000");
     let enemy_deck: Vec<String> = (1..=12).map(|n| format!("infiniteassault-{n:03}")).collect();
@@ -1323,6 +1324,99 @@ fn r679_r768_a_voided_game_shows_its_result_leaves_no_last_board_and_is_kept_now
     assert!(voided.snapshot().replay.is_none());
     // Claimed, it pays nothing: the check says voided (R1303000).
     assert_eq!(voided.save, Some(None));
+}
+
+// R5125000: an Infinite Assault fight is kept for replay
+
+#[test]
+fn r5125000_a_finished_assault_fight_is_kept_named_and_folds_to_its_hash() {
+    let mut session = Session::start(&assault_config("practice-r5125000")).expect("starts");
+    let assault = session.host.config().assault.clone().expect("an Assault fight");
+    let replay = kept_game(&mut session);
+    let build = session.catalog.clone();
+    // Kept as a free game is (R768), numbered, named by its level and enemy, and the snapshot names it.
+    assert_eq!(
+        (replay.summary.game, replay.summary.result),
+        (1, PracticeResult::Loss)
+    );
+    assert_eq!(
+        replay.summary.assault,
+        Some(KeptAssault {
+            level: assault.level.level,
+            enemy: assault.level.enemy.clone(),
+        })
+    );
+    assert_eq!(
+        session.snapshot().replay,
+        Some(KeptAs {
+            game: 1,
+            steps: replay.summary.steps
+        })
+    );
+    // Its seed is the level's, and its setup holds the enemy's marks, so it folds to the game's hash.
+    assert_eq!(replay.config.seed, assault.seed);
+    let setup = replay.setup.as_ref().expect("a setup");
+    assert_eq!(setup.deck_marks, session.host.fold_args().deck_marks);
+    assert!(setup.deck_marks.is_some());
+    let opened = page_replay(&replay, None, 0, 1, &build).open;
+    assert!(
+        matches!(opened, jackioh_engine::ReplayOpen::Ready { .. }),
+        "{opened:?}"
+    );
+    // Without them it would not: the marked card is Radiant and buffed in the game it played.
+    let mut unmarked = replay.clone();
+    unmarked.setup.as_mut().expect("a setup").deck_marks = None;
+    assert!(matches!(
+        page_replay(&unmarked, None, 0, 1, &build).open,
+        jackioh_engine::ReplayOpen::Refused { .. }
+    ));
+}
+
+/// R5125000: an Assault enemy's sets (R4595000) are kept with the fight, and it folds with them.
+#[test]
+fn r5125000_a_kept_assault_fight_keeps_the_enemys_sets() {
+    // The set is single-player and ships in no deck a player builds (R4577000), so a test deals it under a preview.
+    let _preview = jackioh_engine::testkit::preview_sets(&[SetName::InfiniteAssault]);
+    let mut setup = assault_config("practice-r5125000-sets");
+    let enemy_deck: Vec<String> = (1..=12).map(|n| format!("infiniteassault-{n:03}")).collect();
+    let fight = setup.assault.as_mut().expect("an Assault fight");
+    fight.enemy_deck = enemy_deck.clone();
+    fight.level.deck = enemy_deck;
+    fight.enemy_sets = vec![SetName::InfiniteAssault];
+    let mut session = Session::start(&setup).expect("starts");
+    let replay = kept_game(&mut session);
+    let sets = replay
+        .setup
+        .as_ref()
+        .and_then(|kept| kept.deck_sets.clone())
+        .expect("the enemy's sets");
+    assert_eq!((sets.p1, sets.p2), (None, Some(vec![SetName::InfiniteAssault])));
+    let opened = page_replay(&replay, None, 0, 1, &session.catalog.clone()).open;
+    assert!(
+        matches!(opened, jackioh_engine::ReplayOpen::Ready { .. }),
+        "{opened:?}"
+    );
+}
+
+/// R5125000: a run fight, a lesson and a voided Assault fight are still kept nowhere, and a free game's kept
+/// file is as before: no marks, no sets, no Assault.
+#[test]
+fn r5125000_a_run_fight_and_a_voided_assault_fight_keep_nothing_and_a_free_game_is_as_before() {
+    let mut run = Session::start(&run_config("practice-r5125000-run")).expect("starts");
+    run.concede();
+    assert!(run.kept.is_empty() && run.snapshot().replay.is_none());
+    let mut assault = Session::start(&assault_config("practice-r5125000-void")).expect("starts");
+    assault.answer_mulligans();
+    let mut voided = with_game(&assault, |game| {
+        game["result"] = serde_json::json!({ "winner": "draw", "reason": "voided" });
+        game["phase"] = serde_json::json!("over");
+    });
+    voided.act(ActionBody::EndTurn);
+    assert!(voided.kept.is_empty() && voided.snapshot().replay.is_none());
+    let mut free = started("practice-r5125000-free", P2);
+    let kept = serde_json::to_value(kept_game(&mut free)).expect("the kept game is JSON");
+    assert!(kept["setup"].get("deckMarks").is_none() && kept["setup"].get("deckSets").is_none());
+    assert!(kept["summary"].get("assault").is_none());
 }
 
 // R768: the finished games a host keeps

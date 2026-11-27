@@ -545,33 +545,7 @@ fn lint_record(record: &PerfRecord) -> Vec<String> {
 /// the file's name: a file that is no record, a record's lint, a live record of no game the PERF_*
 /// constants name, and a second live record of one game.
 fn read_corpus(dir: &Path) -> Result<(Vec<NamedRecord>, Vec<String>)> {
-    let mut paths: Vec<_> = fs::read_dir(dir)
-        .with_context(|| format!("reading {}", dir.display()))?
-        .map(|entry| entry.map(|entry| entry.path()))
-        .collect::<Result<_, _>>()
-        .with_context(|| format!("reading {}", dir.display()))?;
-    paths.retain(|path| path.extension().is_some_and(|extension| extension == "json"));
-    paths.sort();
-    let mut records = Vec::new();
-    let mut problems = Vec::new();
-    for path in paths {
-        let name = path
-            .file_name()
-            .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
-        let text = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
-        match serde_json::from_str::<PerfRecord>(&text) {
-            Ok(record) => {
-                problems.extend(
-                    lint_record(&record)
-                        .into_iter()
-                        .map(|problem| format!("{name}: {problem}")),
-                );
-                records.push((name, record));
-            }
-            Err(error) => problems.push(format!("{name}: not a perf record: {error}")),
-        }
-    }
-
+    let (records, mut problems) = crate::fuzz::read_named_records(dir, "perf record", lint_record)?;
     let wanted = wanted();
     for (at, (name, record)) in records.iter().enumerate() {
         if record.retired.is_some() {
@@ -794,6 +768,55 @@ struct Played {
     heaviest: [Option<(i64, usize, GameState)>; 3],
 }
 
+/// `golden::record_game`'s loop from a begun game (stopped at the game's end or STEP_CAP), its seats
+/// answering in the order `order` draws and acting as `policy` draws, with no hashing on the way: `label`
+/// names the game in a refusal, and each action's nonce is `<nonce>-<n>`.
+fn play_out(
+    seed: u32,
+    label: &str,
+    nonce: &str,
+    mut state: GameState,
+    mut input: FoldArgs,
+    mut policy: Rng,
+    mut order: Rng,
+) -> Result<Played> {
+    let mut heaviest: [Option<(i64, usize, GameState)>; 3] = [None, None, None];
+
+    while state.result.is_none() && input.log.len() < STEP_CAP {
+        let n = input.log.len();
+        let player = actor_of(&state, &mut order);
+        let chosen = choose_action(&state, player, &mut policy).ok_or_else(|| {
+            anyhow!(
+                "{label} step {n}: no legal action for {player} while the game is live (turn {}): R82 auto-ends \
+                 a turn with nothing left to do, so this is a stall",
+                state.turn
+            )
+        })?;
+        let action = Action::new(chosen, player, format!("{nonce}-{n}"));
+        let result = reduce(&state, &action);
+        if let Some(error) = result.error {
+            bail!(
+                "{label} step {n}: legalActions offered \"{}\" but reduce refused it: {error}",
+                action.action_type()
+            );
+        }
+        input.log.push(action);
+        for (kept, value) in heaviest.iter_mut().zip(weigh(&result.events, &result.state)) {
+            if kept.as_ref().is_none_or(|(most, _, _)| value > *most) {
+                *kept = Some((value, n + 1, result.state.clone()));
+            }
+        }
+        state = result.state;
+    }
+
+    Ok(Played {
+        seed,
+        input,
+        hash: hash_state(&state),
+        heaviest,
+    })
+}
+
 /// A plain or handicapped record's golden seed's game: `golden::record_game`'s loop (nonce `perf-<n>`,
 /// stopped at the game's end or STEP_CAP) on the record's pinned decks and handicaps, with no hashing on
 /// the way.
@@ -813,51 +836,16 @@ fn play_seed(record: &PerfRecord) -> Result<Played> {
     if let Some(error) = begun.error {
         bail!("{game}: beginGame refused: {error}");
     }
-    let mut state = begun.state;
-    let mut policy = Rng::new(&policy_stream, 0);
+    let policy = Rng::new(&policy_stream, 0);
     // R265: the stream that picks which seat answers first while both mulligans are open.
-    let mut order = Rng::new(&order_stream, 0);
-    let mut input = FoldArgs {
+    let order = Rng::new(&order_stream, 0);
+    let input = FoldArgs {
         seed: game.clone(),
         decks,
         handicaps: record.handicaps.clone(),
         ..FoldArgs::default()
     };
-    let mut heaviest: [Option<(i64, usize, GameState)>; 3] = [None, None, None];
-
-    while state.result.is_none() && input.log.len() < STEP_CAP {
-        let n = input.log.len();
-        let player = actor_of(&state, &mut order);
-        let chosen = choose_action(&state, player, &mut policy).ok_or_else(|| {
-            anyhow!(
-                "{game} step {n}: no legal action for {player} while the game is live (turn {}): R82 auto-ends \
-                 a turn with nothing left to do, so this is a stall",
-                state.turn
-            )
-        })?;
-        let action = Action::new(chosen, player, format!("perf-{n}"));
-        let result = reduce(&state, &action);
-        if let Some(error) = result.error {
-            bail!(
-                "{game} step {n}: legalActions offered \"{}\" but reduce refused it: {error}",
-                action.action_type()
-            );
-        }
-        input.log.push(action);
-        for (kept, value) in heaviest.iter_mut().zip(weigh(&result.events, &result.state)) {
-            if kept.as_ref().is_none_or(|(most, _, _)| value > *most) {
-                *kept = Some((value, n + 1, result.state.clone()));
-            }
-        }
-        state = result.state;
-    }
-
-    Ok(Played {
-        seed: record.seed,
-        input,
-        hash: hash_state(&state),
-        heaviest,
-    })
+    play_out(record.seed, &game, "perf", begun.state, input, policy, order)
 }
 
 /// The run-start game (§15) on its record's pinned decks, handicaps and deck marks
@@ -878,51 +866,24 @@ fn play_run_start(record: &PerfRecord) -> Result<Played> {
     if let Some(error) = begun.error {
         bail!("perf-run-start: beginGame refused: {error}");
     }
-    let mut state = begun.state;
-    let mut policy = Rng::new("perf-run-start-policy", 0);
-    let mut order = Rng::new("perf-run-start-order", 0);
-    let mut input = FoldArgs {
+    let policy = Rng::new("perf-run-start-policy", 0);
+    let order = Rng::new("perf-run-start-order", 0);
+    let input = FoldArgs {
         seed: "perf-run-start".to_string(),
         decks,
         handicaps: Some(handicaps),
         deck_marks: Some(marks),
         ..FoldArgs::default()
     };
-    let mut heaviest: [Option<(i64, usize, GameState)>; 3] = [None, None, None];
-
-    while state.result.is_none() && input.log.len() < STEP_CAP {
-        let n = input.log.len();
-        let player = actor_of(&state, &mut order);
-        let chosen = choose_action(&state, player, &mut policy).ok_or_else(|| {
-            anyhow!(
-                "perf-run-start step {n}: no legal action for {player} while the game is live (turn {}): R82 auto-ends \
-                 a turn with nothing left to do, so this is a stall",
-                state.turn
-            )
-        })?;
-        let action = Action::new(chosen, player, format!("perf-run-start-{n}"));
-        let result = reduce(&state, &action);
-        if let Some(error) = result.error {
-            bail!(
-                "perf-run-start step {n}: legalActions offered \"{}\" but reduce refused it: {error}",
-                action.action_type()
-            );
-        }
-        input.log.push(action);
-        for (kept, value) in heaviest.iter_mut().zip(weigh(&result.events, &result.state)) {
-            if kept.as_ref().is_none_or(|(most, _, _)| value > *most) {
-                *kept = Some((value, n + 1, result.state.clone()));
-            }
-        }
-        state = result.state;
-    }
-
-    Ok(Played {
-        seed: record.seed,
+    play_out(
+        record.seed,
+        "perf-run-start",
+        "perf-run-start",
+        begun.state,
         input,
-        hash: hash_state(&state),
-        heaviest,
-    })
+        policy,
+        order,
+    )
 }
 
 struct PlayedDuos {

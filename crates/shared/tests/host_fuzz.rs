@@ -22,7 +22,7 @@
 //! and that no output is `Panicked`. Every draw is the engine's `Rng` (CLAUDE.md rule 4 binds a pure
 //! crate's tests too), so a failure's seed alone reproduces it: set `REPRO` and run the `repro_one_seed` test.
 //!
-//! No module or test here is named `fuzz`, `selfplay` or `positions`: the `rust (test tools, wasm)` job
+//! No module or test here is named `fuzz` or `selfplay`: the `rust (test tools, wasm)` job
 //! skips tests with those names (`.github/ci/rust-test.toml`).
 
 use std::collections::VecDeque;

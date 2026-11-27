@@ -115,31 +115,3 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
         }
     })
 }
-
-/// `shuffleCopiesOfSelf`'s argument.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
-#[serde(rename_all = "camelCase")]
-pub struct ShuffleCopiesOfSelfArgs {
-    pub count: i32,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub player: Option<PlayerSpec>,
-}
-
-/// Shuffle copies of the card that is resolving (Super-Virus's own copies).
-pub fn shuffle_copies_of_self(args: ShuffleCopiesOfSelfArgs) -> Effect {
-    Effect::new("shuffleCopiesOfSelf", move |ctx| {
-        let Some(this) = ctx.live_self().cloned() else {
-            return;
-        };
-        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        for _ in 0..args.count.max(0) {
-            let mut card = new_instance(&mut *ctx.state, &this.def_id, player, Zone::Library { player });
-            card.radiant = this.radiant;
-            carry_from(&mut card, Some(&this));
-            crate::generators::record_generator(ctx, &card);
-            shuffle_into_library(ctx, &mut card, false, Some(this.id.as_str()));
-            crate::generators::credit_creator(ctx, &card.id);
-        }
-    })
-}

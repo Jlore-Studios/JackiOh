@@ -1,5 +1,5 @@
 //! M+ #3 Wondrous Wand (SPEC §8.9 row 3, BUILD M11 row M+ 3): (1, Embiggened 3) Spell, Epic ((2, Embiggened 4) until issue #3996).
-//!   Base and Radiant: "Draw {draw|card|cards}. They cost ({setCost}). Embiggened (3): Draw
+//!   Base and Radiant: "Draw {draw|card|cards}. They cost ({setCost}). Embiggened (+2): Draw
 //!   {embiggenedDraw} instead." (1/2, (1); 2/4, (0) since issue #2179: (0) and 2/5 before)
 //!
 //! C #79 Risky Die pattern: library noted in remember, draws run (R81, R58, §2.4), then drawn cards get costOverride (R766).

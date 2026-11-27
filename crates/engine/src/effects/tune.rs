@@ -37,7 +37,7 @@ use serde_json::{Value, json};
 use crate::alt_play::priced_type_of;
 use crate::brittle_count::active_brittle_count;
 use crate::config::{
-    TUNE_ATTACK_FLOOR, TUNE_BUFF_ANY_KEYWORDS, TUNE_BUFF_HAND_KEYWORDS, TUNE_BUFF_HAND_REMOVES,
+    MANA_CEILING, TUNE_ATTACK_FLOOR, TUNE_BUFF_ANY_KEYWORDS, TUNE_BUFF_HAND_KEYWORDS, TUNE_BUFF_HAND_REMOVES,
     TUNE_BUFF_REMOVES, TUNE_COST_CAP, TUNE_COST_FLOOR, TUNE_COST_STEP, TUNE_DAMAGE_KEYWORDS,
     TUNE_FIELD_SPELL_KEYWORDS, TUNE_HARMFUL_KEYWORDS, TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE,
     TUNE_NERF_HAND_KEYWORDS, TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL, TUNE_X_STEP,
@@ -164,19 +164,6 @@ pub enum TuneRow {
     Number,
     #[serde(rename = "plague")]
     Plague,
-}
-
-impl TuneRow {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            TuneRow::Cost => "cost",
-            TuneRow::Stats => "stats",
-            TuneRow::Keyword => "keyword",
-            TuneRow::X => "x",
-            TuneRow::Number => "number",
-            TuneRow::Plague => "plague",
-        }
-    }
 }
 
 /// The keywords the card has now — all five layers in the unit row or standing in a backrow zone
@@ -527,8 +514,10 @@ fn x_items(
                 write: step(X_KEY, better),
             }),
             Some(x) => {
-                let before = x_of(card);
-                let after = tuned_count(&with_x_step(card, X_KEY, better), X_KEY, x);
+                // R5148000: an X-cost card's X counts at most `MANA_CEILING`, so a step past it moves
+                // nothing.
+                let before = x_of(card).min(MANA_CEILING);
+                let after = tuned_count(&with_x_step(card, X_KEY, better), X_KEY, x).min(MANA_CEILING);
                 if after != before {
                     items.push(XItem {
                         key: X_KEY.to_string(),

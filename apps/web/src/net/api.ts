@@ -14,6 +14,7 @@ import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import type { FleetTrackView } from "../wire/generated/FleetTrackView.ts";
+import type { RolledKind } from "../wire/generated/RolledKind.ts";
 import type { StatsFace } from "../wire/generated/StatsFace.ts";
 import type { VariantKind } from "../wire/generated/VariantKind.ts";
 import { stripTrailingSlashes } from "./navigate.ts";
@@ -1112,24 +1113,6 @@ export type DeckInput = {
   cardBackCosmetic?: string | null;
 };
 
-/**
- * `PUT /api/decks/:id`: creates or replaces. Refusals: 400 `bad_request` (a D1–D4 draft rule, issues in
- * `details`), 409 `conflict` with `details.limit` at `limits.decks`, 409 `update_required` for a stale
- * catalog, 404 when the id is another profile's.
- */
-export async function putDeck(token: string, id: string, input: DeckInput): Promise<{ deck: SavedDeck }> {
-  const answer = await apiRequest<{ deck: SavedDeck }>(`/api/decks/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    token,
-    body: input,
-  });
-  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
-    ...before,
-    decks: withItem(before.decks, answer.deck),
-  }));
-  return answer;
-}
-
 /** The kept decks without deck `id`: a trio slot naming it empties (R252). */
 function withoutDeck(before: DecksResponse, id: string): DecksResponse {
   return {
@@ -1165,7 +1148,7 @@ export function getDeckVersions(token: string, deckId: string): Promise<{ versio
 /**
  * `POST /api/decks/:id/versions/:versionId/restore`: saves the version's name and cards as the deck's,
  * keeping its portrait and picks, as a new version, so the one it replaced stays listed. Refusals as
- * `putDeck`'s.
+ * `PUT /api/decks/:id`'s.
  */
 export async function restoreDeckVersion(
   token: string,
@@ -1832,6 +1815,13 @@ export type CardDrillDownResponse = {
   faces?: CardFaces;
   /** R4676000: the card's choices at the page's patch and face, one group per kind it has; absent from an older server. */
   variants?: PublicVariantGroup[];
+  /** R4679000: each card it made or offered at the page's patch and face, best adjusted first; absent from an older server. */
+  outputs?: PublicOutputRow[];
+  /**
+   * R4707001: the card's rolled outcomes at the page's patch and face, one group per kind it has (its table of
+   * effects, coin flips, dice) in that order; `[]` for a card with none, absent from an older server.
+   */
+  rolled?: PublicRolledGroup[];
 };
 
 /** R4676000: one choice of a card, read against the field of every card's choices. */
@@ -1854,6 +1844,51 @@ export type PublicVariantRow = {
 export type PublicVariantGroup = {
   kind: VariantKind;
   rows: PublicVariantRow[];
+};
+
+/** R4679000: one card a card made or offered, read against the card's other outputs. */
+export type PublicOutputRow = {
+  /** The output's catalog id, which its drill-down opens. */
+  key: string;
+  label: string;
+  cost: number;
+  rarity: string;
+  games: number;
+  /** Its games over every output's on the face, 0..1. */
+  share: number;
+  adjustedWinRate: number | null;
+  adjustedLow: number | null;
+  adjustedHigh: number | null;
+  tier: CardTier | null;
+  hasEnoughGames: boolean;
+  /** A Discover-like card's: the seat-games the output was offered in; absent for a card that offers none. */
+  offered?: number;
+  /** Picked over offered, 0..1; absent when it was never offered. */
+  pickRate?: number;
+};
+
+/** R4707001: one outcome a card rolled, read against its expected share and the card's other outcomes of its kind. */
+export type PublicRolledRow = {
+  /** Unique within the response, e.g. `core-004:2/6`. */
+  key: string;
+  /** The server's words for the outcome ("3 of 6 heads", "Lands on 67"), shown as they are. */
+  label: string;
+  /** The share the odds give it, 0..1. */
+  expected: number;
+  /** The share it was rolled in, 0..1. */
+  share: number;
+  games: number;
+  adjustedWinRate: number | null;
+  adjustedLow: number | null;
+  adjustedHigh: number | null;
+  tier: CardTier | null;
+  hasEnoughGames: boolean;
+};
+
+/** R4707001: one kind of a card's rolled outcomes, its rows best adjusted first and those below the floor last. */
+export type PublicRolledGroup = {
+  kind: RolledKind;
+  rows: PublicRolledRow[];
 };
 
 /** R4673000: one face's figures in the drill-down, read against that face's own field and band. */
@@ -1948,12 +1983,28 @@ export type PublicPlayVersion = {
   live: boolean;
   /** R4678001: the patches its versions reach (the patch bar's windows); absent from a server deployed before it. */
   patches?: number;
+  /** R5033000: the position of its first version in the shipped history; absent from a server deployed before it. */
+  firstShipped?: number | null;
+  /** R5035000: its iteration's label, "v1", "v1b", "v2", the server's count over its card's history; absent from a server deployed before it. */
+  iteration?: string;
   games: number;
   adjustedWinRate: number | null;
   adjustedLow: number | null;
   adjustedHigh: number | null;
+  /** R5036000: its Decisiveness over its span, null below the floor or with no turns; absent from an older server. */
+  decisiveness?: number | null;
   tier: CardTier | null;
   hasEnoughGames: boolean;
+  /**
+   * R5037000: its win rate over the games it counts, as the Cards tab's reads a card's (R3185000); null with no
+   * games; absent from a server deployed before it. The client shows it from R654's floor (`hasEnoughGames`).
+   */
+  winRate?: number | null;
+  /**
+   * R5037000: its played games over its seen games (R3950000); null when it was never seen, which is no 0%; absent
+   * from a server deployed before it.
+   */
+  playRate?: number | null;
 };
 
 /** R4675001: `GET /api/stats/versions`: every deck card's play versions in catalog order, and the band their tiers read. */
@@ -1962,14 +2013,51 @@ export type PublicStatsVersionsResponse = {
   mode: "all" | "bo1" | "bo3" | "random" | "constructed";
   bandLow: number;
   bandHigh: number;
+  /** R5036000: the typical play version's Decisiveness, a fraction; absent from an older server. */
+  decisiveness?: number;
   minSample: number;
   versions: PublicPlayVersion[];
 };
 
-/** R4675001, R4678001: every play version's figures on a match type, every one when none is asked; open to everyone. */
-export function getStatsVersions(options: { mode?: string; signal?: AbortSignal } = {}): Promise<PublicStatsVersionsResponse> {
-  const query = options.mode ? `?${new URLSearchParams({ mode: options.mode }).toString()}` : "";
+/** R4675001, R4678001: every play version's figures on a match type, every one when none is asked; open to everyone. R5040000: `scope: "major"` asks for the live ones alone, the server cutting each to the newest major's line. */
+export function getStatsVersions(
+  options: { mode?: string; scope?: "major"; signal?: AbortSignal } = {},
+): Promise<PublicStatsVersionsResponse> {
+  const params = new URLSearchParams();
+  if (options.mode) params.set("mode", options.mode);
+  if (options.scope) params.set("scope", options.scope);
+  const text = params.toString();
+  const query = text ? `?${text}` : "";
   return apiRequest<PublicStatsVersionsResponse>(`/api/stats/versions${query}`, { signal: options.signal });
+}
+
+/** R4681001: one Hall of Fame entry: its before and after play-version rows with figures, their ship dates, the balance line, and, on the changed list alone, how many changes lie between. */
+export type PublicHallEntry = {
+  before: PublicPlayVersion;
+  after: PublicPlayVersion;
+  beforeDate: string | null;
+  afterDate: string | null;
+  balance: string | null;
+  changesBetween: number | null;
+};
+
+/** R4681001: `GET /api/stats/hall-of-fame`: the four lists over a match type, every one when none is asked; open to everyone. */
+export type PublicHallOfFameResponse = {
+  pilot: "merged" | "human" | "ai";
+  mode: "all" | "bo1" | "bo3" | "random" | "constructed";
+  minSample: number;
+  bandLow: number;
+  bandHigh: number;
+  broken: PublicHallEntry[];
+  nerfed: PublicHallEntry[];
+  buffed: PublicHallEntry[];
+  changed: PublicHallEntry[];
+};
+
+/** R4681001: the Hall of Fame's four lists (R4681000) on a match type, every one when none is asked; open to everyone. */
+export function getHallOfFame(options: { mode?: string; signal?: AbortSignal } = {}): Promise<PublicHallOfFameResponse> {
+  const query = options.mode ? `?${new URLSearchParams({ mode: options.mode }).toString()}` : "";
+  return apiRequest<PublicHallOfFameResponse>(`/api/stats/hall-of-fame${query}`, { signal: options.signal });
 }
 
 /**

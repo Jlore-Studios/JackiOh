@@ -1,7 +1,7 @@
 //! S #154 Dice of Doom (SPEC §8.10 row S 154; §2.4, §6.1 Lucky, §6.3 Embiggen, R62, R153, R155, R386,
 //! R640, R1178001, R1438, R1440, R1857002, R1870007, R3869000): (0) Spell, Quickdraw, Mythic; Embiggened (1).
 //!   Base:    "Roll a 100-sided die. If it lands on 67, add every Terminus card to your hand. They cost
-//!            (0). / End of turn: Add this back to your hand. / Embiggened (1): This also gains Lucky +1
+//!            (0). / End of turn: Add this back to your hand. / Embiggened (+1): This also gains Lucky +1
 //!            for good."
 //!   Radiant: "Roll an 80-sided die twice. If either lands on 67, …" and the same.
 //!
@@ -28,7 +28,7 @@ const SIDES: i32 = 100;
 const RADIANT_SIDES: i32 = 80;
 const RADIANT_ROLLS: i32 = 2;
 const HIT: i32 = 67;
-/// "Embiggened (1): This also gains Lucky +1 for good."
+/// "Embiggened (+1): This also gains Lucky +1 for good."
 const LUCKY_GAIN: i32 = 1;
 
 /// The roll; `kept`, the script through v0.6.3b.
@@ -44,8 +44,9 @@ fn roll(ctx: &mut EffectContext<'_>, kept: bool) -> Vec<Effect> {
         .map(|_| roll_die(ctx, sides, lucky, |face| face == HIT))
         .collect();
     let hit = dice.iter().any(|die| die.kept_face() == HIT);
-    // R2652001: the dice are shown, every Lucky roll of each, before anything they decided.
-    let mut effects = vec![report_rolls(RollKind::Die, sides, dice)];
+    // R2652001: the dice are shown, every Lucky roll of each, before anything they decided; R4707000: with
+    // the face they are checked for, which the game record splits them by.
+    let mut effects = vec![report_die_hits(sides, dice, RollHit { from: HIT, to: HIT })];
     if gain > 0 {
         effects.push(gain_keyword_for_good(json_as(
             json!({ "keyword": { "kind": "Lucky", "n": gain } }),

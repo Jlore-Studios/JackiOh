@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 // Static pages give crawlers page-specific HTML and are replaced at client startup without hydration.
-// Reuse `net/head.ts`, `almanacShelf` (R674, R1420; no unshipped cards), `fillParams`, and `patches.json`.
+// Reuse `net/head.ts`, `almanacShelf` (R674, R1420, R5131000; no unshipped cards but the Infinite Assault's), `fillParams`, and `patches.json`.
 // This Vite entry uses relative imports because Vitest and Cypress do not resolve `@jackioh/*` here.
 // `<style>` hides static content until startup; `<noscript>` restores it without script.
 // #3127, R3127000: the build also writes `404.html` from the same template, the page Cloudflare serves with a 404
@@ -21,7 +21,7 @@ import { installSceneData } from "./src/cards/art/scene.ts";
 import { ALT_SCENE_RECIPES, drawFigure, SCENE_KIT, SCENE_RECIPES } from "./src/cards/art/sceneData.ts";
 import { proceduralArtUri } from "./src/cards/art/svg.ts";
 import { compositionFor, themeFor } from "./src/cards/art/themes.ts";
-import { almanacShelf } from "./src/game/deckbuilder/shelf.ts";
+import { ALMANAC_SETS, almanacShelf } from "./src/game/deckbuilder/shelf.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor, screenNameFor } from "./src/net/head.ts";
 import { SITE_ORIGIN, originOf, paths } from "./src/net/navigate.ts";
 import { RELEASE_ART_DIR, releaseArtAsset, releaseArtAssets } from "./src/patches/releaseArt.ts";
@@ -71,7 +71,8 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
   },
   {
     path: paths.almanac,
-    description: `Every JackiOh card of ${SHIPPED_SETS.join(", ")}, tokens included, with its base and Radiant text.`,
+    // R5131000: the sets the Almanac shows, the Infinite Assault's after the sets that ship.
+    description: `Every JackiOh card of ${ALMANAC_SETS.join(", ")}, tokens included, with its base and Radiant text.`,
   },
   {
     path: paths.stats,
@@ -390,9 +391,9 @@ export function notFoundHtml(template: string, origin: string): string {
   return html.slice(0, open) + notFoundBody() + html.slice(close);
 }
 
-/** A price in R432's words, as the patch diff writes it (patches/diff.ts): "(2) Cost, Embiggened (4)" for an embiggen card (R1175000). */
+/** A price in R432's words, as the patch diff writes it (patches/diff.ts): "(2) Cost, Embiggened (+2)" for a 2 embiggen 4 card (R1175000, R5109001). */
 const costText = (cost: CardCost): string =>
-  typeof cost === "object" ? `(${String(cost.base)}) Cost, Embiggened (${String(cost.embiggen)})` : `(${String(cost)}) Cost`;
+  typeof cost === "object" ? `(${String(cost.base)}) Cost, Embiggened (+${String(cost.embiggen - cost.base)})` : `(${String(cost)}) Cost`;
 
 function almanacList(cards: CardDefs): string {
   const entries: string[] = [];

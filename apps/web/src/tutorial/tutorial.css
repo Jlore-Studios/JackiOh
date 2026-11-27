@@ -11,8 +11,8 @@
    preference or the settings panel's switch alike (the block at the end). */
 
 .practice {
-  --coach: #c4b5fd;
-  --coach-ink: #1d1233;
+  --coach: var(--pal-amethyst-300);
+  --coach-ink: var(--pal-slate-900);
 }
 
 /* Read by a screen reader, not drawn. */
@@ -41,13 +41,13 @@
   gap: 14px;
   padding: 14px 16px 16px;
   border: 1px solid color-mix(in srgb, var(--coach) 30%, var(--line));
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(90% 120% at 0% 0%, color-mix(in srgb, var(--coach) 11%, transparent), transparent 65%),
     color-mix(in srgb, var(--bg-raised) 78%, transparent);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 4%),
-    0 14px 30px -20px rgb(0 0 0 / 90%);
+    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 4%, transparent),
+    0 14px 30px -20px color-mix(in srgb, var(--pal-black) 90%, transparent);
 }
 
 .tutorial-path__head {
@@ -79,7 +79,7 @@
   gap: 8px;
   margin: 0;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
   white-space: nowrap;
 }
 
@@ -91,7 +91,7 @@
 .tutorial-path__meter i {
   width: 14px;
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
@@ -104,8 +104,8 @@
 .app-shell .tutorial-path__toggle {
   min-height: 44px;
   padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--type-md);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -147,7 +147,7 @@
   z-index: 0;
   width: calc(100% + var(--path-gap));
   height: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
@@ -164,10 +164,10 @@
   width: var(--node);
   height: var(--node);
   border: 2px solid var(--line-bright);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--bg-sunken);
   color: var(--text-dim);
-  font-size: 15px;
+  font-size: var(--type-lg);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -201,7 +201,7 @@
   margin-top: calc(var(--node) / -2);
   padding: calc(var(--node) / 2 + 4px) 12px 10px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--bg-raised), color-mix(in srgb, var(--bg-raised) 55%, var(--bg-sunken)));
 }
 
@@ -225,10 +225,8 @@
 .app-shell .tutorial-lesson__kicker {
   margin: 0;
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .tutorial-lesson__next {
@@ -238,14 +236,14 @@
 .app-shell .tutorial-lesson__title {
   margin: 0;
   color: var(--text);
-  font-size: 16px;
+  font-size: var(--type-lg);
   font-weight: 750;
   line-height: 1.25;
 }
 
 .app-shell .tutorial-lesson__summary {
   color: var(--text-dim);
-  font-size: 15px;
+  font-size: var(--type-lg);
   line-height: 1.4;
 }
 
@@ -261,10 +259,10 @@
 .tutorial-lesson__chip {
   padding: 0 6px;
   border: 1px solid color-mix(in srgb, var(--coach) 24%, var(--line));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-sunken);
   color: color-mix(in srgb, var(--coach) 30%, var(--text-dim));
-  font-size: 10.5px;
+  font-size: var(--type-xs);
   line-height: 17px;
   white-space: nowrap;
 }
@@ -287,7 +285,7 @@
   gap: 4px;
   min-width: 0;
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: var(--type-sm);
   line-height: 1.3;
 }
 
@@ -307,8 +305,8 @@
   min-height: 44px;
   margin-left: auto;
   padding: 8px 14px;
-  border-radius: 10px;
-  font-size: 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--type-md);
   font-weight: 700;
 }
 
@@ -357,10 +355,10 @@
   width: 24px;
   height: 24px;
   border: 1px solid var(--coach);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: color-mix(in srgb, var(--coach) 22%, var(--bg-sunken));
   color: var(--coach);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 800;
 }
 
@@ -375,7 +373,7 @@
 .tutorial-hud__title {
   overflow: hidden;
   color: color-mix(in srgb, var(--coach) 70%, var(--text));
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 700;
   text-overflow: ellipsis;
 }
@@ -388,7 +386,7 @@
   padding-left: 14px;
   border-left: 1px solid var(--line);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -403,7 +401,7 @@
   width: 76px;
   height: 4px;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--line);
 }
 
@@ -412,7 +410,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: calc(var(--done, 0) * 100%);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--coach);
   transition: width calc(240ms * var(--anim-scale, 1)) ease-out;
 }
@@ -423,7 +421,7 @@
   padding: 6px 14px;
   border-color: var(--line-bright);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--type-md);
   white-space: nowrap;
 }
 
@@ -460,7 +458,7 @@
   position: fixed;
   z-index: 55;
   border: 3px solid var(--coach);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   box-shadow:
     0 0 0 4px color-mix(in srgb, var(--coach) 22%, transparent),
     0 0 26px 4px color-mix(in srgb, var(--coach) 45%, transparent);
@@ -516,14 +514,14 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid color-mix(in srgb, var(--coach) 60%, var(--line));
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(180deg, color-mix(in srgb, var(--coach) 12%, var(--bg-raised)), var(--bg-raised) 70%);
   box-shadow:
-    0 0 0 1px rgb(0 0 0 / 35%),
-    0 18px 44px -12px rgb(0 0 0 / 85%),
+    0 0 0 1px color-mix(in srgb, var(--pal-black) 35%, transparent),
+    0 18px 44px -12px color-mix(in srgb, var(--pal-black) 85%, transparent),
     0 0 28px -10px color-mix(in srgb, var(--coach) 70%, transparent);
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--type-md);
   transition:
     left calc(180ms * var(--anim-scale, 1)) ease-out,
     top calc(180ms * var(--anim-scale, 1)) ease-out,
@@ -574,15 +572,13 @@
 
 .coach__eyebrow {
   color: var(--coach);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 750;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 .coach__count {
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
@@ -590,7 +586,7 @@
 .app-shell .coach__title {
   margin: 0;
   color: var(--text);
-  font-size: 16px;
+  font-size: var(--type-lg);
   font-weight: 750;
   line-height: 1.25;
 }
@@ -599,7 +595,7 @@
   max-width: none;
   margin: 0;
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--type-md);
   line-height: 1.45;
 }
 
@@ -620,18 +616,18 @@
 .app-shell .coach__ack {
   min-height: 40px;
   padding: 7px 16px;
-  border-color: color-mix(in srgb, var(--coach) 70%, white);
-  border-radius: 10px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--coach) 85%, white), var(--coach));
+  border-color: color-mix(in srgb, var(--coach) 70%, var(--pal-white));
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--coach) 85%, var(--pal-white)), var(--coach));
   color: var(--coach-ink);
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 750;
   white-space: nowrap;
 }
 
 .app-shell .coach__ack:hover:not(:disabled) {
-  border-color: white;
-  background: linear-gradient(180deg, white, color-mix(in srgb, var(--coach) 85%, white));
+  border-color: var(--pal-white);
+  background: linear-gradient(180deg, var(--pal-white), color-mix(in srgb, var(--coach) 85%, var(--pal-white)));
 }
 
 /* The slim bubble while the coach waits (the AI's turn, a step whose moment has not come): one
@@ -657,7 +653,7 @@
 
 .app-shell .coach--slim .coach__text {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 @media (max-width: 1024px), (pointer: coarse) {
@@ -706,11 +702,11 @@
   margin-top: 4px;
   padding: 4px 6px 6px 12px;
   overflow: visible;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   box-shadow:
-    0 10px 22px -14px rgb(0 0 0 / 90%),
+    0 10px 22px -14px color-mix(in srgb, var(--pal-black) 90%, transparent),
     0 0 22px -12px color-mix(in srgb, var(--coach) 70%, transparent);
-  font-size: 13px;
+  font-size: var(--type-md);
   transition: opacity calc(160ms * var(--anim-scale, 1));
 }
 
@@ -733,7 +729,7 @@
    panel taller than the last one's. The heading names the region in full for a screen reader. */
 .app-shell .coach--panel .coach__title {
   overflow: hidden;
-  font-size: 15px;
+  font-size: var(--type-lg);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -750,7 +746,7 @@
 
 .app-shell .coach--panel .coach__ack {
   padding-inline: 11px;
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .coach--panel .coach__body {
@@ -767,7 +763,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--coach-lines);
   line-clamp: var(--coach-lines);
-  font-size: 13px;
+  font-size: var(--type-md);
   line-height: var(--coach-line);
 }
 
@@ -784,7 +780,7 @@
   border-radius: 0;
   background: linear-gradient(90deg, transparent, var(--bg-raised) 22px);
   color: var(--coach);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 750;
   line-height: var(--coach-line);
 }
@@ -798,7 +794,7 @@
 .app-shell .coach__more:hover:not(:disabled) {
   border-color: transparent;
   background: linear-gradient(90deg, transparent, var(--bg-raised) 22px);
-  color: color-mix(in srgb, var(--coach) 70%, white);
+  color: color-mix(in srgb, var(--coach) 70%, var(--pal-white));
 }
 
 .app-shell .coach__more:focus-visible {
@@ -919,7 +915,7 @@
 
 .tutorial-result__seal-number {
   fill: var(--glow);
-  font-size: 28px;
+  font-size: var(--type-4xl);
   font-weight: 800;
 }
 
@@ -929,10 +925,10 @@
   margin: 2px 0 0;
   padding: 10px 12px;
   border-left: 3px solid var(--coach);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--type-md);
   line-height: 1.4;
   text-align: left;
 }
@@ -946,7 +942,7 @@
   margin: 2px 0 0;
   padding: 10px 12px;
   border-left: 3px solid var(--coach);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   text-align: left;
 }
@@ -954,10 +950,8 @@
 .app-shell .tutorial-result__next-title {
   margin: 0;
   color: var(--coach);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 750;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .tutorial-result__next-list {
@@ -967,7 +961,7 @@
   margin: 0;
   padding: 0 0 0 16px;
   color: var(--text);
-  font-size: 13.5px;
+  font-size: var(--type-md);
   line-height: 1.4;
 }
 
@@ -1001,7 +995,7 @@
 
   .tutorial-lesson__node {
     margin-top: 12px;
-    font-size: 14px;
+    font-size: var(--type-md);
   }
 
   .tutorial-lesson__card {
@@ -1127,7 +1121,7 @@
   min-height: 44px;
   padding: 7px 14px;
   border-color: color-mix(in srgb, var(--coach) 55%, var(--line));
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text);
   font-size: var(--type-lg);
@@ -1138,7 +1132,7 @@
 /* A discovery names a rule the player found themselves: its eyebrow is the coach's color on a pill. */
 .coach[data-coach-mode="discovery"] .coach__eyebrow {
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--coach);
   color: var(--coach-ink);
 }
@@ -1188,7 +1182,7 @@
   grid-template-columns: minmax(7.5em, auto) minmax(0, 1fr);
   gap: 2px 12px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   font-size: var(--type-lg);
 }

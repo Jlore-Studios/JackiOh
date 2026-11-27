@@ -42,30 +42,38 @@ export default function OpenedReplay({ load, onLeave, ...player }: OpenedReplayP
   return (
     <div className="app-shell">
       <BackLink onPress={onLeave} testId={replayTestid.back} showSettings={false} title={t("Replays")} />
-      {failure === null ? (
-        <Skeleton variant="panel" label={t("Loading the replay…")} testId={replayTestid.loading} />
-      ) : (
-        <>
-          <p className="notice" role="alert" data-testid={replayTestid.failure}>
-            {replayFailureText(failure)}
-          </p>
-          {failure.reason === "error" ? (
-            <div className="row">
-              <button
-                type="button"
-                className="button-primary"
-                data-testid={replayTestid.retry}
-                onClick={() => {
-                  setFailure(null);
-                  setAttempt((before) => before + 1);
-                }}
-              >
-                {t("Try again")}
-              </button>
-            </div>
-          ) : null}
-        </>
-      )}
+      <ReplayLoadStatus
+        failure={failure}
+        onRetry={() => {
+          setFailure(null);
+          setAttempt((before) => before + 1);
+        }}
+      />
     </div>
+  );
+}
+
+/** A loading replay, or why it failed with Try again when that can help: what both loaded replays show (`duos/DuosReplay.tsx`). */
+export function ReplayLoadStatus({ failure, onRetry }: { failure: ReplayFailure | null; onRetry: () => void }): ReactElement {
+  return failure === null ? (
+    <Skeleton variant="panel" label={t("Loading the replay…")} testId={replayTestid.loading} />
+  ) : (
+    <>
+      <p className="notice" role="alert" data-testid={replayTestid.failure}>
+        {replayFailureText(failure)}
+      </p>
+      {failure.reason === "error" ? (
+        <div className="row">
+          <button
+            type="button"
+            className="button-primary"
+            data-testid={replayTestid.retry}
+            onClick={onRetry}
+          >
+            {t("Try again")}
+          </button>
+        </div>
+      ) : null}
+    </>
   );
 }

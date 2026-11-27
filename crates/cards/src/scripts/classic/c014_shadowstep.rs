@@ -367,8 +367,10 @@ mod tests {
             assert_eq!(s.count(GameEventType::TrapFired), 0);
         }
 
+        /// R5113000: an Indestructible Unit is Immutable (R4353000), so Suppressive Aura's −1/−1 never
+        /// reaches it: it does not die, and Shadowstep stays set.
         #[test]
-        fn r69_an_indestructible_unit_whose_max_health_falls_to_0_is_collected_fires_it_and_comes_back() {
+        fn r5113000_an_indestructible_unit_takes_no_aura_so_it_neither_dies_nor_fires_it() {
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {
@@ -380,9 +382,9 @@ mod tests {
             }));
             let state = s.card(STATE_OF_GAME).clone();
             s.play(SUPPRESSIVE_AURA, json!({ "zone": 1 }));
-            assert_eq!(s.count(GameEventType::TrapFired), 1);
-            s.expect_in_zone(&state, "hand");
-            assert_eq!(s.card(&state).cost_override, Some(0));
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
+            s.expect_in_zone(&state, "field");
+            assert_eq!(s.card(&state).cost_override, None);
             s.expect_in_zone(VANILLA, "field");
         }
 
@@ -567,6 +569,80 @@ mod tests {
 
         fn copies(s: &Scenario) -> Vec<CardInstance> {
             s.hand(P1).into_iter().filter(|card| card.def_id != STOCKPILE).collect()
+        }
+
+        /// Core #89 Corpse Eater: Rush, Brittle 1 on its base face.
+        const EATER: &str = "core-089";
+
+        /// p1's Corpse Eater in lane 1 beside a face-down Radiant Shadowstep, p2's `theirs`, p1 to act;
+        /// the Eater's id, which reads it, since Shadowstep also puts a copy of it in the hand.
+        fn crumbling(theirs: Value) -> (Scenario, String) {
+            let s = scenario(json!({
+                "p1": {
+                    "hand": [STOCKPILE],
+                    "field": [EATER],
+                    "backrow": [{ "def": SHADOWSTEP, "faceUp": false, "radiant": true }],
+                    "library": crate::filler(4),
+                },
+                "p2": { "hand": [STOCKPILE], "field": theirs, "library": crate::filler(4) },
+            }));
+            let id = s.unit(P1, 1).expect("the Eater").id;
+            (s, id)
+        }
+
+        /// The Eater's count as (count, the turn its cycle started, printed).
+        fn brittle_of(s: &Scenario, id: &str) -> Option<(i32, i32, bool)> {
+            s.card(id)
+                .brittle
+                .map(|count| (count.count, count.since, count.printed == Some(true)))
+        }
+
+        /// R441, B3.3 rule 1: the crumble is a death, which the Radiant face answers with a Flicker; the
+        /// Unit re-enters the field, so its spent count starts afresh from the printed Brittle 1 and it
+        /// crumbles again after a whole round.
+        #[test]
+        fn r441_radiant_shadowstep_saving_a_crumbling_eater_restarts_its_printed_brittle() {
+            let (mut s, eater) = crumbling(json!([]));
+            let turn = s.state().turn;
+            assert_eq!(brittle_of(&s, &eater), Some((1, turn, true)));
+
+            s.end_turn().end_turn();
+
+            assert_eq!((s.state().turn, s.state().active), (turn + 2, P1));
+            assert_eq!(s.count(GameEventType::Crumbled), 1);
+            assert_eq!(s.count(GameEventType::Flickered), 1);
+            s.expect_in_zone(eater.as_str(), "field");
+            s.expect_in_zone(SHADOWSTEP, "graveyard");
+            assert_eq!(brittle_of(&s, &eater), Some((1, turn + 2, true)));
+
+            s.end_turn().end_turn();
+
+            assert_eq!(s.state().turn, turn + 4);
+            assert_eq!(s.count(GameEventType::Crumbled), 2);
+            s.expect_in_zone(eater.as_str(), "graveyard");
+        }
+
+        /// R441: a count still running is kept through the Flicker, its turn cycle restarting then, so the
+        /// Eater's next turn start, which would have crumbled it, leaves it standing.
+        #[test]
+        fn r441_an_eater_with_1_left_saved_from_a_combat_death_keeps_1_and_restarts_its_cycle() {
+            let (mut s, eater) = crumbling(json!([VANILLA]));
+            let turn = s.state().turn;
+
+            s.end_turn();
+            assert_eq!((s.state().turn, s.state().active), (turn + 1, P2));
+            let attacker = s.unit(P2, 1).expect("their Unit").id;
+            s.attack(attacker.as_str(), eater.as_str());
+
+            assert_eq!(s.count(GameEventType::Flickered), 1);
+            s.expect_in_zone(eater.as_str(), "field");
+            assert_eq!(brittle_of(&s, &eater), Some((1, turn + 1, true)));
+
+            s.end_turn();
+
+            assert_eq!(s.state().turn, turn + 2);
+            assert_eq!(s.count(GameEventType::Crumbled), 0);
+            s.expect_in_zone(eater.as_str(), "field");
         }
 
         #[test]

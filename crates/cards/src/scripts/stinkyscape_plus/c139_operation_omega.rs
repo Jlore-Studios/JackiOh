@@ -2,9 +2,9 @@
 //! R3563000, R3565000, R3565001): (1 embiggen 3) Spell (2 embiggen 4 until issue #4440), Mindustrial, Legendary, a
 //! card of the Stinkyscape+ set.
 //!   Base:    "Add 2 Automa-Ω cards to your hand.
-//!            Embiggened (3): They have Tribute 2."
+//!            Embiggened (+2): They have Tribute 2."
 //!   Radiant: "Add 2 Radiant Automa-Ω cards to your hand.
-//!            Embiggened (3): They have Tribute 2."
+//!            Embiggened (+2): They have Tribute 2."
 //!
 //! Engine: its Cry is one `addRandomFromCatalog` of `automa` cards (R386, 2 on both faces) from the
 //! Stinkyscape+ cards tagged Automa-Ω (R3565001), tokens out (§5.1, R382: no Reignclipse), the pool naming its set so

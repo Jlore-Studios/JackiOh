@@ -69,11 +69,12 @@ fn amount_of(attack: Option<i32>, health: Option<i32>) -> BuffAmount {
 }
 
 /// A layer-4 buff on one card. `report` false leaves out the `buffed` event: R440's silent change to a
-/// card of a hidden pile a scope reached (`buffCards`).
+/// card of a hidden pile a scope reached (`buffCards`). R5113000: another card's buff or debuff passes
+/// an Immutable card by.
 fn apply_buff(ctx: &mut EffectContext<'_>, unit: &CardInstance, amount: &BuffAmount, report: bool) {
     let attack = amount.attack.unwrap_or(0);
     let health = amount.health.unwrap_or(0);
-    if attack == 0 && health == 0 {
+    if (attack == 0 && health == 0) || crate::restrictions::immutable_keeps_off(ctx, unit) {
         return;
     }
     if let Some(live) = find_instance_mut(ctx.sink.state, &unit.id) {
@@ -193,7 +194,15 @@ pub(crate) fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
 /// (§6.1); a spent Divine Shield or used Reborn comes back. The grant lands on the live card and `unit`
 /// is brought up to date from it (a card in no pile: the copy). R2280001: an Animated granted to a
 /// backrow card with stats that first gives it both owes it its animation at the next state check.
+/// R5113000: another card's grant passes an Immutable card by.
 fn grant_to(ctx: &mut EffectContext<'_>, unit: &mut CardInstance, keyword: &Keyword, report: bool) {
+    if !crate::restrictions::immutable_keeps_off(ctx, unit) {
+        land_grant(ctx, unit, keyword, report);
+    }
+}
+
+/// `grant_to`'s grant once Immutable has let it through (R5113000).
+fn land_grant(ctx: &mut EffectContext<'_>, unit: &mut CardInstance, keyword: &Keyword, report: bool) {
     let animated = keyword.kind() == KeywordKind::Animated;
     let was = animated && crate::animated::ready_to_animate(ctx.sink.state, &unit.id);
     match find_instance_mut(ctx.sink.state, &unit.id) {
@@ -226,11 +235,49 @@ pub struct GrantKeywordArgs {
 }
 
 pub fn grant_keyword(args: GrantKeywordArgs) -> Effect {
-    Effect::new("grantKeyword", move |ctx| {
+    Effect::new("grantKeyword", move |ctx| grant_keyword_on(ctx, &args, true))
+}
+
+/// R5113000: `grant_keyword` as a summon's `keywords` rider gives it to the fresh card it brings: how
+/// the card arrives, which Immutable lets through.
+pub(crate) fn grant_arriving_keyword(args: GrantKeywordArgs) -> Effect {
+    Effect::new("grantKeyword", move |ctx| grant_keyword_on(ctx, &args, false))
+}
+
+/// `grantKeyword`'s body: `refused_by_immutable` false for a card's arrival (R5113000).
+fn grant_keyword_on(ctx: &mut EffectContext<'_>, args: &GrantKeywordArgs, refused_by_immutable: bool) {
+    let Some(DamageTarget::Unit { mut instance }) = resolve_target(ctx, &args.target) else {
+        return;
+    };
+    if refused_by_immutable && crate::restrictions::immutable_keeps_off(ctx, &instance) {
+        return;
+    }
+    land_grant(ctx, &mut instance, &args.keyword, true);
+}
+
+/// `grantKeywords`' argument: one card and the keywords it is given together.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GrantKeywordsArgs {
+    pub target: TargetSpec,
+    pub keywords: Vec<Keyword>,
+}
+
+/// R5113001 (S+ #46 Phase Fabric): `keywords` given to one card together, in order, each as
+/// `grantKeyword` gives it: the target is resolved and Immutable read once, before the first lands, so a
+/// list that gives Immutable or Immune to Spells still gives the rest beside it (R3547002).
+pub fn grant_keywords(args: GrantKeywordsArgs) -> Effect {
+    Effect::new("grantKeywords", move |ctx| {
         let Some(DamageTarget::Unit { mut instance }) = resolve_target(ctx, &args.target) else {
             return;
         };
-        grant_to(ctx, &mut instance, &args.keyword, true);
+        if crate::restrictions::immutable_keeps_off(ctx, &instance) {
+            return;
+        }
+        for keyword in &args.keywords {
+            land_grant(ctx, &mut instance, keyword, true);
+        }
     })
 }
 
@@ -464,13 +511,26 @@ pub fn aura_combat_keywords(args: &HookArgs<'_>, number: &str, key: Option<&str>
 /// row, a number set outright, the card made Radiant) once it has: a card whose text follows the number
 /// (`Script::combat_keywords_follow`) draws what the number, read as its Aura reads it, asks beyond
 /// its list, as the change resolves. Nothing is queued, and every other card is left as it was. A card
-/// holding no list yet has its arrival draw (or its fusion's) still to come, which reads the number as
-/// it is then, so it draws nothing here.
+/// holding no list yet has its arrival draw (or its fusion's, or its copy's, R4839000) still to come,
+/// which reads the number as it is then, so it draws nothing here.
 pub(crate) fn follow_combat_keywords(ctx: &mut EffectContext<'_>, card_id: &str) {
+    if find_instance(ctx.sink.state, card_id)
+        .is_some_and(|card| card.memory.contains_key(COMBAT_KEYWORDS_KEY))
+    {
+        top_up_to_number(ctx, card_id);
+    }
+}
+
+/// R3778000, R4839000: tops the list of `card_id`, a card on the field, up to the number its text
+/// follows (`Script::combat_keywords_follow`), read as its Aura reads it (`top_up_onto`); a card off the
+/// field, or whose text follows no number, draws nothing. `follow_combat_keywords` runs it on a card
+/// holding a list; `copy_unit_text` on the copier as the copied text lands, as a Fuse's kept card draws
+/// its own.
+pub(crate) fn top_up_to_number(ctx: &mut EffectContext<'_>, card_id: &str) {
     let Some(card) = find_instance(ctx.sink.state, card_id).cloned() else {
         return;
     };
-    if card.zone.z() != ZoneName::Field || !card.memory.contains_key(COMBAT_KEYWORDS_KEY) {
+    if card.zone.z() != ZoneName::Field {
         return;
     }
     let Some(number) = crate::scripts::script_of(ctx.sink.state, &card).combat_keywords_follow else {
@@ -497,29 +557,46 @@ pub struct GrantRandomKeywordsArgs {
     pub count: Option<i32>,
 }
 
-/// R21: #63 Plastic Surgery's and #80 Zao Gao's random keywords, none the unit already has.
+/// R21: #63 Plastic Surgery's and #80 Zao Gao's random keywords, none the unit already has. R5113000:
+/// none for an Immutable unit, and nothing drawn for it (R129).
 pub fn grant_random_keywords(args: GrantRandomKeywordsArgs) -> Effect {
     Effect::new("grantRandomKeywords", move |ctx| {
-        let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, &args.target) else {
+        grant_random_on(ctx, &args, true)
+    })
+}
+
+/// R5113000: `grant_random_keywords` as a summon's `random_keywords` roll gives them to the fresh card
+/// it brings: how the card arrives, which Immutable lets through.
+pub(crate) fn grant_arriving_random_keywords(args: GrantRandomKeywordsArgs) -> Effect {
+    Effect::new("grantRandomKeywords", move |ctx| {
+        grant_random_on(ctx, &args, false)
+    })
+}
+
+/// `grantRandomKeywords`' body: `refused_by_immutable` false for a card's arrival (R5113000).
+fn grant_random_on(ctx: &mut EffectContext<'_>, args: &GrantRandomKeywordsArgs, refused_by_immutable: bool) {
+    let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, &args.target) else {
+        return;
+    };
+    if refused_by_immutable && crate::restrictions::immutable_keeps_off(ctx, &instance) {
+        return;
+    }
+    let mut unit = find_instance(ctx.sink.state, &instance.id)
+        .cloned()
+        .unwrap_or(instance);
+    let count = args.count.unwrap_or(1).max(0);
+
+    for _ in 0..count {
+        // Recomputed each draw, so the keyword just granted is out of the pool for the next one.
+        let candidates = pool_candidates(ctx, &unit);
+        if candidates.is_empty() {
+            return;
+        }
+        let Some(keyword) = ctx.sink.rng.pick(&candidates).cloned() else {
             return;
         };
-        let mut unit = find_instance(ctx.sink.state, &instance.id)
-            .cloned()
-            .unwrap_or(instance);
-        let count = args.count.unwrap_or(1).max(0);
-
-        for _ in 0..count {
-            // Recomputed each draw, so the keyword just granted is out of the pool for the next one.
-            let candidates = pool_candidates(ctx, &unit);
-            if candidates.is_empty() {
-                return;
-            }
-            let Some(keyword) = ctx.sink.rng.pick(&candidates).cloned() else {
-                return;
-            };
-            grant_to(ctx, &mut unit, &keyword, true);
-        }
-    })
+        land_grant(ctx, &mut unit, &keyword, true);
+    }
 }
 
 /// `buffCards`' argument: `{ scope: CardScope } & BuffAmount`.

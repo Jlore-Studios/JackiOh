@@ -13,7 +13,6 @@ mod catalog;
 mod changed;
 mod claims;
 mod classify;
-mod dealt_fit;
 mod duos_fuzz;
 mod duos_gate;
 mod fork_screen;
@@ -71,6 +70,8 @@ enum Command {
     Replay(replay::Args),
     /// Hash one state object from stdin by the engine's hash_state; print `{"hash"}` (#4766).
     HashState(replay::HashStateArgs),
+    /// Fold `{seed, decks, log, state, …}` from stdin and hash its `state`; print `{"replayHash", "browserHash", "errors"}` (#4925).
+    ReplayCheck(replay::ReplayCheckArgs),
     /// Print one gate game turn by turn (part 22).
     Trace(trace::Args),
     /// Fold `{seed, decks, log, …}` to one position and print it and the AI's decision there (#834).
@@ -79,6 +80,8 @@ enum Command {
     Catalog(catalog::Args),
     /// What a change between two commits does: its kind, and for cards its tier (#1365, R1365000).
     Classify(classify::Args),
+    /// The cards a pull request changes, as fuzz's gate reads them; none off a merge commit (#5099).
+    ChangedCards(changed::Args),
     /// Print the newest version in `patches.json` (part 22).
     CatalogVersion(catalog::VersionArgs),
     /// The card patch history: `patches <version> <date> "<title>"`, `patches check`, `patches ship` (part 22), `patches log <base>..<head>` (R1369000).
@@ -118,10 +121,12 @@ fn main() -> ExitCode {
         Command::Fx(args) => fx_census::run(args),
         Command::Replay(args) => replay::run(args),
         Command::HashState(args) => replay::run_hash_state(args),
+        Command::ReplayCheck(args) => replay::run_replay_check(args),
         Command::Trace(args) => trace::run(args),
         Command::Think(args) => think::run(args),
         Command::Catalog(args) => catalog::run(args),
         Command::Classify(args) => classify::run(args),
+        Command::ChangedCards(args) => changed::run(args),
         Command::CatalogVersion(args) => catalog::run_version(args),
         Command::Patches(args) => patches::run(args),
         Command::Gate(args) => gate::run(args),

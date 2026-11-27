@@ -7,10 +7,13 @@
 //
 // R1834004: the other seat's backdrop is the same layer behind the opponent's half (`half="theirs"`,
 // `data-half`), from that seat's frozen loadout.
+//
+// R5128000: under Low graphics the field keeps its look and draws no particles, so no layer is made for them.
 
 import type { CSSProperties, ReactElement } from "react";
 
 import type { CosmeticId } from "../cards/cosmetics.ts";
+import { useSetting } from "../settings/store.ts";
 import {
   BACKDROP_PARTICLE_DELAY_STEP_MS,
   BACKDROP_PARTICLE_MAX,
@@ -29,9 +32,10 @@ function particleStyle(index: number): ParticleStyle {
 }
 
 export default function Backdrop({ field, half }: { field: CosmeticId; half?: "theirs" }): ReactElement {
+  const particles = useSetting("lowGraphics") ? 0 : BACKDROP_PARTICLE_MAX;
   return (
     <div className="board-backdrop" data-backdrop={field} data-half={half} aria-hidden="true">
-      {Array.from({ length: BACKDROP_PARTICLE_MAX }, (_, index) => (
+      {Array.from({ length: particles }, (_, index) => (
         <span key={index} className="board-backdrop-particle" style={particleStyle(index)} />
       ))}
     </div>

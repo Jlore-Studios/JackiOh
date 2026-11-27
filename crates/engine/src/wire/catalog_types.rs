@@ -360,7 +360,8 @@ macro_rules! set_table {
             /// issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
             /// Training Grounds (issue #2193, R2194000; released by #2204) and Stinkyscape+ (issue #3535,
             /// R3535000; released by #3573) ship; Boss and Boss-X are reserved; the Infinite Assault
-            /// (tracker #4576, R4577000) is a single-player set held while it is built.
+            /// (tracker #4576, R4577000) is a single-player set, held while it was built and open since
+            /// its release (#4597).
             pub enum SetName { $( $variant = $name ),+ }
         }
 
@@ -498,7 +499,7 @@ set_table![
     Boss = "Boss" { stage: SinglePlayer, segment: "boss", abbreviation: None, shadow_ban_share: None },
     BossX = "Boss-X" { stage: SinglePlayer, segment: "bossx", abbreviation: None, shadow_ban_share: None },
     StinkyscapePlus = "Stinkyscape+" { stage: Shipped, segment: "stinkyscapeplus", abbreviation: Some("S+"), shadow_ban_share: Some((1, 5)) },
-    InfiniteAssault = "Infinite Assault" { stage: HeldSinglePlayer, segment: "infiniteassault", abbreviation: Some("IA"), shadow_ban_share: None },
+    InfiniteAssault = "Infinite Assault" { stage: SinglePlayer, segment: "infiniteassault", abbreviation: Some("IA"), shadow_ban_share: None },
 ];
 
 /// R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): the newest
@@ -596,6 +597,17 @@ pub enum CardCost {
     X,
     /// "A embiggen B": pay `base`, or `embiggen` for the embiggened play (R81).
     Embiggen { base: i32, embiggen: i32 },
+}
+
+impl CardCost {
+    /// R5109000: "A embiggen B"'s Embiggen premium, B − A, which the Embiggened version costs on top of
+    /// the normal version's finished price; `None` for a card of one price.
+    pub const fn embiggen_premium(&self) -> Option<i32> {
+        match *self {
+            CardCost::Embiggen { base, embiggen } => Some(embiggen - base),
+            CardCost::Fixed(_) | CardCost::X => None,
+        }
+    }
 }
 
 impl Serialize for CardCost {
@@ -1157,14 +1169,12 @@ impl Param {
     }
 }
 
-/// A tunable number in a face's text (B3.4 rule 5, R482): `{key}` is the number alone ("Deal {damage}
-/// damage."); `{key|singular|plural}` is the number and the words that agree with it ("Draw
-/// {draw|card|cards}." prints "Draw 1 card." and "Draw 2 cards."), so a text reads right at every
-/// value a Degrade or an Upgrade can move it to.
-///
-/// The TS regular expression, kept as text for the record: `param_placeholders` and `fill_params`
-/// scan for exactly what it matches (there is no regex crate in the pure crates, SURFACE §3).
-pub const PARAM_PLACEHOLDER: &str = r"\{([A-Za-z][A-Za-z0-9]*)(?:\|([^|{}]*)\|([^|{}]*))?\}";
+// A tunable number in a face's text (B3.4 rule 5, R482): `{key}` is the number alone ("Deal {damage}
+// damage."); `{key|singular|plural}` is the number and the words that agree with it ("Draw
+// {draw|card|cards}." prints "Draw 1 card." and "Draw 2 cards."), so a text reads right at every
+// value a Degrade or an Upgrade can move it to. `param_placeholders` and `fill_params` scan for
+// exactly what the client's regular expression `PARAM_PLACEHOLDER` matches (there is no regex crate
+// in the pure crates, SURFACE §3).
 
 /// One placeholder `paramPlaceholders` found: its key and, for the agreeing form, both wordings.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -2080,7 +2090,7 @@ mod tests {
                 .iter()
                 .all(|set| set_row(*set).stage != SetStage::Held || !set_ships(*set))
         );
-        assert_eq!(SINGLE_PLAYER_SETS, [Boss, BossX]);
+        assert_eq!(SINGLE_PLAYER_SETS, [Boss, BossX, InfiniteAssault]);
     }
 
     // R3535002: the new kinds and tags read and write their printed names (CLAUDE.md rule 3).
@@ -2132,15 +2142,16 @@ mod tests {
     }
 
     // R4577000: the Infinite Assault is the set table's last row, a single-player set held while it
-    // is built: in neither the catalog order, the sets that ship nor the open single-player sets.
+    // was built and opened to `SinglePlayer` by its release (#4597): an open single-player set, in
+    // neither the catalog order nor the sets that ship, and no set is held for single-player now.
     #[test]
-    fn r4577000_infinite_assault_is_held_for_single_player() {
+    fn r4577000_infinite_assault_opens_as_a_single_player_set() {
         let row = set_row(SetName::InfiniteAssault);
         assert_eq!(
             *row,
             SetRow {
                 set: SetName::InfiniteAssault,
-                stage: SetStage::HeldSinglePlayer,
+                stage: SetStage::SinglePlayer,
                 segment: "infiniteassault",
                 abbreviation: Some("IA"),
                 shadow_ban_share: None,
@@ -2148,10 +2159,10 @@ mod tests {
         );
         assert_eq!(SetName::InfiniteAssault.as_str(), "Infinite Assault");
         assert_eq!(SetName::ALL.last(), Some(&SetName::InfiniteAssault));
-        assert_eq!(HELD_SINGLE_PLAYER_SETS, [SetName::InfiniteAssault]);
+        assert!(HELD_SINGLE_PLAYER_SETS.is_empty());
         assert!(!CATALOG_SETS.contains(&SetName::InfiniteAssault));
         assert!(!SHIPPED_SETS.contains(&SetName::InfiniteAssault));
-        assert!(!SINGLE_PLAYER_SETS.contains(&SetName::InfiniteAssault));
+        assert!(SINGLE_PLAYER_SETS.contains(&SetName::InfiniteAssault));
         assert!(!set_ships(SetName::InfiniteAssault));
     }
 

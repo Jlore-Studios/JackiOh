@@ -14,7 +14,8 @@
 // against the AI (R2102000). The worker holds the game; the page holds snapshots (CLAUDE.md
 // rule 7). A fight left unfinished waits where it stood (R3476000, R4582001): after a reload the
 // attempt, still on its fight, resumes the kept fight where it was left; Try again deals it fresh
-// from its seed instead (R2972000).
+// from its seed instead (R2972000). Once over, the fight is kept on the device as a free game is,
+// and its result offers Watch the replay beside Continue (R5125000).
 
 import {
   useCallback,
@@ -23,7 +24,6 @@ import {
   useRef,
   useState,
   type ReactElement,
-  type ReactNode,
 } from "react";
 
 import type { ActionBody } from "@jackioh/shared";
@@ -43,10 +43,12 @@ import { usePracticeEmotes } from "../../practice/emotes.ts";
 import { createPracticeHost, type PracticeHost } from "../../practice/host.ts";
 import type { PracticeStartConfig } from "../../practice/protocol.ts";
 import { ThinkIndicator } from "../../practice/ThinkIndicator.tsx";
-import { guardLeaving, navigate, paths } from "../../net/navigate.ts";
+import { FightMenuButton, FightShell, fightNoSetup, fightShuffling, fightStopped } from "../../practice/FightStages.tsx";
+import { BackLayer } from "../../net/backLayers.ts";
+import { navigate, paths, useLeaveGuard } from "../../net/navigate.ts";
 import { messageOf } from "../../net/errors.ts";
 import "../../practice/practice.css";
-import { PageTitle } from "../../routes/PageTitle.tsx";
+import ReplayPlayer from "../../replay/ReplayPlayer.tsx";
 import { useSetting } from "../../settings/store.ts";
 import { assaultFightSetup } from "../../wasm/index.ts";
 import ConfirmLeave from "./ConfirmLeave.tsx";
@@ -74,16 +76,6 @@ type Report = { controller: PracticeController } & ({ action: AssaultAction } | 
 
 function defaultHostFactory(): PracticeHost {
   return createPracticeHost();
-}
-
-/** The setup, loading and failure screens are practice's reading column; the fight is its full-width board. */
-function Shell({ variant, children }: { variant: "lobby" | "game"; children: ReactNode }): ReactElement {
-  const shell = variant === "game" ? "app-shell app-shell--wide" : "app-shell tavern one-screen";
-  return (
-    <div className={`${shell} practice practice--${variant}`} data-testid={variant === "game" ? assaultFightTestid.screen : undefined}>
-      {children}
-    </div>
-  );
 }
 
 export function AssaultFightScreen({ state, day, onAction, onHold, onLeave, hostFactory, pacing }: AssaultFightScreenProps): ReactElement {
@@ -218,19 +210,9 @@ export function AssaultFightScreen({ state, day, onAction, onHold, onLeave, host
   // its seed (R4582001), so there is no kept fight to pick up. The cleanup releases the guard when
   // the store moves screens on its own (Continue sends the report and unmounts this screen), and
   // `!over` releases it once the fight has its result.
-  const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
   const atStake =
     setup !== null && controller !== null && snapshot !== null && !over && controllerState.phase !== "failed";
-  useEffect(() => {
-    if (!atStake) return;
-    const release = guardLeaving((leave) => {
-      setLeaving({ leave });
-    });
-    return () => {
-      release();
-      setLeaving(null);
-    };
-  }, [atStake]);
+  const [leaving, setLeaving] = useLeaveGuard(atStake);
 
   const onMenu = useCallback(() => {
     if (atStake && onLeave !== undefined) {
@@ -240,54 +222,47 @@ export function AssaultFightScreen({ state, day, onAction, onHold, onLeave, host
     if (!atStake) sendOnce(); // R4582001: a finished fight's report goes to the attempt first
     if (onLeave === undefined) navigate(paths.play); // mid-fight the leave guard asks (R2972000)
     else onLeave();
-  }, [atStake, onLeave, sendOnce]);
+  }, [atStake, onLeave, sendOnce, setLeaving]);
 
-  if (setup === null) {
-    return (
-      <Shell variant="lobby">
-        <div className="practice-stage">
-          <p className="notice" data-testid={assaultFightTestid.noSetup} role="alert">
-            {t("This fight could not be set up.")}
-          </p>
-        </div>
-      </Shell>
-    );
-  }
+  // R5125000: the finished fight, kept on the device as a free game is (R768), watched again from its
+  // result. Keyed by the controller, so a fight dealt again never opens the last one's replay; watching
+  // sends nothing to the attempt, and Back returns to the result.
+  const [watching, setWatching] = useState<PracticeController | null>(null);
+  const keptGame = snapshot?.replay?.game;
+  const keptSteps = snapshot?.replay?.steps;
+  const replaySource = useMemo(
+    () =>
+      controller === null || keptGame === undefined || keptSteps === undefined
+        ? null
+        : controller.replaySource({ game: keptGame, steps: keptSteps, portraits: null }),
+    [controller, keptGame, keptSteps],
+  );
+  const onWatchReplay = useCallback(() => {
+    setWatching(controller);
+  }, [controller]);
+  const onLeaveReplay = useCallback(() => {
+    setWatching(null);
+  }, []);
 
-  if (controllerState.phase === "failed") {
-    return (
-      <Shell variant="lobby">
-        <div className="practice-stage">
-          <PageTitle>{t("The fight stopped")}</PageTitle>
-          <p className="notice" data-testid={assaultFightTestid.failed} role="alert">
-            {t(controllerState.failure ?? "Something went wrong while the game was running.")}
-          </p>
-          <button type="button" className="practice-play button-primary" data-testid={assaultFightTestid.retry} onClick={onRetryFight}>
-            {t("Try again")}
-          </button>
-        </div>
-      </Shell>
-    );
-  }
+  if (setup === null) return fightNoSetup(assaultFightTestid);
 
-  if (controller === null || snapshot === null) {
-    return (
-      <Shell variant="lobby">
-        <div className="practice-stage">
-          <div className="practice-shuffle" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-          <p className="practice-stage__status" data-testid={assaultFightTestid.loading} role="status">
-            {t("Shuffling the decks…")}
-          </p>
-        </div>
-      </Shell>
-    );
-  }
+  if (controllerState.phase === "failed") return fightStopped(assaultFightTestid, controllerState.failure, onRetryFight);
+
+  if (controller === null || snapshot === null) return fightShuffling(assaultFightTestid);
 
   const enemy = t(setup.level.enemy);
+
+  if (watching !== null && watching === controller && replaySource !== null) {
+    // The enemy's name on its hero, as the replay list opens it (R5125000).
+    const player = <ReplayPlayer source={replaySource} onLeave={onLeaveReplay} opponentLabel={enemy} />;
+    return (
+      <FightShell variant="game" testids={assaultFightTestid}>
+        {/* R4619000: Back means the replay's corner arrow; first, so what the replay opens is a layer above it. */}
+        <BackLayer onClose={onLeaveReplay} />
+        {lookup === null ? player : <CatalogContext.Provider value={lookup}>{player}</CatalogContext.Provider>}
+      </FightShell>
+    );
+  }
 
   const resultActions = (
     <>
@@ -314,24 +289,18 @@ export function AssaultFightScreen({ state, day, onAction, onHold, onLeave, host
       )}
       {/* #4742, R4742000: after Continue, which keeps the focus and the primary look: the board's Menu, once the fight is over. */}
       <MainMenuButton testid={assaultFightTestid.resultMenu} onClick={onMenu} />
+      {/* R5125000: once the worker kept the fight, as practice's result offers it (R768000). */}
+      {replaySource === null ? null : (
+        <button type="button" data-testid={assaultFightTestid.watchReplay} onClick={onWatchReplay}>
+          {t("Watch the replay")}
+        </button>
+      )}
     </>
   );
 
   // R4582001: out to the day screen, or the Play menu with no way back; mid-fight it asks first,
   // and leaves once the fight has its result.
-  const menuButton = (
-    <button
-      type="button"
-      className="control control-practice-menu"
-      data-testid={assaultFightTestid.menu}
-      aria-haspopup={!over ? "dialog" : undefined}
-      aria-label={t("Main menu")}
-      title={t("Main menu")}
-      onClick={onMenu}
-    >
-      {t("Menu")}
-    </button>
-  );
+  const menuButton = <FightMenuButton testids={assaultFightTestid} over={over} onClick={onMenu} />;
 
   const board = (
     <Game
@@ -379,7 +348,7 @@ export function AssaultFightScreen({ state, day, onAction, onHold, onLeave, host
   );
 
   return (
-    <Shell variant="game">
+    <FightShell variant="game" testids={assaultFightTestid}>
       {/* The board has no heading of its own; this names the screen for a screen reader, and draws nothing. */}
       <h1 className="tutorial-sr-only">{t("Fight against {enemy}", { enemy })}</h1>
       {/* The wrapper hands the board the screen's height (practice.css) and is the root `useBoardBusy` watches. */}
@@ -398,6 +367,6 @@ export function AssaultFightScreen({ state, day, onAction, onHold, onLeave, host
           }}
         />
       )}
-    </Shell>
+    </FightShell>
   );
 }

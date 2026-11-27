@@ -246,13 +246,6 @@ impl Tx<'_> {
         admin_dispatch!(self, actions_page(filter, limit))
     }
 
-    /// R3074000: the newest `limit` audit rows in `(at, id)` order, newest first (of two
-    /// at once, the later `at`; a shared `at` broken by id).
-    pub async fn admin_actions_recent(&mut self, limit: i64) -> StoreResult<Vec<AdminAction>> {
-        self.admin_actions_page(&AdminActionFilter::default(), limit)
-            .await
-    }
-
     /// R3074001: the ladders on which the profile holds a hand-set rating, Constructed first.
     pub async fn admin_hand_set_get(&mut self, profile_id: &str) -> StoreResult<Vec<HandSetRating>> {
         admin_dispatch!(self, hand_set_get(profile_id))

@@ -5,9 +5,9 @@
 //! so `zones.rs` and `layers.rs` read it without pulling in the destroy machinery the tick needs.
 
 use crate::faces::{card_type_of, running_face};
-use crate::state::{BrittleCounter, CardInstance, GameState};
+use crate::state::{BrittleCounter, CardInstance, GameState, find_instance, find_instance_mut};
 use crate::tuning::{numbered_sum, tuned_count};
-use crate::wire::{CardType, KeywordKind, Row, Zone};
+use crate::wire::{CardType, KeywordKind, Row, Zone, ZoneName};
 
 /// B3.3 rule 1: the Brittle a card prints on its running face, as its tuning leaves it (a Degrade or
 /// Upgrade of the printed number before the count has started, B3.4), or `None` when it prints none.
@@ -69,6 +69,29 @@ pub fn start_brittle_on_field(state: &GameState, card: &mut CardInstance, from_o
         since: state.turn,
         printed: Some(true),
     });
+}
+
+/// R4817000: a face swapped where the card stands (Make Radiant, De-Radiant, §5.2) re-reads the Brittle
+/// its new running face prints; call it once the `radiant` flag is written. A count its printed Brittle
+/// started is the card's text, so it goes when the new face prints none (S #9 Ticketed made Radiant), in
+/// any zone; a Vanilla's switched-off count goes too, since the Vanilla ends as the card leaves the field
+/// (R78) and the count would then be this face's. On the field a card with no count starts the one its
+/// new face prints, as an arrival does (S #135.1 Sack made Radiant; R687's face-down trap excepted, a
+/// Vanilla printing none). A count that stays, given or printed on both faces, keeps its number and its
+/// cycle (B3.3 rule 5).
+pub(crate) fn refit_brittle_to_face(state: &mut GameState, id: &str) {
+    let Some(mut card) = find_instance(state, id).cloned() else {
+        return;
+    };
+    let face_prints = numbered_sum(&running_face(state, &card).keywords, KeywordKind::Brittle).is_some();
+    if card.brittle.is_some_and(|brittle| brittle.printed == Some(true)) && !face_prints {
+        card.brittle = None;
+    } else if card.zone.z() == ZoneName::Field {
+        start_brittle_on_field(state, &mut card, false);
+    }
+    if let Some(live) = find_instance_mut(state, id) {
+        live.brittle = card.brittle;
+    }
 }
 
 /// B3.3 rule 4: "Give Brittle N" sets the count to N and starts it now, whatever the card had; the

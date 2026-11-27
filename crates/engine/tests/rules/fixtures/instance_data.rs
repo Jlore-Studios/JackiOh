@@ -82,6 +82,30 @@ pub static brittle_set_trap: LazyLock<CardDef> = LazyLock::new(|| {
     )
 });
 
+/// R4817000: S #135.1 Sack's shape, Brittle 1 on its Radiant face only.
+pub static brittle_radiant_only: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "brittle-radiant-only",
+        4471,
+        json!({
+            "base": { "attack": 0, "health": 4, "keywords": [], "text": "Sack shape" },
+            "radiant": { "attack": 0, "health": 8, "keywords": [{ "kind": "Brittle", "n": 1 }], "text": "Brittle 1" },
+        }),
+    )
+});
+
+/// R4817000: S #9 Ticketed's shape on a Unit, Brittle 3 on its base face only.
+pub static brittle_base_only: LazyLock<CardDef> = LazyLock::new(|| {
+    def(
+        "brittle-base-only",
+        4472,
+        json!({
+            "base": { "attack": 2, "health": 2, "keywords": [{ "kind": "Brittle", "n": 3 }], "text": "Brittle 3" },
+            "radiant": { "attack": 4, "health": 4, "keywords": [], "text": "Ticketed shape" },
+        }),
+    )
+});
+
 /// A plain 3/4 with no keywords, cost 2: every menu row but the keyword add has room on it.
 pub static body: LazyLock<CardDef> = LazyLock::new(|| {
     def(
@@ -479,6 +503,8 @@ pub static INSTANCE_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         brittle_unit.clone(),
         brittle_trap.clone(),
         brittle_set_trap.clone(),
+        brittle_radiant_only.clone(),
+        brittle_base_only.clone(),
         body.clone(),
         asker.clone(),
         numbered_body.clone(),

@@ -71,8 +71,8 @@
 //!      Position while it is Indestructible, has Can't Defend or is Evasive, or while an aura bars Defense
 //!      (§4.5 step 1: R2179000, R2657000, R3543002, R1849006), and no seat that `can_lose` (R2201000) at
 //!      hero health 0 or less (a Duos seat's is its pool's, §13.4); on every state
-//!      mana and card `damage` are 0 or more (§2.3), and every `damage` event deals more than 0 (R63,
-//!      R1361, R1362).
+//!      mana and card `damage` are 0 or more (§2.3), mana at most `MANA_CEILING` (R5148000), and every
+//!      `damage` event deals more than 0 (R63, R1361, R1362).
 //!   I18 every plain attack does what its seat's forecast said (R3100000, R4111000; #4111): `before` keeps
 //!      the `combat_forecast` entry of a chosen `attack`, and `after` holds `PlayedAttack::read` of the
 //!      step to it, a Cleave attack's splash and a Trample attack's overflow included (R4290000); what it
@@ -103,8 +103,12 @@
 //!      restore's `radiantSet` (R4508001), an exile in a `LANE_TAKERS` card's run (R4508004) or by the
 //!      Black Hole's pull at a turn's end (R4577008), a `radiantSet` under Tears of the Kwzki Tree's world
 //!      (R4508003), the state check's switch out of a barred Defense and a Burn or Toxic tick (R4508005),
-//!      and the state check's evolution of a Unit whose "Evolves when" holds after the step (R4623000). A Unit is judged only while still on the
-//!      field and immune after the step, or gone from it with its own keywords immune. Reads the events
+//!      and the state check's evolution of a Unit whose "Evolves when" holds after the step (R4623000);
+//!      a `cardResolved` whose play the step never saw ends its run (R4604003), a Burn tick a Divine
+//!      Shield takes and an exile aura arriving by a `transformed` are the game's (R4604004), a hole
+//!      opened in the step pulls as one it began with (R4604007), and a Burn's removal in a turn's end is
+//!      its tick's (R4604008). A Unit is judged only while still on the field and immune after the step,
+//!      or gone from it with its own keywords immune until a `rolledBack` restores its side (R4604005). Reads the events
 //!      and the catalog, never `restrictions::unaffected_by`; I14's branches and each Duos duel run it.
 //!   I22 every `target` pick is one its source may aim at (§10.5 step 1, R450; #4540): no Dormant card,
 //!      whatever the source or none (R1839000); no face-up Evasive card in play from a Spell or Field
@@ -138,7 +142,8 @@ use serde_json::{Map, Value};
 
 use crate::combat::{HERO_TARGET_PREFIX, hero_seat_of};
 use crate::config::{
-    BACKROW_ZONES, FATIGUE_DAMAGE, MIN_CHOSEN_X, MIN_PLAGUE_PAYMENT, UNIT_ZONES, WINDFURY_ATTACKS,
+    BACKROW_ZONES, FATIGUE_DAMAGE, MANA_CEILING, MIN_CHOSEN_X, MIN_PLAGUE_PAYMENT, UNIT_ZONES,
+    WINDFURY_ATTACKS,
 };
 use crate::damage::DamageTarget;
 use crate::duos::{DuosState, duos_view_for};
@@ -764,8 +769,9 @@ fn price_held(card: &CardInstance) -> Vec<&'static str> {
 /// under one that woke inside it (S+ #63 Overdrive Dome, fuzz seeds 1596, 2217), and so may an animated
 /// card back in its backrow by then (R383, M #66 Fiery Waraxe, fuzz seed 1013, #4079).
 fn aura_gives_windfury(state: &GameState) -> bool {
-    crate::layers::aura_entries(state).iter().any(|entry| {
-        entry
+    crate::layers::aura_entries(state).iter().any(|sourced| {
+        sourced
+            .entry
             .mod_
             .keywords
             .as_deref()
@@ -873,6 +879,13 @@ fn state_check_findings(events: &[GameEvent], state: &GameState) -> Vec<String> 
         if mana.current < 0 || mana.max < 0 {
             found.push(format!(
                 "I17 negative mana: {player} holds {} of {} mana on turn {turn} (§2.3)",
+                mana.current, mana.max
+            ));
+        }
+        if mana.current > MANA_CEILING || mana.max > MANA_CEILING {
+            found.push(format!(
+                "I17 mana past the ceiling: {player} holds {} of {} mana on turn {turn}, past {MANA_CEILING} \
+                 (§2.3, R5148000)",
                 mana.current, mana.max
             ));
         }
@@ -1199,7 +1212,8 @@ fn reached_ids(event: &GameEvent) -> Vec<&str> {
 ///   R1852000, R3539004); an Equip's (R2260000) or any other fuse onto it is not;
 /// - an `exiled` inside a `BOARD_SWEEPS` card's run, or a copier's running one's text (`copies_a_sweep`),
 ///   from its `hookResolving` (or the prompt its answer continues) to the next marker, trap or turn edge
-///   (R3539002, R3554002, R3567000);
+///   (R3539002, R3554002, R3567000), and again once a card whose marker came after it resolves
+///   (`cardResolved`, R4604013: a Spell its Cry played);
 /// - a `controlChanged` or a `bounced` after a board `swapped` or a `rotated`, in the same window: the
 ///   board move carries the card whole (R4454000; the bounce is R73's and R14's at a Locked, reserved or
 ///   void zone, R3554002);
@@ -1232,6 +1246,9 @@ fn slumber_reach_findings(step: &SlumberStep, events: &[GameEvent], after: &Game
             .as_deref()
             .is_some_and(|id| copies_a_sweep(after, id) || step.sweepers.contains(id));
     let mut moving: Option<BoardMove> = None;
+    // R4604013: the cards whose runs opened in the step and have not resolved, each with its sweep, the
+    // newest last: one that resolves gives the run back to the card still resolving beneath it.
+    let mut opened: Vec<(&str, &str, bool)> = Vec::new();
     // R4454001: under Tears of the Kwzki Tree every card is Radiant, the Dormant ones too (R3569000).
     let radiant_world = after.radiant_world == Some(true);
     for (at, event) in events.iter().enumerate() {
@@ -1244,6 +1261,21 @@ fn slumber_reach_findings(step: &SlumberStep, events: &[GameEvent], after: &Game
                     || copies_a_sweep(after, source_id)
                     || step.sweepers.contains(source_id.as_str());
                 moving = None;
+                opened.retain(|(source, ..)| *source != source_id.as_str());
+                opened.push((source_id.as_str(), def_id.as_str(), sweeping));
+                continue;
+            }
+            // R4604013: a Spell a sweep's Cry played (a fused Call to Chaos and A Glimpse into the Endless
+            // Sea, R43) resolved, and the sweep's run goes on.
+            GameEvent::CardResolved { instance_id, .. }
+                if opened.iter().any(|(source, ..)| *source == instance_id.as_str()) =>
+            {
+                opened.retain(|(source, ..)| *source != instance_id.as_str());
+                if let Some(&(_, def_id, sweep)) = opened.last() {
+                    running = Some(def_id);
+                    sweeping = sweep;
+                    moving = None;
+                }
                 continue;
             }
             GameEvent::TrapFired { def_id, .. } => {
@@ -1256,6 +1288,7 @@ fn slumber_reach_findings(step: &SlumberStep, events: &[GameEvent], after: &Game
                 running = None;
                 sweeping = false;
                 moving = None;
+                opened.clear();
                 continue;
             }
             GameEvent::Swapped {
@@ -1397,6 +1430,9 @@ struct ImmuneStep {
     board_exiles: bool,
     /// R4783000: whose turn's start stage the step begins in (a stage a prompt paused, R62).
     start_of: Option<PlayerId>,
+    /// R4604008: the step begins inside a turn's end (`Phase::End`: an answer step resuming it), where the
+    /// Burn tick may still come.
+    ending: bool,
 }
 
 /// I21: the state a step begins on, as I21 reads it: every Unit on either field (`zones::active_units_of`,
@@ -1451,6 +1487,7 @@ fn immune_step(state: &GameState) -> ImmuneStep {
         pending_instance: resume.and_then(|resume| resume.instance_id.clone()),
         board_exiles: exile_aura_stands(state),
         start_of: (state.phase == Phase::Start).then_some(state.active),
+        ending: state.phase == Phase::End,
     }
 }
 
@@ -1541,8 +1578,9 @@ impl ImmuneRun<'_> {
 
 /// I21: whether `event` is an affliction's tick on `id` (R4508005): a sourceless hit via Burn or Toxic
 /// (`afflictions::tick_burn_at_turn_end`, `tick_at_turn_start`; R4154000, R3540001), or the Burn's
-/// removal right after its hit.
-fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, id: &str) -> bool {
+/// removal right after its hit. R4604004: a Burn tick a Divine Shield takes (§4.4 step 1) is its
+/// `divineShieldLost` right before the Burn's removal, and that removal.
+fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, next: Option<&GameEvent>, id: &str) -> bool {
     let tick = |event: &GameEvent| match event {
         GameEvent::Damage {
             source_id: None,
@@ -1558,6 +1596,19 @@ fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, id: &str) -> bool {
         } => target_id == id,
         _ => false,
     };
+    let burn_removed = |event: &GameEvent| {
+        matches!(
+            event,
+            GameEvent::CounterChanged {
+                instance_id,
+                counter: crate::wire::CounterKind::Burn,
+                value: 0,
+                ..
+            } if instance_id == id
+        )
+    };
+    let shield_lost =
+        |event: &GameEvent| matches!(event, GameEvent::DivineShieldLost { instance_id } if instance_id == id);
     tick(event)
         || matches!(
             event,
@@ -1567,6 +1618,8 @@ fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, id: &str) -> bool {
                 ..
             }
         ) && previous.is_some_and(tick)
+        || shield_lost(event) && next.is_some_and(burn_removed)
+        || burn_removed(event) && previous.is_some_and(shield_lost)
 }
 
 /// I21, R4828001: whether a killerless `destroyed` of `id` may be the settle collecting what an
@@ -1694,11 +1747,23 @@ fn pulled_into_the_hole(
 ///   arrived in the step (R4599004), or after a board restore or replacement (R4599010, R4599014);
 /// - the one `controlChanged` or killerless `destroyed` of a Unit its Allure takes in the turn's start
 ///   stage once its mark came off (R4783000, `allure_resolved`): the engine runs it with no marker, after
-///   whatever Spell the stage ran last.
+///   whatever Spell the stage ran last;
+/// - R5166000: a killerless `destroyed` a play's announcement follows, past the tributed set's own events:
+///   its Tribute (`paid_as_a_tribute`).
+///
+/// - R4604004: a Burn tick a Divine Shield takes (`ticks_on`: its `divineShieldLost`, then the Burn's
+///   removal), and an `exiled` once a card laying an exile aura arrives by a `transformed` (S+ #104
+///   Tireless Cultivation turning a Drone into S #115 Scornboi), as by a `summoned`; R4604007: the Black
+///   Hole's pull of a hole opened in the step, when the step began with none (R4577008's lanes and side);
+///   R4604008: a Burn's removal anywhere in a turn's end, from its `turnEnded` (or a step resuming it) to
+///   the next `turnStarted`, where its tick's hit may show nothing (a hit of 0) or a damage chain's echoes
+///   may come between.
 ///
 /// A card announced face-down in the step runs as a Trap (R4599002); from a turn's end to the next turn's
-/// start a Spell's standing trigger opens no run (R4599007); and once an event moves a Unit off the field,
-/// no later one naming its id is judged (R4599015).
+/// start a Spell's standing trigger opens no run (R4599007); once an event moves a Unit off the field,
+/// no later one naming its id is judged (R4599015); a `cardResolved` whose `cardPlayed` the step never saw
+/// ends the run (R4604003); and a `rolledBack` releases the Units of the sides it restores that are off
+/// the field as the step ends, whose own keywords as it began no longer judge them (R4604005, R4524001).
 ///
 /// A Unit is judged only when it is still on the field and still immune after the step (an aura that
 /// dropped mid-step, or a step that first took its immunity away, makes no finding), or when it is gone
@@ -1747,8 +1812,15 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
     let mut nested: Vec<(&str, ImmuneRun<'_>)> = Vec::new();
     // R4508003: under Tears of the Kwzki Tree every card is Radiant (R3569000).
     let radiant_world = after.radiant_world == Some(true);
-    // R4577008: whose turn has ended in this step, so the Black Hole's pull may follow.
+    // R4577008: whose turn has ended in this step, so the Black Hole's pull may follow; R4604007: the
+    // hole the step begins with, or else one opened in it that is still open as it ends.
     let mut ended: Option<PlayerId> = None;
+    let hole = step
+        .hole
+        .or(after.black_hole.filter(crate::geometry::BlackHole::pulls_at_end));
+    // R4604008: inside a turn's end, from its `turnEnded` (or a step resuming it) to the next turn's
+    // `turnStarted`, where every Burn ticks and is removed (`afflictions::tick_burn_at_turn_end`).
+    let mut turn_end = step.ending;
     // R4599004: whether an exile aura stood as the step began, or a card laying one arrived in it.
     let mut exile_aura = step.board_exiles;
     // R4599008: the damage each Unit took in the step so far, on top of its mark's.
@@ -1802,12 +1874,14 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
             }
             GameEvent::TurnEnded { player, .. } => {
                 ended = Some(*player);
+                turn_end = true;
                 stage = None;
                 run = ImmuneRun::NONE;
                 continue;
             }
             GameEvent::TurnStarted { player, .. } => {
                 ended = None;
+                turn_end = false;
                 stage = Some(*player);
                 run = ImmuneRun::NONE;
                 continue;
@@ -1840,10 +1914,14 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 run = ImmuneRun::NONE;
                 continue;
             }
+            // R4604003: a card resolved whose play the step never saw (an answer step's resumed cast) ends
+            // the run it was.
             GameEvent::CardResolved { instance_id, .. } => {
                 if let Some(at) = nested.iter().rposition(|(played, _)| played == instance_id) {
                     run = nested[at].1;
                     nested.truncate(at);
+                } else {
+                    run = ImmuneRun::NONE;
                 }
                 continue;
             }
@@ -1854,8 +1932,21 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 run.window = Some(ImmuneWindow::Carry);
                 continue;
             }
-            GameEvent::RolledBack { .. } => {
+            GameEvent::RolledBack { sides, .. } => {
                 run.window = Some(ImmuneWindow::Restore);
+                // R4604005: a restored side's Units come back as the snapshot holds them (R4524001), so
+                // the keywords one held as the step began no longer judge it: one off the field as the
+                // step ends is released, and one on it is judged by what it holds then, as before.
+                released.extend(
+                    step.marks
+                        .iter()
+                        .filter(|(id, mark)| {
+                            sides.contains(&mark.side)
+                                && find_instance(after, id)
+                                    .is_none_or(|card| !matches!(card.zone, Zone::Field { .. }))
+                        })
+                        .map(|(id, _)| id.as_str()),
+                );
                 continue;
             }
             GameEvent::BoardReplaced { .. } => {
@@ -1868,7 +1959,12 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
             }
             _ => {}
         }
-        if let GameEvent::Summoned { def_id, .. } = event {
+        // R4604004: a card transformed into one laying an exile aura arrives with it too.
+        if let GameEvent::Summoned { def_id, .. }
+        | GameEvent::Transformed {
+            to_def_id: def_id, ..
+        } = event
+        {
             exile_aura |= lays_an_exile_aura(after, def_id);
         }
         if let GameEvent::Damage {
@@ -1879,6 +1975,9 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
         }
         // R4599015: an event that moves a Unit off the field, after which its id names no field Unit.
         let leaving = leaves_the_field(event);
+        // R4604012: a Nerf that takes a Unit's Immune to Spells away, after which no Spell's reach of it
+        // is barred; judged itself first, so a Spell's own Nerf of an immune Unit is still a finding.
+        let unimmune = loses_spell_immunity(event);
         // R4783000: the Units whose Allure mark came off, this event the first to name them since: the
         // Allure's steal, or its destroy for want of room, whatever runs.
         let allured: Vec<&str> = reached_ids(event)
@@ -1887,6 +1986,7 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
             .collect();
         if !run.spell {
             released.extend(leaving);
+            released.extend(unimmune);
             continue;
         }
         for id in reached_ids(event) {
@@ -1912,7 +2012,21 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                     true
                 }
                 // R4508005: an affliction's tick.
-                _ if ticks_on(event, at.checked_sub(1).and_then(|before| events.get(before)), id) => true,
+                _ if ticks_on(
+                    event,
+                    at.checked_sub(1).and_then(|before| events.get(before)),
+                    events.get(at + 1),
+                    id,
+                ) =>
+                {
+                    true
+                }
+                // R4604008: a Burn's removal at a turn's end is its tick's, whatever the tick's hit showed.
+                GameEvent::CounterChanged {
+                    counter: crate::wire::CounterKind::Burn,
+                    value: 0,
+                    ..
+                } if turn_end => true,
                 // R4508001: a board move carries it whole, or bounces it on the way.
                 GameEvent::ControlChanged { .. } | GameEvent::Bounced { .. } => run.window.is_some(),
                 // R4508001: Bogos Binted's Radiant face rebuilds its side Radiant (R4454002); R4508003:
@@ -1924,7 +2038,7 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 // board restore's or replacement's, which takes the side as it stands.
                 GameEvent::Exiled { .. } => {
                     run.takes_lane
-                        || pulled_into_the_hole(step.hole, ended, mark)
+                        || pulled_into_the_hole(hole, ended, mark)
                         || exile_aura
                         || exile_aura_stands(after)
                         || matches!(run.window, Some(ImmuneWindow::Restore | ImmuneWindow::Replace))
@@ -1946,6 +2060,7 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                     collects_a_casters_marks(&nested)
                         || killed_by_a_tick(&events[..at], id)
                         || *max_health <= mark.damage + taken.get(id).copied().unwrap_or(0)
+                        || paid_as_a_tribute(&events[at + 1..])
                 }
                 // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
                 // R4623000: the state check evolves it by its own standing condition (R3536001).
@@ -1973,8 +2088,25 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
             released.insert(id);
         }
         released.extend(leaving);
+        released.extend(unimmune);
     }
     found
+}
+
+/// I21, R5166000: whether a killerless `destroyed` followed by `rest` is a play's Tribute (§6.3), which
+/// §10.5 step 2 pays before step 3 announces the play: the first event of `rest` that is not the tributed
+/// set's own `destroyed` or `enteredGraveyard` is a `cardAnnounced`. The autopilot's next play pays it
+/// with the marker of the last trigger that resolved before it, a Spell's standing one among them (M+ #17
+/// Dogpile's in the deck), and no marker of its own.
+fn paid_as_a_tribute(rest: &[GameEvent]) -> bool {
+    rest.iter()
+        .find(|event| {
+            !matches!(
+                event,
+                GameEvent::Destroyed { .. } | GameEvent::EnteredGraveyard { .. }
+            )
+        })
+        .is_some_and(|event| matches!(event, GameEvent::CardAnnounced { .. }))
 }
 
 /// I21, R4783000: whether `mark`'s Unit was taken by its Allure (R963) in the step: the step began with an
@@ -1998,6 +2130,24 @@ fn leaves_the_field(event: &GameEvent) -> Option<&str> {
         | GameEvent::Exiled { instance_id, .. }
         | GameEvent::Bounced { instance_id, .. }
         | GameEvent::ShuffledIn { instance_id, .. } => Some(instance_id),
+        _ => None,
+    }
+}
+
+/// I21, R4604012: the Unit a Nerf takes Immune to Spells off (`degraded`, the keyword removed): handicapped
+/// fuzz seed 3928's Meditative #49.1 YileGPT Prime, whose Cry Nerfs every card, before a Spell exiled it.
+fn loses_spell_immunity(event: &GameEvent) -> Option<&str> {
+    match event {
+        GameEvent::Degraded {
+            instance_id,
+            change:
+                TuningChange::Keyword {
+                    keyword,
+                    added: false,
+                    ..
+                },
+            ..
+        } if keyword.kind() == KeywordKind::ImmuneToSpells => Some(instance_id),
         _ => None,
     }
 }
@@ -2107,6 +2257,9 @@ struct ImmutableMark {
     /// Whether its own keywords (`layers::card_keywords` and its conditional ones) make it Immutable, so
     /// it is still judged once the step takes it out of the zones I23 reads, or out of every pile.
     own: bool,
+    /// R5166001: whether its own keywords still make it Immutable once R78's reset has cleared what the
+    /// field gave it (its granted keywords): what holds it after the step summons or flickers it anew.
+    reset_own: bool,
     text: TextRecord,
 }
 
@@ -2162,10 +2315,15 @@ fn immutable_step(state: &GameState) -> ImmutableStep {
             }
             let mut own = crate::layers::card_keywords(state, placed.card);
             own.extend(crate::layers::conditional_keywords_of(state, placed.card));
+            let mut fresh = placed.card.clone();
+            crate::zones::reset_instance(&mut fresh);
+            let mut kept = crate::layers::card_keywords(state, &fresh);
+            kept.extend(crate::layers::conditional_keywords_of(state, &fresh));
             let mark = ImmutableMark {
                 label: name_of(placed.card),
                 zone,
                 own: immutable_by_keywords(state, placed.card, &own),
+                reset_own: immutable_by_keywords(state, &fresh, &kept),
                 text: TextRecord::of(placed.card),
             };
             Some((placed.card.id.clone(), mark))
@@ -2185,7 +2343,10 @@ fn immutable_step(state: &GameState) -> ImmutableStep {
 ///   or library card is, R177), which rewrites no card (R4609001), and one in an exile or a graveyard the
 ///   step sent it to, where Immutable stops nothing (R4783002: IA #43 Cognitive Dissonance's answer to a
 ///   play its Unit left in its own resolution, R427);
-/// - a `degraded` or an `upgraded` of it, but for one whose change is `none` (R440, R4609001);
+/// - a `degraded` or an `upgraded` of it, but for one whose change is `none` (R440, R4609001), and one
+///   in an exile or a graveyard the step sent it to whose own keywords no longer make it Immutable there
+///   (R4604011: Stinkyscape+ #165 Shadiris, granted Immutable, bounced into a full hand and burned, then
+///   Buffed in the graveyard);
 /// - a `fused` whose kept card is it (Fuse-onto, R77): its ingredients are taken whole, and a card the
 ///   step made is not in `step` (R4353003, R4609002).
 ///
@@ -2197,6 +2358,11 @@ fn immutable_step(state: &GameState) -> ImmutableStep {
 /// read. A card is judged when it is Immutable after the step with the text it began with put back on
 /// (so a grant or an aura that lapses in the step lets it go, R4353000), or, gone from the field, a hand
 /// and a library, when its own keywords held it. Draws nothing.
+///
+/// R5166001: once the step summons or flickers a card anew past R78's reset (it began on the field, or
+/// left it or reached an exile or a graveyard in the step), an event changing its text is judged by what
+/// the reset kept (a granted Immutable is gone). One summoned straight from a hand or a library keeps
+/// what it was granted there, and is still judged by it.
 fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &GameState) -> Vec<String> {
     let mut found: Vec<String> = Vec::new();
     if step.marks.is_empty() {
@@ -2225,6 +2391,10 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
     // R4783002: the cards the step sent to an exile or a graveyard, where Immutable stops nothing (§6.3),
     // and has not brought back to the field.
     let mut unjudged: IndexSet<&str> = IndexSet::new();
+    // R5166001: the cards the step has put through R78's reset (`zones::reset_instance`): one that left
+    // the field or reached an exile or a graveyard. A card summoned from a hand or a library with neither
+    // keeps what it was granted there (`KEPT_IN_HAND_OR_LIBRARY`).
+    let mut wiped: IndexSet<&str> = IndexSet::new();
     for event in events {
         let (id, lawful) = match event {
             // R4609001: a Replace off the field, in a hand or a library, or (R4783002) in an exile or a
@@ -2239,24 +2409,37 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
                 new_instance_id != instance_id
                     && (hidden_from.is_some() || unjudged.contains(instance_id.as_str())),
             ),
-            // R4609001, R440: an application on a hidden card that changed nothing.
+            // R4609001, R440: an application on a hidden card that changed nothing. R4604011: or one on a
+            // card the step sent to an exile or a graveyard that its own keywords no longer hold there,
+            // an Immutable it was granted on the field reset by the move (R78).
             GameEvent::Degraded {
                 instance_id, change, ..
             }
             | GameEvent::Upgraded {
                 instance_id, change, ..
-            } => (instance_id, *change == TuningChange::None),
+            } => (
+                instance_id,
+                *change == TuningChange::None
+                    || (unjudged.contains(instance_id.as_str())
+                        && !find_instance(after, instance_id).is_some_and(|card| {
+                            immutable_by_keywords(after, card, &crate::layers::card_keywords(after, card))
+                        })),
+            ),
             GameEvent::Fused {
                 result_instance_id, ..
             } => (result_instance_id, false),
             // R4609002, R78: left the field and back, or back through Reborn.
             GameEvent::Flickered { instance_id, .. } | GameEvent::Summoned { instance_id, .. } => {
+                if matches!(event, GameEvent::Flickered { .. }) {
+                    wiped.insert(instance_id);
+                }
                 reset.insert(instance_id);
                 unjudged.swap_remove(instance_id.as_str());
                 continue;
             }
             // R4783002: into a zone I23 does not judge.
             GameEvent::Exiled { instance_id, .. } | GameEvent::EnteredGraveyard { instance_id, .. } => {
+                wiped.insert(instance_id);
                 unjudged.insert(instance_id);
                 continue;
             }
@@ -2266,7 +2449,11 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
             continue;
         };
         let id = id.as_str();
-        if lawful || released.contains(id) || !judged.contains(id) {
+        // R5166001: a card the step summoned or flickered anew past R78's reset (it began on the field, or
+        // the step wiped it since) is judged by what the reset kept.
+        let reset_away =
+            reset.contains(id) && (mark.zone == ZoneName::Field || wiped.contains(id)) && !mark.reset_own;
+        if lawful || reset_away || released.contains(id) || !judged.contains(id) {
             continue;
         }
         found.push(format!(
@@ -3605,6 +3792,29 @@ pub fn listed_refused(
     legal: &[ActionBody],
     reducer: impl Fn(&GameState, &Action) -> ReduceResult,
 ) -> Vec<String> {
+    listed_findings(state, player, legal, reducer)
+        .into_iter()
+        .map(|finding| finding.message)
+        .collect()
+}
+
+/// One I14 finding with the branch behind it (#5154): the message `listed_refused` returns, the action
+/// I14 sent (its seat and nonce included) and the events the branch's `reduce` emitted (none when it
+/// refused or panicked), for a fuzz failure's step trace.
+#[derive(Clone, Debug)]
+pub struct ListedFinding {
+    pub message: String,
+    pub action: Action,
+    pub events: Vec<GameEvent>,
+}
+
+/// `listed_refused` with each finding's branch beside its message (#5154).
+pub fn listed_findings(
+    state: &GameState,
+    player: PlayerId,
+    legal: &[ActionBody],
+    reducer: impl Fn(&GameState, &Action) -> ReduceResult,
+) -> Vec<ListedFinding> {
     let mut probed = state.clone();
     probed.applied = Vec::new();
     // I19: the Dormant cards every branch begins with (#4454); I21: its Units Immune to Spells (#4508);
@@ -3612,18 +3822,22 @@ pub fn listed_refused(
     let slumber = slumber_step(&probed);
     let immune = immune_step(&probed);
     let immutable = immutable_step(&probed);
-    let mut found: Vec<String> = Vec::new();
+    let mut found: Vec<ListedFinding> = Vec::new();
     for body in sampled(legal, state.rng_cursor) {
         let action = Action::new(body.clone(), player, I14_NONCE);
         let sent = serde_json::to_string(body).unwrap_or_default();
         match catch_unwind(AssertUnwindSafe(|| reducer(&probed, &action))) {
             Ok(result) => {
                 if let Some(error) = result.error {
-                    found.push(format!(
-                        "I14 listed action refused: {player} sent {sent} on turn {} (seed {}), though legalActions \
-                         lists it, and reduce refused it: {error} (§10.2)",
-                        state.turn, state.seed
-                    ));
+                    found.push(ListedFinding {
+                        message: format!(
+                            "I14 listed action refused: {player} sent {sent} on turn {} (seed {}), though legalActions \
+                             lists it, and reduce refused it: {error} (§10.2)",
+                            state.turn, state.seed
+                        ),
+                        action: action.clone(),
+                        events: result.events.clone(),
+                    });
                 } else {
                     let branch = branch_state_findings(&result.events, &result.state)
                         .into_iter()
@@ -3631,20 +3845,28 @@ pub fn listed_refused(
                         .chain(immune_reach_findings(&immune, &result.events, &result.state))
                         .chain(immutable_text_findings(&immutable, &result.events, &result.state));
                     for finding in branch {
-                        found.push(format!(
-                            "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding}",
-                            state.turn, state.seed
-                        ));
+                        found.push(ListedFinding {
+                            message: format!(
+                                "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding}",
+                                state.turn, state.seed
+                            ),
+                            action: action.clone(),
+                            events: result.events.clone(),
+                        });
                     }
                 }
             }
-            Err(payload) => found.push(format!(
-                "I14 listed action panicked: {player} sent {sent} on turn {} (seed {}), though legalActions \
-                 lists it, and reduce threw: {} (§10.2)",
-                state.turn,
-                state.seed,
-                panic_text(&*payload)
-            )),
+            Err(payload) => found.push(ListedFinding {
+                message: format!(
+                    "I14 listed action panicked: {player} sent {sent} on turn {} (seed {}), though legalActions \
+                     lists it, and reduce threw: {} (§10.2)",
+                    state.turn,
+                    state.seed,
+                    panic_text(&*payload)
+                ),
+                action: action.clone(),
+                events: Vec::new(),
+            }),
         }
     }
     found
@@ -4083,6 +4305,10 @@ fn card_label(state: &GameState, id: &str) -> String {
 ///   face, Stinkyscape #138 Pocket Peptides; §4.5 step 1, R4221000): it answers the death check after
 ///   the combat, a flicker or its own `then`, with no `trapFired` or `hookResolving` for `plain_combat`
 ///   to see, and the forecast projects no replacement (fuzz seed 9561);
+/// - a card acting for either side with a "lethal hit" replacement (Classic #52 Final Gambit fused onto a
+///   Unit, which stays on the field; §4.4 step 4a, R1704001): it cancels the blow that would bring a hero
+///   to 0, then heals and draws, fatigue included, with no `trapFired` or `hookResolving` either, and the
+///   forecast projects no replacement (R4604010; fuzz seed 13680);
 /// - a Unit the state check after the combat takes off, as the forecast settles it (R4379000; a Cleave
 ///   neighbour, §4.4 step 10, a sweep's other hit, R3554008, or one an aura no longer holds up), with a
 ///   card dormant beneath it or held by it (R4221002's reason, R4318000): its leaving brings that card
@@ -4136,11 +4362,18 @@ fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> 
     {
         return false;
     }
+    // R4604010: a "lethal hit" replacement (Classic #52 Final Gambit, fused onto a Unit that stays on the
+    // field) answers the blow itself, as a "would die" one answers the death check after it.
     let takes_deaths = |card: &CardInstance| {
         crate::scripts::script_of(state, card)
             .replacements
             .iter()
-            .any(|def| def.on == crate::script::ReplacementMoment::WouldDie)
+            .any(|def| {
+                matches!(
+                    def.on,
+                    crate::script::ReplacementMoment::WouldDie | crate::script::ReplacementMoment::LethalHit
+                )
+            })
     };
     if attacking_side.iter().chain(&defending_side).any(takes_deaths) {
         return false;
@@ -5764,10 +5997,22 @@ impl InvariantMonitor {
         state: &GameState,
         reducer: impl Fn(&GameState, &Action) -> ReduceResult,
     ) -> Vec<String> {
-        let mut found: Vec<String> = Vec::new();
+        self.listed_findings(state, reducer)
+            .into_iter()
+            .map(|finding| finding.message)
+            .collect()
+    }
+
+    /// `listed` with each finding's branch action and events beside its message (#5154).
+    pub fn listed_findings(
+        &self,
+        state: &GameState,
+        reducer: impl Fn(&GameState, &Action) -> ReduceResult,
+    ) -> Vec<ListedFinding> {
+        let mut found: Vec<ListedFinding> = Vec::new();
         for seat in PLAYER_IDS {
             let legal = crate::reduce::legal_actions(state, seat);
-            found.extend(listed_refused(state, seat, &legal, &reducer));
+            found.extend(listed_findings(state, seat, &legal, &reducer));
         }
         found
     }
@@ -6008,6 +6253,29 @@ mod tests {
         let monitor = create_duos_invariant_monitor(&state);
         assert!(monitor.monitors.iter().all(|duel| !duel.judge_forecast));
         assert!(create_invariant_monitor(&state.duels[0]).judge_forecast);
+    }
+
+    /// R5148000: I17 holds each seat's mana, current and maximum, to `MANA_CEILING`.
+    #[test]
+    fn r5148000_i17_finds_mana_past_the_ceiling() {
+        let duos = crate::testkit::duos_scenario::duos_scenario("r5148000-i17", test_decks(), None);
+        let mut state = duos.duels[0].clone();
+        let monitor = create_invariant_monitor(&state);
+        let past = |state: &GameState| -> Vec<String> {
+            monitor
+                .clone()
+                .after(&[], state)
+                .into_iter()
+                .filter(|found| found.contains("I17 mana past the ceiling"))
+                .collect()
+        };
+        state.players[PlayerId::P1].mana.current = MANA_CEILING;
+        assert_eq!(past(&state), Vec::<String>::new(), "15 is held");
+        state.players[PlayerId::P1].mana.current = MANA_CEILING + 1;
+        assert_eq!(past(&state).len(), 1, "16 is past it");
+        state.players[PlayerId::P1].mana.current = 0;
+        state.players[PlayerId::P2].mana.max = MANA_CEILING + 1;
+        assert_eq!(past(&state).len(), 1, "a maximum of 16 is past it");
     }
 
     #[test]

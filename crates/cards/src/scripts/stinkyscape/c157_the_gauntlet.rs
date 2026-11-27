@@ -1,6 +1,6 @@
 //! S #157 The Gauntlet (SPEC §8.10 row 157): (1) Field Spell, Epic, of the Stinkyscape set.
-//!   Base:    "Brittle 3 / The unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can
-//!            attack only each other, and no other Unit can attack them."
+//!   Base:    "Brittle 3 / Aura: The unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there
+//!            can attack only each other, and no other Unit can attack them."
 //!   Radiant: the same, and "Activate: Choose one: give this +{brittleGain} Brittle, or Tribute this."
 //! Engine: Brittle 3 is a catalog keyword (§6.1), its count started as the card enters the field.
 //! `StaticFlags.gauntlet` (R1849005): while it acts on the field, the unit zones of lanes

@@ -162,7 +162,8 @@ pub struct NamedTally {
     pub goal: i32,
 }
 
-/// R1852005, R2249000: one Starship Piece fused into a Starship, on the face it fused on.
+/// R1852005, R2249000: one Starship Piece fused into a Starship, on the face it fused on; R5050000, one piece of
+/// gear a unit holds.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(
     feature = "ts",
@@ -472,7 +473,8 @@ pub struct FaceCost {
     /// `data-cost`: the live number when there is one, else `text`.
     pub value: String,
     pub tone: CostTone,
-    /// The embiggen price, shown small beside the gem while the gem shows the base price; null otherwise.
+    /// The embiggen price, shown small beside the gem: the view's `embiggenCost` wherever it gives one
+    /// (R5109001), else the printed one while the gem shows the base price; null otherwise.
     pub alt: Option<String>,
 }
 
@@ -649,6 +651,24 @@ pub struct StarshipFace {
     pub launched: bool,
     pub list: Vec<StarshipPieceRef>,
     /// The glossary entry the pieces list's head names (the Starship keyword).
+    pub term: Option<GlossaryEntry>,
+}
+
+/// R5050000: the gear a unit holds (`fused.rs` `equipped_of`), listed below its own text as a Starship lists its
+/// pieces (R2249000).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct EquippedFace {
+    /// The catalog card the gear was equipped into.
+    pub host: String,
+    /// The Miners and Weapons equipped into it, oldest first, each on the face it reads on (R469).
+    pub list: Vec<StarshipPieceRef>,
+    /// The glossary entry the list's head names (the Equip keyword).
     pub term: Option<GlossaryEntry>,
 }
 
@@ -855,6 +875,11 @@ pub struct FaceModel {
     pub dormant: Option<DormantFace>,
     pub frozen_forever: bool,
     pub starship: Option<StarshipFace>,
+    /// R5050000: a unit holding gear, as a Starship lists its pieces: the card the gear was equipped into, whose
+    /// name and text the face prints, and the gear; absent for any other card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub equipped: Option<EquippedFace>,
     /// R3337001: the code of the board an Anomaly Found! in play holds (its label, R2247000), whose
     /// picture its art draws; absent for any other card and for a printed face.
     #[serde(default, skip_serializing_if = "Option::is_none")]

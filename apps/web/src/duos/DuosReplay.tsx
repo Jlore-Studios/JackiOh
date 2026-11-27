@@ -17,12 +17,12 @@ import { ApiRequestError } from "../net/api.ts";
 import { getDuosReplay, type ReceivedPing } from "../net/duos.ts";
 import { REPLAY_OPEN_ATTEMPTS, REPLAY_OPEN_RETRY_MS, REPLAY_PLAY_GAP_MS } from "../replay/config.ts";
 import { downloadFile } from "../replay/download.ts";
+import { ReplayLoadStatus } from "../replay/OpenedReplay.tsx";
 import { replayTestid, useBoardBusy } from "../replay/ReplayPlayer.tsx";
 import { ReplayToolbar, isTyping } from "../replay/ReplayToolbar.tsx";
-import { ReplayFailure, replayFailureOf, replayFailureText } from "../replay/source.ts";
+import { ReplayFailure, replayFailureOf } from "../replay/source.ts";
 import { onlineFailure } from "../replay/sources.ts";
 import { BackLink } from "../routes/nav.tsx";
-import { Skeleton } from "../skeleton/Skeleton.tsx";
 import type { DuosActionBody } from "../wire/generated/DuosActionBody.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
 import { DuosChromeContext } from "./context.ts";
@@ -225,7 +225,7 @@ export default function DuosReplay({ matchId, onLeave }: { matchId: string; onLe
             type="button"
             data-testid={duosTestid.replayDownload}
             onClick={() => {
-              downloadFile(duosReplayJsonFile(steps));
+              void duosReplayJsonFile(steps).then(downloadFile);
             }}
           >
             {t("Download JSON")}
@@ -237,30 +237,13 @@ export default function DuosReplay({ matchId, onLeave }: { matchId: string; onLe
   return (
     <div className="app-shell">
       {back}
-      {failure === null ? (
-        <Skeleton variant="panel" label={t("Loading the replay…")} testId={replayTestid.loading} />
-      ) : (
-        <>
-          <p className="notice" role="alert" data-testid={replayTestid.failure}>
-            {replayFailureText(failure)}
-          </p>
-          {failure.reason === "error" ? (
-            <div className="row">
-              <button
-                type="button"
-                className="button-primary"
-                data-testid={replayTestid.retry}
-                onClick={() => {
-                  setFailure(null);
-                  setAttempt((before) => before + 1);
-                }}
-              >
-                {t("Try again")}
-              </button>
-            </div>
-          ) : null}
-        </>
-      )}
+      <ReplayLoadStatus
+        failure={failure}
+        onRetry={() => {
+          setFailure(null);
+          setAttempt((before) => before + 1);
+        }}
+      />
     </div>
   );
 }

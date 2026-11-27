@@ -151,7 +151,7 @@ import { FullArtSignature } from "./FullArtSignature.tsx";
 import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, RichText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
-import { StarshipPieces } from "./StarshipPieces.tsx";
+import { EquippedGear, StarshipPieces } from "./StarshipPieces.tsx";
 import { setAccentOf, setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { pixelNameUri } from "./pixelName.ts";
@@ -337,8 +337,9 @@ function SetMarkBadge({ set }: { set: string | null }): ReactElement | null {
 }
 
 /**
- * B8, R1175000: an embiggen card's Embiggened cost, small beside the gem, named "Embiggened (4)" for a
- * screen reader and on hover, as the card's text labels that version.
+ * B8, R1175000, R5109001: an embiggen card's Embiggened cost, the price the view gives that version,
+ * small beside the gem, named "Embiggened (4)" for a screen reader and on hover; the card's text labels
+ * that version by its premium, "Embiggened (+2): …".
  */
 function EmbiggenedCost({ cost }: { cost: string }): ReactElement {
   const label = t("Embiggened ({cost})", { cost });
@@ -733,6 +734,10 @@ function CardFace({
               <span className="cf-text-base">
                 <RulesText rich={shown} />
               </span>
+            )}
+            {face.equipped !== undefined && (
+              // R5050000: a unit holding gear lists it below its own text, as a Starship lists its pieces.
+              <EquippedGear equipped={face.equipped} />
             )}
             {face.credits != null && (
               <span className="cf-text-credits" data-credits-min={face.credits.min} data-credits-max={face.credits.max}>

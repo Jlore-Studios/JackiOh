@@ -6,8 +6,9 @@
 //! is Legendary or Mythic (a token's is Token, whatever it printed; ST-S17-1, R1876003);
 //! `copy_unit_text` (R1850000): its keywords, aura, triggers, hooks, Death, Activates and numbers on this
 //! body until it leaves the field (R78), its own name, cost, type, tags, rarity and stats kept; the
-//! copied Cry does not run. An Immutable Tnack Trav copies nothing. Radiant: `radiant: true`, the
-//! target's Radiant text. No target, nothing.
+//! copied Cry does not run. A copied Aura that draws keywords (Keymaster Keenus's, Shockwave447's)
+//! draws this card's own as the copy lands (R4839000). An Immutable Tnack Trav copies nothing.
+//! Radiant: `radiant: true`, the target's Radiant text. No target, nothing.
 
 use jackioh_engine::prelude::*;
 
@@ -54,6 +55,7 @@ pub fn script() -> CardScripts {
 // S #20 Tnack Trav — SPEC §8.10 row 20, BUILD M12 row S 20 (R1850000).
 #[cfg(test)]
 mod tests {
+    use jackioh_engine::effects::{drawn_combat_keywords, random_pool_keywords};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -69,6 +71,14 @@ mod tests {
     /// C+ #73.1 Classic Golem, a unit token printed Legendary: its rarity is Token.
     const GOLEM: &str = "classicplus-073-1";
     const CORE_SYSTEM: &str = "stinkyscape-117"; // Core System: "Bounce all permanents. …"
+    /// M #65 Keymaster Keenus, Legendary: "Equip. Has {keywords} random combat keywords."
+    const KEENUS: &str = "meditative-065";
+    /// S #111 Shockwave447, Mythic: "Has {keywords} random combat keywords. Cry: …"
+    const SHOCKWAVE: &str = "stinkyscape-111";
+    /// Keenus's `keywords`, base and Radiant, and Shockwave447's base one.
+    const KEENUS_KEYWORDS: usize = 5;
+    const KEENUS_RADIANT_KEYWORDS: usize = 10;
+    const SHOCKWAVE_KEYWORDS: usize = 3;
 
     fn board(radiant: bool, p2_field: Value) -> Scenario {
         scenario(json!({
@@ -96,6 +106,90 @@ mod tests {
                 _ => None,
             })
             .collect()
+    }
+
+    /// The card's list of drawn combat keywords, as kinds in draw order (R3778000).
+    fn drawn(s: &Scenario, card: &CardInstance) -> Vec<KeywordKind> {
+        drawn_combat_keywords(s.card(&card.id), None)
+            .iter()
+            .map(Keyword::kind)
+            .collect()
+    }
+
+    /// `count` different keywords of R21's combat keyword pool.
+    fn assert_pool_draw(kinds: &[KeywordKind], count: usize) {
+        assert_eq!(kinds.len(), count, "{kinds:?}");
+        let pool: Vec<KeywordKind> = random_pool_keywords().iter().map(Keyword::kind).collect();
+        assert!(kinds.iter().all(|kind| pool.contains(kind)), "{kinds:?}");
+        let mut unique = kinds.to_vec();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), count, "no repeats: {kinds:?}");
+    }
+
+    /// Keenus played to lane 1, then a Tnack Trav (Radiant when `radiant`) copying it in lane 3.
+    fn copies_keenus(seed: &str, radiant: bool) -> (Scenario, CardInstance) {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": {
+                "hand": [KEENUS, { "def": ID, "radiant": radiant }, FILLER],
+                "library": filler(4),
+                "mana": 10,
+            },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        for player in [P1, P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        s.play(KEENUS, json!({ "zone": 1 }));
+        let keenus = s.unit_at(P1, 1);
+        s.play(
+            ID,
+            json!({ "zone": 3, "targets": [{ "pick": "instance", "instanceId": keenus.id }] }),
+        );
+        let trav = s.unit_at(P1, 3);
+        (s, trav)
+    }
+
+    #[test]
+    fn r4839000_copying_keenus_draws_the_auras_five_combat_keywords() {
+        let (s, trav) = copies_keenus("trav-keenus", false);
+        assert_eq!(trav.def_id, ID);
+        let list = drawn(&s, &trav);
+        assert_pool_draw(&list, KEENUS_KEYWORDS);
+        for kind in list.iter().chain([&KeywordKind::Equip]) {
+            assert!(unit_has(s.state(), &trav, *kind), "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn r4839000_radiant_copies_keenus_radiant_number() {
+        let (s, trav) = copies_keenus("trav-keenus-radiant", true);
+        let list = drawn(&s, &trav);
+        assert_pool_draw(&list, KEENUS_RADIANT_KEYWORDS);
+        for kind in &list {
+            assert!(unit_has(s.state(), &trav, *kind), "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn r4839000_copying_an_enemy_shockwave447_keeps_its_three_a_round_later() {
+        let mut s = board(false, json!([SHOCKWAVE]));
+        for player in [P1, P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        let shockwave = s.unit_at(P2, 1);
+        s.play(ID, pick(&shockwave));
+        let trav = s.unit_at(P1, 1);
+        let list = drawn(&s, &trav);
+        assert_pool_draw(&list, SHOCKWAVE_KEYWORDS);
+        s.end_turn();
+        s.end_turn();
+        assert_eq!(drawn(&s, &trav), list, "the same three, a round later");
+        let trav = s.card(&trav.id).clone();
+        for kind in &list {
+            assert!(unit_has(s.state(), &trav, *kind), "{kind:?}");
+        }
     }
 
     #[test]

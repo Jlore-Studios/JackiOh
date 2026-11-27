@@ -1,10 +1,10 @@
 //! S #148 Alteran Reach (SPEC §8.10 row S 148; §6.1 Indestructible, §6.2 Quickdraw, §6.3, R46, R640,
 //! R1847000–R1847002, R4154203): (1) Field Spell, Wincon, Quickdraw, Mythic, a card of the Stinkyscape
 //! set.
-//!   Base:    "Indestructible\nYour first travel each turn is free.\nActivate ♾️: Pay (1) to travel one
-//!            node along your starscape map and gain its reward.\nThe 20th node is the edge of the
+//!   Base:    "Indestructible\nAura: Your first travel each turn is free.\nActivate ♾️: Pay (1) to travel
+//!            one node along your starscape map and gain its reward.\nThe 20th node is the edge of the
 //!            universe: reaching it adds an Edge of the Universe to your hand."
-//!   Radiant: the same, with "Your first two travels each turn are free."
+//!   Radiant: the same, with "Aura: Your first two travels each turn are free."
 //!
 //! Engine: Indestructible is a catalog keyword (R46), and Quickdraw the static flag `setup.rs` reads,
 //! dealing it in the opening hand (R640). The travel is `subsystems::starscape_abilities`: an Activate

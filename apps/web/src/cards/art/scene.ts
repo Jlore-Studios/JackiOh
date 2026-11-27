@@ -41,7 +41,10 @@ export const SCENE_LAYER_ROLES: Readonly<Record<SceneLayer, RidgeRole>> = {
   particles: "motes",
 };
 
-/** palette.css's colours by name, without the `--pal-` prefix: the only colours a kit paints with. */
+/**
+ * R5012000: the art's own palette, the 50 colours palette.css held before #5012, by name without the `--pal-` prefix
+ * (the 25 both still hold agree): the only colours a kit paints with.
+ */
 export const SCENE_PALETTE = {
   black: "#000000",
   white: "#ffffff",

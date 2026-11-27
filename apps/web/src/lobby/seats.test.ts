@@ -96,7 +96,7 @@ describe("the lobby's seats", () => {
     expect(deckWords(seat({ state: "chosen", deck: "Pyre Control" }))).toBe("Pyre Control");
     expect(deckWords(seat({ state: "chosen" }))).toBe("Deck chosen");
     expect(deckWords(seat({ state: "chosen", random: true }))).toBe("Random deck");
-    expect(deckWords(seat({ state: "ready", deck: "Pyre Control" }))).toBe("✓ Ready");
+    expect(deckWords(seat({ state: "ready", deck: "Pyre Control" }))).toBe("Ready");
   });
 
   it("R3730002 the host's Start lights only once every seat is filled and ready", () => {

@@ -26,7 +26,7 @@
   height: 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-round);
-  background: var(--pal-grey-500);
+  background: var(--pal-stone-500);
 }
 
 .artifact-icon[data-tier="bronze"] {
@@ -42,11 +42,11 @@
 }
 
 .artifact-icon[data-tier="platinum"] {
-  background: var(--pal-sky-300);
+  background: var(--pal-ink-300);
 }
 
 .artifact-icon[data-tier="diamond"] {
-  background: var(--pal-violet-300);
+  background: var(--pal-amethyst-300);
 }
 
 /* #3586: the enemy's tier, then its tray, beside its hero. */

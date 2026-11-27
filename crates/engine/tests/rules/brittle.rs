@@ -5,16 +5,18 @@ use serde::Serialize;
 
 use jackioh_engine::effects::reveal::reveal;
 use jackioh_engine::effects::transform::vanilla;
+use jackioh_engine::effects::{clear_radiant, set_radiant};
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::{indestructible, plain, stacker};
 use crate::rules::fixtures::harness::{
-    act, act_with_nonce, by, events_of_type, in_hand, input, json_of, live, live_mut, put, set_library,
-    sink_for, slot,
+    act, act_with_nonce, apply_now, by, events_of_type, in_hand, input, json_of, live, live_mut, put,
+    set_library, sink_for, slot,
 };
 use crate::rules::fixtures::instance_data::{
-    asker, brittle_set_trap, brittle_trap, brittle_unit, instance_game,
+    asker, brittle_base_only, brittle_radiant_only, brittle_set_trap, brittle_trap, brittle_unit,
+    instance_game,
 };
 
 fn instance_ids(events: impl Serialize) -> Vec<String> {
@@ -501,6 +503,51 @@ mod r385_r441_b3_3_rule_5_vanilla_and_the_count {
         assert_eq!(live(&state, &unit.id).brittle, Some(counter(2, 7, true)));
     }
 
+    /// B3.3 rule 1: a Flicker re-enters the field, so a count its crumble spent starts afresh from the
+    /// printed Brittle (C #14's Radiant face saving a crumbling Unit).
+    #[test]
+    fn r441_a_flickered_card_whose_count_is_spent_starts_its_printed_brittle_afresh() {
+        let mut state = at(7, P1);
+        let unit = put(
+            &mut state,
+            &brittle_unit.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        live_mut(&mut state, &unit.id).brittle = Some(counter(0, 5, true));
+
+        let standing = live(&state, &unit.id);
+        assert!(jackioh_engine::zones::flicker_in_place(&mut state, &standing));
+
+        assert_eq!(live(&state, &unit.id).brittle, Some(counter(2, 7, true)));
+        tick_at(&mut state, 9, P1);
+        assert_eq!(count_of(&state, &unit.id), Some(1));
+        tick_at(&mut state, 11, P1);
+        assert_eq!(zone_of(&state, &unit.id), ZoneName::Graveyard);
+    }
+
+    /// A count still running keeps its number, and its turn cycle restarts at the Flicker, as on any
+    /// arrival from off the field: its first tick waits a whole round.
+    #[test]
+    fn r441_a_flickered_card_keeps_a_running_count_and_its_cycle_restarts() {
+        let mut state = at(7, P1);
+        let unit = put(
+            &mut state,
+            &brittle_unit.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        live_mut(&mut state, &unit.id).brittle = Some(counter(1, 5, true));
+
+        let standing = live(&state, &unit.id);
+        assert!(jackioh_engine::zones::flicker_in_place(&mut state, &standing));
+
+        assert_eq!(live(&state, &unit.id).brittle, Some(counter(1, 7, true)));
+        tick_at(&mut state, 7, P1);
+        assert_eq!(zone_of(&state, &unit.id), ZoneName::Field);
+        assert_eq!(count_of(&state, &unit.id), Some(1));
+    }
+
     #[test]
     fn r441_gain_n_on_a_card_with_no_count_starts_one_now_at_n_more_than_it_prints_a_vanilla_keeps_it() {
         let mut state = at(4, P1);
@@ -627,7 +674,7 @@ mod r113_b3_3_a_crumble_that_pauses_the_settle_after_the_tick_9_3 {
         let pending = pending.expect("expected the Death to ask");
 
         let copy: GameState = serde_json::from_value(json_of(&state)).expect("a state survives JSON");
-        assert_eq!(copy, clone_state(&state));
+        assert_eq!(copy, state.clone());
         let answer = json!({
             "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "mode", "option": "two" }],
             "playerId": "p1"
@@ -726,5 +773,192 @@ mod r3996100_a_fill_with_brittle_renews_it_on_the_reborn_copies {
         assert_eq!(body.zone.z(), ZoneName::Field);
         assert_eq!(body.reborn_spent, Some(true));
         assert_eq!(body.brittle, None);
+    }
+}
+
+/// R4817000, §5.2: a face swapped where the card stands (Make Radiant, De-Radiant) re-reads the Brittle
+/// its new face prints: a count its printed Brittle started goes when the new face prints none, and a
+/// card on the field with no count starts the one its new face prints; a count that stays keeps its
+/// number and its cycle (B3.3 rule 5).
+mod r4817000_a_face_swap_where_the_card_stands_refits_its_brittle {
+    use super::*;
+
+    fn make_radiant(state: &mut GameState, id: &str) {
+        apply_now(state, set_radiant(json_as(json!({ "instanceId": id }))));
+    }
+
+    fn de_radiant(state: &mut GameState, id: &str) {
+        apply_now(state, clear_radiant(json_as(json!({ "instanceId": id }))));
+    }
+
+    fn shows_brittle(state: &GameState, id: &str) -> bool {
+        unit_view(state, &live(state, id))
+            .keywords
+            .iter()
+            .any(|keyword| keyword.kind() == KeywordKind::Brittle)
+    }
+
+    fn make_vanilla(state: &mut GameState, id: &str) {
+        let mut sink = sink_for(state);
+        let mut ctx = make_context(&mut sink, None, by(P1));
+        (vanilla(json_as(json!({ "instanceId": id }))).apply)(&mut ctx);
+    }
+
+    /// S #135.1 Sack's case: Brittle 1 on its Radiant face only.
+    #[test]
+    fn r4817000_made_radiant_on_the_field_a_card_starts_the_brittle_its_radiant_face_newly_prints() {
+        let mut state = at(7, P1);
+        let sack = put(
+            &mut state,
+            &brittle_radiant_only.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        assert_eq!(live(&state, &sack.id).brittle, None);
+
+        make_radiant(&mut state, &sack.id);
+        assert_eq!(live(&state, &sack.id).brittle, Some(counter(1, 7, true)));
+        assert!(
+            unit_view(&state, &live(&state, &sack.id))
+                .keywords
+                .contains(&Keyword::Brittle { n: 1 })
+        );
+        tick_at(&mut state, 9, P1);
+        assert_eq!(zone_of(&state, &sack.id), ZoneName::Graveyard);
+
+        // R687: a Trap set face-down starts no count, whatever face it wears.
+        let mut state = at(7, P1);
+        let trap = put(
+            &mut state,
+            &brittle_set_trap.id,
+            slot(P1, Row::Backrow, 1),
+            Default::default(),
+        );
+        make_radiant(&mut state, &trap.id);
+        assert!(live(&state, &trap.id).radiant);
+        assert_eq!(live(&state, &trap.id).brittle, None);
+
+        // Off the field nothing starts: a printed Brittle starts as its card enters the field (R385).
+        let held = in_hand(&mut state, &brittle_radiant_only.id, P1, 1)
+            .into_iter()
+            .next()
+            .expect("no card");
+        make_radiant(&mut state, &held.id);
+        assert!(live(&state, &held.id).radiant);
+        assert_eq!(live(&state, &held.id).brittle, None);
+    }
+
+    /// S #9 Ticketed's case: Brittle 3 on its base face only, so its Radiant face holds (R1875001).
+    #[test]
+    fn r4817000_a_count_its_printed_brittle_started_ends_when_the_new_face_prints_none() {
+        let mut state = at(7, P1);
+        let ticketed = put(
+            &mut state,
+            &brittle_base_only.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        assert_eq!(count_of(&state, &ticketed.id), Some(3));
+        make_radiant(&mut state, &ticketed.id);
+        assert_eq!(live(&state, &ticketed.id).brittle, None);
+        assert!(!shows_brittle(&state, &ticketed.id));
+        for turn in [9, 11, 13, 15] {
+            tick_at(&mut state, turn, P1);
+            assert_eq!(zone_of(&state, &ticketed.id), ZoneName::Field, "turn {turn}");
+        }
+
+        // A count an effect gave is no face's text, so it stays.
+        let mut state = at(7, P1);
+        let mut given_to = put(
+            &mut state,
+            &brittle_base_only.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
+        given(&mut state, &mut given_to, 2, 7);
+        make_radiant(&mut state, &given_to.id);
+        assert_eq!(count_of(&state, &given_to.id), Some(2));
+
+        // A count kept in a hand (R766) goes there too, so the card does not crumble once played.
+        let held = in_hand(&mut state, &brittle_base_only.id, P1, 1)
+            .into_iter()
+            .next()
+            .expect("no card");
+        live_mut(&mut state, &held.id).brittle = Some(counter(2, 5, true));
+        make_radiant(&mut state, &held.id);
+        assert_eq!(live(&state, &held.id).brittle, None);
+
+        // A Vanilla switches the count off only while the card stays on the field (R78), so the face
+        // it is made Radiant to decides it: none printed, the count goes.
+        let mut state = at(7, P1);
+        let plain_now = put(
+            &mut state,
+            &brittle_base_only.id,
+            slot(P1, Row::Units, 3),
+            Default::default(),
+        );
+        make_vanilla(&mut state, &plain_now.id);
+        assert_eq!(live(&state, &plain_now.id).brittle, Some(counter(3, 7, true)));
+        make_radiant(&mut state, &plain_now.id);
+        assert_eq!(live(&state, &plain_now.id).brittle, None);
+    }
+
+    /// The mirror: De-Radiant puts the base face back, so its Brittle starts, and a count only the
+    /// Radiant face's Brittle started goes.
+    #[test]
+    fn r4817000_de_radiant_starts_the_base_faces_brittle_and_ends_the_radiant_faces_count() {
+        let mut state = at(7, P1);
+        let ticketed = put(
+            &mut state,
+            &brittle_base_only.id,
+            slot(P1, Row::Units, 1),
+            json_as(json!({ "radiant": true })),
+        );
+        assert_eq!(live(&state, &ticketed.id).brittle, None);
+        de_radiant(&mut state, &ticketed.id);
+        assert!(!live(&state, &ticketed.id).radiant);
+        assert_eq!(live(&state, &ticketed.id).brittle, Some(counter(3, 7, true)));
+
+        let sack = put(
+            &mut state,
+            &brittle_radiant_only.id,
+            slot(P1, Row::Units, 2),
+            json_as(json!({ "radiant": true })),
+        );
+        assert_eq!(count_of(&state, &sack.id), Some(1));
+        de_radiant(&mut state, &sack.id);
+        assert_eq!(live(&state, &sack.id).brittle, None);
+        tick_at(&mut state, 9, P1);
+        assert_eq!(zone_of(&state, &sack.id), ZoneName::Field);
+    }
+
+    /// B3.3 rule 5: a Brittle printed on both faces is not started again; its count keeps its number and
+    /// its cycle (Core #89 Corpse Eater's Brittle 1 against 3), a Vanilla's switched-off one included.
+    #[test]
+    fn r4817000_a_count_in_force_keeps_its_number_and_cycle_across_both_swaps() {
+        let mut state = at(5, P1);
+        let unit = put(
+            &mut state,
+            &brittle_unit.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        assert_eq!(live(&state, &unit.id).brittle, Some(counter(2, 5, true)));
+        state.turn = 7;
+        make_radiant(&mut state, &unit.id);
+        assert_eq!(live(&state, &unit.id).brittle, Some(counter(2, 5, true)));
+        de_radiant(&mut state, &unit.id);
+        assert_eq!(live(&state, &unit.id).brittle, Some(counter(2, 5, true)));
+
+        let other = put(
+            &mut state,
+            &brittle_unit.id,
+            slot(P1, Row::Units, 2),
+            Default::default(),
+        );
+        make_vanilla(&mut state, &other.id);
+        make_radiant(&mut state, &other.id);
+        assert_eq!(live(&state, &other.id).brittle, Some(counter(2, 7, true)));
+        assert_eq!(active_brittle_count(&live(&state, &other.id)), None);
     }
 }

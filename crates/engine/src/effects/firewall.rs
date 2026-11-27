@@ -29,8 +29,8 @@ pub struct SetAttackThisTurnArgs {
 
 /// R4591000 (IA #148 Quarantine): the Unit `target` names has `attack` Attack until this turn ends.
 /// Read after every Attack layer (`layers::compute_layers_on`), so it beats buffs and aura sets, and
-/// touches no Health. A Unit Immune to Spells is passed by (`instance_of`), as Freeze is passed by;
-/// an Immutable one is not, since a status is not text.
+/// touches no Health. A Unit Immune to Spells is passed by (`instance_of`), as Freeze is passed by,
+/// and since R5113000 an Immutable one too: a set Attack is a change to its stats, not a status.
 pub fn set_attack_this_turn(args: SetAttackThisTurnArgs) -> Effect {
     Effect::new("setAttackThisTurn", move |ctx| {
         set_attack_this_turn_on(ctx, &args.target, args.attack);
@@ -42,8 +42,9 @@ fn set_attack_this_turn_on(ctx: &mut EffectContext<'_>, target: &TargetSpec, att
     let Some(unit) = instance_of(ctx, target) else {
         return;
     };
-    if !crate::zones::in_units_row_or_standing(ctx.state, &unit)
-        && !crate::zones::is_carried(ctx.state, &unit)
+    if (!crate::zones::in_units_row_or_standing(ctx.state, &unit)
+        && !crate::zones::is_carried(ctx.state, &unit))
+        || crate::restrictions::immutable_keeps_off(ctx, &unit)
     {
         return;
     }

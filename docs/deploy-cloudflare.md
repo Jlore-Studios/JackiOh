@@ -194,6 +194,7 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
 | Resend | another sending-only key for jackioh.com, the Worker secret `PLAYER_RESEND_API_KEY`; unset, no player is emailed. The free plan's 100 a day are shared with the alerts and the sign-in mail, so the server sends at most `DAILY_PLAYER_EMAILS_PER_DAY` (50) of these a UTC day, half the plan, and push still goes past it (#3843) | the daily games' "your move" emails (`crates/server/README.md`, Daily games; #3727) |
 | Cloudflare | the Worker secrets `VAPID_PRIVATE_KEY` and `VAPID_PUBLIC_KEY`, one pair per Worker, generated once: `openssl ecparam -name prime256v1 -genkey -noout -out vapid.pem`, then the raw private scalar (`openssl ec -in vapid.pem -outform DER \| tail -c +8 \| head -c 32 \| basenc --base64url \| tr -d '=\n'`) and the raw public point (`openssl ec -in vapid.pem -pubout -outform DER \| tail -c 65 \| basenc --base64url \| tr -d '=\n'`); unset, no push is sent. A new pair orphans every device's subscription, each player turning push on again | the daily games' Web Push (`crates/server/README.md`, Daily games; #3727) |
 | Cloudflare Zero Trust | the team's organisation, and a service token for staging's deploy check | Access |
+| Cloudflare | Web Analytics' automatic setup, **off** for jackioh.com (Analytics & Logs -> Web Analytics -> the site -> Manage site -> Disable). Cloudflare turns it on by default for a proxied zone and injects its beacon (`static.cloudflareinsights.com/beacon.min.js`) into every page on every hostname, which the CSP blocks and the privacy page's "no third-party trackers" rules out (#5132). `infra/` does not own it: its resource needs the account-wide Account Settings: Edit permission | every page (`public/_headers`' CSP) |
 | GitHub secret | `CLOUDFLARE_API_TOKEN`: the Edit Cloudflare Workers template, plus Containers if wrangler asks for it | both deploy jobs |
 | GitHub secrets | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`: the service token's pair | staging's live check |
 | GitHub secret | `CLOUDFLARE_BILLING_TOKEN`: a custom token with the account's Billing: Read alone | `cf-spend.yml` |
@@ -246,7 +247,7 @@ Free plan (up to 50 users), with One-time PIN as the sign-in. `infra/cloudflare.
 Access application `JackiOh staging` on `staging.jackioh.com`, its two policies, the custom domain,
 and the service token `JackiOh staging deploy check` (made on 2026-11-02 for a year), whose pair is
 the repository secrets `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`, for deploy-staging.yml's
-live check.
+live check and its card statistics' check (`.github/actions/check-stats`).
 
 To let someone else into staging, add their address to the policy `JackiOh staging: the team` (Zero
 Trust -> Access -> Policies) and to `staging_team_emails` in `infra/terraform.tfvars`, or the next
@@ -327,8 +328,10 @@ JackiOh-Production.
 - **A deploy job fails:** the run's log names the step: the build, the bundle check (a missing
   `VITE_` setting), the deploy (the token, or Docker building the image), or the live check (the
   server did not report the commit in time: Workers & Pages -> the Worker -> Logs shows the server's
-  boot, and a failed migration there). Fix it on `main`; for production, then run promote
-  production with **redeploy**.
+  boot, and a failed migration there), or the card statistics' check (`/api/stats/cards?mode=all`
+  did not answer with cards within the client's `API_REQUEST_TIMEOUT_SECONDS`: the logs show a
+  `slow statement`, a `handler.threw` or the container killed, #5174). Fix it on `main`; for
+  production, then run promote production with **redeploy**.
 - **An alert:** the server opens `Patch: alert <event> on <site>` (labelled `human`) and emails
   `ALERT_EMAILS` the details (`crates/server/README.md`, Alerts). Read the event in the Worker's logs
   (Workers & Pages -> the Worker -> Logs), and close the issue once it is handled, so the next one emails

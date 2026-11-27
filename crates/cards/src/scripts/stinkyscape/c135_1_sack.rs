@@ -244,5 +244,45 @@ mod tests {
             }
             assert!(matches!(s.card(sorcerer.as_str()).zone, Zone::Field { player: P1, row: Row::Units, .. }));
         }
+
+        /// R4817000, §5.2: a base Sack made Radiant where it stands (C+ #65.4 Golden Grape) starts the
+        /// Brittle 1 its Radiant face newly prints, so it crumbles a turn cycle later, as one that
+        /// entered the field Radiant does.
+        #[test]
+        fn r4817000_a_base_sack_made_radiant_where_it_stands_starts_brittle_1_and_crumbles() {
+            const GRAPE: &str = "classicplus-065-4"; // Golden Grape: "Make a card … Radiant."
+            let board = |radiant: bool| {
+                crate::scenario(json!({
+                    "seed": "sack",
+                    "p1": { "hand": [GRAPE, FILLER], "field": [{ "def": ID, "radiant": radiant }],
+                            "library": crate::filler(5), "mana": 10 },
+                    "p2": { "hand": [FILLER], "library": crate::filler(5) },
+                }))
+            };
+            let cycle = |s: &mut Scenario| {
+                s.end_turn(); // p1's turn ends, p2's starts
+                s.end_turn(); // p2's ends, p1's starts: the first tick of a count started two turns before
+            };
+
+            let mut control = board(true);
+            assert!(control.card(ID).brittle.is_some(), "control: its printed Brittle started");
+            cycle(&mut control);
+            assert!(control.unit(P1, 1).is_none(), "control: a Sack that entered Radiant crumbles");
+
+            let mut s = board(false);
+            let id = s.card(ID).id.clone();
+            assert_eq!(s.card(id.as_str()).brittle, None);
+            let targets = pick::card(&s, id.as_str());
+            s.play(GRAPE, json!({ "targets": targets }));
+            assert!(s.card(id.as_str()).radiant, "Golden Grape made it Radiant");
+            assert!(s.stats(id.as_str()).keywords.contains(&Keyword::Brittle { n: 1 }));
+            assert_eq!(s.card(id.as_str()).brittle.map(|brittle| brittle.count), Some(1));
+            cycle(&mut s);
+            assert!(
+                s.unit(P1, 1).is_none(),
+                "its Brittle 1 crumbles it a turn cycle later (its count: {:?})",
+                s.unit(P1, 1).and_then(|card| card.brittle)
+            );
+        }
     }
 }

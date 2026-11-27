@@ -5,9 +5,11 @@
 //! engine's `fill_params` does.
 
 use indexmap::IndexMap;
+use jackioh_engine::params::tuned_value;
 use jackioh_engine::wire::{CardDef, Keyword, KeywordKind, Param, ParamBetter, Tuning};
 
 use super::chinese::{list_separator, reader_keyword};
+use super::fused::{FUSED_LINE, is_fused, leaves_of};
 use super::types::{FaceTuning, TuneChange, TuneVerdict, Way};
 use super::words::Words;
 
@@ -393,6 +395,107 @@ pub fn filled_text(
         &def.base.text
     };
     filled_text_of(def, text, radiant, values)
+}
+
+/// R5049000: the numbers a face fills a fused text with: the card's tuning, and the view's numbers by key
+/// (`CardView.params`, `CopiedTextView.params`) for the face it stands on.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct LiveNumbers<'a> {
+    pub tuning: Option<&'a Tuning>,
+    pub radiant: bool,
+    pub values: Option<&'a IndexMap<String, i32>>,
+}
+
+/// R5049000: `def`, a fused definition that declares no numbers (R77), with each part's `{key}`s filled with that
+/// part's own numbers (R102) on the face it went in on (R469, R4334000). The first part to declare a key prints
+/// the view's number for it on the face the card stands on, as the engine reads it (`params_view` keeps the first
+/// declaration of each key); a later one its own declaration, as the card's tuning moves it (`params::tuned_value`,
+/// the formula the view's numbers come from): two parts that declare one key, a Smoothie's Fig of Life and All
+/// Purpose Apple, each print their own. A face whose text is not its parts' joined as the Fuse joins them
+/// (`fuse.rs` `fused_face`) is left as it is; `None` for a definition that declares numbers or is no fusion, and
+/// for one holding a part `lookup` cannot find.
+pub fn with_part_numbers(
+    def: &CardDef,
+    lookup: &dyn Fn(&str) -> Option<CardDef>,
+    live: LiveNumbers<'_>,
+) -> Option<CardDef> {
+    if def.params.is_some() || !is_fused(&def.id) {
+        return None;
+    }
+    let leaves: Vec<(CardDef, bool)> = leaves_of(def, lookup)?
+        .into_iter()
+        .map(|leaf| lookup(&leaf.def_id).map(|part| (part, leaf.radiant)))
+        .collect::<Option<_>>()?;
+    let face_text = |radiant_face: bool, filled: bool| -> String {
+        let mut declared: Vec<&str> = Vec::new();
+        leaves
+            .iter()
+            .map(|(part, forced)| {
+                let radiant = radiant_face || *forced;
+                let text = if radiant {
+                    &part.radiant.text
+                } else {
+                    &part.base.text
+                };
+                if !filled {
+                    return text.clone();
+                }
+                let values: IndexMap<String, i32> = part
+                    .params
+                    .iter()
+                    .flatten()
+                    .map(|param| {
+                        let first = !declared.contains(&param.key.as_str());
+                        let viewed = live
+                            .values
+                            .filter(|_| first && radiant_face == live.radiant)
+                            .and_then(|values| values.get(&param.key))
+                            .copied();
+                        let value = viewed.unwrap_or_else(|| tuned_value(param, radiant, live.tuning));
+                        (param.key.clone(), value)
+                    })
+                    .collect();
+                declared.extend(part.params.iter().flatten().map(|param| param.key.as_str()));
+                filled_text_of(part, text, radiant, Some(&values)).0
+            })
+            .collect::<Vec<_>>()
+            .join(FUSED_LINE)
+    };
+    let mut out = def.clone();
+    if face_text(false, false) == def.base.text {
+        out.base.text = face_text(false, true);
+    }
+    if face_text(true, false) == def.radiant.text {
+        out.radiant.text = face_text(true, true);
+    }
+    Some(out)
+}
+
+/// R5049000, R5050000: `text` (one of `part`'s, or its Chinese template) filled with `part`'s own numbers on the face
+/// `radiant` names, as `tuning` moves them.
+fn own_numbers_text(part: &CardDef, text: &str, radiant: bool, tuning: Option<&Tuning>) -> String {
+    let values: IndexMap<String, i32> = part
+        .params
+        .iter()
+        .flatten()
+        .map(|param| (param.key.clone(), tuned_value(param, radiant, tuning)))
+        .collect();
+    filled_text_of(part, text, radiant, Some(&values)).0
+}
+
+/// R5050000: `def`, a unit holding gear (`fused.rs` `equipped_of`), printed as `host`, the card the gear was
+/// equipped into: the host's name, and on each face its text filled with its own numbers (R5049000) and its
+/// keywords, so what the gear lends reads as gained; its id, cost, stats and tags stay the fusion's. `forced` is
+/// R469's mark on the host, which puts its Radiant face on both forms.
+pub fn as_host(def: &CardDef, host: &CardDef, forced: bool, tuning: Option<&Tuning>) -> CardDef {
+    let mut out = def.clone();
+    out.name = host.name.clone();
+    for (face, radiant) in [(&mut out.base, forced), (&mut out.radiant, true)] {
+        let printed = if radiant { &host.radiant } else { &host.base };
+        face.text = own_numbers_text(host, &printed.text, radiant, tuning);
+        face.keywords = printed.keywords.clone();
+    }
+    out
 }
 
 /// `fillParams` over a text of its own (a Chinese template, a copier's sentence): `def`'s declared numbers.

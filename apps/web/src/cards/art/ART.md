@@ -18,7 +18,7 @@ asset tests out).
 2. Add the card's line to `ART_MANIFEST` in `manifest.ts`, naming the faces delivered:
    `"core-002": { base: true, radiant: true },` (or `{ base: true }`).
 3. Credit the artist, if they are credited, as the `artist` of the card's entry in
-   `crates/cards/card-text.yaml` (`artist: Name`, beside its `flavour`, at most `ARTIST_MAX_CHARS`
+   `crates/cards/card-text.yaml` (`artist: Name`, beside its `flavour`, at most 60
    characters), then run `cargo test -p jackioh-tools --test export_card_text`, which writes it into
    `crates/cards/flavour.json`. The inspect views and the Card Almanac show it as "Art by Name". That
    file is not card data, so the credit needs no patch fragment.
@@ -313,14 +313,15 @@ A Legacy card and a Starship in play keep their one picture under each, as under
 delivered file, the normal picture's, gives way to the painter for all six. A Radiant face washes its
 painted picture back over each (`nt-wash`, `wc-wash`, `sg-wash`, `tr-wash`, `wd-wash`, `ne-wash`), and
 the cache keys each apart (`|night`, `|watercolor`, `|stained-glass`, `|tarot`, `|woodcut`, `|neon`),
-a repaint's under its own seed too. Every colour is palette.css's, none in Radiant's gold window. The
+a repaint's under its own seed too. Every colour is `SCENE_PALETTE`'s, none in Radiant's gold window. The
 constants were set by eye on the component spec's screenshot (`card-versions-part-6`).
 
 ## The art bible (R3331000)
 
 What each set family's pictures look like, so every picture pass under #3330 paints its set as one world. A
 family's **home** is the place its pictures happen in (Set showcase's treatments start from the same five:
-R2943001); its **palette** is named in palette.css's names, the only colours a scene kit paints with
+R2943001); its **palette** is named in `SCENE_PALETTE`'s names (the 50 colours palette.css held before #5012,
+R5012000; every `--pal-*` name in this file is one of them), the only colours a scene kit paints with
 (`SCENE_PALETTE`), none of them in Radiant's gold window (no `--pal-gold-400`, `--pal-gold-300`,
 `--pal-gold-200`, `--pal-yellow-400` or `--pal-parchment` on a base face, R2725004); its **line** is the outline
 its inked shapes take (`SCENE_LINES`); its **camera** is where the viewer stands. A glow is a stack of
@@ -661,7 +662,7 @@ the brief names, a part it named that the kit lacked added to the kit. A person 
 starting from its tag's (a Human's head, a Felinor's) and dressed for the card; a ship Unit's character is its own
 craft part in the subject layer (Stratos' boxy fighter, Falcon's needle, Paragon-X's blade, Ozark's barge), and
 Imprisoned Cosmality is its creature. The bible's palette is the set's base, and a brief's own colours are drawn
-in palette.css's nearest names (pink `red-300` and `purple-400`, teal `cyan-400` or `jade-400`, crimson `red-600`
+in `SCENE_PALETTE`'s nearest names (pink `red-300` and `purple-400`, teal `cyan-400` or `jade-400`, crimson `red-600`
 or `red-900`, rust `wood-700`, amber `orange-400`). Each card clears its rarity's floor, the median rising from
 Common to Mythic (Commons about 40 drawn elements, Rares about 60, Epics about 85, Legendaries about 115 and
 Mythics 150 to 160), and each Mythic places a part no other card does: Tylannt's skiff, Rod of Ages' rod, Drone

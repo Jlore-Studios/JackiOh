@@ -284,7 +284,7 @@ mod the_zephyrs_scorer_r29_m3_t7 {
         assert_eq!(scored_ids(&rank(&state, P1, &no_options())), first);
         assert_eq!(scored_ids(&rank(&state, P1, &no_options())), first);
         // §9.3: the state is JSON, so a round-tripped copy is the same state and ranks the same.
-        assert_eq!(scored_ids(&rank(&clone_state(&state), P1, &no_options())), first);
+        assert_eq!(scored_ids(&rank(&state.clone(), P1, &no_options())), first);
         // A total order is a property of the pool, not of the seat that asked.
         assert_eq!(scored_ids(&rank(&state, P2, &no_options())).len(), pool().len());
     }

@@ -536,6 +536,30 @@ export function DuosBoard({
     </div>
   );
 
+  // The seat's own board, the same whether it is drawn alone or beside the teammate's; `chromed`
+  // when it carries the rail, with the clock and the status (R2095000).
+  const ownBoard = (chromed: boolean): ReactElement => (
+    <Game
+      key="board-own"
+      view={view.own}
+      legal={replay ? NOTHING : duelLegal}
+      onAction={replay ? ignore : sendDuel}
+      forecast={ownForecast}
+      replay={replay}
+      musicKey={musicKey}
+      drainWhenHidden={drainWhenHidden ?? !replay}
+      wearCosmetics
+      error={error ?? null}
+      autoEndTurn={false}
+      resultForm="chip"
+      turnClock={chromed ? chrome?.clock : undefined}
+      matchStatus={chromed ? chrome?.status : undefined}
+      boardRail={chromed ? rail : undefined}
+      tradeBar={false}
+      sideline={sideline}
+    />
+  );
+
   return (
     <div
       className="duos-board"
@@ -552,25 +576,7 @@ export function DuosBoard({
       {showBoth ? (
         <div className="duos-both">
           <div className="duos-board-own" data-testid={duosTestid.boardOwn} ref={setHost}>
-            <Game
-              key="board-own"
-              view={view.own}
-              legal={replay ? NOTHING : duelLegal}
-              onAction={replay ? ignore : sendDuel}
-              forecast={ownForecast}
-              replay={replay}
-              musicKey={musicKey}
-              drainWhenHidden={drainWhenHidden ?? !replay}
-              wearCosmetics
-              error={error ?? null}
-              autoEndTurn={false}
-              resultForm="chip"
-              turnClock={showing === "own" ? chrome?.clock : undefined}
-              matchStatus={showing === "own" ? chrome?.status : undefined}
-              boardRail={showing === "own" ? rail : undefined}
-              tradeBar={false}
-              sideline={sideline}
-            />
+            {ownBoard(showing === "own")}
             <CardActions
               key="actions-own"
               container={host}
@@ -614,25 +620,7 @@ export function DuosBoard({
           </div>
         </div>
       ) : showing === "own" ? (
-        <Game
-          key="board-own"
-          view={view.own}
-          legal={replay ? NOTHING : duelLegal}
-          onAction={replay ? ignore : sendDuel}
-          forecast={ownForecast}
-          replay={replay}
-          musicKey={musicKey}
-          drainWhenHidden={drainWhenHidden ?? !replay}
-          wearCosmetics
-          error={error ?? null}
-          autoEndTurn={false}
-          resultForm="chip"
-          turnClock={chrome?.clock}
-          matchStatus={chrome?.status}
-          boardRail={rail}
-          tradeBar={false}
-          sideline={sideline}
-        />
+        ownBoard(true)
       ) : (
         <Game
           key="board-teammate"

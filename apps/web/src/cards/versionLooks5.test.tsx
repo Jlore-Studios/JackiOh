@@ -484,7 +484,8 @@ describe("R2944002 R3015000 the levels of part 5's variants", () => {
       expect(rule.selector, rule.selector).toContain(':not([data-radiant-face="true"])');
       // A rainbow edge of the sheen's own colours, there and back, and a chrome bezel.
       const edge = /--cf-edge:\s*conic-gradient\(([^;]*)\);/.exec(rule.body)?.[1] ?? "";
-      const stops = [...edge.matchAll(/var\((--pal-[a-z0-9-]+)\)/g)].map((match) => PALETTE.get(match[1] ?? ""));
+      // R5012000: an owned look keeps the old palette's colours as literals.
+      const stops = [...edge.matchAll(/var\((--pal-[a-z0-9-]+)\)|#[0-9a-f]{6}/gi)].map((match) => (match[1] === undefined ? match[0].toLowerCase() : PALETTE.get(match[1])));
       expect(stops).toEqual([...PRISMATIC_SHEEN]);
       expect(PALETTE.get(/--cf-bezel:\s*var\((--pal-[a-z0-9-]+)\);/.exec(rule.body)?.[1] ?? "")).toMatch(/^#[0-9a-f]{6}$/i);
     }

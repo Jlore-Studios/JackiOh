@@ -819,10 +819,10 @@ mod visible_activations {
 mod open_lethal_1634 {
     use super::*;
 
-    /// B41, #1634: two attackers whose hits only together reach the seat's hero take the face, not a
-    /// kill worth more than one hit.
+    /// R5027000, B41, #1634: two attackers whose hits only together reach the seat's hero take the
+    /// face, not a kill worth more than one hit.
     #[test]
-    fn b41_takes_a_lethal_that_needs_both_attacks_over_a_kill_worth_more_than_one_hit() {
+    fn r5027000_takes_a_lethal_that_needs_both_attacks_over_a_kill_worth_more_than_one_hit() {
         let state = handed_over(json!({
             "p1": { "health": 8, "field": ["core-008"] },
             "p2": { "field": ["core-025", "core-025"] },
@@ -830,67 +830,36 @@ mod open_lethal_1634 {
         let hidden = hidden_card_ids(&state, AI);
 
         let counter = create_node_counter(20, None);
-        let reply = simulate_reply_with(&state, AI, &counter, &hidden, true, Prices::NONE).expect("a reply");
+        let reply = simulate_reply(&state, AI, &counter, &hidden, Prices::NONE).expect("a reply");
         assert_eq!(
             reply.result.map(|result| result.winner),
             Some(Winner::from(HUMAN))
         );
         assert!(on_field(&reply, AI, "core-008"));
         assert_eq!(counter.used(), 2);
-
-        // One hit at a time, the kill outranks the face: Mr. Vanilla dies and the seat lives on 1.
-        let blind = simulate_reply_with(
-            &state,
-            AI,
-            &create_node_counter(20, None),
-            &hidden,
-            false,
-            Prices::NONE,
-        )
-        .expect("a reply");
-        assert!(blind.result.is_none());
-        assert!(in_graveyard(&blind, AI, "core-008"));
-        assert_eq!(blind.players[AI].hero.health, 1);
-
-        // `simulate_reply` plays by the shipped switch.
-        let shipped = simulate_reply(&state, AI, &create_node_counter(20, None), &hidden, Prices::NONE)
-            .expect("a reply");
-        assert_eq!(shipped.result.is_some(), AI_REPLY.open_lethal);
     }
 
-    /// #4931: short of lethal the switch changes nothing. At 20 the two 7/7s reach 14 together, so the
-    /// reply is the one it plays one hit at a time: the kill, then a 7 at the face.
+    /// R5027000, #4931: short of lethal the reply scores one hit at a time. At 20 the two 7/7s reach 14
+    /// together, so the reply is the kill, then a 7 at the face.
     #[test]
-    fn a_reply_short_of_lethal_is_the_same_with_the_switch_on_or_off() {
+    fn r5027000_a_reply_short_of_lethal_plays_one_hit_at_a_time() {
         let state = handed_over(json!({
             "p1": { "health": 20, "field": ["core-008"] },
             "p2": { "field": ["core-025", "core-025"] },
         }));
         assert!(ready_gap(&state, HUMAN) > 0.0);
         let hidden = hidden_card_ids(&state, AI);
-        let reply = |open_lethal: bool| {
-            simulate_reply_with(
-                &state,
-                AI,
-                &create_node_counter(20, None),
-                &hidden,
-                open_lethal,
-                Prices::NONE,
-            )
-            .expect("a reply")
-        };
-        let open = reply(true);
-        assert!(open.result.is_none());
-        assert!(in_graveyard(&open, AI, "core-008"));
-        assert_eq!(open.players[AI].hero.health, 13);
-        assert_eq!(hash_state(&open), hash_state(&reply(false)));
+        let reply = simulate_reply(&state, AI, &create_node_counter(20, None), &hidden, Prices::NONE)
+            .expect("a reply");
+        assert!(reply.result.is_none());
+        assert!(in_graveyard(&reply, AI, "core-008"));
+        assert_eq!(reply.players[AI].hero.health, 13);
     }
 
-    /// #1634: at 8 health with Mr. Vanilla against two 4-mana 7/7s, lethal only together, the AI puts
-    /// Mr. Vanilla in Defense Position, whose Taunt takes one swing, and survives the swing back. One
-    /// hit at a time, the reply sees a kill and a 7, and the AI swings at the face and dies.
+    /// R5027000, #1634: at 8 health with Mr. Vanilla against two 4-mana 7/7s, lethal only together, the
+    /// AI puts Mr. Vanilla in Defense Position, whose Taunt takes one swing, and survives the swing back.
     #[test]
-    fn decide_blocks_one_of_two_attackers_that_are_lethal_only_together() {
+    fn r5027000_decide_blocks_one_of_two_attackers_that_are_lethal_only_together() {
         let run = run_puzzle(
             "open-lethal-1634",
             json!({
@@ -901,7 +870,7 @@ mod open_lethal_1634 {
         assert!(run.end.result.is_none(), "{}", trace(&run.turn));
         let after = all_out_attack(&run.end, HUMAN);
         let survives = after.result.as_ref().map(|result| result.winner) != Some(Winner::from(HUMAN));
-        assert_eq!(survives, AI_REPLY.open_lethal, "{}", trace(&run.turn));
+        assert!(survives, "{}", trace(&run.turn));
     }
 }
 
