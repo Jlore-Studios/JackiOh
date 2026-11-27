@@ -21496,6 +21496,13 @@
     "5117": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45906397991",
+        "model": "opus",
+        "provider": "claude-6",
+        "since": "2026-11-27T00:06:12Z",
+        "until": "2026-11-27T00:36:12Z"
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-26T22:32:13Z",
