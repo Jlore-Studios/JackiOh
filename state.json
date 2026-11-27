@@ -21095,14 +21095,6 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "F'\\nimport re\\np='spec/09-architecture/9.11-card-statistics.md'\\ns=open(p).read()\\npat=re.compile(r'<<<<<<< HEAD\\\\n(.*?)=======\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; awk '/^<<<<<<<|^=======|^>>>>>>>/{print NR\\\": \\\"$0; next} {if(inc) print NR\\\": \\\"$0} /^<<<<<<</{inc=1} /^>>>>>>>/{inc=0}' crates/engine/src/wir\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; sed -n 20,33p crates/engine/src/wire/stats/play_versions.rs; echo =====; sed -n 1330,1345p crates/engine/src/wire/stats/play_versions.rs; echo \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; python3 - <<'EOF'\\nimport re\\np='crates/engine/src/wire/stats/play_versions.rs'\\ns=open(p).read()\\npat=re.compile(r'<<<<<<< HEAD\\\\n(.*?)=======\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; sed -n 425,470p crates/engine/src/wire/stats/play_versions.rs; grep -n 'PlayVersion {' crates/engine/src/wire/stats/play_versions.rs crates/eng\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; sed -n 5,18p apps/web/src/stats/RunningPanel.tsx; echo ====; sed -n 175,202p apps/web/src/stats/RunningPanel.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; python3 - <<'EOF'\\nimport re\\np='apps/web/src/stats/RunningPanel.tsx'\\ns=open(p).read()\\npat=re.compile(r'<<<<<<< HEAD\\\\n(.*?)\\\\|\\\\|\\\\|\\\\|\\\\|\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; f=apps/web/src/routes/stats.test.tsx; awk '/^<<<<<<<|^=======|^>>>>>>>|^\\\\|\\\\|\\\\|\\\\|\\\\|\\\\|\\\\|/{print NR\\\": \\\"$0; next} {if(inc) print NR\\\": \\\"$\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; f=apps/web/src/routes/stats.test.tsx; sed -n 3900,3952p $f; echo ...; sed -n 4280,4296p $f\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; python3 - <<'EOF'\\nimport re\\np='apps/web/src/routes/stats.test.tsx'\\ns=open(p).read()\\npat=re.compile(r'<<<<<<< HEAD\\\\n(.*?)\\\\|\\\\|\\\\|\\\\|\\\\|\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; git diff --name-only --diff-filter=U; grep -rln '^<<<<<<< \\\\|^>>>>>>> ' apps crates spec 2>/dev/null | head; grep -n 'Decisiveness\\\\|Iteration'\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; sed -n 180,205p apps/web/src/stats/versions.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Log')\\nstate=\\\"\\\"\\\"## State\\n\\n- Approved at be301\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5094/.bot-notes.md\", \"content\": \"# #5036 / PR #5094 notes\\n\\n## State\\n\\n- Approved at be301a8f4f (pass 2 fixed the review's R5033000/R4680000 amended\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; grep -n 'R5036000 the running' -A75 apps/web/src/routes/stats.test.tsx | grep -n 'toEqual\\\\|dt\\\\|headers' \"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; grep -n '\\\"Since\\\", \\\"Iteration\\\"\\\\]' apps/web/src/routes/stats.test.tsx apps/web/src/stats/versions.test.tsx; sed -n 310,332p apps/web/src/sta\u2026\n- said: Update my R5036000 web test's header and Grid lists for main's new Iteration column (a test-only follow-on of the merge).\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; python3 - <<'EOF'\\np='apps/web/src/routes/stats.test.tsx'\\ns=open(p).read()\\nfor old,new in [\\n ('expect(headers(table)).toEqual([\\\"Card\\\", \\\"N\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; sleep 100; tail -15 /tmp/claude-1001/-home-runner-work--temp-work-item-5094/2a37994c-20da-4724-88d1-23afb9644187/tasks/bdxv31loa.output\"}\n- said: The engine's `wire::stats` tests pass (113/113). Next: the server tests, the spec check and fmt in the background, and the WASM build.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; (cargo fmt --check && echo FMT_OK; cargo jackioh spec check 2>&1 | tail -2; cargo test -p jackioh-server --test server api::stats 2>&1 | grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; sh scripts/build-wasm.sh > /tmp/run7-wasm.log 2>&1; echo $?; tail -3 /tmp/run7-wasm.log\", \"timeout\": 600000}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; pnpm exec vitest run --project web src/routes/stats.test.tsx src/stats/versions.test.tsx src/stats/hallOfFame.test.tsx src/stats/CreatedPanel.t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; cat /tmp/run7-rust.log; pnpm --dir apps/web typecheck 2>&1 | tail -3; pnpm exec eslint apps/web/src/stats/RunningPanel.tsx apps/web/src/routes/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; sleep 240; cat /tmp/run7-rust.log\", \"timeout\": 300000}\n- said: fmt and the spec check pass. The server suite is still compiling; meanwhile I'll run clippy on the engine.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; sleep 200; cat /tmp/run7-rust.log\", \"timeout\": 300000}\n- said: The server test run hit the 10-minute background limit while compiling. I'm restarting it with a longer limit.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; cargo test -p jackioh-server --test server api::stats 2>&1 | grep -E 'test result|FAILED|panicked|^error' | head -20\", \"timeout\": 2400000, \"run\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; cat >> .bot-notes.md <<'EOF'\\n- run 7: engine wire::stats 113/113, fmt ok, spec check ok (2700 rulings), wasm built, 5 web files 181/181 (R5036\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; grep -n '\\\"decisiveness\\\"\\\\|\\\"iteration\\\"' crates/server/tests/api/stats.rs | head; grep -n 'decisiveness\\\\|iteration' crates/engine/src/wire/s\u2026\n- said: Both sides' keys are in the server test's key lists. Waiting for the server suite.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5094; for i in $(seq 1 55); do if grep -q 'test result\\\\|^error' /tmp/claude-1001/-home-runner-work--temp-work-item-5094/2a37994c-20da-4724-88d1-23af\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 12:40am (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-27T00:52:57Z",
-        "lifted": "2026-11-27T00:44:07Z",
-        "owner": "claude-3",
-        "since": "2026-11-26T22:52:57Z",
-        "until": "2026-11-27T00:40:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 1,
       "issue": 5036,
       "kind": "revise",
@@ -21119,7 +21111,7 @@
       "question": "",
       "queued_at": "2026-11-26T22:12:51Z",
       "round_tier": "strong",
-      "run_id": "45903429404",
+      "run_id": "pending:306807a2-1795740264",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -21140,7 +21132,7 @@
         "run": "45903429404"
       },
       "source": "conflict",
-      "started_at": "2026-11-26T22:13:49Z",
+      "started_at": "2026-11-27T00:44:41Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -21744,9 +21736,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T00:06:56Z",
+    "at": "2026-11-27T00:44:41Z",
     "url": "",
-    "what": "build #5117 on claude-6"
+    "what": "revise #5094 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-27T00:37:52Z",
