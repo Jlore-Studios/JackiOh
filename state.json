@@ -21933,6 +21933,9 @@
       "taken_asks": [],
       "verdict_rounds": 1
     },
+    "5158": {
+      "suggestion": true
+    },
     "5165": {
       "action": "review",
       "asks": [],
@@ -45554,6 +45557,13 @@
         "title": "Patch: a failing fuzz seed's report prints the step that failed: its action, its seat and the events it emitted",
         "verdict": "auto-approved",
         "why": "approved by itself: no one voted on it"
+      },
+      {
+        "at": "2026-11-27T20:35:22Z",
+        "number": 5158,
+        "title": "Patch: Radiant Rollback Point brings its Units back on their printed face, with Rush, not Radiant",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
       }
     ],
     "declined": [
