@@ -22159,7 +22159,7 @@
     "5166": {
       "action": "build",
       "asks": [],
-      "failures": 1,
+      "failures": 0,
       "handoff": {
         "at": "2026-11-27T07:54:36Z",
         "family": "claude",
@@ -22170,6 +22170,7 @@
         "trail": "- Bash: {\"command\": \"git log --oneline -1; ls /tmp/fz-s4-hc.out /tmp/fz-s2-duos.out /tmp/fz-s4-duos.out 2>&1; grep -E \\\"seeds .*passed|message\\\" /tmp/fz-s4-hc.out /tmp/fz-s2-duos.out /tmp/fz-s4-duos.out 2>/d\u2026\n- Bash: {\"command\": \"git log --oneline d044f4d1b9..HEAD | head -30; git diff --stat d044f4d1b9..HEAD -- crates/ai/tests/ai/wide_lethal.rs crates/cards/src/scripts/classic_plus/c002_groom_shroom.rs crates/eng\u2026\n- Bash: {\"command\": \"git log --oneline d044f4d1b9..HEAD -- crates/engine/src/testkit/invariants.rs; git diff d044f4d1b9..HEAD -- crates/engine/src/testkit/invariants.rs | head -200\", \"description\": \"Inspect \u2026\n- Bash: {\"command\": \"sed -n '107,$p' .bot-plan.md > /tmp/final-plan.md; wc -w /tmp/final-plan.md; grep -n \\\"Not covered\\\\|fail on \\\\`main\\\\`\\\\|^8\\\\. \\\\|Seeds 14921\\\" /tmp/final-plan.md\", \"description\": \"Reco\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='/tmp/final-plan.md'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1, a\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\"every root cause reproduced on `main` (`d\u2026\n- Bash: {\"command\": \"cat /tmp/final-plan.md\", \"description\": \"Print the final plan\"}\n- said: **Goal.** Staging's super run 45935559198 (on `bf3c6fd`) goes green on its four red jobs. Each root cause below was reproduced on `main` at `d044f4d` with the job's own command, and all four are fixed in one pull request without skipping or loosening any test. - **daily tests (pool probe, cards)**:\u2026"
       },
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-27T05:12:01Z",
@@ -22180,8 +22181,10 @@
       "planned_by_id": "claude-6",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 5172,
       "provider": "claude-6",
-      "round_tier": "",
+      "question": "",
+      "round_tier": "strong",
       "run_id": "45961944895",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-27T07:56:32Z",
