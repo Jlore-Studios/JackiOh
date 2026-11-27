@@ -613,11 +613,12 @@ type SuggestionArea struct {
 // `prompts/judge.md`) reads each suggestion against the recent decisions on suggestions and says
 // whether it would approve it. One it would approve goes ahead by itself once it has waited
 // `WaitHours` with no vote, no person's comment and no 👎 on it, at `priority:low`, at most
-// `PerDay` in any 24 hours (`plan.AutoApprove`, in the sweep). Off, or left out, judges nothing.
+// `PerDay` in any 24 hours (`plan.AutoApprove`, in the sweep; 0 caps none). Off, or left out, judges
+// nothing.
 type AutoApprove struct {
 	Enabled   bool
 	WaitHours int // how long a suggestion the judge would approve waits for a person first
-	PerDay    int // the most suggestions approved by themselves in any 24 hours
+	PerDay    int // the most suggestions approved by themselves in any 24 hours; 0 caps none
 	Window    int // how many of the latest decisions on suggestions the judge reads
 }
 

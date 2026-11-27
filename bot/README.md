@@ -344,10 +344,12 @@ waiting for a person, and keeps the rest for one:
    it, so it is planned, built, reviewed and merged under every gate, and `/harness stop` takes it
    back out; the bot says so on it. One the judge leaves to a person waits for a person's vote, as
    any suggestion does.
-4. **At `priority:low`, a few a day.** Each goes ahead at `priority:low`, whatever its class
-   opened it with, so it waits behind everything a person asked for, and at most `per_day` (3) go
-   ahead in any 24 hours (`suggest.auto_approved`, the times they did); one past the cap waits for
-   the next sweep with room. Its approval joins the decisions as `auto-approved`, which the judge is
+4. **At `priority:low`, with no daily cap.** Each goes ahead at `priority:low`, whatever its class
+   opened it with, so it waits behind everything a person asked for. `per_day` caps how many go
+   ahead in any 24 hours (`suggest.auto_approved`, the times they did; one past the cap waits for the
+   next sweep with room), and at 0, as committed, caps none (#5104): the old cap of 3 held back six
+   suggestions the judge approved on 2026-11-27. A survey runs only while lanes are spare, so
+   approved work that fills the queue stops new surveys by itself. Its approval joins the decisions as `auto-approved`, which the judge is
    told is no person's decision, so it never learns from its own approvals.
 
 `enabled: false`, or no `auto_approve` at all, judges nothing and approves nothing. Squishy makes no

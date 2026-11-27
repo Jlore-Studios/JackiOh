@@ -16,6 +16,8 @@ package plan
 //   - the rest go ahead, oldest first, at most `per_day` in any 24 hours (`suggest.auto_approved`,
 //     the times they did), each at `priority:low` whatever its class opened it with, so it waits
 //     behind everything a person asked for. One past the cap waits for the next tick with room.
+//     `per_day` 0, as committed, caps none: a survey runs only while lanes are spare, so approved
+//     work that fills the queue stops new surveys by itself (#5104).
 //
 // Approving one is queueing it, as a person's `approve` does (`queue.QueueBuild`), so its build is
 // planned, built, reviewed and merged under every gate a person's approval would meet, and `stop`
@@ -121,7 +123,7 @@ func AutoApprove(ctx *hctx.Context) []string {
 			notes = append(notes, fmt.Sprintf("#%d waits for a person: %s", number, who))
 			continue
 		}
-		if room <= 0 {
+		if auto.PerDay > 0 && room <= 0 {
 			notes = append(notes, fmt.Sprintf("#%d waits: %d approved themselves in the last day already",
 				number, auto.PerDay))
 			break
