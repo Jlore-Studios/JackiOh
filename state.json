@@ -30644,7 +30644,7 @@
           "resets_at": "2026-11-27T05:40:00Z",
           "utilization": 1.0
         },
-        "observed_at": "2026-11-27T04:34:18Z",
+        "observed_at": "2026-11-27T04:34:46Z",
         "rejected_resets_at": "2026-11-27T05:40:00Z",
         "status": "rejected"
       }
@@ -46435,7 +46435,8 @@
       "2026-11-27T04:13:30Z,claude-3,stream,call,45937223451,97,2026-11-27T05:40:00Z,,,allowed_warning,,,",
       "2026-11-27T04:15:00Z,claude-3,stream,call,45937223451,98,2026-11-27T05:40:00Z,,,allowed_warning,,,",
       "2026-11-27T04:18:06Z,claude-3,stream,call,45937223451,99,2026-11-27T05:40:00Z,,,allowed_warning,,,",
-      "2026-11-27T04:30:20Z,claude-3,refusal,call,45940062403,100,2026-11-27T05:40:00Z,,,rejected,,,2026-11-27T05:40:00Z"
+      "2026-11-27T04:30:20Z,claude-3,refusal,call,45940062403,100,2026-11-27T05:40:00Z,,,rejected,,,2026-11-27T05:40:00Z",
+      "2026-11-27T04:30:01Z,claude-3,refusal,call,45940015409,100,2026-11-27T05:40:00Z,,,rejected,,,2026-11-27T05:40:00Z"
     ],
     "runs": [
       "2026-11-27T04:14:10Z,45935310397,claude-3,opus,suggest,,,suggested,,33.1,233,66425,19422093,6.9904,58,98,,,,,none,,1",
