@@ -19803,9 +19803,7 @@
       "started_at": "2026-11-27T21:07:27Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7227641103"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "5159": {
