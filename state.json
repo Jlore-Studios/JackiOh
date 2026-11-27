@@ -20680,13 +20680,14 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-4",
       "queued_at": "2026-11-27T22:55:18Z",
-      "run_id": "46079584932",
+      "run_id": "pending:3bf924a1-1795822849",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 630,
-      "started_at": "2026-11-27T22:56:09Z",
+      "started_at": "2026-11-27T23:41:05Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -20785,9 +20786,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T23:40:36Z",
+    "at": "2026-11-27T23:41:05Z",
     "url": "",
-    "what": "revise #5211 on claude-7"
+    "what": "spot-check #5213 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-27T23:33:20Z",
@@ -43660,7 +43661,15 @@
         "n": 630,
         "pr": 5213,
         "queued_at": "2026-11-27T23:39:48Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "run_id": "pending:3bf924a1-1795822849",
         "sha": "6190f42276b26abf99956b93c03d6dbb1bef3635",
+        "started_at": "2026-11-27T23:41:05Z",
         "status": "queued",
         "title": "Patch: spell sound effects: new procedural recipes and effects-bank entries for what Spells, Field Spells and Traps do",
         "tries": 0
