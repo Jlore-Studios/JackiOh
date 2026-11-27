@@ -21875,14 +21875,11 @@
     "what": "suggestions (rules) on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-27T01:31:34Z",
+    "at": "2026-11-27T01:39:54Z",
     "notes": [
-      "started suggest on claude-1 (run 45923130360)",
-      "started suggest on claude-1 (run 45923175542)",
-      "started suggest on claude-8 (run 45923222492)",
-      "started suggest on claude-8 (run 45923268346)",
-      "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 1 waiting run(s); run 45923145030 on main: it waits on nothing this account may approve"
+      "delivered suggest on claude-8 (run 45923268346): interrupted",
+      "delivered suggest on claude-1 (run 45923175542): interrupted",
+      "delivered suggest on claude-1 (run 45923130360): interrupted"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22588,7 +22585,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T01:31:34Z",
+  "loop_tick": "2026-11-27T01:39:54Z",
   "machine_disk": {
     "issue": null,
     "reading": {
