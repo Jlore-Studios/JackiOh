@@ -22259,7 +22259,7 @@
     "what": "build #5166 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-27T08:52:45Z",
+    "at": "2026-11-27T08:58:57Z",
     "notes": [
       "#5156 waits: 3 approved themselves in the last day already"
     ],
@@ -22967,7 +22967,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T08:52:45Z",
+  "loop_tick": "2026-11-27T08:58:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
