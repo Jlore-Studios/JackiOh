@@ -22152,16 +22152,9 @@
     "what": "suggestions (ai) on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-27T03:34:24Z",
+    "at": "2026-11-27T03:44:04Z",
     "notes": [
-      "#5156 waits: 3 approved themselves in the last day already",
-      "delivered review #5144 on agy (run 45920009801): approved",
-      "started revise #5144 on agy (run 45935123743)",
-      "started suggest on claude-4 (run 45935172186)",
-      "started suggest on claude-1 (run 45935216088)",
-      "started suggest on claude-1 (run 45935263233)",
-      "started suggest on claude-3 (run 45935310397)",
-      "nothing more to start: nothing is queued"
+      "#5156 waits: 3 approved themselves in the last day already"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22867,7 +22860,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T03:34:24Z",
+  "loop_tick": "2026-11-27T03:44:04Z",
   "machine_disk": {
     "issue": null,
     "reading": {
