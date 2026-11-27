@@ -38022,5 +38022,33 @@
     "plays": [],
     "fragment": "motion-and-glow-budget-reverted",
     "changes": []
+  },
+  {
+    "version": "v0.6.15j",
+    "date": "2026-11-27",
+    "title": "Patch: Starfleet Commander and Preemptive Strike still Discover a War Doctrine when a fused Cry asks during the launch",
+    "source": "issue #5106",
+    "notes": "R5106000: S #137 Starfleet Commander's Cry and S #176 Preemptive Strike read their Dormant Starship once, as the text begins (for_each_card's memo, R113), and build the launch and the Discover as one part from that read (crate::war_doctrine, the text both run, kept out of the card files so neither crosses the complicated line count, R1846000, R2173001). Before, the hook read dormant_starship_of each time the list was built: when a fused Cry asked during the launch (S #40 Poison Capsule's placement), the list paused after awaken, and its rebuild after the answer found the Starship launched, built nothing, and lost the Discover. Each card's script_before_launch_read_once keeps the old read, keyed by this fragment, so replays of every version before this one fold under it (R4779000). classify stage 2 against main's build finds S #176 playing differently in its forced games, and Core #39 Recycling Initiative in its unforced games.",
+    "player": {
+      "title": "War Doctrines after a Starship launch that asks",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Starfleet Commander and Preemptive Strike now let you Discover a War Doctrine even when a piece's Cry asks you something as the Starship launches, such as where Poison Capsule's counters go."
+      ]
+    },
+    "commits": [
+      "b6c40db1dc2f90c04b3e38843beef25b91c855e5"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "core-039",
+      "stinkyscape-176"
+    ],
+    "fragment": "starfleet-commander-and-preemptive-strike-still-discover-a",
+    "changes": []
   }
 ]
