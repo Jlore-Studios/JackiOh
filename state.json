@@ -20778,15 +20778,8 @@
       }
     },
     "5217": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46084535179",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-27T23:55:38Z",
-        "until": "2026-11-28T00:25:38Z"
-      },
       "difficulty_by": {
         "at": "2026-11-27T23:55:29Z",
         "difficulty": "medium",
@@ -20805,10 +20798,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"git log --oneline -3 && ls .bot-plan.md 2>&1; git show --stat 6190f42276 | head -40\"}\n- Grep: {\"pattern\": \"VERB_BANK_EFFECTS\", \"path\": \"/home/runner/work/_temp/work/item-5217\", \"output_mode\": \"content\", \"glob\": \"!node_modules\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5217/apps/web/src/audio/test/verbBank.ts\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5217/apps/web/src/audio/verbBank.test.ts\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5217/apps/web/src/audio/voice-lines.test.ts\", \"offset\": 1, \"limit\": 80}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5217/apps/web/src/audio/voice-lines.test.ts\", \"offset\": 80, \"limit\": 150}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5217/apps/web/src/audio/voice-lines.test.ts\", \"offset\": 480, \"limit\": 110}\n- Bash: {\"command\": \"cd apps/web/src/audio && git show 6190f42276 -- voice-lines.test.ts voiceData.test.ts | head -80; grep -n \\\"Wind\\\\|Release\\\\|Tail\\\" card-audio.json5 | head -120\"}\n- Bash: {\"command\": \"sed -n 195,215p card-audio.json5; sed -n 266,275p card-audio.json5; for n in fireWind fireRelease fireTail frostWind frostRelease frostTail lightningWind lightningRelease lightningTail a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5217 && grep -rn \\\"exempt\\\" apps/web/src/audio docs/polish/2-sound.md e2e/cypress/component/audio-recipes.cy.tsx | grep -v node_modules | head -20; s\u2026\n- Bash: {\"command\": \"sed -n 1253,1320p docs/polish/2-sound.md; git show 6190f42276 -- docs/polish/2-sound.md | grep -n \\\"exempt\\\\|dead\\\\|every bank effect\\\\|tautolog\\\\|Weak\\\" \"}\n- Bash: {\"command\": \"node -e '\\nconst cat=JSON.parse(require(\\\"fs\\\").readFileSync(\\\"crates/cards/catalog.json\\\",\\\"utf8\\\"));\\nconst norm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,\\\"\\\");\\nconst names=Object.valu\u2026\n- Bash: {\"command\": \"grep -n \\\"catalog.json\\\\|currentCatalog\\\\|export \\\" apps/web/src/wire/cards.ts | head -30; grep -n \\\"catalog.json\\\" apps/web/src/emotes/portraits.test.ts apps/web/src/audio/gen-voice.tes\u2026\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/wire/cards.ts; sed -n 1,30p apps/web/src/emotes/portraits.test.ts; grep -n \\\"CardDefs\\\\|CardDef\\\\b\\\" apps/web/src/wire/*.ts | head; grep -rn \\\"wire/cards\\\" apps\u2026\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/audio/signatureCues.test.ts; grep -n \\\"name\\\" apps/web/src/wire/catalog.ts | sed -n 1,12p; cat apps/web/package.json | grep -n '\\\"test\\\\|pretest\\\\|typecheck\\\\|\\\u2026\n- Bash: {\"command\": \"cat spec/rulings/R0655.md | head -40; grep -rn \\\"VERB_BANK\\\\|verbBank\\\" --include=* -l . 2>/dev/null | grep -v node_modules | grep -v \\\"^./target\\\" | head\"}\n- Bash: {\"command\": \"ls apps/web/src/wasm/pkg 2>&1 | head -3; (time timeout 280 pnpm exec vitest run --project web apps/web/src/audio/verbBank.test.ts apps/web/src/audio/voice-lines.test.ts 2>&1 | tail -15)\"\u2026\n- Bash: {\"command\": \"timeout 120 pnpm exec vitest run --project web apps/web/src/audio/verbBank.test.ts 2>&1 | grep -i \\\"error\\\\|fail\\\\|resolve\\\" | head -8\", \"timeout\": 130000}\n- Bash: {\"command\": \"sed -n 100,108p apps/web/src/wire/index.ts; grep -n \\\"CATALOG\\\\b\\\" apps/web/src/audio/signatureSounds.test.ts | head -3\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5217/.bot-plan.md\", \"content\": \"# Draft plan #5217 (planner notes)\\n\\nFound: only 3 web test files change (apps/web/src/audio/voice-lines.test.ts, ver\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Test-only change in three apps/web/src/audio files: no engine, AI, cross-crate contract, migration or ~40 files, so none of the rule's hard lines holds.\"} --> ## Goal Fix both findings of #5213's spot-check, in the web's audio tests only. 1. **R655 dead-ef\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-27T23:48:36Z",
       "owner_why": "it plans it",
@@ -20821,10 +20813,10 @@
       "provider": "claude-3",
       "queued_at": "2026-11-27T23:47:55Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46084535179",
+      "run_id": "pending:1b21318d-1795823842",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 5213,
-      "started_at": "2026-11-27T23:48:36Z",
+      "started_at": "2026-11-27T23:57:38Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -20979,9 +20971,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T23:57:08Z",
+    "at": "2026-11-27T23:57:38Z",
     "url": "",
-    "what": "review #5218 on claude-6"
+    "what": "build #5217 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-27T23:47:20Z",
