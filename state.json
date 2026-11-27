@@ -22115,15 +22115,8 @@
       }
     },
     "5152": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45932677177",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-27T03:18:52Z",
-        "until": "2026-11-27T03:48:52Z"
-      },
       "difficulty_by": {
         "at": "2026-11-27T03:18:40Z",
         "difficulty": "medium",
@@ -22142,10 +22135,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"sed -n 100,230p apps/web/src/i18n/i18n.ts && grep -n \\\"R711000\\\\|readFileSync\\\\|describe(\\\\|^import\\\" apps/web/src/i18n/i18n.test.ts | head -60 && cat scripts/ci-scope.sh | head -120\"}\n- Bash: {\"command\": \"sed -n 1285,1300p crates/engine/src/view_for.rs; ls crates/engine/src/subsystems | grep call_to; grep -n \\\"Add {card} to {deck}\\\\|\\\\\\\"You are {rank}\\\\\\\"\\\" apps/web/src/i18n/zh-CN.json; l\u2026\n- Bash: {\"command\": \"cd crates/engine/src/subsystems; grep -n \\\"label\\\" call_to_chaos*.rs | grep -i \\\"add\\\\|format\\\" | head -80\"}\n- Bash: {\"command\": \"cd apps/web/src; sed -n 240,340p i18n/i18n.test.ts; sed -n 40,70p fx/chaos.ts; grep -n \\\"\\\\\\\"Add \\\\|\\u52a0\\u5165\\\" i18n/zh-CN.json | head -30; sed -n 120,200p ../../../scripts/ci-scope.s\u2026\n- tool error: Exit code 2 /bin/bash: line 1: cd: apps/web/src: No such file or directory sed: can't read i18n/i18n.test.ts: No such file or directory sed: can't read fx/chaos.ts: No such file or directory grep: i1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; sed -n 240,340p apps/web/src/i18n/i18n.test.ts; sed -n 40,70p apps/web/src/fx/chaos.ts; grep -n \\\"\\\\\\\"Add \\\\|\\u52a0\\u5165\\\" apps/web/src/i18n/z\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; python3 -I - <<'E'\\nimport json,re,glob\\nnames=json.load(open('crates/shared/data/chaos-names.json'))\\nknown=set(k for t in names.values() for \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; sed -n 42,104p apps/web/src/i18n/i18n.test.ts; grep -n \\\"\\u968f\\u673a\\\\|\\u8865\\u5145\\\\|\\u6cd5\\u529b\\u503c\\\\|\\u624b\\u724c\\\" crates/shared/data/z\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; sed -n 380,425p crates/shared/data/zh-CN.json | cut -c1-200; python3 -I - <<'E'\\nimport json\\nn=json.load(open('crates/shared/data/chaos-names.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; python3 -I - <<'E'\\nimport json,re\\nc=json.load(open('crates/cards/chinese.json'))\\ncat=json.load(open('crates/cards/catalog.json'))\\ncards=cat\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; grep -n \\\"Mindustrial\\\\|Swarm\\\\|Paperclip\\\\|\\\\\\\"Terminus\\\\|Meditative\\\\|\\\\\\\"CN\\\\|Prime\\\\|Stinkyscape Unit\\\\|Acclaimed\\\" apps/web/src/i18n/zh-CN\u2026\n- tool error: Exit code 1 531: \"Meditative\": \"\u51a5\u60f3\", 2219: \"Add 2 (1) Cost Prime cards\": \"\u83b7\u5f972\u5f20(1)\u8d39\u81f3\u5c0a\u724c\", 2222: \"Summon 2 random Acclaimed cards\": \"\u53ec\u55242\u5f20\u968f\u673a\u7684\u8d5e\u8a89\u724c\", 3238: \"Play 8 Meditative cards\": \"\u6253\u51fa 8 \u5f20\u51a5\u60f3\u724c\", 3239: \"Pla\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; python3 -I - <<'E'\\nimport json\\nc=json.load(open('crates/cards/chinese.json'))\\ncat=json.load(open('crates/cards/catalog.json'))\\nprint(list(c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; grep -rn \\\"Paperclip\\\\|\\u56de\\u5f62\\u9488\\\\|Evolved Swarm\\\\|\\u8fdb\\u5316\\u8702\\u7fa4\\\" apps/web/src crates/cards/chinese.json crates/cards/card\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; grep -n \\\"ModifierKind::\\\" crates/engine/src/view_for.rs | head -5; awk 'NR>=1230 && NR<=1330 && /\\\"/' crates/engine/src/view_for.rs | head -60\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; sed -n 29,40p apps/web/src/i18n/i18n.test.ts; sed -n 105,135p apps/web/src/i18n/i18n.test.ts; tail -30 apps/web/src/i18n/i18n.test.ts; grep -n \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; grep -n \\\"engine/tests/fixtures\\\\|it(\\\\\\\"\\\" apps/web/src/net/ci-scope.test.ts | head -40; sed -n 1,40p apps/web/src/net/ci-scope.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; sed -n 420,470p apps/web/src/net/ci-scope.test.ts; sed -n 750,900p apps/web/src/net/ci-scope.test.ts | grep -n \\\"scan\\\\|names\\\\|readFileSync\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; sed -n 795,960p apps/web/src/net/ci-scope.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; grep -n \\\"\\u8865\\u5145\\\" crates/shared/data/zh-CN.json apps/web/src/i18n/zh-CN.json | head -5; grep -n \\\"replenish\\\" apps/web/src/i18n/zh-CN.js\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; grep -n -i \\\"replenish\\\" crates/cards/card-text.yaml | head -3; grep -o \\\"[^\\u3002]*\\u8865\\u5145[^\\u3002]*\\u3002\\\" crates/cards/chinese.json | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; sed -n 1,40p apps/web/src/fx/chaos.ts | grep -n \\\"import\\\\|chaosNames\\\" ; sed -n 66,90p apps/web/src/fx/chaos.ts; sed -n 15,35p apps/web/src/ga\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5152; echo \\\"Plan #5152 drafted in final message: 13 zh-CN.json entries (wording from crates/cards/chinese.json), R711000 test in i18n.test.ts, ci-sc\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: the change is 13 zh-CN.json entries, one web test, one line in scripts/ci-scope.sh and one list entry in ci-scope.test.ts. It touches no engine, AI or server code and no migration, and it changes 4 files.\"} --> ## Goal Un\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-27T03:11:08Z",
       "owner_why": "it plans it",
@@ -22158,9 +22150,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-27T03:08:31Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45932677177",
+      "run_id": "pending:96e31c29-1795749588",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-27T03:11:08Z",
+      "started_at": "2026-11-27T03:20:06Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -22191,9 +22183,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T03:11:40Z",
+    "at": "2026-11-27T03:20:06Z",
     "url": "",
-    "what": "plan #5154 on claude-6"
+    "what": "build #5152 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-27T03:08:10Z",
