@@ -45108,32 +45108,7 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {
-      "5156": {
-        "at": "2026-11-27T03:10:29Z",
-        "why": "Confirmed on main: the AI files both shipyard prices under the card's exact def_id (evaluate.rs:374-376, :473-478), a fuse rewrites that id (fuse.rs:2141), the yard fuses at the AI's turn start (turn.rs:398, which end_turn reaches at :840), and reply_score scores lines on that post-reply state with the root's prices (reply.rs:1026-1027), so a played shipyard reads 0 for both, contrary to R3575400'"
-      },
-      "5158": {
-        "at": "2026-11-27T03:19:30Z",
-        "why": "Confirmed: `c224_rollback_point.rs:57` passes the card's own face as the summon's `radiant`, and `summon_fresh_into` (`crates/engine/src/effects/summon.rs:566`) makes each copy Radiant, but the card's text, its header, \u00a78.13 row 224 and R4594005 all say the copies come back on their printed face with only Rush added (compare row 230, whose Radiant text does say 'Radiant copies'); the Commander's c"
-      },
-      "5160": {
-        "at": "2026-11-27T03:27:43Z",
-        "why": "Confirmed: #4868 refuses a NUL in the body (`crates/server/src/api/http.rs:627`) and the query (`:797`), but `match_path` inserts `decode_segment(actual)` unchecked (`:748`). `DELETE /api/practice/seeds/:seed` and `DELETE /api/rooms/:code` then bind it as `$1::text` (`economy/store.rs:2601`, `db/pg.rs:3712`), and `From<StoreError>` makes the Postgres refusal a 500 (`http.rs:235`), which feeds `Rou"
-      },
-      "5161": {
-        "at": "2026-11-27T03:57:37Z",
-        "why": "Confirmed: in `FightScreen.tsx:222-224` a finished fight's Main menu and corner Menu send the report and then call the page's `onLeave`, but sending the report has already moved the attempt to phase `briefing`, `lost` or `repelled`, so `away === fight` at `AssaultPage.tsx:85` never matches and the page shows the same screen Continue shows; going to Play is what R4742000 says (\"the match, dungeon a"
-      },
-      "5164": {
-        "at": "2026-11-27T04:26:32Z",
-        "why": "Confirmed on main: the ladder's only beaten cue is a `::marker` rule (`apps/web/src/assault/assault.css:50`) on rows that are `display: grid` (`:43-44`), so it draws nothing and \u00a716.7's \"those beaten today\u2026 marked\" (`spec/16-infinite-assault.md:115`) goes unmet; and `zh-CN.json` has no entry for the four Commanders at `crates/run/src/assault.json:53-57`, so `t(level.enemy)` (`DayScreen.tsx:102`, `"
-      },
-      "5171": {
-        "at": "2026-11-27T06:27:22Z",
-        "why": "Confirmed on main: four of the five live R4607000 tests play fork arms through `play_deal` (fork_screen.rs:1965, :2000) or a live `resume_save` with `late_fork` (:1875, :2040, :1845), and no assertion reads those arms, because `load_save` only counts them (:783), `identity_check` compares only the trunk hash and fork points (:873-895), and the finished-save test computes both of its tallies from t"
-      }
-    },
+    "auto": {},
     "auto_approved": [
       "2026-11-26T23:19:32Z",
       "2026-11-27T03:08:24Z",
