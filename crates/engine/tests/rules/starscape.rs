@@ -267,8 +267,9 @@ fn r1847001_each_reward_does_what_its_node_says() {
 #[test]
 fn r1847001_twenty_travels_reach_the_edge_and_no_travel_goes_past_it() {
     let mut s = board("starscape-edge", false);
-    s.state_mut().players.p1.mana.current = STARSCAPE_EDGE_TRAVELS * STARSCAPE_TRAVEL_MANA * 2;
+    // R5148000: twenty travels cost more than the mana ceiling holds, so each starts from a full 15.
     for _ in 0..STARSCAPE_EDGE_TRAVELS {
+        s.state_mut().players.p1.mana.current = jackioh_engine::config::MANA_CEILING;
         travel(&mut s);
     }
     let nodes: Vec<i32> = traveled(s.events())
