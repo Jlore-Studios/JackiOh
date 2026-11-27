@@ -1,10 +1,10 @@
 // R5186000: the card statistics' load progress on /stats (stats/LoadProgress.tsx).
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ApiUnreachableError, type StatsLoading } from "../net/api.ts";
-import { STATS_LOADING_SHARE_MAX } from "./config.ts";
+import { STATS_LOADING_AFTER_MS, STATS_LOADING_POLL_MS, STATS_LOADING_SHARE_MAX } from "./config.ts";
 import { askAgain, clockOf, loadShare, loadWords, StatsLoadProgress } from "./LoadProgress.tsx";
 
 /** Halfway through the time to expect, on the card totals. */
@@ -16,6 +16,7 @@ const SLOW = { timeout: 10_000 } as const;
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("R5186000 the card statistics' load progress", () => {
@@ -41,24 +42,34 @@ describe("R5186000 the card statistics' load progress", () => {
     await expect(askAgain(new Error("500"), () => Promise.resolve(HALFWAY))).resolves.toBe(false);
   });
 
-  it("R5186000 draws the bar from the server's answer, and nothing while no load is under way", async () => {
+  it("R5186000 draws the bar from the server's answer once the read has waited, and nothing while no load is under way", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     const fetchMock = vi.fn((_input: RequestInfo | URL) =>
       Promise.resolve(new Response(JSON.stringify(HALFWAY), { status: 200 })),
     );
     vi.stubGlobal("fetch", fetchMock);
     render(<StatsLoadProgress />);
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(STATS_LOADING_AFTER_MS);
+    });
     const bar = await screen.findByRole("progressbar", {}, SLOW);
     expect(bar.getAttribute("aria-valuenow")).toBe("50");
     expect(screen.getByText("Step 2 of 3: Reading the card totals · 0:31 of about 1:02")).toBeTruthy();
     expect(new URL(String(fetchMock.mock.calls[0]?.[0]), window.location.origin).pathname).toBe("/api/stats/loading");
     cleanup();
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() => Promise.resolve(new Response(JSON.stringify({ ...HALFWAY, loading: false }), { status: 200 }))),
+    const idle = vi.fn((_input: RequestInfo | URL) =>
+      Promise.resolve(new Response(JSON.stringify({ ...HALFWAY, loading: false }), { status: 200 })),
     );
+    vi.stubGlobal("fetch", idle);
     const { container } = render(<StatsLoadProgress />);
-    await new Promise((resolve) => setTimeout(resolve, 2_000));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(STATS_LOADING_AFTER_MS + STATS_LOADING_POLL_MS);
+    });
+    await vi.waitFor(() => {
+      expect(idle).toHaveBeenCalled();
+    });
     expect(container.innerHTML).toBe("");
   }, SLOW.timeout);
 });
