@@ -11,9 +11,9 @@ use jackioh_engine::{
     PlayerId, Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, acting_with_flag,
     active_units_of, adjacent, attack_mod_for, attack_restriction, beneath_at, canonical, card_at,
     carried_at, cleave_struck, converts_to, damage_pool_of, effective_cost, effective_life, find_def,
-    find_instance, find_instance_mut, flags_of, has_keyword, is_locked, lane_multiplier_for, legal_actions,
-    midlane_lanes_of, pierces, position_after_switch, row_size, slot_of, strike_back_multiplier_for,
-    subsystems, unit_damage_cap, unit_view,
+    find_instance, find_instance_mut, flags_of, half_of_lane, has_keyword, is_locked, lane_multiplier_for,
+    legal_actions, midlane_lanes_of, occupant_at, pierces, position_after_switch, row_size, slot_of,
+    strike_back_multiplier_for, subsystems, unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
@@ -66,9 +66,10 @@ fn play_zone(action: &ActionBody) -> Option<&ZoneChoice> {
     }
 }
 
-/// One zone of a placement: `|` past the board's edge, else the id of the card acting there (`-` for
-/// none), the Unit a carrier holds there (R446), how many cards lie beneath (R13, R447) and `L` when it
-/// is Locked. `redact` keeps a hidden card's id and `determinize` keeps it in every world, so all of it
+/// One zone of a placement: `|` past the board's edge, else the id of the card a lane read meets there
+/// (`occupant_at`: the zone's own top, or a GIGA covering it from its own row, R3546001, R4799001; `-`
+/// for none), the Unit a carrier holds there (R446), how many cards lie beneath (R13, R447) and `L` when
+/// it is Locked. `redact` keeps a hidden card's id and `determinize` keeps it in every world, so all of it
 /// is what the seat can read (R185).
 fn zone_part(state: &GameState, slot: ZoneSlot) -> String {
     if slot.lane < 1 || slot.lane > row_size(slot.row) {
@@ -76,16 +77,17 @@ fn zone_part(state: &GameState, slot: ZoneSlot) -> String {
     }
     format!(
         "{}{}:{}{}",
-        card_at(state, slot).map_or("-", |card| card.id.as_str()),
+        occupant_at(state, slot).map_or("-", |card| card.id.as_str()),
         carried_at(state, slot).map_or(String::new(), |unit| format!("+{}", unit.id)),
         beneath_at(state, slot).len(),
         if is_locked(state, slot) { "L" } else { "" },
     )
 }
 
-/// What a play's lane means to it (#1014): the seat's zones beside it in its row, left then right, or
-/// the board's edge, then the lane's four zones (§3.1): the play's own, the seat's other one, and the
-/// enemy's unit and backrow zones opposite. Two lanes with the same key are the same placement.
+/// What a play's lane means to it (#1014): the half of a slashed board the lane is on (R3554003,
+/// R4799001), the seat's zones beside it in its row, left then right, or the board's edge, then the
+/// lane's four zones (§3.1): the play's own, the seat's other one, and the enemy's unit and backrow zones
+/// opposite. Two lanes with the same key are the same placement.
 fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
     let other_row = if zone.row == Row::Units {
         Row::Backrow
@@ -93,7 +95,7 @@ fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String
         Row::Units
     };
     let enemy = seat.opponent();
-    [
+    let zones = [
         (seat, zone.row, zone.lane - 1),
         (seat, zone.row, zone.lane + 1),
         (seat, zone.row, zone.lane),
@@ -104,7 +106,8 @@ fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String
     .into_iter()
     .map(|(player, row, lane)| zone_part(state, ZoneSlot { player, row, lane }))
     .collect::<Vec<_>>()
-    .join("/")
+    .join("/");
+    format!("{:?}/{zones}", half_of_lane(state, zone.lane))
 }
 
 /// Per otherwise-identical play, keep one lane of each placement (`placement_key`): its first in lane
