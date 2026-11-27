@@ -21110,6 +21110,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 620,
       "started_at": "2026-11-27T00:44:41Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -44857,9 +44858,33 @@
         "title": "Patch: a pull request that changes a card also runs the e2e specs whose seeded games deal or name that card, within a time cap",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-3"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "bede0539d54f392033596adb3198dbb2b7224a82",
+        "issue": 5036,
+        "merged_at": "2026-11-27T02:41:55Z",
+        "n": 620,
+        "pr": 5094,
+        "queued_at": "2026-11-27T02:41:55Z",
+        "sha": "9cafcdb7a9f6d4bc19202ec76644cf65551bc479",
+        "status": "queued",
+        "title": "Patch: deeper card stats, X6, Decisiveness on the Experimental tab's Running and Versions",
+        "tries": 0
       }
     ],
-    "count": 619
+    "count": 620
   },
   "statistics": {
     "at": "2026-11-27T02:32:37Z"
