@@ -11,6 +11,10 @@
 //! cargo jackioh stats --patch v0.2.5 --out v0.2.5.jsonl
 //!                                                   a pre-release run of v0.2.5, kept in a file
 //! cargo jackioh stats --series tuning-a             another seed series: other games
+//! cargo jackioh stats --from 1 --games 20000 --out-every 50 --out dir
+//!                                                   each 50 games by number to
+//!                                                   dir/<series>-<patch>-<first>.jsonl as soon as all
+//!                                                   50 have finished (the gather lane's files)
 //! cargo jackioh stats --force core-090 --out a.jsonl
 //!                                                   core-090 in one seat's deck in every game, p1's in
 //!                                                   odd games and p2's in even ones (R1284000)
@@ -31,7 +35,7 @@
 
 use std::collections::BTreeMap;
 use std::io::Write as _;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc;
 use std::time::Instant;
@@ -87,7 +91,7 @@ fn newest_patch(list: &Value) -> Result<String> {
     }
 }
 
-/// A positive integer option (`--games` and `--from`).
+/// A positive integer option (`--games`, `--from` and `--out-every`).
 fn count(name: &str, raw: &str) -> Result<i32, String> {
     match raw.parse::<i32>() {
         Ok(value) if value >= 1 => Ok(value),
@@ -104,6 +108,10 @@ fn games_count(raw: &str) -> Result<i32, String> {
 
 fn from_count(raw: &str) -> Result<i32, String> {
     count("from", raw)
+}
+
+fn out_every_count(raw: &str) -> Result<i32, String> {
+    count("out-every", raw)
 }
 
 /// `cargo jackioh stats …` (TS `DevRunArgs`, read by clap where TS's `parseDevRunArgs` read
@@ -127,9 +135,15 @@ pub struct Args {
     /// R1284000: deal this card to p1 in odd games and p2 in even ones; a token goes in through its card (R279).
     #[arg(long, value_name = "ID")]
     pub force: Option<String>,
-    /// Write the records here, one JSON line per game (`stats-import` reads it).
+    /// Write the records here, one JSON line per game (`stats-import` reads it). With --out-every, the
+    /// directory the files go to.
     #[arg(long, value_name = "FILE")]
     pub out: Option<PathBuf>,
+    /// Each N games by number, from --from, to a file of their own in --out,
+    /// `<series>-<patch>-<first game>.jsonl`, as soon as every one of them has finished, so a slow game
+    /// holds back only its own file (the gather lane files each as it appears).
+    #[arg(long, value_name = "N", value_parser = out_every_count)]
+    pub out_every: Option<i32>,
     #[command(subcommand)]
     pub command: Option<Command>,
 }
@@ -1011,6 +1025,18 @@ struct PlayedGame {
     seconds: f64,
 }
 
+/// Game n played with `dev_game_record`, timed for stderr.
+fn dev_play(options: &DevRunOptions) -> impl Fn(i32) -> PlayedGame + Sync {
+    move |n| {
+        let game_started = Instant::now();
+        PlayedGame {
+            n,
+            record: dev_game_record(n, options),
+            seconds: game_started.elapsed().as_secs_f64(),
+        }
+    }
+}
+
 /// Plays games `from..from + games` with `dev_game_record` and hands them to `sink` in game order
 /// (`play_in_order`). A record is a pure function of its number and options, so the run reads the
 /// same games whatever the thread count.
@@ -1020,36 +1046,27 @@ fn play_chunks(
     options: &DevRunOptions,
     sink: impl FnMut(Vec<PlayedGame>) -> Result<()>,
 ) -> Result<()> {
-    let play = |n| {
-        let game_started = Instant::now();
-        PlayedGame {
-            n,
-            record: dev_game_record(n, options),
-            seconds: game_started.elapsed().as_secs_f64(),
-        }
-    };
-    play_in_order(from, games, play, sink)
+    play_in_order(from, games, dev_play(options), sink)
 }
 
 /// Plays games `from..from + games` on `workers()` threads, each taking the next game as soon as it
-/// is free, and hands `sink` each run of finished games as soon as every game before it has
-/// finished, in game order. No core waits on a slower game: played a chunk of `workers()` at a time,
-/// each chunk waiting for its slowest, the gather lane's runners stood idle about half the time. A
-/// sink that fails stops the run once each game in hand finishes, so a stopped run keeps the games
-/// in order up to the first one that had not finished.
-fn play_in_order(
+/// is free, and hands `finished` each game as it finishes, in the order they finish. No core waits
+/// on a slower game: played a chunk of `workers()` at a time, each chunk waiting for its slowest, the
+/// gather lane's runners stood idle about half the time. When `finished` fails, the run stops once
+/// each game in hand finishes.
+fn play_games(
     from: i32,
     games: i32,
     play: impl Fn(i32) -> PlayedGame + Sync,
-    mut sink: impl FnMut(Vec<PlayedGame>) -> Result<()>,
+    mut finished: impl FnMut(PlayedGame) -> Result<()>,
 ) -> Result<()> {
     let total = usize::try_from(games).unwrap_or(0);
     let next = AtomicUsize::new(0);
-    let (done, finished) = mpsc::channel::<PlayedGame>();
+    let (done, results) = mpsc::channel::<PlayedGame>();
     std::thread::scope(|scope| {
         for _ in 0..workers().min(total) {
             let (done, next, play) = (done.clone(), &next, &play);
-            // Until every game is taken, or the sink failed and dropped `finished`.
+            // Until every game is taken, or `finished` failed and dropped `results`.
             scope.spawn(move || {
                 loop {
                     let i = next.fetch_add(1, Ordering::Relaxed);
@@ -1061,21 +1078,104 @@ fn play_in_order(
             });
         }
         drop(done);
-        let mut waiting = BTreeMap::new();
-        let mut due = from;
-        for played in finished {
-            waiting.insert(played.n, played);
-            let mut ready = Vec::new();
-            while let Some(played) = waiting.remove(&due) {
-                ready.push(played);
-                due += 1;
-            }
-            if !ready.is_empty() {
-                sink(ready)?;
-            }
+        for played in results {
+            finished(played)?;
         }
         Ok(())
     })
+}
+
+/// `play_games`, handing `sink` each run of finished games as soon as every game before it has
+/// finished, in game order, so a stopped run keeps the games in order up to the first one that had
+/// not finished.
+fn play_in_order(
+    from: i32,
+    games: i32,
+    play: impl Fn(i32) -> PlayedGame + Sync,
+    mut sink: impl FnMut(Vec<PlayedGame>) -> Result<()>,
+) -> Result<()> {
+    let mut waiting = BTreeMap::new();
+    let mut due = from;
+    play_games(from, games, play, |played| {
+        waiting.insert(played.n, played);
+        let mut ready = Vec::new();
+        while let Some(played) = waiting.remove(&due) {
+            ready.push(played);
+            due += 1;
+        }
+        if ready.is_empty() { Ok(()) } else { sink(ready) }
+    })
+}
+
+/// `play_games`, handing `sink` each group of `size` games by number from `from` (the last one
+/// shorter when `games` is not a multiple), whole and in game order, with its first game's number,
+/// as soon as every game in it has finished, the groups in whatever order they finish: a slow game
+/// holds back only its own group (`--out-every`).
+fn play_in_groups(
+    from: i32,
+    games: i32,
+    size: i32,
+    play: impl Fn(i32) -> PlayedGame + Sync,
+    mut sink: impl FnMut(i32, Vec<PlayedGame>) -> Result<()>,
+) -> Result<()> {
+    let end = from + games;
+    let mut groups: BTreeMap<i32, Vec<PlayedGame>> = BTreeMap::new();
+    play_games(from, games, play, |played| {
+        let first = from + (played.n - from) / size * size;
+        let group = groups.entry(first).or_default();
+        group.push(played);
+        if group.len() < size.min(end - first) as usize {
+            return Ok(());
+        }
+        let Some(mut whole) = groups.remove(&first) else {
+            return Ok(());
+        };
+        whole.sort_by_key(|played| played.n);
+        sink(first, whole)
+    })
+}
+
+/// `--out-every`'s file for the group from game `first`, `<dir>/<series>-<patch>-<first>.jsonl`: its
+/// finished games' records, one a line in game order, written under a `.partial` name and renamed
+/// into place, so whoever lists `*.jsonl` sees only whole files. The same games on the same build
+/// write the same file, which `stats-import --totals-only` claims once (R1976000).
+fn write_group(dir: &Path, options: &DevRunOptions, first: i32, records: &[GameRecord]) -> Result<PathBuf> {
+    let name = format!("{}-{}-{first}.jsonl", options.series, options.patch);
+    let path = dir.join(&name);
+    let partial = dir.join(format!("{name}.partial"));
+    let text: String = records
+        .iter()
+        .map(|record| jackioh_cards::versions::game_record_line(record) + "\n")
+        .collect();
+    std::fs::write(&partial, text).with_context(|| format!("writing {}", partial.display()))?;
+    std::fs::rename(&partial, &path).with_context(|| format!("renaming {}", partial.display()))?;
+    Ok(path)
+}
+
+/// Each played game's line on stderr, and the records of the ones that finished.
+fn finished_records(series: &str, games: Vec<PlayedGame>) -> Vec<GameRecord> {
+    games
+        .into_iter()
+        .filter_map(|played| {
+            let seconds = format!("{:.*}", SECONDS_DECIMALS, played.seconds);
+            let Some(record) = played.record else {
+                eprintln!(
+                    "[ai:stats] {series}:{} did not finish; no record ({seconds}s)",
+                    played.n
+                );
+                return None;
+            };
+            let outcome = match record.game.winner {
+                Winner::Draw => "draw".to_string(),
+                winner => format!("{winner} won"),
+            };
+            eprintln!(
+                "[ai:stats] {series}:{} {outcome} by {} in {} turns ({seconds}s)",
+                played.n, record.game.reason, record.game.turns
+            );
+            Some(record)
+        })
+        .collect()
 }
 
 pub fn run(args: Args) -> Result<()> {
@@ -1112,49 +1212,47 @@ pub fn run(args: Args) -> Result<()> {
         None => None,
         Some(path) => Some(std::env::current_dir()?.join(path)),
     };
-    let mut file = match &out {
-        None => None,
-        Some(path) => {
-            Some(std::fs::File::create(path).with_context(|| format!("creating {}", path.display()))?)
-        }
-    };
-
     let mut records: Vec<GameRecord> = Vec::new();
     let started = Instant::now();
-    play_chunks(args.from, games, &options, |chunk| {
-        for played in chunk {
-            let seconds = format!("{:.*}", SECONDS_DECIMALS, played.seconds);
-            let Some(record) = played.record else {
-                eprintln!(
-                    "[ai:stats] {series}:{} did not finish; no record ({seconds}s)",
-                    played.n
-                );
-                continue;
+    let written = match (args.out_every, &out) {
+        (Some(_), None) => return Err(anyhow!("--out-every needs --out, the directory its files go to")),
+        (Some(every), Some(dir)) => {
+            std::fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+            play_in_groups(args.from, games, every, dev_play(&options), |first, group| {
+                let finished = finished_records(series, group);
+                let path = write_group(dir, &options, first, &finished)?;
+                eprintln!("[ai:stats] {series}:{first}.. written to {}", path.display());
+                records.extend(finished);
+                Ok(())
+            })?;
+            format!(", each {every} written to {}", dir.display())
+        }
+        (None, out) => {
+            let mut file = match out {
+                None => None,
+                Some(path) => Some(
+                    std::fs::File::create(path).with_context(|| format!("creating {}", path.display()))?,
+                ),
             };
-            if let Some(file) = file.as_mut() {
-                writeln!(file, "{}", jackioh_cards::versions::game_record_line(&record))?;
+            play_chunks(args.from, games, &options, |ready| {
+                let finished = finished_records(series, ready);
+                if let Some(file) = file.as_mut() {
+                    for record in &finished {
+                        writeln!(file, "{}", jackioh_cards::versions::game_record_line(record))?;
+                    }
+                    file.flush()?;
+                }
+                records.extend(finished);
+                Ok(())
+            })?;
+            match out {
+                None => String::new(),
+                Some(path) => format!(", written to {}", path.display()),
             }
-            let outcome = match record.game.winner {
-                Winner::Draw => "draw".to_string(),
-                winner => format!("{winner} won"),
-            };
-            eprintln!(
-                "[ai:stats] {series}:{} {outcome} by {} in {} turns ({seconds}s)",
-                played.n, record.game.reason, record.game.turns
-            );
-            records.push(record);
         }
-        if let Some(file) = file.as_mut() {
-            file.flush()?;
-        }
-        Ok(())
-    })?;
+    };
 
     let elapsed = format!("{:.*}", SECONDS_DECIMALS, started.elapsed().as_secs_f64());
-    let written = match &out {
-        None => String::new(),
-        Some(path) => format!(", written to {}", path.display()),
-    };
     eprintln!(
         "[ai:stats] {} of {games} games recorded in {elapsed}s{written}",
         records.len()
@@ -1206,6 +1304,7 @@ mod tests {
                 series: None,
                 force: None,
                 out: None,
+                out_every: None,
                 command: None
             }
         );
@@ -1216,7 +1315,8 @@ mod tests {
                 "--patch=v0.2.3",
                 "--series=a",
                 "--force=core-090",
-                "--out=run.jsonl"
+                "--out=run.jsonl",
+                "--out-every=50"
             ])
             .unwrap(),
             Args {
@@ -1226,6 +1326,7 @@ mod tests {
                 series: Some("a".to_string()),
                 force: Some("core-090".to_string()),
                 out: Some(PathBuf::from("run.jsonl")),
+                out_every: Some(50),
                 command: None,
             }
         );
@@ -1241,6 +1342,12 @@ mod tests {
                 .unwrap_err()
                 .to_string()
                 .contains("--from must be a positive integer")
+        );
+        assert!(
+            parse(&["--out-every=0"])
+                .unwrap_err()
+                .to_string()
+                .contains("--out-every must be a positive integer")
         );
         assert!(parse(&["--budget=9"]).is_err());
         assert!(parse(&["50"]).is_err());
@@ -2630,6 +2737,100 @@ mod tests {
             "game 6 was not played while game 1 was"
         );
         assert_eq!(handed, (1..=8).collect::<Vec<_>>());
+    }
+
+    /// `--out-every`'s groups: each reaches the sink whole and in game order, the short last one
+    /// among them, and a slow game holds back only its own group. Game 2 waits until the group from
+    /// game 5 has been handed over, which groups handed in game order never reach.
+    #[test]
+    fn stats_groups_arrive_whole_and_a_slow_game_holds_back_only_its_own() {
+        let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
+        let (five_handed, five) = mpsc::channel::<()>();
+        let five = std::sync::Mutex::new(five);
+        let second_waited = std::sync::atomic::AtomicBool::new(false);
+        let play = |n: i32| {
+            if n == 2 {
+                let got = five
+                    .lock()
+                    .unwrap()
+                    .recv_timeout(std::time::Duration::from_secs(STUCK_SECONDS));
+                second_waited.store(got.is_ok(), Ordering::Relaxed);
+            }
+            PlayedGame {
+                n,
+                record: None,
+                seconds: 0.0,
+            }
+        };
+        let mut handed: Vec<(i32, Vec<i32>)> = Vec::new();
+        four.install(|| {
+            play_in_groups(1, 11, 4, play, |first, group| {
+                if first == 5 {
+                    five_handed.send(()).unwrap();
+                }
+                handed.push((first, group.iter().map(|played| played.n).collect()));
+                Ok(())
+            })
+        })
+        .unwrap();
+        assert!(
+            second_waited.load(Ordering::Relaxed),
+            "game 2 never saw the group from game 5 handed over"
+        );
+        let at = |first: i32| handed.iter().position(|(group, _)| *group == first).unwrap();
+        assert!(at(5) < at(1), "the group from game 5 came before game 2's");
+        handed.sort();
+        assert_eq!(
+            handed,
+            vec![(1, vec![1, 2, 3, 4]), (5, vec![5, 6, 7, 8]), (9, vec![9, 10, 11])]
+        );
+    }
+
+    /// `--out-every` writes each group's file whole, under its first game's number, leaves no
+    /// `.partial` file, and the files together hold the serial run's records.
+    #[test]
+    fn stats_out_every_writes_each_group_to_a_whole_file_of_its_own() {
+        jackioh_cards::register_all();
+        let options = DevRunOptions {
+            series: "dev".to_string(),
+            patch: "v0.9.9-test".to_string(),
+            budget: Some(FEW),
+            force: None,
+            commit: None,
+        };
+        let (dir, _) = scratch(&[]);
+        let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
+        four.install(|| {
+            play_in_groups(1, 5, 2, dev_play(&options), |first, group| {
+                let records: Vec<GameRecord> = group.into_iter().filter_map(|played| played.record).collect();
+                write_group(&dir, &options, first, &records).map(|_| ())
+            })
+        })
+        .unwrap();
+        let mut names: Vec<String> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        assert_eq!(
+            names,
+            [
+                "dev-v0.9.9-test-1.jsonl",
+                "dev-v0.9.9-test-3.jsonl",
+                "dev-v0.9.9-test-5.jsonl"
+            ]
+        );
+        let written: String = names
+            .iter()
+            .map(|name| std::fs::read_to_string(dir.join(name)).unwrap())
+            .collect();
+        let serial: Vec<String> = (1..=5)
+            .filter_map(|n| dev_game_record(n, &options))
+            .map(|record| jackioh_cards::versions::game_record_line(&record))
+            .collect();
+        assert!(!serial.is_empty(), "the serial run finished no game");
+        assert_eq!(written.lines().collect::<Vec<_>>(), serial);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
