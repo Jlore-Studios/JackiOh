@@ -19740,18 +19740,29 @@
       "verdict_rounds": 1
     },
     "5158": {
-      "asks": [
-        "c:7227641103"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-7",
+      "owner_since": "2026-11-27T20:46:06Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-27T20:35:26Z",
       "requested_by": "jgoetzmann",
+      "run_id": "pending:14b84a8e-1795812345",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-27T20:46:06Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:7227641103"
+      ]
     },
     "5164": {
       "action": "plan",
@@ -19960,9 +19971,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T20:45:31Z",
+    "at": "2026-11-27T20:46:06Z",
     "url": "",
-    "what": "plan #5164 on agy"
+    "what": "plan #5158 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-27T20:33:39Z",
