@@ -4242,3 +4242,11 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-27T02:53:36Z,45930427985,claude-6,opus,review,5094,hard,reviewed,,1.8,41,9355,2083558,1.3564,18,20,,,,,none,,1
 2026-11-27T02:47:50Z,45929446805,claude-1,opus,suggest,,,interrupted,5-hour cap,5.8,34,11463,1164017,18.4808,0,41,,,,,none,,1
 2026-11-27T02:58:40Z,45929494520,claude-8,opus,suggest,,,suggested,,17.2,87,56489,4642969,12.8636,0,70,,,,,none,,2
+2026-11-27T03:06:36Z,45930384935,claude-6,opus,review,5150,hard,approved,,15.7,34,7002,1194412,0.8434,17,21,,,0.8,,none,,1
+2026-11-27T03:03:42Z,45929541010,claude-3,opus,suggest,,,suggested,,21.7,24,10917,957307,6.5766,14,55,,,,,none,,2
+2026-11-27T03:04:08Z,45929403081,claude-8,opus,suggest,,,suggested,,22.7,50,21812,2183559,21.7006,0,73,,,,,none,,2
+2026-11-27T03:16:57Z,45932677177,claude-6,opus,plan,5152,medium,planned,,2.3,38,18262,1282909,0.5936,21,23,,,2.6,,fresh,,1
+2026-11-27T03:17:45Z,45929587096,claude-3,opus,suggest,,,suggested,,36,48,16916,1873064,13.6335,13,58,,,,,none,,2
+2026-11-27T03:18:38Z,45932733964,claude-6,opus,plan,5154,medium,planned,,2.9,33,22175,1086335,0.6316,22,24,,,1.8,,fresh,,1
+2026-11-27T03:21:47Z,45931165037,claude-7,opus,suggest,,,suggested,,23,265,75174,15476414,22.2182,23,70,,,,,none,,2
+2026-11-27T03:30:06Z,45920009801,agy,gemini-3.8-flash-high,review,5144,medium,approved,,148.4,2086797,186749,0,,3,81,65,85,0.7,,none,,5
