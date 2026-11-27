@@ -1,7 +1,7 @@
 //! Stinkyscape #128 Jlockeed's Yamato Cannon (SPEC §8.10 row 128). (1, Embiggened 2) Unit, Jlockeed, Rare;
 //! 3/1 → 6/2 (4/1 → 8/2, (2) embiggen (3), until issue #3951).
-//!   Base:    "Ranged, Cleave / Embiggened (2): Starship Piece."
-//!   Radiant: "Ranged, Cleave, Rush / Embiggened (2): Starship Piece."
+//!   Base:    "Ranged, Cleave / Embiggened (+1): Starship Piece."
+//!   Radiant: "Ranged, Cleave, Rush / Embiggened (+1): Starship Piece."
 //!
 //! Ranged (R783000) and Cleave (§6.1, R63) are printed keywords the engine plays: it takes no strike back
 //! from a defender without Ranged, and its attack splashes the Units beside its target, which never
@@ -14,7 +14,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-128";
 
-/// R1878001: "Embiggened (2): Starship Piece.": the keyword holds only on a card stamped embiggened.
+/// R1878001: "Embiggened (+1): Starship Piece.": the keyword holds only on a card stamped embiggened.
 fn embiggened_piece(args: HookArgs<'_>) -> Vec<Keyword> {
     if args.self_.embiggened == Some(true) { vec![Keyword::StarshipPiece] } else { Vec::new() }
 }

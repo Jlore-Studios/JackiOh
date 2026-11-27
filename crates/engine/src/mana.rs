@@ -385,6 +385,8 @@ struct Price {
 /// threshold rules on the number the flat ones left (as R363 reads Curvature), then "costs (N)" sets, then
 /// the card's own floor (Forever&'s), which holds in every zone and alone reaches X, then 0. R4285000: last,
 /// a play by Flashback from the graveyard costs at least FLASHBACK_MIN_PRICE (`flashback_floor`), X included.
+/// R5109000: an embiggen card's Embiggened version costs its normal version's finished price, every rung
+/// above applied, plus its Embiggen premium (`dearer_premium`), then Flashback's floor.
 pub fn effective_cost(state: &GameState, instance: &CardInstance, options: CostOptions) -> i32 {
     price_of(state, instance, options).cost
 }
@@ -460,27 +462,42 @@ pub fn garden_offers_radiant(state: &GameState, card: &CardInstance) -> bool {
         && garden_premium_for(state, card).is_some()
 }
 
-/// R1181002, R1563004: the price a Garden sets on the dearer play of a card that is not Radiant: its
-/// normal price plus the premium, in place of an embiggen card's Embiggened price; else `None`.
-/// R4350000: a card with no Embiggen premium (Meditative+ #23) pays no Garden premium either, so its
-/// dearer choice costs its normal price, and is still the Garden's (`Some`, which stamps it Radiant).
-pub fn garden_dearer_price(state: &GameState, card: &CardInstance) -> Option<i32> {
+/// R1181002, R1563004, R5109000: the premium a Garden sets on the dearer play of a card that is not
+/// Radiant, in place of an embiggen card's own Embiggen premium (`dearer_premium`); else `None`. `Some`
+/// is the Garden's dearer choice, which stamps the play Radiant (`play_made_radiant`).
+pub fn garden_dearer_premium(state: &GameState, card: &CardInstance) -> Option<i32> {
     if card.embiggened != Some(true) || card.radiant {
         return None;
     }
     let premium = garden_premium_for(state, card)?;
-    // R4350000: a card with no Embiggen premium (M+ #23) has none under a Garden either.
-    let waived = card.no_embiggen_premium == Some(true);
-    let premium = if waived { 0 } else { premium };
-    match def_of(Some(state), &card.def_id).cost {
-        CardCost::Embiggen { base, .. } => Some(base + premium),
-        _ if garden_offers_radiant(state, card) => Some(printed_cost(state, card) + premium),
-        _ => None,
+    (crate::play_choices::has_embiggen_price(state, card) || garden_offers_radiant(state, card))
+        .then_some(premium)
+}
+
+/// R5109000: what the dearer version of this card costs on top of its normal version's finished price,
+/// or `None` for a play at its normal price: an embiggen card's Embiggen premium (B − A), which a Garden's
+/// premium replaces (R1181002, R1563004, `garden_dearer_premium`) and no Embiggen premium makes 0
+/// (R4350000). R1181003: a card kept with an `embiggenCostOverride` (games of v0.6.9 and before) has none,
+/// since that override prices its Embiggened version on R65's ladder as it did.
+pub fn dearer_premium(state: &GameState, card: &CardInstance) -> Option<i32> {
+    if card.embiggened != Some(true) || card.embiggen_cost_override.is_some() {
+        return None;
     }
+    let premium = garden_dearer_premium(state, card)
+        .or_else(|| def_of(Some(state), &card.def_id).cost.embiggen_premium())?;
+    // R4350000: a card with no Embiggen premium (M+ #23) has none, under a Garden too.
+    Some(if card.no_embiggen_premium == Some(true) {
+        0
+    } else {
+        premium
+    })
 }
 
 /// R65, R1181003: the override a price starts from: for the Embiggened version its own price
 /// (`embiggenCostOverride`, Meditative+ #23) before `costOverride`; for every other play `costOverride`.
+/// R5109000: only a kept `embiggenCostOverride` card prices its Embiggened version from here; any other
+/// Embiggened version is its normal version's price plus the premium (`dearer_premium`), so a
+/// `costOverride` prices the normal version, and the premium rides on it.
 pub fn override_of(card: &CardInstance) -> Option<i32> {
     if card.embiggened == Some(true) {
         card.embiggen_cost_override.or(card.cost_override)
@@ -512,6 +529,20 @@ fn priced(state: &GameState, instance: &CardInstance, options: CostOptions, flas
             used_rules: Vec::new(),
         };
     }
+    // R5109000: the dearer version costs the normal version's finished price, every rung of R65 and R455
+    // and the floor at 0 applied, plus its premium; the rules it spends are the normal price's. R4285000:
+    // Flashback's floor reads the sum.
+    if let Some(premium) = dearer_premium(state, instance) {
+        let normal = CardInstance {
+            embiggened: Some(false),
+            ..instance.clone()
+        };
+        let Price { cost, used_rules } = priced(state, &normal, options, false);
+        return Price {
+            cost: floored(cost + premium),
+            used_rules,
+        };
+    }
 
     // R65: X-cost cards cost exactly X and ignore modifiers, but an override makes one free. R455: a
     // floor the card carries is its own, and holds.
@@ -528,11 +559,8 @@ fn priced(state: &GameState, instance: &CardInstance, options: CostOptions, flas
         };
     }
 
-    // R1181002: under a Garden the dearer play of a card that is not Radiant starts from the normal
-    // price plus the premium.
-    let mut cost = override_.unwrap_or_else(|| {
-        garden_dearer_price(state, instance).unwrap_or_else(|| printed_cost(state, instance))
-    }) + instance.cost_mod
+    let mut cost = override_.unwrap_or_else(|| printed_cost(state, instance))
+        + instance.cost_mod
         + crate::hand_order::hand_aura_cost_delta(state, instance);
     // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
     // graveyard, while a permission lets its player play it from there (E11, R454).

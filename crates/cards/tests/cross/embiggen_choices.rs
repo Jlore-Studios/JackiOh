@@ -5,7 +5,8 @@
 //! and, while B mana is there to pay, listed again with `embiggen: true` and every other choice the
 //! same. The client opens its price picker only off that list (CLAUDE.md rule 7), and shows the
 //! Embiggened option at the view's `embiggenCost`, which must be what that play then charges: under
-//! Professor Curvature's "(4)+ Cost" discount (R363), which reaches B and not A, and AI Alignment
+//! Professor Curvature's "(4)+ Cost" discount (R363), which reads the normal price A and so reaches
+//! B only with A (R5109000: B costs A's finished price plus the premium B − A), and AI Alignment
 //! Tax's surcharge (R455) too. This is the engine half of the choice;
 //! `apps/web/src/game/embiggen-real.test.tsx` is the client's, on the same cards. Every Embiggen card
 //! in the catalog is driven, on both faces, so a new one is covered the day it is added.
@@ -284,7 +285,8 @@ fn r81_every_embiggen_cards_view_shows_its_embiggen_price_as_it_stands_and_that_
             let g = holding(&id, radiant, embiggen);
             view_prices_are_charged(&g, &held(&g, &id), base, embiggen, &what);
 
-            // The card's own discount reaches both prices (R65), each floored at (0), so a (0)
+            // The card's own discount reaches the normal price (R65), floored at (0), and R5109000: the
+            // Embiggened price is that finished price plus the premium, so a (0) normal price keeps it whole.
             let g = scenario(json!({
                 "p1": { "hand": [{ "def": id, "radiant": radiant, "costMod": -1 }], "mana": embiggen },
             }));
@@ -293,7 +295,7 @@ fn r81_every_embiggen_cards_view_shows_its_embiggen_price_as_it_stands_and_that_
                 &g,
                 &held(&g, &id),
                 (base - 1).max(0),
-                (embiggen - 1).max(0),
+                (base - 1).max(0) + (embiggen - base),
                 &what,
             );
         }
@@ -305,8 +307,11 @@ fn under_curvature(price: i32) -> i32 {
     if price >= 4 { price - 1 } else { price }
 }
 
+/// R363, R5109000: Curvature reads the normal price, and the Embiggened price is the normal one plus the
+/// premium, so a card at A below (4) and B at (4)+ is discounted at neither price.
 #[test]
-fn r363_professor_curvature_discounts_the_embiggen_price_and_not_the_base_one_and_the_view_says_so() {
+fn r363_r5109000_professor_curvature_reads_the_normal_price_and_the_embiggened_price_keeps_its_premium_and_the_view_says_so()
+ {
     let cards = embiggen_cards();
     assert!(
         cards
@@ -314,8 +319,8 @@ fn r363_professor_curvature_discounts_the_embiggen_price_and_not_the_base_one_an
             .any(|(_, base, embiggen)| *base < 4 && *embiggen >= 4),
         "the catalog holds an embiggen card with A below (4) and B at (4)+"
     );
-    // Every embiggen card is driven: each price is reached exactly when it is (4)+, so M #81
-    // Deadman's Hand's (0) embiggen (2) is reached at neither.
+    // Every embiggen card is driven: both prices are reached exactly when the normal one is (4)+, so
+    // M #81 Deadman's Hand's (0) embiggen (2) is reached at neither.
     for (id, base, embiggen) in cards {
         for radiant in [false, true] {
             let mut g = scenario(json!({
@@ -330,7 +335,7 @@ fn r363_professor_curvature_discounts_the_embiggen_price_and_not_the_base_one_an
                 &g,
                 &held(&g, &id),
                 under_curvature(base),
-                under_curvature(embiggen),
+                under_curvature(base) + embiggen - base,
                 &what,
             );
         }

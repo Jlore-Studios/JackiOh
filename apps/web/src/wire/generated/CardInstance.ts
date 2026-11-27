@@ -31,9 +31,9 @@ export type CardInstance = { id: string, defId: string, owner: PlayerId, control
 embiggenCostOverride?: number, 
 /**
  * R4350000 (Meditative+ #23 Enormous Elderberry's "Their Embiggened version costs no extra mana"):
- * no Embiggen premium. The Embiggened version (under a Garden, the dearer choice) starts from the
- * normal price (`mana::printed_cost`, `mana::garden_dearer_price`), so every modifier moves both
- * prices alike. Price-like, so R766 takes it off.
+ * no Embiggen premium. The Embiggened version (under a Garden, the dearer choice) costs the normal
+ * price plus a premium of 0 (`mana::dearer_premium`, R5109000), so the two prices are equal.
+ * Price-like, so R766 takes it off.
  */
 noEmbiggenPremium?: boolean, counters: Counters, memory: Record<string, unknown>, 
 /**

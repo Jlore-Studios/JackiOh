@@ -1,5 +1,5 @@
 //! #59 Unbiased Immigration (SPEC §8.3): Field Spell, cost 2 embiggen 4, Rare. "Activate: add a random card
-//! to your hand (Embiggened (4): it costs (0))" / radiant "A random Radiant card (Embiggened (4): it costs
+//! to your hand (Embiggened (+2): it costs (0))" / radiant "A random Radiant card (Embiggened (+2): it costs
 //! (0))". Engine cell: "Non-token pool excluding #59", every set's (R380; §8).
 //! Embiggen travels in play action (R81, §10.6). Pool query excludes def (#59, §5.1, R387).
 //! Drawn via RNG (R60; Radiant R74); embiggened discounts costMod (R766, R65; burns if full, R4, §2.4, R78).
@@ -27,7 +27,7 @@ fn add_random_card(ctx: &EffectContext, as_radiant: bool) -> Effect {
     if as_radiant {
         args["radiant"] = json!(true);
     }
-    // "(Embiggened (4): it costs (0))" — the Embiggened version, not the mana actually spent after discounts. The
+    // "(Embiggened (+2): it costs (0))" — the Embiggened version, not the mana actually spent after discounts. The
     // (0) is the declared number `setCost` (R386).
     if ctx.embiggened {
         args["costOverride"] = json!(param(ctx, "setCost"));

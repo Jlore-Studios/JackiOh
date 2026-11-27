@@ -82,7 +82,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// Core #84 Going Long: (2, Embiggened 4) Field Spell, "Your hero has Armor 2. Embiggened (4):
+    /// Core #84 Going Long: (2, Embiggened 4) Field Spell, "Your hero has Armor 2. Embiggened (+2):
     const GOING_LONG: &str = "core-084";
     /// Core #36 Magic Jammed: (1) Spell, "Destroy target backrow card; Lock its zone".
     const MAGIC_JAMMED: &str = "core-036";
@@ -445,16 +445,21 @@ mod tests {
             assert_eq!(hero_armor_of(s.state(), P1), 5, "the Embiggened version's Armor");
         }
 
+        /// R5109000: the (0) override prices the normal version, and the Garden's dearer choice costs that
+        /// finished price plus the Garden's premium (Radiant 1), as every dearer price does.
         #[test]
-        fn r3140001_a_costs_0_override_holds_for_the_gardens_dearer_choice_too() {
+        fn r3140001_r5109000_the_gardens_dearer_choice_costs_the_premium_over_the_0_override() {
             let _restore = with_catalog(only_embiggen(GOING_LONG));
             let mut s = holding_garden("m+022-cry-dearer", true, 2);
             s.play(ID, json!({ "zone": 1 }));
             let long = in_hand(&s, GOING_LONG);
             assert_eq!(offered(&s, &long), vec![Some(false), Some(true)]);
             s.state_mut().players.p1.mana.current = 0;
+            s.expect_refused(|s| s.play(long.as_str(), json!({ "zone": 2, "embiggen": true })));
+            let premium = super::super::declared_premium(true);
+            s.state_mut().players.p1.mana.current = premium;
             s.play(long.as_str(), json!({ "zone": 2, "embiggen": true }));
-            assert_eq!(paid(&s), 0);
+            assert_eq!(paid(&s), premium, "the (0) override, then the Garden's premium");
             assert!(s.card(long.as_str()).radiant);
             assert_eq!(s.card(long.as_str()).embiggened, Some(true));
         }

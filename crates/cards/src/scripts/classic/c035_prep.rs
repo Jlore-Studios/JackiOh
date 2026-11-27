@@ -1,7 +1,7 @@
 //! C #35 Prep (SPEC §8.6 row 35). (0) Spell, Common; Embiggened (2) since issue #2179.
 //!   Base:    "Your next Spell this turn costs ({discount}) less.
-//!             Embiggened (2): Also draw a random Spell from your deck." — discount 2
-//!   Radiant: "… Embiggened (2): Also draw the highest cost Spell from your deck." — discount 4
+//!             Embiggened (+2): Also draw a random Spell from your deck." — discount 2
+//!   Radiant: "… Embiggened (+2): Also draw the highest cost Spell from your deck." — discount 4
 //!   Engine:  "#35 Lunar Eclipse's modifier (`costDiscount`, `onlyType: "Spell"`, this turn, consumed
 //!            on use or at cleanup; Cost, §6.3, R65). Tunes: discount 2 ↑."
 //!

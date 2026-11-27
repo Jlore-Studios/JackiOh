@@ -1,7 +1,7 @@
 //! Meditative+ #23 Enormous Elderberry (SPEC §8.9 row 23, BUILD M11 row M+ 23, R4350000, R1178001):
 //! (2, Embiggened 4) Spell, Fruit, Epic.
 //!   Base:    "Add {cards} random embiggen card to your hand. Their Embiggened version costs no extra
-//!            mana. / Embiggened (4): Add {embiggenedCards} instead." (1; 3)
+//!            mana. / Embiggened (+2): Add {embiggenedCards} instead." (1; 3)
 //!   Radiant: the same, the cards Radiant.
 //!
 //! `add_random_from_catalog` over the embiggen pool (R1178001: the non-token cards of the sets that

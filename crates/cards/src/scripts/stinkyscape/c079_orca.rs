@@ -2,7 +2,7 @@
 //! 4, Embiggened (5), Epic.
 //!   Base:    "Flying
 //!            Cry: Choose one of 2 Miners and Equip it into this.
-//!            Embiggened (5): The Miners offered are Radiant."
+//!            Embiggened (+1): The Miners offered are Radiant."
 //!   Radiant: "… Cry: Choose one of 2 Miners and Equip it into this, twice. …"
 //!
 //! Miner v1 to S #66 Miner v5, named by id so that the pool reaches them whether or not the set ships (R1420):

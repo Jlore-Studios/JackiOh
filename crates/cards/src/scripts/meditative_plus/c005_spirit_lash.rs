@@ -1,5 +1,5 @@
 //! M+ #5 Spirit Lash (SPEC §8.9 row 5, BUILD M11 row M+ 5): (0, Embiggened 1) Spell, Rare.
-//!   Base:    "Flashback / Deal {damage} damage to all Units. Embiggened (1): With Lifesteal and Pierce."
+//!   Base:    "Flashback / Deal {damage} damage to all Units. Embiggened (+1): With Lifesteal and Pierce."
 //!   Radiant: "Echo 1, Flashback" plus the same: it resolves a second time.
 //!
 //! Flashback (issue #3138) is the catalog keyword (§6.1, R783012): the script is unchanged. The card lies

@@ -391,9 +391,9 @@ export function notFoundHtml(template: string, origin: string): string {
   return html.slice(0, open) + notFoundBody() + html.slice(close);
 }
 
-/** A price in R432's words, as the patch diff writes it (patches/diff.ts): "(2) Cost, Embiggened (4)" for an embiggen card (R1175000). */
+/** A price in R432's words, as the patch diff writes it (patches/diff.ts): "(2) Cost, Embiggened (+2)" for a 2 embiggen 4 card (R1175000, R5109001). */
 const costText = (cost: CardCost): string =>
-  typeof cost === "object" ? `(${String(cost.base)}) Cost, Embiggened (${String(cost.embiggen)})` : `(${String(cost)}) Cost`;
+  typeof cost === "object" ? `(${String(cost.base)}) Cost, Embiggened (+${String(cost.embiggen - cost.base)})` : `(${String(cost)}) Cost`;
 
 function almanacList(cards: CardDefs): string {
   const entries: string[] = [];

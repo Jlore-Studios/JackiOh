@@ -1200,7 +1200,7 @@ fn r3941001_a_written_face_prints_its_words_filled_and_keeps_its_whole_text() {
         face.short.as_ref().map(|short| short.full.as_str()),
         Some(
             "Shuffle a copy of this and of each card in your hand into your deck. Draw 1 card.\n\
-             Embiggened (1): Copies 25% Radiant."
+             Embiggened (+1): Copies 25% Radiant."
         )
     );
     assert!(

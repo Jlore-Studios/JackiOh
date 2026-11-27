@@ -599,6 +599,17 @@ pub enum CardCost {
     Embiggen { base: i32, embiggen: i32 },
 }
 
+impl CardCost {
+    /// R5109000: "A embiggen B"'s Embiggen premium, B − A, which the Embiggened version costs on top of
+    /// the normal version's finished price; `None` for a card of one price.
+    pub const fn embiggen_premium(&self) -> Option<i32> {
+        match *self {
+            CardCost::Embiggen { base, embiggen } => Some(embiggen - base),
+            CardCost::Fixed(_) | CardCost::X => None,
+        }
+    }
+}
+
 impl Serialize for CardCost {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         #[derive(Serialize)]

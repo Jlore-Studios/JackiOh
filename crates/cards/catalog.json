@@ -1641,11 +1641,11 @@
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Aura: All Units have −{debuff}/−{debuff}.\nEmbiggened (3): −{paidDebuff}/−{paidDebuff} instead."
+      "text": "Aura: All Units have −{debuff}/−{debuff}.\nEmbiggened (+2): −{paidDebuff}/−{paidDebuff} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Enemy Units have −{debuff}/−{debuff}.\nEmbiggened (3): −{paidDebuff}/−{paidDebuff} instead."
+      "text": "Aura: Enemy Units have −{debuff}/−{debuff}.\nEmbiggened (+2): −{paidDebuff}/−{paidDebuff} instead."
     }
   },
   "core-047": {
@@ -1985,7 +1985,7 @@
           "kind": "Divine Shield"
         }
       ],
-      "text": "Rush, Taunt, Lifesteal, Divine Shield\nEmbiggened (3): Equip."
+      "text": "Rush, Taunt, Lifesteal, Divine Shield\nEmbiggened (+1): Equip."
     },
     "radiant": {
       "attack": 6,
@@ -2007,7 +2007,7 @@
           "kind": "Reborn"
         }
       ],
-      "text": "Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (3): Equip."
+      "text": "Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (+1): Equip."
     }
   },
   "core-057": {
@@ -2114,11 +2114,11 @@
     "loc": 14,
     "base": {
       "keywords": [],
-      "text": "Activate: Add a random card to your hand.\nEmbiggened (4): It costs ({setCost})."
+      "text": "Activate: Add a random card to your hand.\nEmbiggened (+2): It costs ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Activate: Add a random Radiant card to your hand.\nEmbiggened (4): It costs ({setCost})."
+      "text": "Activate: Add a random Radiant card to your hand.\nEmbiggened (+2): It costs ({setCost})."
     }
   },
   "core-060": {
@@ -3097,11 +3097,11 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Replace every card in your hand and deck with a random Legendary.\nEmbiggened (4): Your board too."
+      "text": "Replace every card in your hand and deck with a random Legendary.\nEmbiggened (+2): Your board too."
     },
     "radiant": {
       "keywords": [],
-      "text": "Replace every card in your hand and deck with a random Radiant Legendary.\nEmbiggened (4): Your board too."
+      "text": "Replace every card in your hand and deck with a random Radiant Legendary.\nEmbiggened (+2): Your board too."
     }
   },
   "core-084": {
@@ -3139,11 +3139,11 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
+      "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (+2): Armor {paidArmor} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
+      "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (+2): Armor {paidArmor} instead."
     }
   },
   "core-085": {
@@ -5443,11 +5443,11 @@
     "loc": 16,
     "base": {
       "keywords": [],
-      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (2): Also draw a random Spell from your deck."
+      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (+2): Also draw a random Spell from your deck."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (2): Also draw the highest cost Spell from your deck."
+      "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (+2): Also draw the highest cost Spell from your deck."
     }
   },
   "classic-036": {
@@ -9382,11 +9382,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "Shuffle {count|Bone Storm|Bone Storms} into your deck.\nEmbiggened (4): {paidCount} instead."
+      "text": "Shuffle {count|Bone Storm|Bone Storms} into your deck.\nEmbiggened (+2): {paidCount} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle {count|Radiant Bone Storm|Radiant Bone Storms} into your deck.\nEmbiggened (4): {paidCount} instead."
+      "text": "Shuffle {count|Radiant Bone Storm|Radiant Bone Storms} into your deck.\nEmbiggened (+2): {paidCount} instead."
     }
   },
   "classicplus-036-1": {
@@ -12642,11 +12642,11 @@
     "loc": 37,
     "base": {
       "keywords": [],
-      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
+      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (+1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add a Radiant API Key Fishing to your hand."
+      "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (+1): {paidChance}% instead.\nEnd of turn: Add a Radiant API Key Fishing to your hand."
     }
   },
   "meditative-022": {
@@ -13948,11 +13948,11 @@
     "loc": 31,
     "base": {
       "keywords": [],
-      "text": "Add a random KY card, a random CN card and a random Book to your hand.\nEmbiggened (4): They cost ({setCost})."
+      "text": "Add a random KY card, a random CN card and a random Book to your hand.\nEmbiggened (+2): They cost ({setCost})."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a random Radiant KY card, a random Radiant CN card and a random Radiant Book to your hand.\nEmbiggened (4): They cost ({setCost})."
+      "text": "Add a random Radiant KY card, a random Radiant CN card and a random Radiant Book to your hand.\nEmbiggened (+2): They cost ({setCost})."
     }
   },
   "meditative-047": {
@@ -15451,11 +15451,11 @@
     "loc": 38,
     "base": {
       "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (1): Each copy has a {chance}% chance to become Radiant."
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (+1): Each copy has a {chance}% chance to become Radiant."
     },
     "radiant": {
       "keywords": [],
-      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (1): Each copy has a {chance}% chance to become Radiant."
+      "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (+1): Each copy has a {chance}% chance to become Radiant."
     }
   },
   "meditative-082": {
@@ -17284,11 +17284,11 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (3): Draw {embiggenedDraw} instead."
+      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (+2): Draw {embiggenedDraw} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (3): Draw {embiggenedDraw} instead."
+      "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (+2): Draw {embiggenedDraw} instead."
     }
   },
   "meditativeplus-004": {
@@ -17370,11 +17370,11 @@
     "loc": 101,
     "base": {
       "keywords": [],
-      "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (4): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or add {embiggenedCards}."
+      "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (+2): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or add {embiggenedCards}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (4): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or fill your hand with them."
+      "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (+2): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or fill your hand with them."
     }
   },
   "meditativeplus-005": {
@@ -17409,7 +17409,7 @@
           "kind": "Flashback"
         }
       ],
-      "text": "Flashback\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+      "text": "Flashback\nDeal {damage} damage to all Units.\nEmbiggened (+1): With Lifesteal and Pierce."
     },
     "radiant": {
       "keywords": [
@@ -17417,7 +17417,7 @@
           "kind": "Flashback"
         }
       ],
-      "text": "Echo 1, Flashback\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+      "text": "Echo 1, Flashback\nDeal {damage} damage to all Units.\nEmbiggened (+1): With Lifesteal and Pierce."
     }
   },
   "meditativeplus-006": {
@@ -17550,11 +17550,11 @@
     "loc": 30,
     "base": {
       "keywords": [],
-      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (2): Also has \"Cry: Add a random Spell or Field Spell that deals damage to your hand.\""
+      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (+1): Also has \"Cry: Add a random Spell or Field Spell that deals damage to your hand.\""
     },
     "radiant": {
       "keywords": [],
-      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (2): Also has \"Cry: Add a random Radiant Spell or Field Spell that deals damage to your hand.\""
+      "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (+1): Also has \"Cry: Add a random Radiant Spell or Field Spell that deals damage to your hand.\""
     }
   },
   "meditativeplus-010": {
@@ -17941,11 +17941,11 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Steal the top {cards|card|cards} of your opponent's deck.\nEmbiggened (2): Steal {cards|random card|random cards} from their hand instead."
+      "text": "Steal the top {cards|card|cards} of your opponent's deck.\nEmbiggened (+1): Steal {cards|random card|random cards} from their hand instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Steal the top {cards|card|cards} of your opponent's deck. They cost ({setCost}).\nEmbiggened (2): Steal {cards|random card|random cards} from their hand instead."
+      "text": "Steal the top {cards|card|cards} of your opponent's deck. They cost ({setCost}).\nEmbiggened (+1): Steal {cards|random card|random cards} from their hand instead."
     }
   },
   "meditativeplus-020": {
@@ -18117,11 +18117,11 @@
     "loc": 23,
     "base": {
       "keywords": [],
-      "text": "Add {cards|random embiggen card|random embiggen cards} to your hand. Their Embiggened version costs no extra mana.\nEmbiggened (4): Add {embiggenedCards} instead."
+      "text": "Add {cards|random embiggen card|random embiggen cards} to your hand. Their Embiggened version costs no extra mana.\nEmbiggened (+2): Add {embiggenedCards} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {cards|random Radiant embiggen card|random Radiant embiggen cards} to your hand. Their Embiggened version costs no extra mana.\nEmbiggened (4): Add {embiggenedCards} instead."
+      "text": "Add {cards|random Radiant embiggen card|random Radiant embiggen cards} to your hand. Their Embiggened version costs no extra mana.\nEmbiggened (+2): Add {embiggenedCards} instead."
     }
   },
   "meditativeplus-024": {
@@ -21747,7 +21747,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this.\nEmbiggened (5): The Miners offered are Radiant."
+      "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this.\nEmbiggened (+1): The Miners offered are Radiant."
     },
     "radiant": {
       "attack": 6,
@@ -21757,7 +21757,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this, twice.\nEmbiggened (5): The Miners offered are Radiant."
+      "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this, twice.\nEmbiggened (+1): The Miners offered are Radiant."
     }
   },
   "stinkyscape-080": {
@@ -23560,13 +23560,13 @@
       "attack": 8,
       "health": 5,
       "keywords": [],
-      "text": "End of turn: This attacks a random enemy.\nEmbiggened (4): Starship Piece."
+      "text": "End of turn: This attacks a random enemy.\nEmbiggened (+1): Starship Piece."
     },
     "radiant": {
       "attack": 16,
       "health": 10,
       "keywords": [],
-      "text": "End of turn: This attacks a random enemy.\nEmbiggened (4): Starship Piece."
+      "text": "End of turn: This attacks a random enemy.\nEmbiggened (+1): Starship Piece."
     }
   },
   "stinkyscape-128": {
@@ -23597,7 +23597,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Ranged, Cleave\nEmbiggened (2): Starship Piece."
+      "text": "Ranged, Cleave\nEmbiggened (+1): Starship Piece."
     },
     "radiant": {
       "attack": 6,
@@ -23613,7 +23613,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush, Ranged, Cleave\nEmbiggened (2): Starship Piece."
+      "text": "Rush, Ranged, Cleave\nEmbiggened (+1): Starship Piece."
     }
   },
   "stinkyscape-129": {
@@ -23637,13 +23637,13 @@
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "End of turn: Deal damage equal to its Attack split among all enemies.\nEmbiggened (3): Starship Piece."
+      "text": "End of turn: Deal damage equal to its Attack split among all enemies.\nEmbiggened (+2): Starship Piece."
     },
     "radiant": {
       "attack": 4,
       "health": 4,
       "keywords": [],
-      "text": "End of turn: Deal damage equal to twice its Attack split among all enemies.\nEmbiggened (3): Starship Piece."
+      "text": "End of turn: Deal damage equal to twice its Attack split among all enemies.\nEmbiggened (+2): Starship Piece."
     }
   },
   "stinkyscape-130": {
@@ -24843,11 +24843,11 @@
     "loc": 55,
     "base": {
       "keywords": [],
-      "text": "Roll a 100-sided die. If it lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (1): This also gains Lucky +1 for good."
+      "text": "Roll a 100-sided die. If it lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (+1): This also gains Lucky +1 for good."
     },
     "radiant": {
       "keywords": [],
-      "text": "Roll an 80-sided die twice. If either lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (1): This also gains Lucky +1 for good."
+      "text": "Roll an 80-sided die twice. If either lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (+1): This also gains Lucky +1 for good."
     }
   },
   "stinkyscape-155": {
@@ -29791,11 +29791,11 @@
     "loc": 62,
     "base": {
       "keywords": [],
-      "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck. It keeps no cost changes or buffs.\nEmbiggened (3): Shuffle {copy2|copy|copies} of it into your deck instead."
+      "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck. It keeps no cost changes or buffs.\nEmbiggened (+2): Shuffle {copy2|copy|copies} of it into your deck instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck, then Buff them. It keeps no cost changes or buffs.\nEmbiggened (3): Shuffle {copy2|copy|copies} of it into your deck instead, then Buff them."
+      "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck, then Buff them. It keeps no cost changes or buffs.\nEmbiggened (+2): Shuffle {copy2|copy|copies} of it into your deck instead, then Buff them."
     },
     "params": [
       {
@@ -31358,7 +31358,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/24."
+      "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (+3): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/24."
     },
     "radiant": {
       "attack": 0,
@@ -31371,7 +31371,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
+      "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (+3): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
     },
     "params": [
       {
@@ -31420,7 +31420,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Taunt\nEmbiggened (4): GIGA, 0/40."
+      "text": "Can't attack, Taunt\nEmbiggened (+3): GIGA, 0/40."
     },
     "radiant": {
       "attack": 0,
@@ -31437,7 +31437,7 @@
           "n": 2
         }
       ],
-      "text": "Can't attack, Taunt, Armor 2\nEmbiggened (4): GIGA, 0/80."
+      "text": "Can't attack, Taunt, Armor 2\nEmbiggened (+3): GIGA, 0/80."
     }
   },
   "stinkyscapeplus-066": {
@@ -31468,7 +31468,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Taunt\nEnd of turn: Gain Divine Shield.\nEmbiggened (4): GIGA, 0/16."
+      "text": "Can't attack, Taunt\nEnd of turn: Gain Divine Shield.\nEmbiggened (+3): GIGA, 0/16."
     },
     "radiant": {
       "attack": 0,
@@ -31485,7 +31485,7 @@
           "n": 2
         }
       ],
-      "text": "Can't attack, Taunt, Armor 2\nEnd of turn: Gain Divine Shield.\nEmbiggened (4): GIGA, 0/32."
+      "text": "Can't attack, Taunt, Armor 2\nEnd of turn: Gain Divine Shield.\nEmbiggened (+3): GIGA, 0/32."
     }
   },
   "stinkyscapeplus-067": {
@@ -31522,7 +31522,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Immutable, Immune to Spells, Can't attack, Taunt\nEmbiggened (4): GIGA, 0/24."
+      "text": "Immutable, Immune to Spells, Can't attack, Taunt\nEmbiggened (+3): GIGA, 0/24."
     },
     "radiant": {
       "attack": 0,
@@ -31545,7 +31545,7 @@
           "n": 2
         }
       ],
-      "text": "Immutable, Immune to Spells, Can't attack, Taunt, Armor 2\nEmbiggened (4): GIGA, 0/48."
+      "text": "Immutable, Immune to Spells, Can't attack, Taunt, Armor 2\nEmbiggened (+3): GIGA, 0/48."
     }
   },
   "stinkyscapeplus-068": {
@@ -32738,11 +32738,11 @@
     "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Fill your hand with random F tier cards (or D tier if none exist).\nEmbiggened (2): They cost (1) less."
+      "text": "Fill your hand with random F tier cards (or D tier if none exist).\nEmbiggened (+2): They cost (1) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "Fill your hand with random Radiant F tier cards (or D tier if none exist).\nEmbiggened (2): They cost (0)."
+      "text": "Fill your hand with random Radiant F tier cards (or D tier if none exist).\nEmbiggened (+2): They cost (0)."
     }
   },
   "stinkyscapeplus-097": {
@@ -35195,11 +35195,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Add {automa} Automa-δ cards to your hand.\nEmbiggened (4): They have Tribute 1."
+      "text": "Add {automa} Automa-δ cards to your hand.\nEmbiggened (+2): They have Tribute 1."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {automa} Radiant Automa-δ cards to your hand.\nEmbiggened (4): They have Tribute 1."
+      "text": "Add {automa} Radiant Automa-δ cards to your hand.\nEmbiggened (+2): They have Tribute 1."
     },
     "params": [
       {
@@ -35231,11 +35231,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Add {automa} Automa-Ω cards to your hand.\nEmbiggened (3): They have Tribute 2."
+      "text": "Add {automa} Automa-Ω cards to your hand.\nEmbiggened (+2): They have Tribute 2."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add {automa} Radiant Automa-Ω cards to your hand.\nEmbiggened (3): They have Tribute 2."
+      "text": "Add {automa} Radiant Automa-Ω cards to your hand.\nEmbiggened (+2): They have Tribute 2."
     },
     "params": [
       {

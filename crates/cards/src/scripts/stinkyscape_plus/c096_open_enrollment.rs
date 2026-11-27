@@ -1,8 +1,8 @@
 //! S+ #96 Open Enrollment (SPEC §8.12 row 96). (0) embiggen (2) Spell, Common.
 //!   Base:    "Fill your hand with random F tier cards (or D tier if none exist).
-//!            Embiggened (2): They cost (1) less."
+//!            Embiggened (+2): They cost (1) less."
 //!   Radiant: "Fill your hand with random Radiant F tier cards (or D tier if none exist).
-//!            Embiggened (2): They cost (0)."
+//!            Embiggened (+2): They cost (0)."
 //!
 //! Cry (R1): add F-tier cards (D-tier when no F card exists, R3538001) until the hand is full,
 //! Radiant on the Radiant face. Issue #4353 gave it its Embiggened price, (2) (R1175000, the play's
@@ -15,9 +15,9 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-096";
 
-/// "Embiggened (2): They cost (1) less", the base face's (R1748003: a price, printed, declared nowhere).
+/// "Embiggened (+2): They cost (1) less", the base face's (R1748003: a price, printed, declared nowhere).
 const DISCOUNT: i32 = 1;
-/// "Embiggened (2): They cost (0)", the Radiant face's (R1748003: a price, printed, declared nowhere).
+/// "Embiggened (+2): They cost (0)", the Radiant face's (R1748003: a price, printed, declared nowhere).
 const EMBIGGENED_COST: i32 = 0;
 
 /// R3538001: `first` unless its pool is empty, then `then`.

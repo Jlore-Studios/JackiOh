@@ -2296,7 +2296,7 @@
   "Allure": "魅惑",
   "Mark": "标记",
   "(X) Cost": "(X)费",
-  "({base}) Cost, Embiggened ({embiggen})": "({base})费，加码({embiggen})",
+  "({base}) Cost, Embiggened (+{premium})": "({base})费，加码(+{premium})",
   "A trio needs exactly {n} decks; this one has {count}.": "三套卡组需要正好{n}套卡组；这一组有{count}套。",
   "{deck} has {count} card; every deck needs exactly {size}.": "{deck}有{count}张牌；每套卡组需要正好{size}张。",
   "{deck} has {count} cards; every deck needs exactly {size}.": "{deck}有{count}张牌；每套卡组需要正好{size}张。",

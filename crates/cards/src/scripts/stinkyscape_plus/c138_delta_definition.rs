@@ -1,9 +1,9 @@
 //! SPEC §8.12 S+ #138 Delta Definition (§2.4, §5.1, §6.3 Add to hand; R60, R65, R78, R215, R382, R1181003, R1420, R3535000,
 //! R3563000, R3565000, R3565001): (2 embiggen 4) Spell, Mindustrial, Epic, a card of the Stinkyscape+ set.
 //!   Base:    "Add 3 Automa-δ cards to your hand.
-//!            Embiggened (4): They have Tribute 1."
+//!            Embiggened (+2): They have Tribute 1."
 //!   Radiant: "Add 3 Radiant Automa-δ cards to your hand.
-//!            Embiggened (4): They have Tribute 1."
+//!            Embiggened (+2): They have Tribute 1."
 //!
 //! Engine: its Cry is one `addRandomFromCatalog` of `automa` cards (R386, 3 on both faces) from the
 //! Stinkyscape+ cards tagged Automa-δ (R3565001), tokens out (§5.1, R382: no Sceptumbra), the pool naming its set so

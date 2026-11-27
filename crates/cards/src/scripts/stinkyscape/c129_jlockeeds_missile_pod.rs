@@ -1,9 +1,9 @@
 //! Stinkyscape #129 Jlockeed's Missile Pod (SPEC §8.10 row 129). (1, Embiggened 3) Unit, Jlockeed, Epic;
 //! 2/2 → 4/4 (1/1 → 2/2 through v0.6.7k, 2/1 → 4/2 until issue #3837).
 //!   Base:    "End of turn: Deal damage equal to its Attack split among all enemies.
-//!            Embiggened (3): Starship Piece."
+//!            Embiggened (+2): Starship Piece."
 //!   Radiant: "End of turn: Deal damage equal to twice its Attack split among all enemies.
-//!            Embiggened (3): Starship Piece."
+//!            Embiggened (+2): Starship Piece."
 //!
 //! End of turn (R62), R4285002: its Attack as it stands then, through the layers, buffs and auras included
 //! (§10.4, R1878002), times `ATTACK_MULTIPLE` (Radiant `RADIANT_ATTACK_MULTIPLE`), dealt by §4.4's split
@@ -29,7 +29,7 @@ const ATTACK_MULTIPLE: i32 = 1;
 /// R4285002: "twice its Attack", on the Radiant face.
 const RADIANT_ATTACK_MULTIPLE: i32 = 2;
 
-/// R4285001: "Embiggened (3): Starship Piece.": it holds only on a card stamped embiggened (R1878001).
+/// R4285001: "Embiggened (+2): Starship Piece.": it holds only on a card stamped embiggened (R1878001).
 fn embiggened_piece(args: HookArgs<'_>) -> Vec<Keyword> {
     if args.self_.embiggened == Some(true) {
         vec![Keyword::StarshipPiece]

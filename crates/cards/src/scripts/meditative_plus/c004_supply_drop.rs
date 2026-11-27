@@ -2,7 +2,7 @@
 //! R1431): (2, Embiggened 4) Spell, Jlockeed, Epic. Named Supply Drop before issue #1828.
 //!   Base:    "Choose one: In {turns} turns, deal {damage} damage to each enemy, with Pierce and
 //!            Lifesteal; or in {turns} turns, add {cards} random Radiant Jlockeed cards to your hand,
-//!            and each costs ({suppliesCost}). / Embiggened (4): In {embiggenedTurns} turns instead;
+//!            and each costs ({suppliesCost}). / Embiggened (+2): In {embiggenedTurns} turns instead;
 //!            deal {embiggenedDamage} damage, or add {embiggenedCards}." (3; 4, 1 at (2); 5; 9, 5)
 //!   Radiant: the same, "… or fill your hand with them." (3; 9, 2 at (0); 5; 15, a full hand)
 //!

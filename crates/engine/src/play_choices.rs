@@ -294,7 +294,7 @@ pub fn play_made_radiant(state: &GameState, player: PlayerId, card: &CardInstanc
         || tagged_play_radiant(state, player, card)
         || crate::subsystems::feng_shui::rewards(state, player, card)
         || radiant_next_play(state, player)
-        || crate::mana::garden_dearer_price(state, card).is_some()
+        || crate::mana::garden_dearer_premium(state, card).is_some()
 }
 
 /// R831005: whether a live `radiantNextPlay` modifier of the player makes their next play Radiant.

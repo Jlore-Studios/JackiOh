@@ -86,6 +86,11 @@
         "en": "Tradable\nChoose one. You also win while it holds: hero {health}+ Health; graveyard {graveyard}+ cards; or Units {board}+/{board}+. Draw {draw}."
       }
     },
+    "meditative-021": {
+      "radiant": {
+        "en": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (+1): {paidChance}% instead.\nEnd of turn: Add a Radiant API Key Fishing to hand."
+      }
+    },
     "meditative-022": {
       "base": 1,
       "radiant": 1
@@ -140,10 +145,10 @@
     },
     "meditative-081": {
       "base": {
-        "en": "Shuffle a copy of this and of each card in your hand into your deck. Draw {draw|card|cards}.\nEmbiggened (1): Copies {chance}% Radiant."
+        "en": "Shuffle a copy of this and of each card in your hand into your deck. Draw {draw|card|cards}.\nEmbiggened (+1): Copies {chance}% Radiant."
       },
       "radiant": {
-        "en": "Shuffle a copy of this and of each card in your hand into your deck. Draw {draw|card|cards}.\nEmbiggened (1): Copies {chance}% Radiant."
+        "en": "Shuffle a copy of this and of each card in your hand into your deck. Draw {draw|card|cards}.\nEmbiggened (+1): Copies {chance}% Radiant."
       }
     },
     "meditative-091": {
@@ -174,10 +179,10 @@
     },
     "meditativeplus-004": {
       "base": {
-        "en": "Choose one: in {turns|turn|turns}, deal {damage} Pierce Lifesteal damage to each enemy; or add {cards} Radiant Jlockeed cards at ({suppliesCost}).\nEmbiggened (4): Bigger, later."
+        "en": "Choose one: in {turns|turn|turns}, deal {damage} Pierce Lifesteal damage to each enemy; or add {cards} Radiant Jlockeed cards at ({suppliesCost}).\nEmbiggened (+2): Bigger, later."
       },
       "radiant": {
-        "en": "Choose one: in {turns|turn|turns}, deal {damage} Pierce Lifesteal damage to each enemy; or add {cards} Radiant Jlockeed cards at ({suppliesCost}).\nEmbiggened (4): Bigger, later."
+        "en": "Choose one: in {turns|turn|turns}, deal {damage} Pierce Lifesteal damage to each enemy; or add {cards} Radiant Jlockeed cards at ({suppliesCost}).\nEmbiggened (+2): Bigger, later."
       }
     },
     "meditativeplus-020": {
@@ -341,10 +346,10 @@
     },
     "stinkyscape-154": {
       "base": {
-        "en": "Roll a d100. On 67, add every Terminus card at (0).\nEnd of turn: Return to hand.\nEmbiggened (1): Also gains Lucky +1 for good."
+        "en": "Roll a d100. On 67, add every Terminus card at (0).\nEnd of turn: Return to hand.\nEmbiggened (+1): Also gains Lucky +1 for good."
       },
       "radiant": {
-        "en": "Roll a d80 twice. On a 67, add every Terminus card at (0).\nEnd of turn: Return to hand.\nEmbiggened (1): Also gains Lucky +1 for good."
+        "en": "Roll a d80 twice. On a 67, add every Terminus card at (0).\nEnd of turn: Return to hand.\nEmbiggened (+1): Also gains Lucky +1 for good."
       }
     },
     "stinkyscape-157": {
@@ -411,10 +416,10 @@
     },
     "stinkyscapeplus-024": {
       "base": {
-        "en": "Shuffle {copy|copy|copies} of a non-fused card in your hand or field into your deck, as printed.\nEmbiggened (3): {copy2|copy|copies}."
+        "en": "Shuffle {copy|copy|copies} of a non-fused card in your hand or field into your deck, as printed.\nEmbiggened (+2): {copy2|copy|copies}."
       },
       "radiant": {
-        "en": "Shuffle {copy|copy|copies} of a non-fused card in your hand or field into your deck, as printed, then Buff them.\nEmbiggened (3): {copy2}."
+        "en": "Shuffle {copy|copy|copies} of a non-fused card in your hand or field into your deck, as printed, then Buff them.\nEmbiggened (+2): {copy2}."
       }
     },
     "stinkyscapeplus-031": {

@@ -243,7 +243,7 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
 
   it("R277 a keyword line prints the radiant form's whole list and marks what it adds (core-056, core-025, core-019)", () => {
     const jilliax = face("core-056", true);
-    expect(jilliax.text.full).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (3): Equip.");
+    expect(jilliax.text.full).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (+1): Equip.");
     expect(marksOf("core-056")).toEqual(["Reborn"]);
     expect(marksOf("core-025")).toEqual(["Reborn"]);
     expect(marksOf("core-019")).toEqual(["Immutable"]);
@@ -375,7 +375,13 @@ describe("B8: faceModel cost", () => {
     expect(face("core-059", false, { liveEmbiggenCost: 6 }).cost.alt).toBe("6");
   });
 
-  it("B8 an embiggen card's gem shows the view's live number, toned against its base price, and drops the embiggen price", () => {
+  it("R5109001 under a discount the second badge is the view's embiggenCost, the Embiggened version's realized price", () => {
+    // A discount of 3 on a 2 embiggen 4: the engine prices (0) and (0) plus the premium of 2.
+    expect(face("core-059", false, { liveCost: 0, liveEmbiggenCost: 2 }).cost).toEqual({ text: "0", value: "0", tone: "down", alt: "2" });
+    expect(face("core-059", false, { liveCost: 3, liveEmbiggenCost: 5 }).cost).toEqual({ text: "3", value: "3", tone: "up", alt: "5" });
+  });
+
+  it("B8 an embiggen card's gem shows the view's live number, toned against its base price, and drops the embiggen price the view does not give", () => {
     // /fullsend's "your cards cost 1 less" makes one cost 1 in hand: the gem says 1, not 2.
     expect(face("core-059", false, { liveCost: 1 }).cost).toEqual({ text: "1", value: "1", tone: "down", alt: null });
     expect(face("core-059", false, { liveCost: 3 }).cost).toEqual({ text: "3", value: "3", tone: "up", alt: null });
