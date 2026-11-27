@@ -123,6 +123,7 @@ Every number below is a named constant, under the name it had in TypeScript (`pu
 | `MEDIUM_EXTRA_DECK_CARDS` / `HARD_EXTRA_DECK_CARDS` | 5 / 10: the cards a Medium and a Hard AI seat's deck holds past `DECK_SIZE` | §9.9, R1705000 |
 | `MAX_COPIES` | 1 | §2.6, §9.4 |
 | `MAX_MANA` | 4 | §2.3 |
+| `MANA_CEILING` | 15: the most mana a player holds, current or maximum, temporary mana included, and the most X a card chooses or counts; costs are not capped | §2.3, R5148000 |
 | `HERO_HEALTH` | 30 | §2 |
 | `TURN_CAP_PLAYER_TURNS` | 60 | §2.5, R2, R389 |
 | `HAND_CAP` | 10 | §2.4, R4 (decide) |
@@ -260,7 +261,7 @@ Acceptance:
 - Either answer order deals the same game (the same state hash, and both logs fold to it); the other player's view is the same whatever a sealed answer kept; a `timeout` while the mulligans are open keeps that player's whole hand (R265, R266, R268).
 
 **M1-T6 Turn loop and mana.** Files: `engine/src/turn.ts`, `engine/src/mana.ts`, `engine/src/modifiers.ts`.
-Phases per §2.2 and R62. Start-of-turn: the board snapshot (R419), refresh mana (`min(turnsStarted, MAX_MANA) + permMod + nextTurnMod`, floor 0), the Brittle tick (R385), "Animated on your turn" cards animate (R383), delayed effects due, start-of-turn triggers, then draw. End-of-turn: end-of-turn triggers (Combo-Index and "add back to hand" spells included), the Bread and Butter / Intern Stimmy trap window, delayed effects due, cleanup expiring "this turn" modifiers and, last, returning animated "on your turn" cards to their backrow zones (R383), turn-cap check. Cost calculation per R65: `effectiveCost(instance, player)` starts from `costOverride` or the printed cost, adds instance `costMod`, then player discounts (next-spell, this-turn), then Curvature, floors at 0; X-cost cards cost exactly X. X and embiggen selection are part of the `play` action and stored on the instance.
+Phases per §2.2 and R62. Start-of-turn: the board snapshot (R419), refresh mana (`min(turnsStarted, MAX_MANA) + permMod + nextTurnMod`, floor 0, ceiling `MANA_CEILING`, R5148000), the Brittle tick (R385), "Animated on your turn" cards animate (R383), delayed effects due, start-of-turn triggers, then draw. End-of-turn: end-of-turn triggers (Combo-Index and "add back to hand" spells included), the Bread and Butter / Intern Stimmy trap window, delayed effects due, cleanup expiring "this turn" modifiers and, last, returning animated "on your turn" cards to their backrow zones (R383), turn-cap check. Cost calculation per R65: `effectiveCost(instance, player)` starts from `costOverride` or the printed cost, adds instance `costMod`, then player discounts (next-spell, this-turn), then Curvature, floors at 0; X-cost cards cost exactly X. X and embiggen selection are part of the `play` action and stored on the instance.
 Acceptance:
 - Turn 1 P1: 1 mana; turn 4: 4; turn 10: 4. Mana Well turn 4: 5 available.
 - `nextTurnMod = −1` (Hinder) on a turn-2 player yields 1 mana, and 0 mana never goes negative.

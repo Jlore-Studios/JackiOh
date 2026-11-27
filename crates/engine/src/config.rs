@@ -39,6 +39,10 @@ pub const MAX_COPIES: i32 = 1;
 pub const LOADOUT_DECKS: usize = 3;
 /// §2.3
 pub const MAX_MANA: i32 = 4;
+/// §2.3, R5148000: the most mana a player may hold, current or maximum, temporary mana included, and
+/// the most X a card may choose or count. Costs are not capped: a card may cost more, which only
+/// infinite mana (R3548004) or a credit line (R1223) pays.
+pub const MANA_CEILING: i32 = 15;
 /// §2
 pub const HERO_HEALTH: i32 = 30;
 
