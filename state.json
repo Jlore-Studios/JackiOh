@@ -46378,14 +46378,6 @@
         "provider": "claude-7",
         "run_id": "45931165037",
         "taken_asks": []
-      },
-      "5": {
-        "area": "rules",
-        "count": 2,
-        "last_run": "2026-11-27T02:39:06Z",
-        "provider": "claude-3",
-        "run_id": "45929587096",
-        "taken_asks": []
       }
     },
     "taken_asks": []
