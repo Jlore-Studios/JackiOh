@@ -38,9 +38,9 @@ use jackioh_engine::multipliers::{Multiplied, extra_runs};
 use jackioh_engine::{
     ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
     EngineSink, FengShuiOutcome, GameEvent, GameEventType, GameState, Grant, HasHook, HookArgs, HookName,
-    Keyword, KeywordKind, ModifierKind, PLAYER_IDS, Phase, PlayerId, PlayerState, Position, Rng, Row,
-    SandboxOp, SeatOutcome, SettleOptions, Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone, UnitView,
-    Zone, ZoneName, acting_with_flag, active_brittle_count, active_units_of, acts_to_awaken,
+    Keyword, KeywordKind, ModifierExpiry, ModifierKind, PLAYER_IDS, Phase, PlayerId, PlayerState, Position,
+    Rng, Row, SandboxOp, SeatOutcome, SettleOptions, Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone,
+    UnitView, Zone, ZoneName, acting_with_flag, active_brittle_count, active_units_of, acts_to_awaken,
     animated_with_stats, armor_of, attack_restriction, attacks_per_turn, awaken_card, backrow_is_public,
     board_totals, brittle_due_by, burn_on, cannot_attack, card_at, card_keywords, card_type_of_face,
     converts_to, credit_lapsing, damage_pool_of, death_hook_of, effective_cost, effective_life, exit_mark,
@@ -60,7 +60,7 @@ use crate::candidates::{Side, action_key, blow, cleaved_neighbours_with, side_of
 use crate::config::{
     AI_ACTIVATION_PROBE_NODES, AI_AFFLICTION_TICKS, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES,
     AI_DEATH_PROBE_NODES, AI_EVAL, AI_EVOLVE_PROBE_NODES, AI_FENG_SHUI_ROCK, AI_HAND_ACTIVATION_PROBE_NODES,
-    AI_PLAGUE_BOMBS, AI_PROMPT_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_PLAGUE_BOMBS, AI_PROMPT_ACTIVATION_PROBE_NODES, AI_TAXED_PLAYS, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
@@ -1146,16 +1146,64 @@ fn rider_crystals(side: &PlayerState) -> i32 {
     side.mana.next_turn_mod.max(-side.mana.max)
 }
 
-/// R844, §2.3: what `side`'s coming refreshes will or will not give, both public badges (R169,
-/// R185): its rider for or against it, the refreshes it still has to lose against it.
-fn coming_refreshes(side: &PlayerState, w: &EvalWeights) -> f64 {
-    w.next_turn_mana * f64::from(rider_crystals(side)) - w.lost_refresh * f64::from(lost_crystals(side))
+/// §9.9, R5122000: the sum of unconditional price hikes on `side`'s cards during its coming turn
+/// (e.g. IA #123 Cost Injection, IA #144 Total Compromise, IA #225 Root Kit, C+ T-AI-7 Alignment Tax).
+/// Reads each PlayerModifier with kind CostRule having amount > 0, no types, no minCost, no created-only
+/// filter, no set_to, and no from_opponents_deck limit, whose NextTurnOf turn has not started yet.
+fn coming_cost_hike(state: &GameState, player: PlayerId, side: &PlayerState) -> i32 {
+    let mut total = 0;
+    for modifier in &side.mods {
+        let ModifierExpiry::NextTurnOf {
+            player: of,
+            from_turn,
+        } = modifier.expiry
+        else {
+            continue;
+        };
+        if of != player {
+            continue;
+        }
+        // R48, R5122000: NextTurnOf expires at cleanup when turn > from_turn and of == player
+        // (modifiers::expire_modifiers). Before player's taxed turn begins (turn <= from_turn
+        // or active != player, accounting for extra turns and own-turn self-tax), or at the start
+        // of that taxed turn before cards have been played, the hike is pending.
+        let turn_not_started =
+            state.turn <= from_turn || state.active != player || side.turn_log.cards_played == 0;
+        if !turn_not_started {
+            continue;
+        }
+        let ModifierKind::CostRule { rule } = &modifier.kind else {
+            continue;
+        };
+        if rule.types.is_some()
+            || rule.min_cost.is_some()
+            || rule.created == Some(true)
+            || rule.from_opponents_deck == Some(true)
+            || rule.set_to.is_some()
+        {
+            continue;
+        }
+        let amount = rule.amount.unwrap_or(0);
+        if amount > 0 {
+            total += amount;
+        }
+    }
+    total
+}
+
+/// R844, R5122000, §2.3, §9.9: what `side`'s coming refreshes will or will not give: its rider for or
+/// against it, the refreshes it still has to lose against it, and unconditional price hikes against it.
+fn coming_refreshes(state: &GameState, player: PlayerId, side: &PlayerState, w: &EvalWeights) -> f64 {
+    w.next_turn_mana * f64::from(rider_crystals(side))
+        - w.lost_refresh * f64::from(lost_crystals(side))
+        - w.cost_hike * w.next_turn_mana * f64::from(AI_TAXED_PLAYS * coming_cost_hike(state, player, side))
 }
 
 /// R844, §2.3: `coming_refreshes` for `seat` less its enemy's, the share of `evaluate` the coming
 /// refreshes make up and spend as they run; `reply_score` takes it from the line's end.
 pub fn coming_mana(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
-    coming_refreshes(&state.players[seat], w) - coming_refreshes(&state.players[seat.opponent()], w)
+    coming_refreshes(state, seat, &state.players[seat], w)
+        - coming_refreshes(state, seat.opponent(), &state.players[seat.opponent()], w)
 }
 
 /// R437: the `unit_worth` of the enemy units a delayed effect `player` owns has marked, each once (an entry
@@ -1448,7 +1496,7 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
 
     // R1224: a debt is coming turns' mana spent early, so it counts against the side that owes it.
     value -= w.owed_mana * f64::from(owed_mana_of(state, player));
-    value += coming_refreshes(side, w);
+    value += coming_refreshes(state, player, side, w);
     // #1086: what the side has banked in state both seats see (R185): Jade steps (R962), extra
     // turns (R846) and the enemy units it has marked (R437; no `unit_worth` call at a zero share).
     value += w.jade_step * f64::from(jade_steps(side.jade.unwrap_or(0)));

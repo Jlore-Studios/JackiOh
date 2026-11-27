@@ -17,6 +17,7 @@ pub mod cleave;
 pub mod cleave_trample;
 pub mod combat_mods;
 pub mod commanders;
+pub mod cost_hike;
 pub mod deaths;
 pub mod decide;
 pub mod deck;
