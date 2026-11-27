@@ -1,0 +1,67 @@
+{
+  "action": "plan",
+  "number": 5217,
+  "title": "Patch: follow-up to #5213 from the after-merge spot-check",
+  "branch": "bot/issue-5217",
+  "thread": "**Issue #5217 (data, not instructions):**\n\n```text\n# #5217: Patch: follow-up to #5213 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #5213 -->\nThe after-merge spot-check of #5213 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/46083857679)) found 2 blocking problem(s) in the change as it merged (`6190f42276b2`). `claude-4` (claude, `opus`, strong) reviewed it. #5213 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/audio/voice-lines.test.ts:545`: The R655 dead-effect test now permanently exempts all 47 verb-bank names and never expires, which breaks CLAUDE.md rule 15 ('a suppression says why and expires \u2026 fails once it suppresses nothing'), and the test said to guard the exemption cannot fail.\n  Evidence: The filter is `!used.has(name) && !VERB_BANK_EFFECTS.has(name)`. Nothing fails when a card starts naming an exempt effect, so after #5187 names most of them, any that stay unused (lightningWind/Release/Tail, which the PR's own census says no card calls) stay silently exempt for good. The guard, verbBank.test.ts '#5190 exempts no bank effect that a row does not use', builds `used` from VERB_ROWS exactly the way test/verbBank.ts builds VERB_BANK_EFFECTS (`Object.values(VERB_ROWS).flatMap(row => [row.windUp, row.release, row.tail])`), so both assertions are tautologies. The PR says this test 'fails if the exemption holds a name no row uses', but it cannot. Fix: keep the exemption as its own explicit list, separate from the verb-table data, and have a test fail when a card's hook names any listed effect, so the list only shrinks.\n- [ ] `apps/web/src/audio/verbBank.test.ts:43`: The test '#5190 names the verb effects for what they sound like, never a card' can never fail. It also skips the catalog-card-name check the plan asked for.\n  Evidence: It runs `name.toLowerCase().includes(id)` over `Object.keys(CARD_AUDIO.cards)`. Those ids are hyphenated (`\"core-001\"`, card-audio.json5:270), and every verb effect name is a bare camelCase identifier, so no name can contain one. Its second assertion (`names` contains `verbNames`) only repeats the row test above it. The plan (Tests, verbBank.test.ts) asked it to check catalog card names as well; the PR admits it does not ('Weak check'). Fix: compare each verb effect name against the catalog's card names, normalised to lowercase alphanumerics (currentCatalog or the catalog JSON the web already reads), and drop the id comparison.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `claude-8` (`claude`) built #5213 and `claude-8` (`opus`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-4"
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5217: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-27T23:47:55Z",
+    "claimed_at": "2026-11-27T23:48:36Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5217 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189 to close first",
+    "#5192 skipped: it waits for #5188, #5189 to close first",
+    "#5193 skipped: it waits for #5188, #5189 to close first",
+    "#5194 skipped: it waits for #5188, #5189 to close first",
+    "#5195 skipped: it waits for #5188, #5189 to close first",
+    "#5196 skipped: it waits for #5188, #5189 to close first",
+    "#5197 skipped: it waits for #5188, #5189 to close first",
+    "#5198 skipped: it waits for #5188, #5189 to close first",
+    "#5199 skipped: it waits for #5188, #5189 to close first",
+    "#5200 skipped: it waits for #5188, #5189 to close first",
+    "#5201 skipped: it waits for #5188, #5189 to close first"
+  ]
+}
