@@ -41569,41 +41569,6 @@
         "approver": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-4",
-          "tier": "strong"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-4"
-        },
-        "difficulty": "hard",
-        "done_at": "2026-11-07T07:17:17Z",
-        "every": 5,
-        "findings": 0,
-        "head": "19f8d2543ae077785606358e777409f4758d76ca",
-        "issue": 3333,
-        "merged_at": "2026-11-07T06:39:51Z",
-        "n": 125,
-        "pr": 3360,
-        "queued_at": "2026-11-07T06:39:51Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-7",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42349899165",
-        "sha": "f15ce12a7d705fd0ef814cc0f910534dfe4df519",
-        "started_at": "2026-11-07T07:06:58Z",
-        "status": "done",
-        "title": "Patch: Starships built from what they hold: every Starship Piece drawn on the hull as itself, hull designs of their own, and a dormant ship in a shipyard",
-        "tries": 0,
-        "verdict": "clean"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "opus",
           "provider": "claude-7",
           "tier": "strong"
         },
@@ -45092,7 +45057,9 @@
           "provider": "claude-7"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-27T06:14:31Z",
         "every": 5,
+        "findings": 0,
         "head": "168615aca8a937b4520a12f1e535504d26dcab58",
         "issue": 5109,
         "merged_at": "2026-11-27T06:06:35Z",
@@ -45105,12 +45072,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:72fd6d1c-1795759640",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45949870749",
         "sha": "49b908bc47893c2a2cf4f9bc8371c42e587ddd9d",
         "started_at": "2026-11-27T06:07:37Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: an Embiggened version costs its normal price plus a premium, so every discount moves both prices alike",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 625
