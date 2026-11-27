@@ -549,9 +549,9 @@ describe("R2577000 a unit on the field draws only the keywords that can still ac
       "Flexible",
       "Stack",
       "Temporary",
-      "Woozy",
       "Toxic",
       "Tradable",
+      "Woozy",
     ]);
     for (const kind of ["Starship Piece", "Starship", "Can't Defend", "Charge", "Rush", "Brittle", "GIGA", "Frenzy", "Evasive"] as const) expect(KEYWORD_VISUALS[kind].onField, kind).toBe(true);
   });
