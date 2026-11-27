@@ -5,7 +5,8 @@
 //!  * Immune to Spells: targeting is `play_choices`'s; "doesn't affect it" is `unaffected_by`, which
 //!    `effects/targets.rs` asks of every card a target or a board scope names and, since R4453000,
 //!    `card_scope::cards_in_card_scope` of each field card, `buff_all_units`, `switch_all_positions`, the
-//!    Radiant picks' field pool and a Plague Counter placement (`effect_is_from_spell` there).
+//!    Radiant picks' field pool and a Plague Counter placement (`effect_is_from_spell` there), and since
+//!    R5117000 `crush` of each Unit in its zone.
 //!  * Evasive's targeting half (R4353002, R450): every declaration and `target` prompt asks
 //!    `evasive_bars`, which bars a Spell's and a Field Spell's aim; random picks, scopes, Traps, Field
 //!    Traps and Units still reach it. Immutable bars no aim since R4353001: its text half (R23) is read

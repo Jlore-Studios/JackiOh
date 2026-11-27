@@ -1271,3 +1271,58 @@ mod r4453000_a_spells_allure_passes_a_unit_immune_to_spells_by {
         assert_eq!(by_unit, both, "a Unit's Allure reaches it");
     }
 }
+
+// Issue #5117: the daily fuzz's handicapped seed 9498 played a Spell holding S+ #121 Toxopid's Cry (a
+// fusion), and its crush destroyed an enemy S+ #111 Mace, Immune to Spells, which I21 caught.
+mod r5117000_a_spells_crush_passes_a_unit_immune_to_spells_by {
+    use super::*;
+    use jackioh_engine::effects::{CrushArgs, PlayerSpec, crush};
+
+    /// `crush` of the enemy's unit zone in `lane`, applied as `source`'s, p1's, and whether it marked
+    /// the Unit standing there.
+    fn crushes(s: &mut Scenario, source: &CardInstance, lane: i32) -> bool {
+        let id = id_at(s, P2, lane);
+        let mut events: Vec<GameEvent> = Vec::new();
+        let state = s.state_mut();
+        let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            let options = HookOptions {
+                controller: Some(P1),
+                ..Default::default()
+            };
+            let mut ctx = make_context(&mut sink, Some(source), options);
+            let args = CrushArgs {
+                player: PlayerSpec::Enemy,
+                row: None,
+                lane,
+            };
+            (crush(args).apply)(&mut ctx);
+        }
+        s.card(id.as_str()).marked_destroyed == Some(true)
+    }
+
+    #[test]
+    fn r5117000_a_spells_crush_passes_a_unit_immune_to_spells_by_and_a_units_crush_destroys_it() {
+        let board_of = |seed: &str| {
+            board(
+                "p1",
+                seed,
+                json!(["stand-in (0) Spell"]),
+                json!([{ "def": "stand-in (1) 1/1", "lane": 1 }]),
+                json!([plain.id]),
+                json!([
+                    { "def": "stand-in (1) 4/4 Immune to Spells", "lane": 1 },
+                    { "def": "stand-in (1) 4/4", "lane": 2 },
+                ]),
+            )
+        };
+        let mut s = board_of("r5117000-spell");
+        let spell = s.card("stand-in (0) Spell").clone();
+        assert!(!crushes(&mut s, &spell, 1), "the Spell passes the immune Unit by");
+        assert!(crushes(&mut s, &spell, 2), "and destroys the Unit beside it");
+        let mut s = board_of("r5117000-unit");
+        let unit = s.unit(P1, 1).expect("the Unit");
+        assert!(crushes(&mut s, &unit, 1), "a Unit's crush reaches it");
+    }
+}

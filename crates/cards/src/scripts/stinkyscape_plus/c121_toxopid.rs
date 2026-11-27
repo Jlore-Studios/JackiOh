@@ -728,6 +728,47 @@ mod tests {
         }
     }
 
+    #[test]
+    fn r5117000_a_spell_running_its_cry_crushes_no_unit_immune_to_spells_and_lands_no_leg_there() {
+        const IMMUNE: &str = "stand-in (1) 4/4 Immune to Spells";
+        const KEPT: &str = "stinkyscape-126";
+        let (mut spared, mut crushed) = (0, 0);
+        for n in 0..SEEDS {
+            let mut s = weapon_board(
+                &format!("s121-spell-{n}"),
+                json!({
+                    "mana": 10,
+                    "hand": [KEPT],
+                    "field": units_in(IMMUNE, 1..=5),
+                    "backrow": units_in(TRAP, 1..=5),
+                }),
+                json!({ "field": units_in(VANILLA, 1..=5), "backrow": units_in(TRAP, 1..=5) }),
+            );
+            // The issue's fusion: the Toxopid fused into a Spell in hand, which keeps the Spell's type (R77).
+            let spell = s.card(KEPT).id.clone();
+            let fuse = fuse_cards(json_as(json!({ "defIds": [ID], "intoInstanceId": spell })));
+            crate::run_as(&mut s, fuse, P1);
+            assert_eq!(card_type_of(s.state(), s.card(spell.as_str())), CardType::Spell, "seed {n}");
+            let immune: Vec<String> = (1..=UNIT_ZONES).map(|lane| s.unit_at(P1, lane).id).collect();
+            let vanillas: Vec<String> = (1..=UNIT_ZONES).map(|lane| s.unit_at(P2, lane).id).collect();
+            s.play(spell.as_str(), json!({}));
+            assert!(s.state().pending.is_none(), "seed {n}: no prompt opens");
+            for (lane, id) in (1..=UNIT_ZONES).zip(&immune) {
+                assert_eq!(s.unit_at(P1, lane).id, *id, "seed {n}: the Spell passes it by");
+            }
+            assert!(legs_of(&s, P1).is_empty() && backrow_legs_of(&s, P1).is_empty(), "seed {n}");
+            let destroyed = vanillas
+                .iter()
+                .filter(|id| s.card(id.as_str()).zone.z() == ZoneName::Graveyard)
+                .count();
+            assert_eq!(legs_of(&s, P2).len(), destroyed, "seed {n}: a Leg where each crush freed the zone");
+            spared += 3 - destroyed;
+            crushed += destroyed;
+        }
+        assert!(spared > 0, "an immune Unit's zone is drawn on some seed");
+        assert!(crushed > 0, "a Unit not immune is crushed on some seed");
+    }
+
     /// R767000: the script kept for the replays from before issue #5048, whose Cry landed its Legs in
     /// random empty unit zones only (R4154300).
     mod kept_before_crushing_legs {
