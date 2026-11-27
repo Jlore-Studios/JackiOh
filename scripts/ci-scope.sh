@@ -403,6 +403,8 @@ for file in $files; do
   case "$file" in
     crates/server/Cargo.toml | crates/tools/Cargo.toml) on web ;;
     crates/server/src/env.rs | crates/server/src/app.rs | crates/server/Dockerfile | crates/server/tests/deploy/* | crates/engine/tests/fixtures/*) on web ;;
+    # i18n.test.ts reads the engine's Call to Chaos labels and modifier labels (R711000).
+    crates/engine/src/view_for.rs | crates/engine/src/subsystems/*) on web ;;
     crates/server/tests/fixtures/practice-claim.json) on web ;;
     crates/server/* | crates/tools/* | crates/*/README.md) ;;
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/* | crates/shared/tests/*) ;;

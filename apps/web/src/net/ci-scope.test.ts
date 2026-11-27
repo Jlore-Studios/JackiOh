@@ -424,6 +424,9 @@ describe("scripts/ci-scope.sh", () => {
         "crates/ai/src/decide.rs",
         "crates/wasm/src/lib.rs",
         "crates/shared/src/series.rs",
+        // i18n.test.ts reads the engine's Call to Chaos and modifier labels (R711000).
+        "crates/engine/src/view_for.rs",
+        "crates/engine/src/subsystems/call_to_chaos_stinky.rs",
         "crates/server/Cargo.toml",
         "crates/tools/Cargo.toml",
         // `web (wasm c module)` builds the C module and reads its imports (#3093, #3097).

@@ -26,6 +26,7 @@ import { BOARD_NAMES_OPTIONS } from "../settings/controls.tsx";
 import { SETTINGS_SLOTS } from "../settings/slots.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import chineseJson from "../../../../crates/cards/chinese.json";
+import chaosNames from "../../../../crates/shared/data/chaos-names.json";
 import {
   formatDateTime,
   formatDay,
@@ -91,6 +92,44 @@ function sentencesIn(path: string, text: string): { at: string; key: string }[] 
 function untranslated(sentences: readonly { at: string; key: string }[]): string[] {
   return sentences.filter(({ key }) => !Object.hasOwn(zhCN, key)).map(({ at, key }) => `${at}: ${JSON.stringify(key)}`);
 }
+
+/** Every `label: "…"` of the engine's Call to Chaos clauses, bar the ones built with `format!` (a `{` in the literal): those are outside this scan's reach. */
+function chaosLabels(): string[] {
+  const dir = join(SRC, "../../../crates/engine/src/subsystems");
+  return readdirSync(dir)
+    .filter((name) => /^call_to_chaos.*\.rs$/u.test(name))
+    .flatMap((name) => [...readFileSync(join(dir, name), "utf8").matchAll(/label: "((?:[^"\\]|\\.)*)"/gu)].map((m) => m[1] ?? ""))
+    .filter((label) => !label.includes("{"));
+}
+
+/** The literal labels of the engine's modifier badges (`modifier_label` in `view_for.rs`); a label built with `format!` is outside this scan's reach. */
+function modifierLabels(): string[] {
+  const source = readFileSync(join(SRC, "../../../crates/engine/src/view_for.rs"), "utf8");
+  const from = source.indexOf("fn modifier_label(");
+  const body = source.slice(from, source.indexOf("fn modifier_views(", from));
+  return [...body.matchAll(/"((?:[^"\\]|\\.)*)"\.to_string\(\)/gu)].map((m) => (m[1] ?? "").replaceAll('\\"', '"')).filter((label) => !label.includes("{"));
+}
+
+/** The longest dictionary key with `{name}` tokens whose literal pieces the sentence starts with, holds in order and ends with: a diagnostic for the failure message only, not `t()`'s own matcher. */
+function catchingKey(sentence: string): string {
+  let best = "(no key)";
+  for (const key of Object.keys(zhCN)) {
+    const pieces = key.split(/\{\w+\}/u);
+    if (pieces.length < 2) continue;
+    let at = 0;
+    const holds = pieces.every((piece, i) => {
+      const found = sentence.indexOf(piece, at);
+      if (found < 0 || (i === 0 && found !== 0)) return false;
+      at = found + piece.length;
+      return true;
+    });
+    if (holds && sentence.endsWith(pieces.at(-1) ?? "") && key.length > (best === "(no key)" ? 0 : best.length)) best = key;
+  }
+  return best;
+}
+
+const HAN = /\p{Script=Han}/u;
+const ENGLISH_RUN = /\b[A-Za-z]+\s[A-Za-z]+\b/u;
 
 describe("R711000 internationalisation and reader language", () => {
   beforeEach(() => {
@@ -316,6 +355,27 @@ describe("R711000 internationalisation and reader language", () => {
       held += 1;
     }
     expect(held).toBeGreaterThan(0);
+  });
+
+  // An engine sentence with no exact entry is matched by a dictionary key with `{name}` tokens written for another screen, and comes out half
+  // Chinese, half English (`Add {card} to {deck}`, the deck builder's label, caught Call to Chaos clauses; `You are {rank}`, the leaderboard's,
+  // the fatigue-immunity badge). A wholly English result is the documented fallback and passes. The fix is one exact entry: `t()` checks it first.
+  it("R711000 no engine sentence the board shows is half translated by a key written for another screen", async () => {
+    await setLocale("zh-CN");
+    // The banner shows a clause's short name when `chaos-names.json` has one, and a short name has its own entry.
+    const named = new Set(Object.values(chaosNames).flatMap((table) => Object.keys(table)));
+    const sentences = [...new Set([...chaosLabels().filter((label) => !named.has(label)), ...modifierLabels()])];
+    expect(sentences.length).toBeGreaterThan(40);
+    const half = sentences.flatMap((sentence) => {
+      const shown = t(sentence);
+      return HAN.test(shown) && ENGLISH_RUN.test(shown)
+        ? [`${JSON.stringify(sentence)} -> ${JSON.stringify(shown)} (caught by "${catchingKey(sentence)}"; fix: one exact zh-CN.json entry)`]
+        : [];
+    });
+    expect(half).toEqual([]);
+    // The keys that caught them read as before when the client calls them with params.
+    expect(t("You are {rank}", { rank: "Gold" })).toBe("你的段位是Gold");
+    expect(t("Add {card} to {deck}", { card: "X", deck: "Y" })).toBe("将X加入Y");
   });
 
   it("R711000 the t() guard names the file and line of a literal with no entry, in either branch of a conditional", () => {
