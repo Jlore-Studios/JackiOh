@@ -22182,7 +22182,7 @@
       "planned_tier": "strong",
       "provider": "claude-6",
       "round_tier": "",
-      "run_id": "pending:aa66c1a4-1795766176",
+      "run_id": "45961944895",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-27T07:56:32Z",
       "stop_requested": false,
