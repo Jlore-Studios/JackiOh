@@ -305,8 +305,9 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     // diverged, every game clean; its scene tests (crates/ai/tests/ai/wide_lethal.rs) settle it
     // (training/improve.md, A screen). false stops every walk at its scaled allowance.
     lethal_reach: true,
-    // R4791000: on. Its deal screen, 400 games on improve-dev against the control at 5991e8da39, is still
-    // being played as this is written; its scene tests (crates/ai/tests/ai/budget.rs) hold it.
+    // R4791000: on. 400 games on improve-dev, 200-200, edge 0.000 (-0.024 to +0.024), 6 decided (3-3), 25
+    // diverged, every game clean, vs control 5991e8da39: inconclusive (R4319000), kept; its scene tests
+    // (crates/ai/tests/ai/budget.rs) settle it (training/improve.md, A screen).
     close_cut_lines: true,
     // R4797000: on. Its deal screen, 400 games on improve-dev against the control at the R4791000 commit,
     // is still being played as this is written; its scene tests (crates/ai/tests/ai/float_discount.rs)
