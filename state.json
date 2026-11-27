@@ -22147,9 +22147,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T03:36:04Z",
+    "at": "2026-11-27T03:36:34Z",
     "url": "",
-    "what": "revise #5144 on agy"
+    "what": "suggestions (client) on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-27T03:26:23Z",
@@ -46342,13 +46342,22 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-27T03:35:39Z",
-    "last_area": "server",
-    "last_run": "2026-11-27T02:55:32Z",
+    "idle_since": "2026-11-27T03:36:34Z",
+    "last_area": "client",
+    "last_run": "2026-11-27T03:36:34Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "client",
+        "count": 1,
+        "last_run": "2026-11-27T03:36:34Z",
+        "provider": "claude-4",
+        "run_id": "pending:23a341d4-1795750578",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
