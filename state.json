@@ -19936,17 +19936,8 @@
       "stop_requested": false
     },
     "5171": {
-      "action": "plan",
-      "asks": [
-        "c:7227642752"
-      ],
-      "build_next": {
-        "from_run": "46065934961",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-27T20:55:18Z",
-        "until": "2026-11-27T21:25:18Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-27T20:55:07Z",
         "difficulty": "medium",
@@ -19965,10 +19956,9 @@
         "reason": "planned on sonnet",
         "trail": "- said: I'll read the test module first.\n- Grep: {\"pattern\": \"fn (late_fork|echo|test_header|hand_line|write_save|play_deal|identity_check|load_save|resume_save|check_header|play_game_probed|deal_finished_before_a_batch_error|resume_refuses_a_chang\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/scripts/ci-shards.toml\", \"offset\": 30, \"limit\": 45}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/crates/tools/src/fork_screen.rs\", \"offset\": 1222, \"limit\": 110}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/crates/tools/src/fork_screen.rs\", \"offset\": 1460, \"limit\": 170}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/crates/tools/src/fork_screen.rs\", \"offset\": 1790, \"limit\": 290}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/crates/tools/src/fork_screen.rs\", \"offset\": 680, \"limit\": 370}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/crates/tools/src/fork_screen.rs\", \"offset\": 1045, \"limit\": 110}\n- Grep: {\"pattern\": \"type ScriptedAnswer|struct SavedArm|struct SavedFork|struct DealLine|fn replays|fn scripted|derive.*\\\\n.*struct (SavedArm|SavedFork|DealLine)\", \"path\": \"/home/runner/work/_temp/work/item\u2026\n- tool error: Search failed \u2014 ripgrep rejected the pattern, glob, or file type without searching: rg: the literal \"\\n\" is not allowed in a regex Consider enabling multiline mode with the --multiline flag (or -U fo\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/crates/tools/src/fork_screen.rs\", \"offset\": 2078, \"limit\": 110}\n- Grep: {\"pattern\": \"ScriptedAnswer|struct SavedArm|struct SavedFork|struct DealLine|fn replays|fn scripted|fn duel_line\", \"path\": \"/home/runner/work/_temp/work/item-5171/crates/tools/src\", \"output_mode\": \"c\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5171/.bot-plan.md\", \"content\": \"Draft #5171: tests-only change in crates/tools/src/fork_screen.rs (mod tests) + scripts/ci-shards.toml comment.\\nRead:\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Tests-only change in one module (crates/tools/src/fork_screen.rs) plus a comment in scripts/ci-shards.toml; no engine, AI, cross-crate, migration or 40-file change, so none of the five hard lines holds.\"} --> ## Goal Five R4607000 tests in `crates/tools/sr\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-27T20:46:43Z",
       "owner_why": "it plans it",
@@ -19981,12 +19971,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-27T20:35:44Z",
       "requested_by": "jgoetzmann",
-      "run_id": "46065934961",
+      "run_id": "pending:945e059c-1795812958",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-27T20:46:43Z",
+      "started_at": "2026-11-27T20:56:21Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7227642752"
+      ]
     },
     "5172": {
       "action": "review",
@@ -20056,9 +20048,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T20:46:43Z",
+    "at": "2026-11-27T20:56:21Z",
     "url": "",
-    "what": "plan #5171 on claude-8"
+    "what": "build #5171 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-27T20:40:09Z",
