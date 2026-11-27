@@ -1,0 +1,22 @@
+{
+  "title": "Patch: cap every mana amount and every chosen X at 15",
+  "sources": "issue #5148",
+  "notes": "Issue #5148 (R5148000): a player holds at most MANA_CEILING (15) mana, current or maximum, temporary mana included (every gain, a refresh and its riders, persistent modifiers, crystal steals); what would pass it is lost. An X-cost card's chosen, cast, set or counted X is at most 15 (an X that is no price, Lil' Kenny's count, is not capped), under a credit line (R1223) and infinite mana (R3548004) too. Costs are not capped: infinite mana still pays Core #100 Ceaseless Void at (16) or more. Asked for as a preemptive counter to infinite mana dealing unbounded damage. S #153 Stimmycheck, a (0) gain of 1 mana that returns each turn, is the card classify finds playing differently.",
+  "player": {
+    "title": "Mana and X capped at 15",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "You can hold at most 15 mana. Mana you would gain past 15, temporary mana included, is lost.",
+      "In Too Deep's 100-mana reward and Last Word's Radiant 100 mana now leave you with 15.",
+      "An X is at most 15, however much mana you have, borrowed mana and infinite mana included.",
+      "Card costs are not capped: infinite mana still lets you play Ceaseless Void while it costs (16) or more."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "plays": [
+    "stinkyscape-153"
+  ]
+}

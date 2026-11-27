@@ -193,15 +193,15 @@ mod tests {
         #[test]
         fn r386_radiant_multiple_reads_through_param() {
             let mut s = scenario(json!({
-                "p1": { "hand": [{ "def": LIKELY, "radiant": true }, FILLER], "mana": 9, "field": [MENACE] },
+                "p1": { "hand": [{ "def": LIKELY, "radiant": true }, FILLER], "mana": 5, "field": [MENACE] },
                 "p2": { "hand": [FILLER] },
             }));
             step_param(s.card_mut(LIKELY), "multiple", 1);
 
             s.play(LIKELY, json!({ "targets": pick::card(&s, MENACE) }));
 
-            // Three times the Menace's 3.
-            s.expect_mana(P1, 18);
+            // Three times the Menace's 3, under the mana ceiling.
+            s.expect_mana(P1, 14);
         }
 
         #[test]
