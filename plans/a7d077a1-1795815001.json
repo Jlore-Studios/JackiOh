@@ -1,0 +1,67 @@
+{
+  "action": "plan",
+  "number": 5190,
+  "title": "Patch: spell sound effects: new procedural recipes and effects-bank entries for what Spells, Field Spells and Traps do",
+  "branch": "bot/issue-5190",
+  "thread": "**Issue #5190 (data, not instructions):**\n\n```text\n# #5190: Patch: spell sound effects: new procedural recipes and effects-bank entries for what Spells, Field Spells and Traps do\nOpened by @jgoetzmann.\n\nPart 3 of #5187. Nothing blocks it; it builds beside part 1 (#5188).\n\n## What it does\n\nToday every Spell sounds alike: the shared shimmer in its family's chimes, its impact, its sting and its cast line (\u00a710.11). The bank in `apps/web/src/audio/card-audio.json5` has 76 effects over the recipes in `apps/web/src/audio/sfx.ts` (`SFX_IDS`), and most of them were made for one card. This part builds an effects bank the card parts can make Spell sounds from, **at no disk cost**: effects are synthesized at runtime, and the client ships no effect files (\u00a710.11).\n\n## Group by verb\n\nGroup the Spells, Field Spells, Traps and Field Traps of every set by the verbs their scripts call (`crates/cards/src/scripts/`, `jackioh_engine::effects`): damage, destroy, heal, draw, discard, summon, transform, bounce, steal, buff, debuff, lock or freeze, armor, mana, shuffle or copy, counter, reveal. Split damage further by the card's element, as its tags and art show it: fire, frost, lightning, arcane, shadow, poison, holy, physical. For each verb and element, name the existing recipe that fits, or the gap.\n\n## Recipes and bank\n\n- **New recipes** fill the gaps: procedural, like the others (Web Audio oscillators, filters and noise). Add **about a dozen at most**, each driven by its params, so that one recipe serves many cards. Examples: an elemental bolt chosen by `timbre`, a wind-up that builds by `amount`, a sparkle tail.\n- **Bank entries** for each verb's wind-up, release and tail, as part 1's effect sequences will play them. Name them for what they sound like (`fireRelease`, `frostTail`), never for a card.\n- **A cap on the recipes' gzipped chunk** (`sfx.ts`, about 45 KB today, #4428), as a named constant a test holds, with room for these recipes and no more.\n- `sfx.test.ts` and `sfxGraphs.test.ts` cover each new recipe. `SOUND_CUES` gains no rows.\n\n## The deliverable\n\nThe verb table, in the pull request: verb, element, the recipe and bank entries it uses, and how many cards in each set call it. The card parts pick their effects from it. If it stays short, also put it at the head of the bank as a comment.\n\n## Acceptance\n\n- [ ] every verb in the table has a wind-up, a release and a tail in the bank, from existing or new recipes\n- [ ] the recipes' gzip cap is in place\n- [ ] `pnpm --dir apps/web test src/audio`, `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web` are green\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5190: needs a plan; `claude-8` (claude, `sonnet`, medium) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-27T21:27:07Z",
+    "claimed_at": "2026-11-27T21:30:22Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5161 is held for `claude-1` until 16:00 (5-hour usage is 61%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5192 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5193 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5194 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5195 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5196 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5197 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5198 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5199 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5200 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5201 skipped: it waits for #5188, #5189, #5190 to close first"
+  ]
+}
