@@ -14,6 +14,12 @@
 # schedule runs it for that reason; staging redeploys whenever main has moved, as often as every two
 # hours). Staging's site is behind Cloudflare Access, which lets a request through with an Access service
 # token's two headers. A refusal from Access fails at once.
+#
+# GitHub runs a composite step's `shell: bash` with `-e`, so each command whose failure the script reads
+# itself sits in an `if` or ends in `|| true`: a request curl itself gave up on (a timeout, a connection
+# the site closed) is an attempt that failed, not the end of the step. Until 2026-11-27 such a request
+# ended the step at once with no message, and so did any failed attempt curl wrote no error for, on the
+# first attempt each time (deploy-staging run 46066268550).
 name: check the card statistics load
 description: GET a site's /api/stats/cards?mode=all and fail unless it answers 200 with cards within the client's timeout
 inputs:
@@ -44,7 +50,7 @@ runs:
         PAUSE_SECONDS: "5"
       run: |
         set -uo pipefail
-        timeout=$(sed -nE 's/^export const API_REQUEST_TIMEOUT_SECONDS = ([0-9_]+);.*/\1/p' "$CONFIG" | tr -d _)
+        timeout=$(sed -nE 's/^export const API_REQUEST_TIMEOUT_SECONDS = ([0-9_]+);.*/\1/p' "$CONFIG" | tr -d _) || true
         if [ -z "$timeout" ]; then
           echo "::error::API_REQUEST_TIMEOUT_SECONDS is not in $CONFIG, so the check cannot hold the server to the client's timeout"
           exit 1
@@ -59,7 +65,8 @@ runs:
         for attempt in $(seq 1 "$ATTEMPTS"); do
           : > "$body"
           : > "$errors"
-          out=$(curl -sS -m "$timeout" -o "$body" -w '%{http_code} %{time_total}' "${access[@]}" "$SITE$STATS_PATH" 2> "$errors")
+          # curl writes its -w line (status 000) even for a request it gave up on, and exits non-zero.
+          out=$(curl -sS -m "$timeout" -o "$body" -w '%{http_code} %{time_total}' "${access[@]}" "$SITE$STATS_PATH" 2> "$errors") || true
           status=${out%% *}
           seconds=${out##* }
           cards=$(jq -r 'if (.cards | type) == "array" then (.cards | length) else "no cards list" end' "$body" 2> /dev/null || echo "no JSON")
@@ -77,7 +84,11 @@ runs:
               fi
               ;;
           esac
-          seen="HTTP ${status:-000} after ${seconds:-?}s, $cards$( [ -s "$errors" ] && printf '; %s' "$(head -c 300 "$errors")" )"
+          detail=""
+          if [ -s "$errors" ]; then
+            detail="; $(head -c 300 "$errors")"
+          fi
+          seen="HTTP ${status:-000} after ${seconds:-?}s, $cards$detail"
           echo "::warning::$SITE$STATS_PATH, attempt $attempt of $ATTEMPTS: $seen"
           [ "$attempt" = "$ATTEMPTS" ] || sleep "$PAUSE_SECONDS"
         done
