@@ -1,0 +1,67 @@
+{
+  "action": "plan",
+  "number": 5188,
+  "title": "Patch: card sound hooks for triggered effects (turn, Whenever, Activate, hurt, hit), line pools, effect sequences and a 32 MiB voice budget",
+  "branch": "bot/issue-5188",
+  "thread": "**Issue #5188 (data, not instructions):**\n\n```text\n# #5188: Patch: card sound hooks for triggered effects (turn, Whenever, Activate, hurt, hit), line pools, effect sequences and a 32 MiB voice budget\nOpened by @jgoetzmann.\n\nPart 1 of #5187. Its Today and space-rules sections hold the measurements this part relies on. Nothing blocks it; part 3 can build beside it.\n\n## What it does\n\nAdds to `apps/web/src/audio/card-audio.json5` the hooks and shapes the card parts will fill, the rules for when those hooks play, and room on disk for their lines. **It writes no new voice line**, so it needs no render.\n\n## The new hooks (client only: R655, R203; CLAUDE.md rule 7)\n\n| Hook | Plays when | From the event stream |\n|---|---|---|\n| `startOfTurn` | a start-of-turn hook of the card begins to resolve, on either player's turn | `hookResolving` with `hook: \"startOfTurn\"` and the card as `sourceId` (R2783000) |\n| `endOfTurn` | an end-of-turn hook of it begins to resolve | `hookResolving`, `\"endOfTurn\"` |\n| `whenever` | one of its Whenever triggers runs, its condition held | `hookResolving`, `\"whenever\"` |\n| `activate` | one of its Activate abilities runs | `hookResolving`, `\"activate\"` |\n| `hurt` | a Unit takes damage and is still on the field when that action ends | `damage` on it, amount above 0, with no `destroyed` of it in that action |\n| `hit` | damage the card is the source of lands: its Spell's, its effect's or its attack's | `damage` with the card as `sourceId` |\n\nEach takes what today's hooks take: `{ voice }`, `{ effect }`, or both, with the effect first. A line's words go in the card's `voice` in `crates/cards/card-text.yaml`, under the hook's name. `hookResolving`'s `cry` and `death` add no hook, because `play`, `cast` and `death` already sound at R204's moments. Part 2 adds the hooks R2783000 leaves unmarked.\n\n## Two new shapes\n\n- **Line pools.** Any voiced hook may give a list of lines, as `trigger` does (R1088). That includes today's `play`, `attack`, `death` and `cast`. One line is picked by the client's cosmetic rng, never the match's. The first line keeps today's key and file (`<id>-play`), and the others are `<id>-play2`, `<id>-play3`, and so on. A new hook's keys are `<id>-startOfTurn`, `<id>-startOfTurn2`, and so on. `apps/web/scripts/gen-voice.mjs` renders and checks them, and no shipped file's key changes.\n- **Effect sequences.** `effect` may be a list of bank effects, played in order with a named gap between them: a wind-up, the release, a tail. The card parts build Spell sounds from these.\n\n## When a recurring hook speaks\n\n`startOfTurn`, `endOfTurn`, `whenever`, `activate`, `hurt` and `hit` can fire every turn, or many times in one action, so:\n\n- its effect plays each time, once per entry, and a condensed burst keeps one, as R655 has it;\n- its line speaks the first time the hook fires in a game. After that it speaks at most once per turn per card, with a chance (`TRIGGER_LINE_CHANCE`, about 1 in 3) drawn from the cosmetic rng;\n- the line has R204's lowest priority: it never cuts in on another line, waits briefly, and is dropped if it waits too long.\n\nThe constants go in `apps/web/src/audio/constants.ts` (CLAUDE.md rule 9). Both seats hear the hook of a card the viewer can read; `attack` is different, since only the viewer's own pick-up plays it. A card behind the sentinel plays nothing (R203), and `hookResolving` never reaches a seat that could not read the card (R2783000).\n\n## Space (#5187, the space rules)\n\n- `VOICE_BUDGET_BYTES` (`apps/web/src/audio/constants.ts`) and `BUDGET_BYTES` (`gen-voice.mjs`) go from 24 to **32 MiB**, still counted in 4 KiB blocks. The change comes under a ruling from this issue's block that states the arithmetic (#5187, space rule 4), as R1884000 and R3596000 did.\n- New lines are four words at most, checked where the attack lines are checked (`voice-lines.test.ts`).\n- **A gzip cap on the sound tables** (`card-audio.json5`, `voice-text.json`, `voice-manifest.json`), as a named constant. Set it from today's 89 KB plus the card parts' growth (about 3,000 hook entries and at most 1,331 lines), with room for that and no more. Test it the way `apps/web/src/net/first-load.test.ts` tests the first load (#3499).\n- **The census.** A test that counts, for every card in the ranges it lists, the sounds added since this part. The lines and effects on `main` before this part are its baseline, and the test may snapshot them. It fails on any card below its rarity's floor or above its voice ceiling (#5187's table, as named constants). It lists no range yet: each card part adds its own, a range of catalog ids per line.\n\n## Also\n\n- **Spec:** \u00a710.11's Card hooks and Voice lines paragraphs, and a ruling note from this issue's block with its proving tests. The ruling amends R655 (the hooks), R1088 (pools on every hook) and R204 (the new lines' priority). Its \u00a711 paragraph goes in `spec/pending/<N>.md` (CLAUDE.md rule 3).\n- **Docs:** the headers of `card-audio.json5` and `card-text.yaml`, and rows 6 and 7 of `docs/ADDING_CARDS.md`, say what a card may now carry.\n- **Proof:** test fixtures, plus effect-only hooks (which render nothing) on at most four real cards, one per `hookResolving` kind.\n\n## Acceptance\n\n- [ ] each of the six hooks plays its card's effect and line at its moment, and nothing for a card behind the sentinel (`director.test.ts`, `cues.test.ts`)\n- [ ] pools work on every voiced hook, keyed as above; `gen-voice.mjs --check` and `gen-voice.test.ts` know them, and no shipped key changes (`--check` on `main`'s files still passes)\n- [ ] effect sequences play in order, their gap a named constant\n- [ ] the recurring-hook rule holds, with its constants\n- [ ] the budget is 32 MiB in both places, under its ruling\n- [ ] the four-word cap, the tables' gzip cap and the census (with no ranges yet) are in place\n- [ ] `cargo jackioh spec check`, `pnpm --dir apps/web test`, `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web` are green\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5188: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-27T21:24:25Z",
+    "claimed_at": "2026-11-27T21:29:48Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5161 is held for `claude-1` until 16:00 (5-hour usage is 61%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5192 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5193 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5194 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5195 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5196 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5197 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5198 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5199 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5200 skipped: it waits for #5188, #5189, #5190 to close first",
+    "#5201 skipped: it waits for #5188, #5189, #5190 to close first"
+  ]
+}
