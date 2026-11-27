@@ -46,6 +46,9 @@ pub mod code_lines;
 /// SPEC §5.1's single pool source over the shipped catalog (its `catalog.query`: `query`, `pool`, …).
 pub mod query;
 
+/// R5106000: the War Doctrine text S #137 Starfleet Commander and S #176 Preemptive Strike share.
+pub(crate) mod war_doctrine;
+
 /// Classic+ #42 KY's Test's problem bank (R420).
 pub mod ky_test_bank;
 
