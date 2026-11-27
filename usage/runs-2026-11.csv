@@ -4289,3 +4289,10 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-27T22:25:06Z,46075537189,claude-8,sonnet+opus,review,5208,medium,approved,,5.8,7,2614,263843,1.0423,9,11,,,1,,none,,1
 2026-11-27T22:26:17Z,46068214703,claude-7,sonnet+opus,build,5158,medium,built,,27.3,38,8820,1116556,0.3841,5,6,,,32,claude-7,fresh,,1
 2026-11-27T22:31:34Z,46069201822,claude-4,sonnet+opus,build,5159,medium,built,,32.8,57,18632,2243033,0.739,3,5,,,22.2,claude-4,fresh,,1
+2026-11-27T22:51:23Z,46077318113,claude-7,sonnet+opus,review,5211,medium,approved,,13.2,28,6882,844428,0.733,6,7,,,0.9,,none,,1
+2026-11-27T22:47:58Z,46072291086,claude-8,sonnet+opus,build,5190,medium,built,,14.8,118,40992,6054253,1.4948,5,9,,,17.8,claude-8,fresh,,1
+2026-11-27T23:01:51Z,46078133638,claude-4,sonnet+opus,review,5212,medium,approved,,16.9,31,7439,1112125,0.9146,5,7,,,0.8,,none,,1
+2026-11-27T23:06:28Z,46079584932,claude-8,sonnet+opus,review,5213,medium,approved,,6.4,35,10226,1771217,1.2774,11,13,,,0.8,,none,,1
+2026-11-27T23:04:22Z,46075598669,claude-1,sonnet+opus,build,5161,medium,built,,8,14,3950,310093,0.1974,12,13,,,82.4,claude-1,fresh,,1
+2026-11-27T23:20:12Z,46081129683,claude-1,sonnet+opus,review,5214,medium,approved,,4.7,16,5458,412844,0.5475,17,18,,,0.9,,none,,1
+2026-11-27T23:19:38Z,46065801734,agy,gemini-3.8-flash-high,plan,5164,medium,failed,,150.3,311352,38898,0,,0,7,91,93,9.7,,none,,1
