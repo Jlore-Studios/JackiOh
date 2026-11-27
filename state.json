@@ -20730,6 +20730,8 @@
       }
     },
     "5213": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-27T21:44:57Z",
@@ -20743,8 +20745,11 @@
         "trail": "p -i \\\"expected\\\\|me\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web/src/audio; cat > /tmp/census5190/recipes.ts <<'EOF'\\n// #5190: the spell verbs' recipes (card-audio.json5's verb table). Each is driven\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web; sed -i 's|/\\\\*\\\\* #5190: every damage element elementWindUp, elementBolt and elementTail sound as (types.ts SfxElement), for the tests\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web/src/audio; cat > sfxSize.test.ts <<'EOF'\\n// @vitest-environment node\\n// #5190: the recipes' gzipped chunk (sfx.ts and the leaf module\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web/src/audio; grep -n \\\"class FakeNode\\\" -A30 test/fakeAudio.ts | head -60; grep -n \\\"class FakeParam\\\" -A12 test/fakeAudio.ts | head -20;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web/src/audio; python3 -I - <<'EOF'\\np='sfxGraphs.test.ts'; s=open(p).read()\\ns=s.replace('import { SFX, SFX_IDS } from','import { SFX, SFX\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web; python3 -I - <<'EOF'\\np='src/audio/sfx.ts'; s=open(p).read()\\na=''' chain(dust, low, envelope(k, 0, rise, 0.6, len), out);\\n run(k, du\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web; git diff --numstat src/audio/__snapshots__/; git diff src/audio/__snapshots__ | grep -c '^-[^-]'; pnpm exec vitest run src/audio/sfxSi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web/src/audio; sed -i 's/31,103 with them/31,128 with them/' sfxSize.test.ts; grep -n \\\"31,\\\" sfxSize.test.ts; grep -n \\\"UNION_ORDER\\\\|EXPE\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/e2e/cypress/component; sed -n 70,76p audio-recipes.cy.tsx; sed -n 290,296p audio-recipes.cy.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/e2e/cypress/component; python3 -I - <<'EOF'\\np='audio-recipes.cy.tsx'; s=open(p).read()\\ns=s.replace('''\\\"shutterPurr\\\", \\\"venomDrip\\\",\\n] as co\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web/src/audio; grep -n \\\"unknown timbre\\\" -B6 -A6 voiceData.test.ts | head -40\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web/src/audio; grep -n \\\"expectError = \\\\|function expectError\\\\|function accepted\\\\|expectOk\\\\|it(\\\\\\\"R655 accepts\\\" voiceData.test.ts | h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web/src/audio; sed -n 340,380p voiceData.test.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web/src/audio; python3 -I - <<'EOF'\\np='voiceData.test.ts'; s=open(p).read()\\na=''' it(\\\"R655 names a voice the bank does not hold\\\", () =>\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; (pnpm --dir apps/web typecheck > /tmp/census5190/tc.log 2>&1; pnpm exec eslint apps/web e2e > /tmp/census5190/eslint.log 2>&1; pnpm --dir e2e t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; sed -n 1221,1232p docs/polish/2-sound.md | cut -c1-200; tail -5 docs/polish/2-sound.md | cut -c1-200\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; python3 -I - <<'EOF'\\nimport subprocess\\ntab=subprocess.check_output(['python3','-I','/tmp/census5190/table.py','docs'],text=True)\\nd='''\\n## S\u2026\n- tool error: Exit code 1 | damage | shadow | elementWindUp / elementBolt / elementTail | `shadowWind` | `shadowRelease` | `shadowTail` | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | | damage | poison | elementWindUp / ele\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; sed -i 's/So the damage rows are approximate, and no card now deals lightning damage; its entries wait for/So the damage rows are approximate, \u2026\n- tool error: Exit code 1 error: unexpected argument '-5' found tip: to pass '-5' as a value, use '-- -5' Usage: tail [OPTION]... [FILE]... For more information, try '--help'.\n- Bash: {\"command\": \"cd /tmp/census5190; for f in tc eslint tcc; do echo == $f; tail -n 8 $f.log; done\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web/src/audio; sed -n 122,170p test/fakeAudio.ts\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web; python3 -I - <<'EOF'\\np='src/audio/sfx.test.ts'; s=open(p).read()\\na=''' return `${made.map((node) => node.kind).join(\\\",\\\")} ${String\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; grep -rln \\\"card-audio\\\\|SFX_IDS\\\\|SfxId\\\" apps/web/src e2e crates/tools 2>/dev/null | grep -v \\\"^apps/web/src/audio/\\\" | head; cargo jackioh c\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190/apps/web; timeout 110 pnpm exec vitest run src/emotes src/game/entrance.real.test.ts src/duos 2>&1 | grep -E \\\"Test Files|Tests |FAIL\\\"\"}\n- said: Now notes and wait for classify.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5190; python3 -I - <<'EOF'\\ns=open('.bot-notes.md').read()\\nst='''## State\\n\\nBuild done (run 2, sonnet): all plan steps implemented; `pnpm --dir app\u2026\n- Bash: {\"command\": \"until ! pgrep -f \\\"jackioh-tools|cargo run --release\\\" >/dev/null; do sleep 5; done; tail -n 12 /tmp/claude-1001/-home-runner-work--temp-work-item-5190/a001d524-8c6b-4f25-99f6-b70e98e76b\u2026\n- Bash: {\"command\": \"sleep 1; cat /tmp/claude-1001/-home-runner-work--temp-work-item-5190/a001d524-8c6b-4f25-99f6-b70e98e76b53/tasks/b41cj41wr.output | tail -n 15; pgrep -af \\\"jackioh\\\" | head -n 3 | cut -c1\u2026\n- TaskStop: {\"task_id\": \"b41cj41wr\"}\n- Bash: {\"command\": \"while kill -0 5965 2>/dev/null; do sleep 5; done; tail -n 15 /tmp/claude-1001/-home-runner-work--temp-work-item-5190/a001d524-8c6b-4f25-99f6-b70e98e76b53/tasks/baboxh0jp.output\", \"timeou\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: spell sound effects: new procedural recipes and effects-bank entries for what Spells, Field Spells and Traps do\"} --> ## What changed The bank now has a wind-up, a release and a tail for every verb a Spell, Field Spell, Trap or Field Trap calls. The car\u2026"
       },
       "issue": 5190,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-27T22:56:09Z",
         "from_run": "46072291086",
         "gates": [
           {
@@ -20836,7 +20841,11 @@
         "source": "build",
         "until": "2026-11-27T23:25:18Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-27T22:55:18Z",
+      "run_id": "pending:77467081-1795820151",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -20855,6 +20864,9 @@
         "provider": "claude-8",
         "run": "46072291086"
       },
+      "started_at": "2026-11-27T22:56:09Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -20868,9 +20880,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T22:41:09Z",
+    "at": "2026-11-27T22:56:09Z",
     "url": "",
-    "what": "review #5212 on claude-4"
+    "what": "review #5213 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-27T22:47:25Z",
