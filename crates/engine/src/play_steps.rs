@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 use crate::animated::animate_on_entry;
 use crate::announce::{begin_announce, end_announce, is_announce_live};
 use crate::catalog::def_of;
-use crate::config::{FENG_SHUI_BRITTLE, MIN_CHOSEN_X, QUICKSTRIKER_COMBO_MULTIPLE};
+use crate::config::{FENG_SHUI_BRITTLE, MANA_CEILING, MIN_CHOSEN_X, QUICKSTRIKER_COMBO_MULTIPLE};
 use crate::cost_rules::why_play_banned;
 use crate::damage::{DamageArgs, DamageTarget, deal_damage};
 use crate::draw::{add_to_hand, draw};
@@ -95,9 +95,10 @@ fn snapshot(state: &GameState, instance_id: &str) -> Option<CardInstance> {
     find_instance(state, instance_id).cloned()
 }
 
+/// R5148000: a cast's X, at most `MANA_CEILING`.
 fn set_x(state: &mut GameState, instance_id: &str, value: i32) {
     if let Some(card) = find_instance_mut(state, instance_id) {
-        card.x = Some(value);
+        card.x = Some(value.min(MANA_CEILING));
     }
 }
 
@@ -2294,7 +2295,7 @@ fn cast_x_chosen(
     if !chooses_x(sink.state, card) || card.x.is_some() {
         return true;
     }
-    let most = MIN_CHOSEN_X.max(sink.state.players[run.player].mana.current);
+    let most = MIN_CHOSEN_X.max(sink.state.players[run.player].mana.current.min(MANA_CEILING));
     if let Some(cast_x) = run.cast_x {
         set_x(sink.state, &card.id, MIN_CHOSEN_X.max(most.min(cast_x)));
         return true;
@@ -3238,7 +3239,7 @@ pub fn cast_through_pipeline(sink: &mut EngineSink<'_>, instance: &CardInstance,
     // R452, R453: a random cast's X is the caster's current mana, at least MIN_CHOSEN_X (R348); any
     // other cast's caster chooses it as the cast's first choice (`cast_x_chosen`).
     if random && chooses_x(sink.state, &card) && card.x.is_none() {
-        let x = MIN_CHOSEN_X.max(sink.state.players[player].mana.current);
+        let x = MIN_CHOSEN_X.max(sink.state.players[player].mana.current.min(MANA_CEILING));
         set_x(sink.state, &card.id, x);
         card.x = Some(x);
     }

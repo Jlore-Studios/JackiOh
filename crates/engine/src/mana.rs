@@ -1,7 +1,7 @@
 //! Mana refresh, temporary mana and the cost calculation (SPEC §2.3, §6.3 Cost, R65, R396, R455).
 
 use crate::catalog::def_of;
-use crate::config::GLITCH_DEF_ID;
+use crate::config::{GLITCH_DEF_ID, MANA_CEILING};
 use crate::cost_rules::{climb_price_rules, cost_floor_of, price_rules_for};
 use crate::graveyard_play::playable_from_graveyard;
 use crate::script::{CostArgs, EngineSink};
@@ -15,11 +15,17 @@ use crate::wire::{CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PL
 /// modifiers, floored at 0; with no handicap, §2.3's "min(number of turns you have started, 4), plus
 /// persistent modifiers". `nextTurnMod` is a one-shot rider the refresh spends, never max mana; other
 /// modifiers apply on top of the capped value as for a human. R1854003: moved crystals count in the cap;
-/// R4331001: stolen crystals count on top of it.
+/// R4331001: stolen crystals count on top of it. R5148000: never above `MANA_CEILING`.
 pub fn max_mana_for(side: &PlayerState) -> i32 {
     let handicap = handicap_of(side);
     let base = mana_crystal_count(side).min(handicap.mana_cap);
-    (base + stolen_mana_crystals_of(side) + side.mana.perm_mod).max(0)
+    held_mana(base + stolen_mana_crystals_of(side) + side.mana.perm_mod)
+}
+
+/// §2.3, R5148000: a mana amount as a player may hold it, current or maximum, temporary mana included:
+/// never below 0 nor above `MANA_CEILING`, what passes it lost as Hearthstone loses mana past its 10.
+pub fn held_mana(mana: i32) -> i32 {
+    mana.clamp(0, MANA_CEILING)
 }
 
 /// R1854003: a player's mana crystals before the cap (Hearthstone's count): the turns they have started
@@ -80,7 +86,7 @@ pub fn move_mana_crystals(
             }
         }
         side.mana.max = max_mana_for(side);
-        side.mana.current += side.mana.max - held;
+        side.mana.current = held_mana(side.mana.current + side.mana.max - held);
     }
     (lost, gained)
 }
@@ -119,7 +125,7 @@ pub fn move_some_mana_crystals(
         let held = side.mana.max;
         side.stolen_mana_crystals = Some(stolen_mana_crystals_of(side) + gained);
         side.mana.max = max_mana_for(side);
-        side.mana.current += side.mana.max - held;
+        side.mana.current = held_mana(side.mana.current + side.mana.max - held);
     }
     (lost, gained)
 }
@@ -175,15 +181,16 @@ pub fn refreshed_mana(side: &PlayerState, max: i32, natural: bool) -> i32 {
 }
 
 /// R4440052: `refreshed_mana` with `bonus` more, which counts as the rider does: with it under MD-B2's
-/// aura, against it when it is negative, and not at all on a lost refresh. Never below 0.
+/// aura, against it when it is negative, and not at all on a lost refresh. Never below 0, nor above
+/// `MANA_CEILING` (R5148000).
 pub fn refreshed_mana_with_bonus(side: &PlayerState, max: i32, natural: bool, bonus: i32) -> i32 {
-    let rider = side.mana.next_turn_mod + bonus;
+    let rider = side.mana.next_turn_mod.saturating_add(bonus);
     if refresh_is_lost(side) {
         0
     } else if natural {
-        (max + rider).max(0)
+        held_mana(max.saturating_add(rider))
     } else {
-        rider.max(0)
+        held_mana(rider)
     }
 }
 
@@ -248,9 +255,9 @@ pub fn refresh_some_mana(side: &mut PlayerState, amount: i32) {
     side.mana.current = side.mana.max.min(side.mana.current.saturating_add(amount));
 }
 
-/// Temporary mana may take current above max (§2.3).
+/// Temporary mana may take current above max (§2.3), never above `MANA_CEILING` (R5148000).
 pub fn gain_mana(side: &mut PlayerState, amount: i32) {
-    side.mana.current = (side.mana.current + amount).max(0);
+    side.mana.current = held_mana(side.mana.current.saturating_add(amount));
 }
 
 pub fn spend_mana(side: &mut PlayerState, amount: i32) {
@@ -316,6 +323,18 @@ pub fn printed_cost(state: &GameState, instance: &CardInstance) -> i32 {
 
 pub fn is_x_cost(state: &GameState, instance: &CardInstance) -> bool {
     def_of(Some(state), &instance.def_id).cost == CardCost::X
+}
+
+/// R5148000: the X a card counts on the field and as it resolves (`tuning::x_of`, its X steps
+/// included), an X-cost card's at most `MANA_CEILING`. An X that is no price is not mana and is not
+/// capped: the X/X a summoner sets from a count (M+ #20.1 Lil' Kenny's right answers).
+pub fn counted_x(state: &GameState, instance: &CardInstance) -> i32 {
+    let x = crate::tuning::x_of(instance);
+    if is_x_cost(state, instance) {
+        x.min(MANA_CEILING)
+    } else {
+        x
+    }
 }
 
 /// R48: a modifier for a player's *next* turn (#77: "during **your** next turn") is live only once that
@@ -639,7 +658,8 @@ pub fn cost_now(state: &GameState, card: &CardInstance) -> i32 {
         } else {
             card.fixed_x.unwrap_or(0)
         };
-        return 0.max(x).max(floor);
+        // R5148000: an X counts at most `MANA_CEILING`.
+        return x.clamp(0, MANA_CEILING).max(floor);
     }
     if card.embiggened == Some(true) && !matches!(card.zone, Zone::Resolving { .. }) {
         let unembiggened = CardInstance {

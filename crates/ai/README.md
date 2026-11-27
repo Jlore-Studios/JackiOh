@@ -93,6 +93,10 @@ one redaction (R1184002); and so is C+ #42 KY's Test's Easy problem (#2929). Ahe
 answers such a question of the AI's own the same way, judged right on its world, a sequence until
 `AI_KY_COMPETITION_EXPECTED_STREAK` (6, Radiant 12) and then Stop (`simulate::worked_step`,
 R1563005); the greedy baseline's simulation does not.
+R4797000: `decide` plays each sampled world with the opponent's automatic turn end off (`search_world`,
+R82, R345, as `unstoppable.rs` does), so a line's End turn stops where the opponent's turn begins, the
+crystals it left unspent still in the seat's turn log for `passed_score` and `reply_score`, even against an
+opponent with nothing to do, and the reply ends that turn (`AI_SEARCH.hold_opponent_turn`).
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
@@ -473,6 +477,12 @@ so a wrap-up that fired before the beam still leaves it lines, the root's End tu
 R4604014: so is the slice's own limit (`create_beam_counter`): the root's moves draw on the decision's
 counter however many nodes they cost, so a root move dearer than the whole slice still closes a line;
 the decision's own limit and clock still stop it.
+R4791000: a beam whose slice refused a node, to its budget or the wrap-up, closes on its stop only the
+frontier line the stop cut short, those after it and the children (a line it finished expanding filed its
+End turn already), and ranks a line whose End turn was refused, open in the seat's main phase, as a passed
+one, its hand eval less `AI_EVAL.unspent_mana` a crystal (`closed_score`); `decide` then ends the turn of
+each such shortlisted line on the decision's own nodes before `reply_score`, and a node refused there ends
+the replies. A beam its slice never refused decides node for node as before (`AI_SEARCH.close_cut_lines`).
 `SearchStats.replied` and `worldsScored` say how far they got, and
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.

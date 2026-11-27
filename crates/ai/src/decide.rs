@@ -45,10 +45,10 @@ use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
 use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
-use crate::search::{Line, ReplayFill, beam_search, replay_line};
+use crate::search::{Line, ReplayFill, beam_search, open_in_main, replay_line};
 use crate::simulate::{
     CountingNodeCounter, LineStatus, create_beam_counter, create_node_counter, create_sub_counter,
-    note_sim_panic,
+    line_status, note_sim_panic, simulate,
 };
 use crate::types::{
     AiOptions, AiStyle, Decision, DecisionReason, NodeCounter, SearchBudget, SearchStats, StoppedBy,
@@ -519,6 +519,20 @@ pub fn decision_prices(probe: &GameState, seat: PlayerId, counter: &dyn NodeCoun
     }
 }
 
+/// R4797000: a sampled world as `decide` plays it: the opponent's automatic turn end is off (R82, R345),
+/// as the concession check's worlds have it (`unstoppable.rs`), so the seat's End turn, or a play that ends
+/// its turn, stops where the opponent's turn begins, the seat's turn log still holding the crystals it left
+/// unspent (`passed_score`, `reply_score`), and the reply ends that turn itself. Without it, an opponent
+/// with nothing to do ended its turn inside the seat's, whose next turn start rebuilt the log, and a line
+/// that floated every crystal scored as one that spent them. With `AI_SEARCH.hold_opponent_turn` off, the
+/// world as sampled.
+pub fn search_world(mut world: GameState, seat: PlayerId) -> GameState {
+    if AI_SEARCH.hold_opponent_turn {
+        world.players[seat.opponent()].auto_end_turn = Some(false);
+    }
+    world
+}
+
 /// Steps 1–7 on the redacted copy; every number `stats` reads beside the counter goes in `scratch`.
 /// `options` gives the budget, the wrap-up and the stream; its `should_stop` is the counter's.
 /// `pool_loss` is what `decide_with_pool_loss` was given (R4188000), None for every 1v1 decision.
@@ -596,12 +610,9 @@ fn plan(
     let k = budget.determinizations.max(1);
     let mut dets: Vec<GameState> = Vec::new();
     for _ in 0..k {
-        dets.push(determinize_on(
-            &public,
+        dets.push(search_world(
+            determinize_on(&public, seat, rng, DeterminizeOptions::default(), &ground),
             seat,
-            rng,
-            DeterminizeOptions::default(),
-            &ground,
         ));
     }
     scratch.determinizations = k;
@@ -716,11 +727,37 @@ fn plan(
         seat,
     );
     let hidden0 = hidden_card_ids(det0, seat);
+    // R3498000: only a passed or yielded line is replied to; `reply_score` scores any other statically.
+    let hands_over = |end: &GameState| {
+        matches!(
+            line_status(end, seat, root_turn),
+            LineStatus::Passed | LineStatus::Yielded
+        )
+    };
+    // R4791000: where the beam's slice refused a node (its budget or the host's wrap-up), a shortlisted line
+    // it left open in the seat's main phase ends its turn here, on the decision's own nodes, and is
+    // replied to as every other line is; a node refused there ends the replies as a refused reply does.
+    let close_cut = AI_SEARCH.close_cut_lines && beam_stopped_by != StoppedBy::Exhausted;
     let mut replied: Vec<Scored<'_>> = Vec::new();
+    let mut replied_count = 0;
     for &line in &shortlist {
-        let Some(score) = reply_score(&line.end, seat, root_turn, counter, &hidden0, &prices) else {
+        let closed;
+        let end = if close_cut && open_in_main(&line.end, seat, root_turn) {
+            match simulate(&line.end, seat, &ActionBody::EndTurn, counter, &prices) {
+                None => break,
+                Some(Ok(next)) => {
+                    closed = next;
+                    &closed
+                }
+                Some(Err(_)) => &line.end,
+            }
+        } else {
+            &line.end
+        };
+        let Some(score) = reply_score(end, seat, root_turn, counter, &hidden0, &prices) else {
             break;
         };
+        replied_count += usize::from(hands_over(end));
         replied.push(Scored { line, score });
     }
     // R3696000: the payoff line last, once every shortlisted line is replied to: skipped once the host's
@@ -742,16 +779,15 @@ fn plan(
                 &hidden0,
                 &prices,
             ) {
-                Some(score) => replied.push(Scored { line, score }),
+                Some(score) => {
+                    replied_count += usize::from(hands_over(&line.end));
+                    replied.push(Scored { line, score });
+                }
                 None => payoff_stop = Some(StoppedBy::Budget),
             }
         }
     }
-    // R3498000: only a passed or yielded line is replied to; `reply_score` scores any other statically.
-    scratch.replied = replied
-        .iter()
-        .filter(|entry| matches!(entry.line.status, LineStatus::Passed | LineStatus::Yielded))
-        .count();
+    scratch.replied = replied_count;
     let unreplied: Vec<Scored<'_>> = found
         .iter()
         .map(|line| Scored {

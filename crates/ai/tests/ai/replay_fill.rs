@@ -116,7 +116,8 @@ fn r4447000_a_pinned_decision_keeps_its_action_line_and_nodes() {
     // determinization 0, then the 4/4. At 0 (3af8296300) it was the 4/4, then Stockpile, then a drawn
     // card, in 137 nodes: the other worlds' cut replays of the Stockpile line ended their turn with
     // its crystals unspent. Its nodes are 178 since R4806000 (171 before): the lethal solver walks a
-    // play's two lanes as two positions.
+    // play's two lanes as two positions. They are 183 since R4797000 (178 before): a reply whose
+    // opponent's turn ended by itself after its last move now plays that End turn, one node.
     let stockpile = r#"{"instanceId":"c1","type":"play"}"#;
     let line = [
         stockpile,
@@ -130,7 +131,7 @@ fn r4447000_a_pinned_decision_keeps_its_action_line_and_nodes() {
         (
             stockpile.to_string(),
             line.iter().map(|key| key.to_string()).collect(),
-            178
+            183
         )
     );
 }
