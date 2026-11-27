@@ -45935,7 +45935,8 @@
       "2026-11-27T00:03:13Z,claude-6,stream,call,45906397991,11,2026-11-27T03:40:00Z,,,allowed,50,,"
     ],
     "runs": [
-      "2026-11-27T00:01:01Z,45907574249,claude-1,sonnet+opus,revise,5088,medium,approved,,21.8,61,11837,3485692,3.02,29,36,,,0.4,claude-1,resumed,,2"
+      "2026-11-27T00:01:01Z,45907574249,claude-1,sonnet+opus,revise,5088,medium,approved,,21.8,61,11837,3485692,3.02,29,36,,,0.4,claude-1,resumed,,2",
+      "2026-11-27T00:03:13Z,45906397991,claude-6,opus,plan,5117,hard,planned,,77.7,2,7146,203070,5.8901,0,11,,,127.2,claude-3,fresh,other,1"
     ]
   },
   "version": 1
