@@ -21870,6 +21870,8 @@
     "5147": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "168615aca8a937b4520a12f1e535504d26dcab58",
+      "ci_fixes": 1,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-26T22:53:48Z",
