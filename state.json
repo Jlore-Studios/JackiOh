@@ -21760,7 +21760,7 @@
     "what": "build #5117 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-27T00:25:35Z",
+    "at": "2026-11-27T00:31:46Z",
     "notes": [
       "#5094 is held for `claude-3` until 18:40 (it refused a call)"
     ],
@@ -22468,7 +22468,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T00:25:35Z",
+  "loop_tick": "2026-11-27T00:31:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
