@@ -43428,6 +43428,14 @@
         "title": "Patch: a queue ticket opened before a card patch is cancelled, not seated in a game on the new cards",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-27T20:54:15Z",
+        "number": 5157,
+        "reason": "it is two changes, and only one is clear. The Flashback half is a confirmed bug: `gain_keyword_for_good` (`effects/tune.rs`) writes `tuning.add_keywords`, the store R386 keeps off an Immutable card, with no Immutable check, so Last Hurrah gives an Immutable hand card Flashback. Offered alone, that would be approved. The Brittle half amends R5113000, which lets a status on the instance (Freeze, Berserk) land, and \u00a76.1 calls Brittle a count on the instance. Whether Immutable stops Thorium's and Sh",
+        "title": "Patch: Immutable keeps another card's Brittle and Flashback off a card, so Thorium and Shawarma Law no longer destroy an Immutable Unit",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -44282,6 +44290,13 @@
         "number": 5168,
         "reason": "the bug is real (a Defense Position card's turn is an inline `transform`, `Card.tsx:524`, which the damage shake and other event keyframes overwrite), but the fix as written moves it rather than fixing it. `board.css` animates the individual `rotate` property on board cards during big hits and summon slams (`impact-card-wobble`, `slam-wobble-hard`, `rotate: 0deg` at each end), so a turn held in `rotate: 90deg` would stand up during those instead. A fix needs the turn on an element neither family",
         "title": "Patch: a unit in Defense Position stays on its side while it shakes, pulses or takes a buff",
+        "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-27T20:54:15Z",
+        "number": 5157,
+        "reason": "it is two changes, and only one is clear. The Flashback half is a confirmed bug: `gain_keyword_for_good` (`effects/tune.rs`) writes `tuning.add_keywords`, the store R386 keeps off an Immutable card, with no Immutable check, so Last Hurrah gives an Immutable hand card Flashback. Offered alone, that would be approved. The Brittle half amends R5113000, which lets a status on the instance (Freeze, Berserk) land, and \u00a76.1 calls Brittle a count on the instance. Whether Immutable stops Thorium's and Sh",
+        "title": "Patch: Immutable keeps another card's Brittle and Flashback off a card, so Thorium and Shawarma Law no longer destroy an Immutable Unit",
         "why": "rejected by @jgoetzmann"
       }
     ],
