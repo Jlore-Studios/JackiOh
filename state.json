@@ -22219,13 +22219,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-6",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-6",
+            "run": "45943565052",
+            "tier": "medium"
+          }
+        ],
         "sha": "7187215196059fca09a1be3d6c69f874bf8d8e5e",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "5167": {
