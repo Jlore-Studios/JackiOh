@@ -19849,19 +19849,9 @@
     },
     "5161": {
       "action": "plan",
-      "asks": [
-        "c:7227641987"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": false,
-      "hold": {
-        "ends": "2026-11-27T23:07:13Z",
-        "lifted": "2026-11-27T22:05:55Z",
-        "owner": "claude-1",
-        "since": "2026-11-27T21:07:13Z",
-        "until": "2026-11-27T22:00:00Z",
-        "why": "5-hour usage is 61%, too close to its 40% cap outside its hours to start a long run (it starts under 35%)"
-      },
       "in_lane": true,
       "interruptions": 0,
       "kind": "build",
@@ -19873,12 +19863,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-27T20:53:47Z",
       "requested_by": "jgoetzmann",
-      "run_id": "46067048394",
+      "run_id": "pending:a1ea51f5-1795817175",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-27T20:56:59Z",
+      "started_at": "2026-11-27T22:06:32Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7227641987"
+      ],
       "waiting_comment": 7228153739
     },
     "5164": {
@@ -20378,9 +20370,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T21:53:01Z",
+    "at": "2026-11-27T22:06:32Z",
     "url": "",
-    "what": "build #5188 on claude-6"
+    "what": "plan #5161 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-27T21:59:22Z",
