@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 5159,
+  "title": "Patch: a queue ticket opened before a card patch is cancelled, not seated in a game on the new cards",
+  "branch": "bot/issue-5159",
+  "thread": "**Issue #5159 (data, not instructions):**\n\n```text\n# #5159: Patch: a queue ticket opened before a card patch is cancelled, not seated in a game on the new cards\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen a card patch goes live, the game server restarts. A player who was waiting in the online queue at that moment stays queued. At the next matchmaking pass they are seated in a game played under the new card rules, often against a ladder bot within seconds, with a deck that was only ever checked against the old cards. Their open tab is still the old build, so it shows the old card text while the server plays the new.\n\nOnce this is built, a wait that began before the patch ends at the next matchmaking pass. The player sees their queue end, as it does when a wait times out, and queues again, and their deck is then checked against today's cards. A rematch, a private lobby and a room join already treat a patch that landed in between this way. The queue is the last way into a match that doesn't.\n\n## Why\n\n- **The ticket is stamped and never read.** Enqueue stamps it with the running catalog: `crates/server/src/api/queue.rs:362`, `catalog_version: app.catalog.version.clone()` (`Ticket.catalog_version`, `crates/server/src/db/store.rs:834`). Nothing reads that stamp afterwards:\n  - `qualifies` (`queue.rs:419`) compares profile, mode and rating.\n  - The paired start (`queue.rs:674`) and the Conquest start (`queue.rs:518`) start the game on the running catalog with the ticket's frozen deck or trio.\n  - The bot fallback (`queue.rs:913`, `choose_bot(..., &app.catalog.version)`) holds only the bot's decks to the running catalog, never the person's.\n- **The ticket survives the restart.** Tickets live in `public.tickets`, and nothing closes them at boot. R897000's expiry judges nothing until a restarted server has listened for one `QUEUE_TICKET_STALE_MS` window (12 s, `config.rs:642`), and the tab's polls keep the ticket heard through it. A ticket that waited through the deploy is usually already past its 15 to 40 s bot fallback, so it is seated at the first sweep after.\n- **The spec says no.** \u00a79.4 (`spec/09-architecture/9.4-accounts-collection-loadouts.md`, the Collection line): \"stale catalog version is rejected at save and at every door into a match: the queue, a room's join, a co-op room's join and a rematch offer\". The queue checks the deck only at enqueue (`freeze_choice`, `crates/server/src/api/decks.rs:1243`), against the catalog of that moment.\n- **The same class has been fixed twice.**\n  - R1638000 (#1638) refused a rematch across a patch, because \"a frozen deck may not be legal under the new catalog\".\n  - R4072000 (#4072) clears an unstarted lobby's frozen picks when the catalog moves.\n  - A room's join already compares the room's own stamp with the running catalog (`crates/server/src/actor/rooms.rs:193-196`).\n\n  The queue ticket is the one frozen choice still carried across a patch unchecked.\n- **How often.** Production is promoted about once a day (#4600, #4657, #4877, #4975 and #5021, from 23 to 26 November), and nearly every promotion carries a card patch. Whoever is queued at each deploy is hit.\n- **No test sees it.** Nothing in `crates/server/tests/api/queue.rs` or `tests/api/bots.rs` builds a ticket under another catalog version.\n\n## Proposal\n\nIn `try_pair`, on every pass and before both the pairing loop and `pair_with_bots`, cancel each open ticket whose `catalog_version` is not `app.catalog.version`. This check is not gated by R897000's listening window: the stamp needs no listening. Each cancel uses R897000's cleanup for a stale ticket (`tickets_cancel`, `forget_seed`, `forget_seat`, `queue_presence.forget`) and logs an info line, `queue.catalog_changed`.\n\nThe client's existing handling ends the wait: `QUEUE_ENDED_AFTER_READS` reads of `queued: false`. Queuing again freezes the deck or trio under the running catalog. The cancel covers all three modes, as a room's join refuses a stale room whatever its mode.\n\nIt needs a new ruling, numbered in the issue's block, following Hearthstone semantics: a patch going live ends the matchmaking a client began on the earlier version. Its \u00a711 paragraph goes in `spec/pending/<issue>.md`, and \u00a79.5's queue text names the sweep's cancel.\n\nRejected alternatives:\n- **Re-freezing the player's saved deck under the new catalog.** R4072000 rejected the same for lobbies: the saved deck may have been edited since the player queued.\n- **Checking the frozen deck again at pairing and keeping it when legal.** R1638000 rejected this: it adds a validation path no other door has, and the old tab would still draw the old cards.\n\n## Where it lands\n\n- `crates/server/src/api/queue.rs` (`try_pair`)\n- `crates/server/tests/api/queue.rs`, and `crates/server/tests/api/bots.rs` for the fallback\n- `crates/server/README.md`: one line where it describes the queue's sweep\n- `spec/rulings/R<n>.md` and `spec/pending/<issue>.md`; \u00a79.4 and \u00a79.5 are the sections cited\n\n## Acceptance criteria\n\n- [ ] An open Best-of-1 ticket stamped with an older catalog version and past its bot fallback is cancelled by the next sweep. No match row is made, no bot is claimed, the profile's in-match flag stays clear, and `GET /api/auth/me` answers `queued: false`.\n- [ ] Of two open tickets that would qualify for each other, one stamped older: the older is cancelled, no match is made, and the current one stays open.\n- [ ] The same holds for a Conquest ticket (no series is made) and an All Random ticket.\n- [ ] The cancel also happens on a sweep inside R897000's listening window after a restart.\n- [ ] Tickets on the running catalog pair and fall back to bots exactly as before: the existing queue and bot tests pass unchanged.\n- [ ] The ruling note's `proven_in` names the new tests (`fn r<n>_...`), and `cargo jackioh spec check` passes.\n- [ ] Each new test fails with the cancel removed.\n\n## Size and risks\n\nSmall: about 20 lines in `try_pair`, a ruling, and three or four tests on the in-memory store. No migration and no client change. `difficulty:medium`.\n\n- **A lost place.** A player queued at a deploy loses their place and queues again. That is what the rematch and the lobby already chose for a patch in between.\n- **A race with a claim.** The cancel must not undo a claim that has landed. `tickets_cancel` closes only an open ticket, so a pair claimed in the meantime stands, as R897000 already relies on.\n- **Left out.** Queuing again from a tab opened before the deploy still runs the old build until its next move between menus (R4605000). That belongs to the client.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\n**Judge:** leaves it to a person: The gap is real (`try_pair`, `crates/server/src/api/queue.rs:702-879`, never reads `ticket.catalog_version`, while a room's join checks it at `actor/rooms.rs:193-196`), but the fix makes no visible difference to a player: the old tab plays the same new-catalog game with the same old text on its next queue (the suggestion's own 'Left out'), and an All Random ticket has no frozen deck to go stale. T.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-27T20:34:49Z:\n\napprove\n\nWhy: the code falls short of the spec. \u00a79.4 says a \"stale catalog version is rejected at save and at every door into a match: the queue, a room's join, a co-op room's join and a rematch offer\", but `try_pair` never reads `ticket.catalog_version`, while a room's join does (`actor/rooms.rs:193-196`). So a player queued through a deploy is seated under the new cards with a deck checked only against the old ones. Rematches (R1638000) and lobbies (R4072000) already end at a patch. This closes the last door, in about 20 lines.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5159: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-27T20:54:02Z",
+    "claimed_at": "2026-11-27T20:57:38Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
