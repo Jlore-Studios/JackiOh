@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 5158,
+  "title": "Patch: Radiant Rollback Point brings its Units back on their printed face, with Rush, not Radiant",
+  "branch": "bot/issue-5158",
+  "thread": "**Issue #5158 (data, not instructions):**\n\n```text\n# #5158: Patch: Radiant Rollback Point brings its Units back on their printed face, with Rush, not Radiant\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn the Infinite Assault, the level-10 Commander Loopback, Who Returns plays Rollback Point. The card summons copies of the three most expensive Units its side has lost this game, and its Radiant version adds only 'They have Rush'.\n\nWhen a day's Fine-Tuned upgrade makes that card Radiant, the three copies come back Radiant too. That gives them twice their stats and their stronger text, which the card never says. So a player who has just cleared the Commander's board faces three doubled Units that can all attack at once. Once fixed, they come back as their normal versions, with Rush.\n\n## Why\n\n- **What the card should do.** SPEC \u00a78.13 row 224 and R4594005 say: 'Each is a fresh copy on its printed face, most expensive first, with Rush on the Radiant face.' The script's own header says the same (`crates/cards/src/scripts/infinite_assault/c224_rollback_point.rs:10`).\n- **What it does.** The script passes its own face (`radiant`) into every summon's arguments (`c224_rollback_point.rs:57`), so the Radiant face summons Radiant copies.\n- **How players meet it:**\n  - IA #224 is one of the two cards of the rank II Commander Loopback, Who Returns (`crates/run/src/assault.json:56`), the boss of level 10.\n  - The Fine-Tuned upgrade (\u00a716.3) makes 3 more of an enemy deck's cards start Radiant per stack.\n  - A Commander level takes two upgrades after its card step (`ASSAULT_COMMANDER_UPGRADES`).\n- **No test catches it.** The Radiant test `r4594005_the_copies_have_rush` checks only Rush and which Units come back, never their face. The base tests never play the Radiant face.\n\n## Proposal\n\n1. Summon each copy on its printed face: drop the `radiant` flag from the summon's arguments, and keep the Rush on the Radiant face.\n2. Add to both faces' tests that each copy is not Radiant and has its printed stats.\n3. Keep the shipped behaviour for replays, if this card's recorded games fold under the catalog version they were played on (R767000, `docs/ADDING_CARDS.md`; Assault fights are kept for replay since R5125000). Keep today's script as a `script_v\u2026`, registered in `crates/cards/src/history.rs` for the versions it shipped in, as other cards do.\n4. Write the pending patch fragment with `cargo jackioh patches`, and its player note by hand.\n5. The spec row already says what the fix does. It gains only a line naming the issue.\n\n## Where it lands\n\n- `crates/cards/src/scripts/infinite_assault/c224_rollback_point.rs` (the script and its tests)\n- `crates/cards/src/history.rs` (the shipped script, kept for replays)\n- a pending patch fragment, and one line on SPEC \u00a78.13 row 224\n\n## Acceptance criteria\n\n- [ ] In a test named after R4594005, a Radiant Rollback Point's copies are on their printed face (not Radiant, printed stats) and have Rush.\n- [ ] A base Rollback Point's copies are on their printed face with no Rush, as today.\n- [ ] A recorded game that cast a Radiant Rollback Point under the old script folds to its recorded hash, or is handled as R767000 says for its version.\n- [ ] These are green: `cargo test -p jackioh-cards c224_rollback_point`, `cargo jackioh spec check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims`.\n\n## Size and risks\n\n- **Size:** small, about 3 to 4 files, difficulty medium (a card change).\n- **Balance:** the level-10 Commander gets weaker only in fights where its Rollback Point is Radiant. `cargo jackioh assault-sim`'s wide bands hold the Assault's tuning (SPEC \u00a716, Tuning), and this is unlikely to move them.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n**Judge:** would approve it: Confirmed: `c224_rollback_point.rs:57` passes the card's own face as the summon's `radiant`, and `summon_fresh_into` (`crates/engine/src/effects/summon.rs:566`) makes each copy Radiant, but the card's text, its header, \u00a78.13 row 224 and R4594005 all say the copies come back on their printed face with only Rush added (compare row 230, whose Radiant text does say 'Radiant copies'); the Commander's c, so it is approved by itself as it opens, at `priority:low` (at most 3 a day; one past that waits for room). `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-27T20:34:48Z:\n\napprove\n\nWhy: confirmed. A rules bug on a shipped card. `c224_rollback_point.rs:57` passes the card's own face as each summon's `radiant`, so a Radiant Rollback Point brings its three Units back Radiant, with doubled stats and stronger text. Its text, its header comment, \u00a78.13 row 224 and R4594005 all say \"a fresh copy on its printed face \u2026 with Rush on the Radiant face\". A Fine-Tuned level-10 Commander reaches it, and the fix keeps the old script for replays.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5158: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-27T20:35:26Z",
+    "claimed_at": "2026-11-27T20:46:06Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
