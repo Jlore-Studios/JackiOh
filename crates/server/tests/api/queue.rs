@@ -249,6 +249,11 @@ struct SeedTicket<'a> {
 }
 
 async fn seed_ticket(app: &App, input: SeedTicket<'_>) -> Value {
+    seed_ticket_stamped(app, input, &app.catalog.version).await
+}
+
+/// `seed_ticket` for a ticket enqueued under `catalog_version`, as a wait that began before a patch is.
+async fn seed_ticket_stamped(app: &App, input: SeedTicket<'_>, catalog_version: &str) -> Value {
     fake_lock(app)
         .await
         .seed_profile(json!({ "id": input.profile_id, "status": "active", "rating": input.rating }));
@@ -270,13 +275,28 @@ async fn seed_ticket(app: &App, input: SeedTicket<'_>) -> Value {
         "mode": input.mode,
         "deck": deck,
         "trio": trio,
-        "catalogVersion": app.catalog.version,
+        "catalogVersion": catalog_version,
         "enqueuedAt": now_ms() - input.waited_ms,
         "status": "open",
         "matchId": null,
     });
     q!(app, tickets_insert(&from(ticket.clone())));
     ticket
+}
+
+/// R5159000: a catalog version no running server holds, the stamp of a ticket enqueued before a patch.
+pub(crate) const OLDER_CATALOG: &str = "v-before-the-patch";
+
+/// R5159000: the ticket as enqueued before a deploy, restamped with `OLDER_CATALOG`.
+pub(crate) async fn restamp_older(app: &App, ticket_id: &str) {
+    let mut data = fake_lock(app).await;
+    let row = data
+        .tables
+        .tickets
+        .iter_mut()
+        .find(|row| row.id == ticket_id)
+        .expect("the ticket");
+    row.catalog_version = OLDER_CATALOG.to_string();
 }
 
 /// A frozen trio whose every name says whose it is, over three legal decks.
@@ -808,6 +828,137 @@ mod r897000_an_abandoned_ticket_expires_before_it_seats_anyone {
         assert_eq!(status, 200);
         let (_, after) = request(&app, "GET", "/api/auth/me", &token, None).await;
         assert_eq!(after["queued"], false);
+    }
+}
+
+// SPEC §11 R5159000 — a ticket opened before a card patch ends at the next sweep
+
+mod r5159000_a_ticket_from_before_a_patch_ends_at_the_next_sweep {
+    use super::*;
+
+    /// PREMISE of every test here: this server has not listened one window, so R897000's expiry judges
+    /// nothing, and only the stamp can cancel.
+    fn assert_inside_the_listening_window(app: &App) {
+        assert!(!app.queue_presence.expiry_due(now_ms()));
+    }
+
+    /// One ticket stamped `OLDER_CATALOG` and one on the running catalog, the two of `mode` and one
+    /// rating at the same instant, so each would pair with the other were it not for the stamp; the
+    /// sweep that follows cancels the older, makes nothing and leaves the current open.
+    async fn older_and_current_ticket_of(mode: &str) {
+        let app = test_app().await;
+        assert_inside_the_listening_window(&app);
+        let seed = |id, profile_id| SeedTicket {
+            id,
+            profile_id,
+            rating: 1000,
+            waited_ms: 0,
+            mode,
+        };
+        seed_ticket_stamped(&app, seed("t-older", "older"), OLDER_CATALOG).await;
+        seed_ticket(&app, seed("t-current", "current")).await;
+
+        let report = try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(report.made, 0, "{mode}");
+        assert!(report.failed.is_empty(), "{mode}");
+        assert!(matches_table(&app).await.is_empty(), "{mode}");
+        assert!(series_table(&app).await.is_empty(), "{mode}");
+        assert_eq!(ticket(&app, "t-older").await["status"], "cancelled", "{mode}");
+        assert_eq!(ticket(&app, "t-current").await["status"], "open", "{mode}");
+        assert_eq!(open_count(&app).await, 1, "{mode}");
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r5159000_an_open_ticket_stamped_before_a_patch_is_canceled_and_the_player_reads_queued_false() {
+        let app = test_app().await;
+        let token = active_profile(&app, "queuer", 1000.0).await;
+        let [deck, ..] = decks_from();
+        let deck_id = save_deck_for(&app, "queuer", &deck, "queuer's deck").await;
+        let (status, queued) = enqueue(&app, &token, &deck_id).await;
+        assert_eq!(status, 200);
+        let ticket_id = queued["ticketId"].as_str().expect("the ticket's id").to_string();
+        let (_, during) = request(&app, "GET", "/api/auth/me", &token, None).await;
+        assert_eq!(during["queued"], true);
+        // The wait began before the deploy: its stamp is the earlier build's.
+        restamp_older(&app, &ticket_id).await;
+        assert_inside_the_listening_window(&app);
+
+        let report = try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(report.made, 0);
+        assert_eq!(ticket(&app, &ticket_id).await["status"], "cancelled");
+        assert_eq!(open_count(&app).await, 0);
+        assert!(matches_table(&app).await.is_empty());
+        assert_eq!(in_match_of(&app, "queuer").await, Value::Null);
+        let (_, after) = request(&app, "GET", "/api/auth/me", &token, None).await;
+        assert_eq!(after["queued"], false);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r5159000_of_two_best_of_1_tickets_that_would_pair_the_older_is_canceled_and_the_current_stays_open()
+     {
+        older_and_current_ticket_of("bo1").await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r5159000_of_two_conquest_tickets_that_would_pair_the_older_is_canceled_and_no_series_is_made() {
+        older_and_current_ticket_of("bo3").await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r5159000_of_two_all_random_tickets_that_would_pair_the_older_is_canceled_and_the_current_stays_open()
+     {
+        older_and_current_ticket_of("random").await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r5159000_the_sweep_goes_on_to_pair_the_current_tickets_after_a_cancel() {
+        let app = test_app().await;
+        assert_inside_the_listening_window(&app);
+        let seed = |id, profile_id| SeedTicket {
+            id,
+            profile_id,
+            rating: 1000,
+            waited_ms: 0,
+            mode: "bo1",
+        };
+        seed_ticket_stamped(&app, seed("t-older", "older"), OLDER_CATALOG).await;
+        seed_ticket(&app, seed("t-c1", "c1")).await;
+        seed_ticket(&app, seed("t-c2", "c2")).await;
+
+        let report = try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(report.made, 1);
+        assert_eq!(paired_profiles(&app).await, vec![json!(["c1", "c2"])]);
+        assert_eq!(ticket(&app, "t-older").await["status"], "cancelled");
+        assert_eq!(in_match_of(&app, "older").await, Value::Null);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r5159000_a_sweep_on_the_old_epoch_cancels_no_ticket() {
+        let app = test_app().await;
+        seed_ticket_stamped(
+            &app,
+            SeedTicket {
+                id: "t-older",
+                profile_id: "older",
+                rating: 1000,
+                waited_ms: 0,
+                mode: "bo1",
+            },
+            OLDER_CATALOG,
+        )
+        .await;
+        // A newer server has booted: this one's sweep runs until it is stopped, but the queue is the
+        // newer one's, whose version it may not share.
+        fake_lock(&app).await.tables.seat_epoch += 1;
+
+        let report = try_pair(&app).await.expect("a sweep");
+
+        assert_eq!(report.made, 0);
+        assert!(report.failed.is_empty());
+        assert_eq!(ticket(&app, "t-older").await["status"], "open");
     }
 }
 
