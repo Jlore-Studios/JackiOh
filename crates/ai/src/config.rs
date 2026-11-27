@@ -218,6 +218,20 @@ pub struct AiSearch {
     /// proof of a line that won on determinization 0 (`lethal::find_lethal_reaching`). `false` stops it at
     /// the scaled allowance, as before.
     pub lethal_reach: bool,
+    /// R4791000: a beam its budget cut short leaves its open lines' turns unended. With this on, it
+    /// closes on a stop only the frontier line the stop cut short, those after it and their children
+    /// (the lines it finished expanding filed their End turn already), ranks a line it could not end the
+    /// turn of as a passed one, less its unspent crystals at `AI_EVAL.unspent_mana` (`search.rs`), and
+    /// `decide` ends the turn of each shortlisted line still open in the seat's main phase on its own
+    /// nodes before it replies to it. A beam its slice never refused decides as before. `false` scores
+    /// every such line where it stood, unreplied.
+    pub close_cut_lines: bool,
+    /// R4797000: every world `decide` samples is played with the opponent's automatic turn end off
+    /// (`decide::search_world`, R82, R345), so the seat's End turn stops where the opponent's turn begins,
+    /// the crystals it left unspent still in its turn log, and the reply ends that turn. `false` plays
+    /// the worlds as sampled, where an opponent with nothing to do ends its turn inside the seat's End
+    /// turn, the seat's next turn rebuilding its log, and floating cost a line nothing.
+    pub hold_opponent_turn: bool,
     /// Seed of the throwaway determinization that lists candidates for the forced check.
     pub probe_seed: &'static str,
     /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
@@ -291,6 +305,14 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     // diverged, every game clean; its scene tests (crates/ai/tests/ai/wide_lethal.rs) settle it
     // (training/improve.md, A screen). false stops every walk at its scaled allowance.
     lethal_reach: true,
+    // R4791000: on. 400 games on improve-dev, 200-200, edge 0.000 (-0.024 to +0.024), 6 decided (3-3), 25
+    // diverged, every game clean, vs control 5991e8da39: inconclusive (R4319000), kept; its scene tests
+    // (crates/ai/tests/ai/budget.rs) settle it (training/improve.md, A screen).
+    close_cut_lines: true,
+    // R4797000: on. 400 games on improve-dev, 202-198, edge +0.010 (-0.018 to +0.038), 8 decided (5-3), 29
+    // diverged, every game clean, vs control 681d5a2bc5 (R4791000): inconclusive (R4319000), kept; its
+    // scene tests (crates/ai/tests/ai/float_discount.rs) settle it (training/improve.md, A screen).
+    hold_opponent_turn: true,
     probe_seed: "ai:probe",
     tribute_sets: 120,
     fat_reference: 30,

@@ -170,6 +170,8 @@ pub fn beam_search(
         } else {
             (budget.branching, expansion)
         };
+        // R4791000: the frontier lines expanded in full before a stop, each of which filed its End turn.
+        let mut finished = 0;
 
         for line in &frontier {
             if stopped {
@@ -264,6 +266,7 @@ pub fn beam_search(
                     });
                 }
             }
+            finished += usize::from(!stopped);
         }
         // R4801000: every move at the root has been tried; a host's wrap-up is polled from here, so one
         // that fired before the beam still leaves it lines, the root's End turn among them.
@@ -272,7 +275,10 @@ pub fn beam_search(
         }
 
         if stopped {
-            left_open = std::mem::take(&mut frontier);
+            // R4791000: a line the beam finished expanding is no longer open, its End turn filed, so only
+            // the line the stop cut short and those after it are closed below, beside the children.
+            let open_from = if AI_SEARCH.close_cut_lines { finished } else { 0 };
+            left_open = frontier.split_off(open_from);
             left_open.extend(children);
             lane_variants.extend(variants.into_iter().map(|(_, state, actions)| (state, actions)));
             break;
@@ -316,9 +322,10 @@ pub fn beam_search(
         if actions.is_empty() {
             continue;
         }
-        // Every line here is open, so one `close_line` left where it stood scores as the hand eval.
+        // Every line here is open, so one `close_line` left where it stood scores as the hand eval, or,
+        // R4791000, in the seat's main phase, as a passed line (`closed_score`).
         let end = close_line(&state, seat, root_turn, counter, prices);
-        let score = static_score(&end, seat, root_turn, prices);
+        let score = closed_score(&end, seat, root_turn, prices);
         let status = line_status(&end, seat, root_turn);
         complete.push(Line {
             actions,
@@ -369,8 +376,21 @@ pub struct LineReplay {
     pub closed: GameState,
 }
 
+/// R4791000: the score of a line `close_line` stopped at. A line still open in the seat's main phase (its
+/// End turn was refused, by the counter on a cut) is ranked as a passed line beside those that ended their turn: its hand
+/// eval less its unspent crystals at `AI_EVAL.unspent_mana`, as `passed_score` prices them. No Float
+/// credit: a turn not ended has had no Float cut to credit. Any other line scores as `static_score`.
+fn closed_score(end: &GameState, seat: PlayerId, root_turn: i32, prices: &Prices) -> f64 {
+    if AI_SEARCH.close_cut_lines && open_in_main(end, seat, root_turn) {
+        let unspent = end.players[seat].mana.current;
+        return evaluate_priced(end, seat, NextSwing::Enemy, &AI_EVAL, prices)
+            - AI_EVAL.unspent_mana * f64::from(unspent);
+    }
+    static_score(end, seat, root_turn, prices)
+}
+
 /// Whether a line stands open in the seat's main phase with nothing pending.
-fn open_in_main(state: &GameState, seat: PlayerId, root_turn: i32) -> bool {
+pub(crate) fn open_in_main(state: &GameState, seat: PlayerId, root_turn: i32) -> bool {
     line_status(state, seat, root_turn) == LineStatus::Open
         && state.pending.is_none()
         && state.active == seat
