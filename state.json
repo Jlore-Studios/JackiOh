@@ -43418,6 +43418,7 @@
       {
         "at": "2026-11-27T20:53:59Z",
         "number": 5159,
+        "reason": "the code falls short of the spec. \u00a79.4 says a \"stale catalog version is rejected at save and at every door into a match: the queue, a room's join, a co-op room's join and a rematch offer\", but `try_pair` never reads `ticket.catalog_version`, while a room's join does (`actor/rooms.rs:193-196`). So a player queued through a deploy is seated under the new cards with a deck checked only against the old ones. Rematches (R1638000) and lobbies (R4072000) already end at a patch. This closes the last doo",
         "title": "Patch: a queue ticket opened before a card patch is cancelled, not seated in a game on the new cards",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
