@@ -19776,6 +19776,9 @@
         "c:7227641103"
       ]
     },
+    "5159": {
+      "suggestion": true
+    },
     "5161": {
       "asks": [
         "c:7227641987"
@@ -43398,6 +43401,13 @@
         "number": 5161,
         "reason": "confirmed. Once an Infinite Assault fight is over, Main menu and the corner Menu send the report and then call the page's `onLeave` (`FightScreen.tsx:217-224`). The report has already moved the attempt off its fight, so `away === fight` (`AssaultPage.tsx:85`) never matches, and the player lands on the screen Continue shows, never a menu. R4742000 sends the Assault to Play, as the dungeon fight already does. It's a few lines, and the tests that missed it asserted only that `onLeave` was called.",
         "title": "Patch: Main menu on a finished Infinite Assault fight goes to the Play menu, not the screen Continue shows",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-27T20:53:59Z",
+        "number": 5159,
+        "title": "Patch: a queue ticket opened before a card patch is cancelled, not seated in a game on the new cards",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
       }
