@@ -181,19 +181,19 @@ mod tests {
             assert_eq!(s.card(ROCK).taunt_suppressed_turn, Some(s.state().turn));
         }
 
+        /// R5113000: Indestructible, it is Immutable (R4353000), so no other card's aura reaches it: #46's
+        /// Radiant −2/−2 three times over and a paid −4/−4 leave it at its 10 Health, standing.
         #[test]
-        fn r69_an_indestructible_unit_whose_max_health_falls_to_0_dies_anyway_n46_radiant_3_2_2_then_paid_4_4_4() {
-            // (#46 radiant: 3 × −2/−2, then paid 4 → −4/−4)
+        fn r5113000_no_other_cards_aura_reaches_it_n46_radiant_3_2_2_then_paid_4_4_4() {
             let radiant_aura = json!({ "def": AURA, "radiant": true });
             let mut s = board(json!({
                 "p1": { "hand": [radiant_aura], "backrow": [radiant_aura, radiant_aura, radiant_aura] },
                 "p2": { "field": [ROCK] },
             }));
-            s.expect_stats(ROCK, json!({ "maxHealth": 4 }));
+            s.expect_stats(ROCK, json!({ "maxHealth": 10 }));
             s.play(AURA, json!({ "embiggen": true }));
-            // No destroy effect is involved, so Indestructible has nothing to ignore: it is collected like
-            // any other unit and fires Death (R69, Hearthstone).
-            s.expect_in_zone(ROCK, "graveyard").expect_events(json!(["destroyed"]));
+            s.expect_in_zone(ROCK, "field");
+            s.expect_stats(ROCK, json!({ "maxHealth": 10 }));
         }
 
         // Radiant: "Plus Immutable" (§8 Conventions, R23)

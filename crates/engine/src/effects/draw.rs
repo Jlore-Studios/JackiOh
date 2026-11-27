@@ -85,7 +85,8 @@ pub fn draw_from_library(args: DrawFromLibraryArgs) -> Effect {
             crate::effects::radiant::make_radiant(ctx, &drawn);
         }
         // R3555002: given in the hand as R1878003 gives them (a burned card gets none) and with no
-        // event, as R1438 and R1878003 do it.
+        // event, as R1438 and R1878003 do it. R5113000: how the draw brings the card, so an Immutable
+        // one takes them too.
         if let Some(keywords) = args.keywords.clone()
             && let Some(live) = crate::state::find_instance_mut(ctx.state, &drawn_id)
         {

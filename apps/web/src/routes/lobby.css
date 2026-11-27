@@ -190,7 +190,7 @@
   box-shadow:
     inset 0 0 0 3px color-mix(in srgb, var(--pal-wood-900) 85%, transparent),
     inset 0 0 0 4px color-mix(in srgb, var(--pal-brass-500) 22%, transparent),
-    var(--shadow-3);
+    0 18px 44px color-mix(in srgb, var(--pal-black) 55%, transparent);
 }
 
 .tavern.play-screen .play-panel__heading {
@@ -217,7 +217,7 @@
   height: 26px;
   border: 1px solid var(--tavern-brass);
   border-radius: var(--radius-round);
-  background: var(--pal-brass-600);
+  background: radial-gradient(circle at 40% 35%, var(--pal-brass-200), var(--tavern-gold) 45%, var(--pal-brass-600));
   color: var(--tavern-ink);
   font-size: var(--type-md);
   font-weight: 800;
@@ -388,10 +388,10 @@
   padding: 10px 14px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 50%, transparent);
   border-radius: var(--radius-md);
-  background: var(--tavern-well);
+  background: linear-gradient(180deg, var(--pal-wood-950), var(--tavern-well));
   color: var(--tavern-parchment);
   font: inherit;
-  box-shadow: none;
+  box-shadow: inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent);
   transition: border-color 140ms, box-shadow 140ms;
 }
 
@@ -402,7 +402,7 @@
 .tavern.play-screen .lobby-select:focus-visible {
   outline: none;
   border-color: var(--tavern-gold);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pal-brass-300) 25%, transparent);
+  box-shadow: inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent), 0 0 0 3px color-mix(in srgb, var(--pal-brass-300) 25%, transparent);
 }
 
 .tavern.play-screen .play-pick-summary {
@@ -520,7 +520,7 @@
   border: 2px solid var(--tavern-teal);
   border-radius: var(--radius-round);
   opacity: 0;
-  animation: play-search-ping calc(1800ms * var(--anim-scale)) ease-out 1;
+  animation: play-search-ping calc(1800ms * var(--anim-scale)) ease-out infinite;
 }
 
 .tavern.play-screen .play-search__ring--late {

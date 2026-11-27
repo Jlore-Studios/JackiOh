@@ -42,7 +42,7 @@ const TAILWIND_DEFAULTS = [
   "#c084fc",
 ];
 /** #5012: UNMIGRATED's ceiling; it only falls. */
-const UNMIGRATED_MAX = 871;
+const UNMIGRATED_MAX = 867;
 
 /** The CSS named colors (CSS Color 4), which count as colors too. */
 const NAMED =
@@ -83,7 +83,7 @@ const BOARD_SHEETS = SHEETS.filter(
 const UNMIGRATED: Record<string, number> = {
   "auth/code-field.css": 2,
   "auth/consent.css": 3,
-  "auth/tavern.css": 11,
+  "auth/tavern.css": 10,
   "cards/art/art.css": 7,
   "cards/cards.css": 186,
   "cards/cardstate.css": 15,
@@ -95,7 +95,7 @@ const UNMIGRATED: Record<string, number> = {
   "cards/marks.css": 4,
   "cards/setmark.css": 3,
   "cards/wheel/wheel.css": 6,
-  "collection/collection.css": 74,
+  "collection/collection.css": 73,
   "economy/economy.css": 9,
   "emotes/emotes.css": 1,
   "fx/fx.css": 8,
@@ -104,9 +104,9 @@ const UNMIGRATED: Record<string, number> = {
   "game/table.css": 176,
   "packs/pack-object.css": 15,
   "patches/patches.css": 1,
-  "practice/practice.css": 3,
+  "practice/practice.css": 2,
   "practice/sandbox.css": 2,
-  "routes/landing.css": 13,
+  "routes/landing.css": 12,
   "routes/lobby.css": 10,
   "routes/stats.css": 7,
 };

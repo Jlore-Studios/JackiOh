@@ -18,6 +18,9 @@
 //! tab's Running view names beside the version a card's current play version began at. R5033000: and the
 //! position of its first version in the shipped history, which the Date sort reads.
 //!
+//! R5037000: each row also reads the Cards tab's Win rate (R3185000) and Play rate (R3950000), plain
+//! tallies summed over the span as the games are, never an average of its versions' rates.
+//!
 //! R5040000: `major_line_versions` cuts each live play version to the newest major's line;
 //! `play_version_figures` over the cut versions is the Major patch running view's table, its field read
 //! over the cut rows alone.
@@ -36,7 +39,7 @@ use super::{
     CardStats, CardTier, CreatedStats, DECIMALS, DecisivenessRow, GameMode, GameSource, ModeFilter,
     NO_FIGURE, PERCENT, PilotFilter, StatsField, StatsTotals, SwingRows, SwingTally, Tally, add_created,
     add_stats, add_swing_rows, adjusted_interval, adjusted_win_rate, decisiveness_rows, format_decisiveness,
-    held_adjusted, percent, seen, stats_field, swing_baseline, tier_of, to_fixed,
+    held_adjusted, percent, play_rate, seen, stats_field, swing_baseline, tier_of, to_fixed, win_rate,
 };
 use crate::catalog::RULE_MADE_DEF_IDS;
 use crate::config::{PUBLIC_STATS_MIN_LIVE_GAMES, TIER_BAND_HIGH, TIER_BAND_LOW};
@@ -140,6 +143,13 @@ pub struct PlayVersionFigures {
     /// R3022000: its tier, only once it has the floor's games.
     pub tier: Option<CardTier>,
     pub has_enough_games: bool,
+    /// R5037000: its win rate over the `games` it counts, as R3185000 reads a card's; `None` with no
+    /// games, so a play version nobody held never reads as 0%. The floor (R654) is `has_enough_games`'s.
+    pub win_rate: Option<f64>,
+    /// R5037000: how often it was played when seen, its played games over its seen games (R3950000), a
+    /// card only a rule makes its used Created games over the games a seat made one (R3070000); `None`
+    /// when it was never seen, as 0% would say it was seen and never played.
+    pub play_rate: Option<f64>,
 }
 
 /// R4675001: every play version's figures, and the field and band they are read against.
@@ -425,6 +435,8 @@ fn figures_of(
     });
     let games = i64::from(counted.games);
     let has_enough_games = games >= query.min_sample;
+    let rate = win_rate(&counted);
+    let played = play_rate(stats, sum.created.as_ref(), made.as_ref());
     let (adjusted, range) = match made {
         Some(made) => {
             held_adjusted(&made, field).map_or((None, None), |(rate, range)| (Some(rate), Some(range)))
@@ -455,6 +467,8 @@ fn figures_of(
         decisiveness: decisiveness.filter(|_| has_enough_games),
         tier,
         has_enough_games,
+        win_rate: rate,
+        play_rate: played,
     }
 }
 
@@ -843,6 +857,120 @@ mod tests {
         assert_eq!(reached, [1, 4, 4, 2, 1, 0]);
         // No history names no window.
         assert_eq!(read(&[]), [0; 6]);
+    }
+
+    /// A live game on `patch` holding `deck`, which p1 wins when `won`, where p1 played `played` and, with
+    /// `seen` false, never had any card in hand.
+    fn played_game(
+        id: &str,
+        patch: &str,
+        deck: &[&str],
+        won: bool,
+        played: &[&str],
+        seen: bool,
+    ) -> GameRecord {
+        let mut record = game(id, GameSource::Live, patch, deck, won);
+        record.game.seats.p1.played = played.iter().map(|card| card.to_string()).collect();
+        if !seen {
+            record.game.seats.p1.opening = vec![];
+        }
+        record
+    }
+
+    // R5037000: a one-version play version reads the Cards tab's figures for the same records: R3185000's
+    // win rate over the decks that held the card, R3950000's played over seen.
+    #[test]
+    fn r5037000_a_one_version_play_versions_win_rate_and_play_rate_are_the_cards_tabs() {
+        let a = version(A, &["v1"], true);
+        let records = [
+            played_game("m1", "v1", &[A], true, &[A], true),
+            played_game("m2", "v1", &[A], false, &[], true),
+            played_game("m3", "v1", &[A], true, &[], false),
+            played_game("m4", "v1", &[A], false, &[A], true),
+        ];
+        let table = play_version_figures(&folded(&records), &query(std::slice::from_ref(&a), 1));
+        let row = row(&table, &a.id);
+        assert_eq!(row.games, 4);
+        assert_eq!(row.win_rate, Some(0.5));
+        // Played in two of the three games that saw it; the fourth never had it in hand.
+        assert_eq!(row.play_rate, Some(2.0 / 3.0));
+        let card = by_hand(&records, A);
+        assert_eq!(row.win_rate, win_rate(&card.in_deck));
+        assert_eq!(row.play_rate, play_rate(Some(&card), None, None));
+    }
+
+    // R5037000: a span sums its versions' tallies, so its rates differ from the mean of theirs.
+    #[test]
+    fn r5037000_a_two_version_span_reads_the_summed_tallies() {
+        let span = version(A, &["v1", "v2"], true);
+        let first = version(B, &["v1"], false);
+        let versions = [span.clone(), first.clone()];
+        let records = [
+            played_game("m1", "v1", &[A, B], true, &[A, B], true),
+            played_game("m2", "v2", &[A], false, &[A], true),
+            played_game("m3", "v2", &[A], false, &[], true),
+            played_game("m4", "v2", &[A], false, &[], false),
+        ];
+        let table = play_version_figures(&folded(&records), &query(&versions, 1));
+        let row_a = row(&table, &span.id);
+        // One win in four games, and two plays in the three games that saw it.
+        assert_eq!(
+            (row_a.games, row_a.win_rate, row_a.play_rate),
+            (4, Some(0.25), Some(2.0 / 3.0))
+        );
+        // v1 alone reads 100% and 100%, v2 alone 0% and 50%: the mean of the two would be 50% and 75%.
+        let v1 = row(&table, &first.id);
+        assert_eq!((v1.win_rate, v1.play_rate), (Some(1.0), Some(1.0)));
+        let card = by_hand(&records, A);
+        assert_eq!(row_a.win_rate, win_rate(&card.in_deck));
+        assert_eq!(row_a.play_rate, play_rate(Some(&card), None, None));
+    }
+
+    // R5037000, R3070000: the Dormant Starship is in no deck: it reads its used games over the games a
+    // seat made one.
+    #[test]
+    fn r5037000_a_card_only_a_rule_makes_reads_its_used_games_over_its_made_games() {
+        let starship = version(DORMANT_STARSHIP_DEF_ID, &["v1"], true);
+        let card = DORMANT_STARSHIP_DEF_ID.to_string();
+        let mut used = game("m1", GameSource::Live, "v1", &[A], true);
+        used.game.seats.p1.created_used = Some(vec![CreatedUse {
+            card: card.clone(),
+            turn: 5,
+            radiant: false,
+            variant: None,
+            source: None,
+        }]);
+        let mut unused_won = game("m2", GameSource::Live, "v1", &[A], true);
+        unused_won.game.seats.p1.created_unused = Some(vec![card.clone()]);
+        let mut unused_lost = game("m3", GameSource::Live, "v1", &[A], false);
+        unused_lost.game.seats.p1.created_unused = Some(vec![card]);
+        let table = play_version_figures(
+            &folded(&[used, unused_won, unused_lost]),
+            &query(std::slice::from_ref(&starship), 1),
+        );
+        let row = &table.versions[0];
+        assert_eq!(row.games, 3);
+        assert_eq!(row.win_rate, Some(2.0 / 3.0));
+        assert_eq!(row.play_rate, Some(1.0 / 3.0));
+    }
+
+    // R5037000: a play version nobody saw has a win rate and no play rate, which 0% would misread as seen
+    // and never played; one wholly before the records has neither.
+    #[test]
+    fn r5037000_a_version_never_seen_reads_no_play_rate_and_one_before_the_records_reads_none() {
+        let old = version(A, &["v0"], false);
+        let now = version(A, &["v1"], true);
+        let versions = [old.clone(), now.clone()];
+        let records = [
+            played_game("m1", "v1", &[A], true, &[], false),
+            played_game("m2", "v1", &[A], false, &[], false),
+        ];
+        let table = play_version_figures(&folded(&records), &query(&versions, 1));
+        let seen_never = row(&table, &now.id);
+        assert_eq!((seen_never.games, seen_never.win_rate), (2, Some(0.5)));
+        assert_eq!(seen_never.play_rate, None);
+        let before = row(&table, &old.id);
+        assert_eq!((before.games, before.win_rate, before.play_rate), (0, None, None));
     }
 
     // R5033000: a row's `first_shipped` is its first version's position in the history, ship order and never

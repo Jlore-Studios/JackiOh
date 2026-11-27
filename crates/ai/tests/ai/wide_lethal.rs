@@ -6,6 +6,10 @@
 //!
 //! The pinned position is turn 8 of `audit:hard-vs-easy:2`, p2 to move with 32 root candidates: the
 //! solver proves its six-action lethal in 213 nodes, and the scaled allowance was 140.
+//!
+//! The audit's (#4787) long lethals on boards of ordinary width are pinned beside it, as they stand
+//! (`the_audits_long_lethals_are_proved_given_room`): #5119, #4790's follow-up, must bring two of them
+//! within `AI_BUDGET.lethal_nodes` without losing the third.
 
 use jackioh_ai::{
     AI_BUDGET, AI_SEARCH, AiOptions, DecisionReason, DeterminizeOptions, NodeCounter, Prices, SearchBudget,
@@ -17,6 +21,19 @@ use jackioh_engine::testkit::{GameState, PlayerId, Value, create_rng, json};
 use super::support::{AI, decision_prices_at, register_cards, scenario};
 
 const WIDE_LETHAL: &str = include_str!("../fixtures/pinned-wide-lethal.json");
+/// Turn 12 of the mirror game `audit:ai-vs-greedy:26`, p2 to move: a play, three Activates of it on the
+/// Taunt that walls p2's one attacker, and that attacker's hit.
+const AUDIT_MIRROR_26_T12: &str = include_str!("../fixtures/pinned-audit-mirror-26-t12.json");
+/// Turn 12 of `audit:hard-vs-easy:8`, p2 to move: ten actions, the gap at 1 until the last.
+const AUDIT_HVE_8_T12: &str = include_str!("../fixtures/pinned-audit-hve-8-t12.json");
+/// Turn 21 of `audit:hard-vs-easy:12`, p1 to move: nine actions, the middle ones raising the gap before a
+/// prompt's answer drops it to 0.
+const AUDIT_HVE_12_T21: &str = include_str!("../fixtures/pinned-audit-hve-12-t21.json");
+
+/// The nodes `the_audits_long_lethals_are_proved_given_room` gives the two long lethals the walk does not
+/// prove within `AI_BUDGET.lethal_nodes`: it needs 510 for mirror 26's and 462 for hard-vs-easy 8's, so
+/// this leaves modest room over what the walk costs today and still fails a walk that loses either.
+const LONG_LETHAL_ROOM: usize = 600;
 
 /// The pinned position: the true state, the deciding seat and its stream.
 struct Pinned {
@@ -26,9 +43,9 @@ struct Pinned {
     rng_cursor: u32,
 }
 
-fn pinned() -> Pinned {
+fn pinned(text: &str) -> Pinned {
     register_cards();
-    let fixture: Value = serde_json::from_str(WIDE_LETHAL).expect("the fixture is JSON");
+    let fixture: Value = serde_json::from_str(text).expect("the fixture is JSON");
     Pinned {
         state: serde_json::from_value(fixture["state"].clone()).expect("the fixture's state"),
         seat: serde_json::from_value(fixture["seat"].clone()).expect("the fixture's seat"),
@@ -70,7 +87,7 @@ fn scaled_allowance(fat: usize) -> usize {
 
 #[test]
 fn r4788000_a_wide_decision_plays_the_lethal_its_scaled_allowance_cut_short() {
-    let at = pinned();
+    let at = pinned(WIDE_LETHAL);
     let fat = width(&at);
     assert!(
         fat > AI_SEARCH.fat_reference as usize,
@@ -100,7 +117,7 @@ fn r4788000_a_wide_decision_plays_the_lethal_its_scaled_allowance_cut_short() {
 
 #[test]
 fn r4788000_past_its_allowance_the_walk_goes_on_from_a_position_that_reads_as_lethal() {
-    let at = pinned();
+    let at = pinned(WIDE_LETHAL);
     let scaled = scaled_allowance(width(&at));
     let worlds = worlds(&at);
     let prices = decision_prices_at(&at.state, at.seat);
@@ -126,7 +143,7 @@ fn r4788000_past_its_allowance_the_walk_goes_on_from_a_position_that_reads_as_le
 
 #[test]
 fn r4788000_the_pinned_wide_decision_keeps_to_a_callers_own_figures() {
-    let at = pinned();
+    let at = pinned(WIDE_LETHAL);
     // R4802000's edges: a solver given nothing, and one given more than the whole budget.
     let none = SearchBudget {
         lethal_nodes: 0,
@@ -197,4 +214,36 @@ fn r4788000_a_walk_that_never_reads_as_lethal_stops_at_its_allowance() {
         None
     );
     assert_eq!(reaching.used(), plain.used(), "no node past the allowance");
+}
+
+/// The audit's (#4787) long lethals, each proved by the walk as it stands, given room. #5119, #4790's
+/// follow-up, must bring mirror 26's turn 12 and hard-vs-easy 8's turn 12 within `AI_BUDGET.lethal_nodes`
+/// without losing hard-vs-easy 12's turn 21, which the walk proves within it today (in 192 nodes); until
+/// then this keeps a change to the walk from losing any of the three unnoticed.
+#[test]
+fn the_audits_long_lethals_are_proved_given_room() {
+    for (name, text, room) in [
+        (
+            "audit:ai-vs-greedy:26 turn 12",
+            AUDIT_MIRROR_26_T12,
+            LONG_LETHAL_ROOM,
+        ),
+        ("audit:hard-vs-easy:8 turn 12", AUDIT_HVE_8_T12, LONG_LETHAL_ROOM),
+        (
+            "audit:hard-vs-easy:12 turn 21",
+            AUDIT_HVE_12_T21,
+            AI_BUDGET.lethal_nodes,
+        ),
+    ] {
+        let at = pinned(text);
+        let worlds = worlds(&at);
+        let prices = decision_prices_at(&at.state, at.seat);
+        let counter = create_node_counter(room, None);
+        let proved = find_lethal(&worlds, at.seat, &counter, room, &prices);
+        assert!(
+            proved.is_some(),
+            "{name}: no lethal in {} of {room} nodes",
+            counter.used()
+        );
+    }
 }

@@ -1242,7 +1242,15 @@ mod r1850005_radiant_at_n_keywords {
         let card = put(&mut state, &rod_field().id, slot(P1, Row::Backrow, 1), json!({}));
         check(&mut state);
         assert!(!find_instance(&state, &card.id).expect("the rod").radiant);
-        let events = grant(&mut state, &card.id, json!({ "kind": "Indestructible" }));
+        // Immutable, it takes no other card's keyword (R5113000), so it gives itself this one.
+        let events = apply(
+            &mut state,
+            Some(&card.id),
+            P1,
+            effects::grant_keyword(json_as(
+                json!({ "target": instance(&card.id), "keyword": { "kind": "Indestructible" } }),
+            )),
+        );
         assert_eq!(events_of_type(&events, GameEventType::RadiantSet).len(), 1);
         assert!(find_instance(&state, &card.id).expect("the rod").radiant);
     }

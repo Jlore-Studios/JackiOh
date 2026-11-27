@@ -63,7 +63,7 @@ use jackioh_engine::wire::stats::{
     WindowRequest, WindowSource, WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats,
     card_family, card_stats_of, card_window, collapse_gameless, created_face_adjusted, created_face_field,
     created_face_side, face_adjusted, face_drills_of, face_side, face_stats_field, hall_of_fame,
-    held_adjusted, major_line_versions, not_drawn, output_field, output_figures, patch_windows,
+    held_adjusted, major_line_versions, not_drawn, output_field, output_figures, patch_windows, play_rate,
     play_version_figures, radiant_gap, rolled_field, rolled_figures, round_share, seen, sources_of,
     stats_field, swing_baseline, swing_report, tier_in, variant_field, variant_figures, variant_rows,
     wilson_interval, win_rate, windowed_card_stats, windowed_game_figures, windowed_swing_rows,
@@ -572,22 +572,12 @@ fn card_figures(
 /// games (played, or drawn and never played; the engine's `seen`), in every mode. A card only a rule
 /// makes (R3070000) reads its used Created games over the games a seat made one. 0 when it was never seen.
 fn play_rate_of(report: &WindowedReport, id: &str, stat: Option<&CardStats>, made: Option<&Tally>) -> f64 {
-    let (played, seen_games) = match made {
-        Some(made) => {
-            let used = report
-                .created
-                .iter()
-                .find(|row| row.stats.card == id)
-                .map_or(0, |row| row.stats.created_played.games);
-            (used, made.games)
-        }
-        None => stat.map_or((0, 0), |stat| (stat.played.games, seen(stat).games)),
-    };
-    if seen_games > 0 {
-        f64::from(played) / f64::from(seen_games)
-    } else {
-        0.0
-    }
+    let created = report
+        .created
+        .iter()
+        .find(|row| row.stats.card == id)
+        .map(|row| &row.stats);
+    play_rate(stat, created, made).unwrap_or(0.0)
 }
 
 /// R3022000: what `GET /api/stats/cards`' tiers are read against: the field (`stats_field`) of every card

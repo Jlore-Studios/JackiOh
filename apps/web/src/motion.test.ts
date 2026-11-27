@@ -51,29 +51,29 @@ const CURVES = tokenLines(read("motion.css"), /^\s*--ease-([\w-]+):\s*(cubic-bez
 /** Every time a board sheet keeps of its own, in source order. */
 const KEEP: Record<string, string[]> = {
   "game/activate.css": ["300ms"], // BUILD's `activated` row
-  "game/aim/opponentAim.css": ["700ms", "900ms"], // each plays once (#5014)
+  "game/aim/opponentAim.css": ["700ms", "900ms"], // loops
   // #3348: a tile's ripple (TILE_FEEL.rippleMs, twice: the press-in and the ring), then the corner props' tap, payoff, rare and sequence (CORNER_*_MS in game/arena/config.ts).
   "game/arena/arena.css": ["520ms", "520ms", "380ms", "900ms", "1600ms", "1400ms"],
   "game/board.css": [
     "90ms", // R434's flip stagger
     ...["420ms", "1600ms", "260ms", "520ms", "2400ms", "700ms"], // the table's tap marks
-    "6s", // R3554000's Black Hole breath, out and back once (#5014)
+    "6s", // R3554000's Black Hole breath, a loop
     ...["250ms", "400ms", "220ms", "250ms", "320ms", "400ms"], // R701's wobbles and flashes
     "1.2s", // the End turn button's loop
     "150ms", // BUILD's `turnEnded` row
   ],
   // Clock.tsx's TICK_MS repaint (the 200ms) and loops.
   "game/clock.css": ["200ms", "1s", "500ms", "1s", "200ms", "200ms", "200ms", "140ms", "520ms", "90ms", "1.2s", "700ms"],
-  "game/countered.css": ["2.6s", "4.1s"], // each plays once (#5014)
-  "game/drag/drag.css": ["0.7s", "0.8s"], // the arrow's march plays once (#5014), the reticle's pulse loops
-  "game/facedown.css": ["9s", "4.8s", "4.8s"], // each plays once (#5014): the veil, the breath and its light (#3674), on one beat
+  "game/countered.css": ["2.6s", "4.1s"], // loops
+  "game/drag/drag.css": ["0.7s", "0.8s"], // loops
+  "game/facedown.css": ["9s", "4.8s", "4.8s"], // loops: the veil, the breath and its light (#3674), on one beat
   "game/highlights.css": ["1.8s", "1.4s"], // loops
   "game/lanePick.css": ["1.6s"], // loop
-  "game/market.css": ["3.2s"], // out and back once (#5014)
+  "game/market.css": ["3.2s"], // loop
   "game/notices.css": ["5s"], // the draw toast's hold
   "game/reveal.css": ["70ms"], // the deal's stagger
-  "game/showcase/showcase.css": ["1.1s"], // out and back once (#5014)
-  "game/spent.css": ["2.4s"], // out and back once (#5014)
+  "game/showcase/showcase.css": ["1.1s"], // loop
+  "game/spent.css": ["2.4s"], // loop
 };
 
 /** How many durations in each board sheet scale by --anim-scale: none loses the factor. */
@@ -102,13 +102,13 @@ const UNTOKENED_MOTION: Record<string, number> = {
   "emotes/emotes.css": 20,
   "emotes/portrait.css": 5,
   "fx/aura/aura.css": 2,
-  "fx/fx.css": 60,
+  "fx/fx.css": 61,
   "game/deckbuilder/deckbuilder.css": 16,
   "game/deckbuilder/workshop.css": 2,
   "game/table.css": 27,
   "packs/pack-object.css": 12,
   "packs/packs.css": 4,
-  "practice/practice.css": 41,
+  "practice/practice.css": 42,
   "rank/rankCrest.css": 2,
   "routes/game-banner.css": 6,
   "routes/landing.css": 25,

@@ -57,7 +57,7 @@
 }
 
 .cf .cf-dormant .cf-dormant-anim {
-  animation: cf-dormant-pulse var(--cf-dormant-pulse) ease-in-out 2 alternate;
+  animation: cf-dormant-pulse var(--cf-dormant-pulse) ease-in-out infinite alternate;
 }
 
 @keyframes cf-dormant-pulse {
@@ -127,7 +127,7 @@
   animation-name: cf-shipyard-sweep;
   animation-duration: var(--cf-sweep-ms);
   animation-timing-function: var(--ease-in-out);
-  animation-iteration-count: 1;
+  animation-iteration-count: infinite;
 }
 
 .cf .cf-shipyard-sparks circle {
@@ -135,7 +135,7 @@
   animation-name: cf-shipyard-weld;
   animation-duration: var(--cf-weld-ms);
   animation-timing-function: steps(4);
-  animation-iteration-count: 1;
+  animation-iteration-count: infinite;
   animation-delay: calc(var(--cf-weld-ms) * var(--cf-spark) / var(--cf-sparks) * -1);
 }
 

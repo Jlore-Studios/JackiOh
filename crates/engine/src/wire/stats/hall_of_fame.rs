@@ -198,6 +198,8 @@ mod tests {
             decisiveness: None,
             tier: Some(tier),
             has_enough_games: games >= FLOOR,
+            win_rate: None,
+            play_rate: None,
         }
     }
 

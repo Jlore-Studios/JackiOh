@@ -712,6 +712,14 @@
   }
 }
 
+/* R5128000: Low graphics stills the chase tables' pads, as Reduce motion does, and its backdrop draws no particles
+   (Backdrop.tsx). The selector weighs what the pad rules above weigh, so coming after them it wins. */
+:root[data-low-graphics="true"] .field[data-table] .zone[data-side][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow], [data-animating])::before,
+:root[data-low-graphics="true"] .field[data-their-table] .zone[data-side][data-row="units"]:not(.zone-locked, .zone-reserved, [data-glow], [data-animating])::before {
+  will-change: auto;
+  animation-name: none;
+}
+
 @keyframes backdrop-rise {
   from {
     transform: translateY(0);

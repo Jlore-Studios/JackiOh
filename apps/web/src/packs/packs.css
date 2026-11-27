@@ -251,7 +251,7 @@
   .pack-scene .pack-actions {
     position: sticky;
     bottom: 0;
-    z-index: var(--z-content);
+    z-index: 1;
     width: 100%;
     padding: 0.5rem 0;
     background: color-mix(in srgb, var(--pal-wood-950) 92%, transparent);

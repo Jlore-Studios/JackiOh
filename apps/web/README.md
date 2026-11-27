@@ -71,7 +71,7 @@ The surfaces are one token scale (#2109, #5015): `src/surfaces.css`, imported by
 
 The motion is one vocabulary (#2110): `src/motion.css`, imported by `index.css` after the surfaces, names four durations (`--motion-instant` 80ms, `--motion-fast` 150ms, `--motion-base` 250ms, `--motion-slow` 400ms) and five curves (`--ease-standard`, `--ease-out`, `--ease-in`, `--ease-in-out`, `--ease-overshoot`). A board stylesheet gives every transition and animation a curve (or `linear`, or `steps()`; a `@keyframes` stop spells a curve's value out) and every duration a token, keeping its `* var(--anim-scale)`. These keep their own times: BUILD's (the event table in `game/animations.css`, the `activated` and `turnEnded` rows), R701's wobbles, the table's tap marks, loops, staggers, holds, the clock's 200ms repaint, and any time a `var()` feeds in. `src/motion.test.ts` checks this and lists each sheet's own times in `KEEP`. Every other stylesheet, the menus' among them, is held to its count of raw durations and curves in `UNTOKENED_MOTION` on the same terms.
 
-The glow and motion are one budget (#5014, R5014000). An animation that repeats forever marks only what the player can act on right now, each loop named in `src/compositor-loops.test.ts`'s `IDLE_LOOPS` with the state it marks (a playable card, a unit that can attack, a lane or a target a play can take, End turn as the only move, the turn timer's warning, the lesson's next control, the run map's next nodes): at most `IDLE_LOOPS_CEILING` (12), and the list only shrinks. Every other loop plays at most once (`1`, or `2 alternate` to end where it rests); an effect that ran for its whole cue gets a count that covers the cue. The cosmetic sheets (`cards/cosmetics.css`, `emotes/portrait.css`, `game/table.css`) and loops on their keyframes keep theirs, as do `COSMETIC_LOOPS` and the diorama slices' `PICTURE_LOOPS`; the test fails on any other. The primary button is a flat brass plate: `src/buttons.test.ts` holds `--primary-face*` to two color stops and `--primary-shadow*` to two unblurred layers, one of them an inset highlight. `UNTOKENED_SURFACES` totals at most `UNTOKENED_SURFACES_CEILING` (797), which only falls. Every `::before` and `::after` a sheet makes paints something (its own content, a fill, a border, an outline, a shadow or a backdrop), but the hit areas and float spacers `surfaces.test.ts`'s `EMPTY_PSEUDO` names (R5091000).
+Low graphics (#5128, R5128000) is the settings panel's switch for a slow device, `lowGraphics` in `settings/store.ts`, which puts `data-low-graphics` on `<html>`. The effects run on `fx/settings.ts`'s `getFxSettings()`, which under it holds the intensity and Big moments at `off` (`LOW_GRAPHICS_FX`), so every reader of either (the effects layer, the auras, the arena, the showcase, `useArtMotion`, `useDepthMotion`, `cardMotion.ts`'s calm level) follows it with no check of its own; `getChosenFxSettings()` is what the player chose, which the panel's controls show (disabled while it holds them) and the account sync carries, and `useFxSettings` watches both stores. `game/Backdrop.tsx` draws no particles under it, `table.css` stills the chase tables' pads, `emotes/portrait.css` the portrait's idle, and `index.css` drops every `backdrop-filter`. Reduce motion stops all motion; Low graphics keeps the card motion that reads the game.
 
 The spacing is one scale (#3225): `src/spacing.css`, imported by `index.css` after the motion, names eleven lengths, `--space-1` (2px) to `--space-11` (40px): 2px apart to 12px, where the board's own lengths sit, then 16, 20, 24, 32 and 40px. A board stylesheet gives every `gap`, `padding` and `margin` (and the `--gap` they read) a step, `0`, `auto`, or a `calc()`, `clamp()` or `max()` holding one, and may keep an `em` or `%` term (it scales with its box), a viewport or container term and `env()`, never a px or rem length of its own. A length that is no step is composed of steps (`calc(var(--space-9) + var(--space-2))`), and a negative one is a step times -1. `src/spacing.test.ts` checks this and holds every other stylesheet to its count of px and rem lengths in `UNMIGRATED`; a sheet that loses some lowers its number.
 
@@ -675,7 +675,10 @@ draws too; a source with none draws the default.
 The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
-to the browser's downloads, for a bug report.
+to the browser's downloads, for a bug report. The file is packed (`replay/pack.ts`, R5124000): the first step whole and
+each later one as its change from the one before, gzipped by the browser's CompressionStream into
+`.json.gz`, about a fiftieth to a hundredth of the plain JSON; a browser without CompressionStream saves plain
+`.json`, and Open replay JSON opens either.
 Every mode's end-of-game result offers one **Main menu** button after its own ways on (R4742000, issue #4742):
 `game/MainMenuButton.tsx` draws it for the result panels and screens (the dungeon run-over screen and fights, the
 Infinite Assault fight, the daily game's result, the co-op result), and `mainMenuAction` is the same label as a
@@ -688,7 +691,7 @@ A finished co-op game's result panel offers "Watch the replay" too (§13.9): `du
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
 The panel takes the focus on its first way on as it comes in; its "View the board" folds it to a "Result" button on the board's rail (`duos-result-reopen`) that opens it again, the replay door and the XP reveal with it (#1755).
-A loaded co-op replay offers "Download JSON" too (R1242000, `duos/download.ts`): the seat's views as one file, made in the page, which `/replays` opens again from its Open replay JSON.
+A loaded co-op replay offers "Download JSON" too (R1242000, `duos/download.ts`): the seat's views as one file, packed as the 1v1 file is, made in the page, which `/replays` opens again from its Open replay JSON.
 
 ```
 src/replay/
@@ -706,6 +709,8 @@ src/replay/
   download.ts     "Download JSON" (#1141, R1141000): every step of a source and the row's facts as one file, and
                   `readReplayJsonFile`, then `replayStepsOf`, opens one again (#1160);
                   the download both it and the GIF's share.ts hand a file to
+  pack.ts         a replay file's packing, the co-op file's too: each step as its JSON change from the one before
+                  (`diff`, `apply`), gzipped through CompressionStream, and read back under the byte and step caps
   gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
                   function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
                   OffscreenCanvas, in a worker where it can), encoder.ts (GIF bytes by hand), share.ts, export.ts
@@ -1276,7 +1281,9 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   The same lobby shows the live online game's banner (Rejoin) for a signed-in player in a match.
 - A finished free game is kept for its replay (R768): when it ends the worker adds its config, log,
   catalog version, final hash and a summary to the store, the newest PRACTICE_REPLAYS_KEPT of them, but
-  not a lesson or a game Glitch voided (R679). `{ type: "replays" }` answers the summaries, newest
+  not a lesson, a dungeon run's fight (R2706000) or a game Glitch voided (R679). An Infinite Assault
+  fight is kept with them, its summary naming its level and enemy (`assault`), and its result offers
+  Watch the replay (R5125000). `{ type: "replays" }` answers the summaries, newest
   first, and folds none of them: each has `unavailable` set to `earlier_patch` when it was played on
   another catalog, or to `rules_changed` once opening it found that it no longer folds to its hash;
   `{ type: "replay", game, from, count }` answers a page of `{ step, turn, view }` in the seat the

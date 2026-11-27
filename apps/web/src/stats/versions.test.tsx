@@ -184,20 +184,22 @@ describe("R4680000 the Experimental tab's Versions view", () => {
       "Name",
       "Games",
       "Tier",
-      "Adjusted ↓", "Decisiveness",
+      "Adjusted ↓",
+      "Decisiveness",
+      "Win rate",
+      "Play rate",
       "Since",
-      "Iteration",
-    ]);
+      "Iteration",]);
 
     // Adjusted best first, on one scale across the versions; the old ones' cost is their own catalog's once it loads.
     await waitFor(() => expect(rowsOf(table).cells[0]?.[0]).toBe(String(LIVE_COST + 2)), SLOW);
     expect(rowsOf(table)).toEqual({
       ids: [`${CARD}~v0.1.0`, `${CARD}~v0.1.5`, `${CARD}~v0.2.0`, "core-003~v0.2.0"],
       cells: [
-        [String(LIVE_COST + 2), "Ember Pup", "900", "S", "61.0%", "—", "v0.1.0 – v0.1.4 across 1 patch", "v1"],
-        [String(LIVE_COST + 1), "Spark Pup", "300", "B", "52.0%", "—", "v0.1.5 – v0.1.9 across 2 patches", "v2"],
-        ["1", "Spark Pup", "140", "B", "51.2%", "—", "v0.2.0 – live across 3 patches", "v3"],
-        ["2", "Aqua Warden", "60", "F", "45.5%", "—", "v0.2.0 – live across 1 patch", "v1"],
+        [String(LIVE_COST + 2), "Ember Pup", "900", "S", "61.0%", "—", "—", "—", "v0.1.0 – v0.1.4 across 1 patch", "v1"],
+        [String(LIVE_COST + 1), "Spark Pup", "300", "B", "52.0%", "—", "—", "—", "v0.1.5 – v0.1.9 across 2 patches", "v2"],
+        ["1", "Spark Pup", "140", "B", "51.2%", "—", "—", "—", "v0.2.0 – live across 3 patches", "v3"],
+        ["2", "Aqua Warden", "60", "F", "45.5%", "—", "—", "—", "v0.2.0 – live across 1 patch", "v1"],
       ],
     });
     // The live ones are marked, read the Cards tab's cost and rarity, and load no catalog; the old ones wear their own rarity.

@@ -2,7 +2,7 @@
 // this build's catalog is refused, under named caps.
 
 import { CATALOG_VERSION } from "@jackioh/cards";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { PortraitId } from "@jackioh/shared";
 
@@ -11,6 +11,7 @@ import { REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "./config.ts";
 import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION, practiceGame, readReplayJsonFile, replayJsonFile, replayPortraitsOf, replayStepsOf } from "./download.ts";
 import { ReplayFailure, memoryReplaySource } from "./source.ts";
 import { createStepCache } from "./steps.ts";
+import { isGzip } from "./pack.ts";
 
 const steps = foldedReplaySteps();
 
@@ -43,8 +44,29 @@ function bare(index: number, turn = 0): unknown {
 }
 
 describe("R1141000 opening a downloaded replay", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("R1141000 parses a file replayJsonFile wrote into identical ordered steps", async () => {
     expect(replayStepsOf(await readReplayJsonFile(await written()))).toEqual([...steps]);
+  });
+
+  it("R5124000 the file is packed and gzipped, a fraction of the plain JSON it opens as", async () => {
+    const file = await written();
+    expect(file.name).toBe("jackioh-replay-practice-1.json.gz");
+    expect(file.type).toBe("application/gzip");
+    expect(isGzip(new Uint8Array(await file.arrayBuffer()))).toBe(true);
+    expect(file.size).toBeLessThan(JSON.stringify(steps).length / 10);
+  });
+
+  it("R5124000 a browser without CompressionStream saves plain JSON, which opens again as the same steps", async () => {
+    vi.stubGlobal("CompressionStream", undefined);
+    const file = await written();
+    expect(file.name).toBe("jackioh-replay-practice-1.json");
+    expect(file.type).toBe("application/json");
+    expect(JSON.parse(await file.text())).toMatchObject({ format: REPLAY_JSON_FORMAT, steps: [...steps] });
+    expect(replayStepsOf(await readReplayJsonFile(file))).toEqual([...steps]);
   });
 
   it("R1141000 the memory source pages verified steps and walks turns like the original", async () => {
