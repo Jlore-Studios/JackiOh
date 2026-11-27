@@ -19805,6 +19805,13 @@
     "5159": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-27T21:15:03Z",
+        "difficulty": "medium",
+        "provider": "claude-4",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: the change is one block in crates/server/src/api/queue.rs, tests, one ruling and two doc lines (about 8 files); it touches no engine, AI, migration or second crate."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
