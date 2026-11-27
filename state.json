@@ -19848,17 +19848,8 @@
       ]
     },
     "5161": {
-      "action": "plan",
-      "asks": [
-        "c:7227641987"
-      ],
-      "build_next": {
-        "from_run": "46074567325",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-27T22:13:42Z",
-        "until": "2026-11-27T22:43:42Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-27T22:13:32Z",
         "difficulty": "medium",
@@ -19877,10 +19868,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5161; ls -a | head -30; sed -n 1,60p .bot-notes.md 2>/dev/null; cat .bot-plan.md 2>/dev/null | head -50\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5161/apps/web/src/assault/fight/FightScreen.tsx\", \"offset\": 55, \"limit\": 260}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5161/apps/web/src/assault; sed -n 195,215p ../dungeon/fight/FightScreen.tsx; sed -n 60,125p AssaultPage.tsx; grep -n \\\"navigate\\\\|pathname\\\\|onLeave\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5161/apps/web/src/assault; sed -n 195,215p fight/FightScreen.test.tsx; sed -n 370,440p fight/FightScreen.test.tsx; sed -n 485,545p fight/FightScreen.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5161/apps/web/src/assault; sed -n 1,120p route.test.tsx; ls test; grep -n \\\"export function useAssault\\\\|useSyncExternalStore\\\\|hold\\\\b\\\\|hold(\\\" sto\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5161/apps/web/src/assault; grep -n \\\"fightOver\\\\|^it(\\\\|^ it(\\\\|describe(\\\" store.test.ts | head -60; grep -n \\\"it(\\\\|describe(\\\" hub.test.tsx | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5161/apps/web/src/assault; sed -n 193,217p store.test.ts; grep -n \\\"FightScreen\\\\|AssaultFightScreen\\\" *.test.tsx | head\"}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: one web handler in apps/web/src/assault/fight/FightScreen.tsx and its tests, no engine, AI, cross-crate, migration or 40-file change.\"} --> ## Goal In the Infinite Assault fight screen, Main menu on a finished fight's res\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-27T20:56:59Z",
       "owner_why": "it plans it",
@@ -19893,12 +19883,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-27T20:53:47Z",
       "requested_by": "jgoetzmann",
-      "run_id": "46074567325",
+      "run_id": "pending:e5c68fc4-1795817751",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-27T22:06:32Z",
+      "started_at": "2026-11-27T22:16:11Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7227641987"
+      ],
       "waiting_comment": 7228153739
     },
     "5164": {
@@ -20550,9 +20542,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T22:15:37Z",
+    "at": "2026-11-27T22:16:11Z",
     "url": "",
-    "what": "review #5208 on claude-8"
+    "what": "build #5161 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-27T22:05:41Z",
