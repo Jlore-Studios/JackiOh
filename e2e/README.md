@@ -83,7 +83,10 @@ the `chrome` Cypress finds is a major in
 `chrome` at Chrome for Testing `PINNED_CHROME_MILESTONE` (154), downloaded once into the repo's
 `.cache/chrome-for-testing/` (Linux x64 only); the run header then says `Chrome for Testing`.
 `E2E_CHROME_PIN=1` does the same off CI, `E2E_CHROME_PIN=0` keeps the system Chrome. Every other
-Chrome and browser launches as found, and a failed download keeps the system Chrome and says why.
+Chrome and browser launches as found. The pin fetches the milestone index, then the archive, up to
+`CFT_ATTEMPTS` (3) times each, `CFT_RETRY_DELAY_MS` (5 s) apart, each attempt cut off after
+`CFT_ATTEMPT_TIMEOUT_MS` (30 s); a pin that still cannot be set up stops the run at its start with the
+reason, since the broken Chrome would fail every spec of it (#5178).
 Drop 155 from the list now the runner image ships 156 and later, and 158 once the Cypress in
 `e2e/package.json` runs the smoke specs on it.
 
