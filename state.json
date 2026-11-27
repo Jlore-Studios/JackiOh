@@ -22321,7 +22321,7 @@
     "what": "review #5172 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-27T17:01:37Z",
+    "at": "2026-11-27T17:08:11Z",
     "notes": [
       "#5156 waits: 3 approved themselves in the last day already"
     ],
@@ -23029,7 +23029,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T17:01:37Z",
+  "loop_tick": "2026-11-27T17:08:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
