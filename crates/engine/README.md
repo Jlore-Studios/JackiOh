@@ -65,7 +65,8 @@ of a Cry, Death, turn hook, Whenever trigger or Activate (`prompts::run_resume`,
 `state_check::run_death_pass`, `triggers::run_queued_trigger`), withheld from the trigger loop, and
 `view_for` keeps it from a seat that could not read the card (R2783000). `GameEvent::as_rules_read`
 drops `via`, so neither moves a hash. `effects::gain_hero_armor` reports `armorGained`, withheld the
-same way (R3857000), and so does `damage::spend_pool` each pool's soak, `damageNullified` (R5045000).
+same way (R3857000), and so does `damage::spend_pool` each pool's soak, `damageNullified` (R5045000),
+and `damage::wear_hero_armor` each wear of a hero's own Armor, `armorWorn` (R5183000).
 
 ## Purity (CLAUDE.md rule 4)
 
