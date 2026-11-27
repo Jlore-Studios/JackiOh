@@ -99,3 +99,12 @@ export const STATS_PATCH_MIN_GAMES = 1000;
 
 /** R1973002: how many of the newest patches with enough games have a tab (R3324000). */
 export const STATS_PATCHES_OFFERED = 5;
+
+/** R5186000: how long a card statistics read waits before the page asks the server how its load is going, in ms. */
+export const STATS_LOADING_AFTER_MS = 1500;
+
+/** R5186000: how often the page asks again while the read waits, in ms. */
+export const STATS_LOADING_POLL_MS = 1000;
+
+/** R5186000: the fullest the progress bar draws before the load ends, so a load slower than the last never reads as done. */
+export const STATS_LOADING_SHARE_MAX = 0.95;

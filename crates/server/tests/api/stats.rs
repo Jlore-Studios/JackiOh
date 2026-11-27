@@ -5698,3 +5698,97 @@ mod r4965000_bounded_snapshot {
         }
     }
 }
+
+mod r5186000_load_progress {
+    use super::*;
+    use jackioh_server::app::now_ms;
+    use jackioh_server::db::store::{Db, StoreError};
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+    use std::sync::{Mutex, mpsc};
+    use std::time::{Duration, Instant};
+
+    /// How long a test waits on the held load before it calls it stuck.
+    const STUCK: Duration = Duration::from_secs(20);
+
+    /// At rest the route answers no load, the steps a load takes and no time to expect; after a read
+    /// has loaded the snapshot, how long that load took. No cache keeps the answer.
+    #[tokio::test]
+    async fn r5186000_the_loading_route_at_rest_and_after_a_load() {
+        let app = test_app().await;
+        let (status, headers, body) = get_public(&app, "/api/stats/loading").await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(cache_control(&headers), Some("no-store"));
+        assert_eq!(
+            body,
+            json!({ "loading": false, "step": 0, "steps": 3, "elapsedMs": 0, "expectedMs": null })
+        );
+        let (status, _, _) = get_public(&app, "/api/stats/cards?mode=all").await;
+        assert_eq!(status, 200);
+        let (_, _, body) = get_public(&app, "/api/stats/loading").await;
+        assert_eq!(body["loading"], json!(false), "{body}");
+        assert!(body["expectedMs"].as_i64().is_some_and(|ms| ms >= 0), "{body}");
+    }
+
+    /// A read that gives up while the snapshot loads leaves the load running: meanwhile the load reports
+    /// its first step, and once the store answers it finishes on its own, so the next read finds the
+    /// snapshot and reads every patch's card totals no second time.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn r5186000_a_read_that_gives_up_leaves_the_load_to_finish() {
+        let app = test_app().await;
+        let (entered_tx, entered) = mpsc::channel::<()>();
+        let (release, release_rx) = mpsc::channel::<()>();
+        let release_rx = Mutex::new(release_rx);
+        let held = AtomicBool::new(false);
+        let whole_loads = Arc::new(AtomicUsize::new(0));
+        let counted = Arc::clone(&whole_loads);
+        match &app.db {
+            Db::Fake(data) => {
+                data.lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+                    if method == "statsTotals.loadAllPatches" {
+                        counted.fetch_add(1, Ordering::SeqCst);
+                    }
+                    // The load's first step waits, once, until the test lets it go on.
+                    if method == "statsTotals.loadRecords" && !held.swap(true, Ordering::SeqCst) {
+                        entered_tx.send(()).ok();
+                        release_rx.lock().unwrap().recv_timeout(STUCK).ok();
+                    }
+                    Ok(())
+                }));
+            }
+            Db::Pg(_) => panic!("the API tests run on the fake store"),
+        }
+
+        let reader = Arc::clone(&app);
+        let read = tokio::spawn(async move { get_public(&reader, "/api/stats/cards?mode=all").await });
+        entered.recv_timeout(STUCK).expect("the load reached the store");
+        // The read gives up, as a client's timeout or a proxy closing the connection does.
+        read.abort();
+        assert!(read.await.is_err(), "the read was not cut short");
+        let during = app.card_stats.loading(now_ms());
+        assert_eq!(
+            (during.loading, during.step, during.steps),
+            (true, 1, 3),
+            "{during:?}"
+        );
+
+        release.send(()).expect("the load waits on the test");
+        let deadline = Instant::now() + STUCK;
+        while app.card_stats.loading(now_ms()).loading {
+            assert!(Instant::now() < deadline, "the load never finished");
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        let after = app.card_stats.loading(now_ms());
+        assert!(
+            after.expected_ms.is_some(),
+            "the load that was left did not finish: {after:?}"
+        );
+        assert_eq!(whole_loads.load(Ordering::SeqCst), 1);
+        let (status, _, _) = get_public(&app, "/api/stats/cards?mode=all").await;
+        assert_eq!(status, 200);
+        assert_eq!(
+            whole_loads.load(Ordering::SeqCst),
+            1,
+            "the next read loaded every patch's card totals again"
+        );
+    }
+}
