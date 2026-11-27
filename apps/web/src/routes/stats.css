@@ -393,6 +393,35 @@
   color: var(--pal-lacquer-400);
 }
 
+/* R5186000: the card statistics' load progress over the skeleton (stats/LoadProgress.tsx). */
+.stats-load {
+  margin: 12px 0;
+}
+
+.stats-load__bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--pal-slate-800);
+}
+
+.stats-load__fill {
+  height: 100%;
+  background: var(--pal-gold-300);
+  transition: width 0.9s linear;
+}
+
+.stats-load__words {
+  margin: 6px 0 0;
+  color: var(--pal-slate-400);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-load__fill {
+    transition: none;
+  }
+}
+
 .stats-retry-btn {
   margin-top: 8px;
   padding: 6px 14px;
