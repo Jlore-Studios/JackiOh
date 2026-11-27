@@ -21753,9 +21753,11 @@
         "by": "`gemini` (medium)",
         "sha": "1f6e8ff34b6e44131f63e1836a6cf6d69c55e71d"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T23:21:03Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-27T00:51:57Z",
         "family": "gemini",
@@ -21765,6 +21767,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-409\"}\n- said: Waiting for the `cost_hike` test suite and sweep tasks to finish.\n- said: \n- manage_task: {\"Action\": \"list\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-361\"}\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5122/scripts/build-wasm.sh\", \"StartLine\": 1}\n- said: Waiting for `task-361` (single-card sweep) to complete.\n- said: \n- read_file: {\"EndLine\": 100, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5122/training/history/sweep-infiniteassault-123.md\", \"StartLine\": 1}\n- said: \n- run_command: grep -n \"infiniteassault-123\" /home/agent-agy/actions-runner/_work/_temp/work/item-5122/training/history/sweep-infiniteassault-123.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && cargo jackioh gate\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-429\"}\n- said: Waiting for `cargo jackioh gate` to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-429\"}\n- said: Waiting for `cargo jackioh gate` task to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && sh scripts/build-wasm.sh && pnpm --dir apps/web exec vitest run src/practice/claim.test.ts\n- said: Waiting for `build-wasm.sh` and the practice claim vitest run to complete.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-437\"}\n- said: Waiting for `task-437` to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && cargo jackioh spec check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-443\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && ls -la .bot-notes*\n- said: \n- read_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5122/.bot-notes.md\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5122/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && git diff\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI counts a price hike it puts on the opponent's next turn, so the Assault enemy casts Cost Injection\"} --> ## Summary of Changes ### 1. AI Evaluation (`crates/ai`) - **Config ([`crates/ai/src/config.rs`](file:///home/agent-agy/actions-runner/_work/\u2026"
       },
+      "interruptions": 0,
       "issue": 5122,
       "kind": "review",
       "live": "reviewing",
