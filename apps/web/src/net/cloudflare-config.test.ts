@@ -176,6 +176,14 @@ describe("public/_headers", () => {
     expect(GOOGLE_IDENTITY_SOURCE).toBe("https://accounts.google.com/gsi/");
   });
 
+  it("#5132 lets in no Cloudflare Web Analytics beacon: the privacy page promises no third-party trackers", () => {
+    // Cloudflare's automatic setup injects the beacon into every page of a proxied zone by default. The
+    // fix for its CSP error is that setting, off (docs/deploy-cloudflare.md section 3), never this policy.
+    expect(readFileSync(join(HERE, "../routes/privacy.tsx"), "utf8")).toContain("third-party trackers");
+    const policy = `${csp()} ${connectSources("https://jackioh.com", "https://fuzpvmjdejvbjcarypyi.supabase.co")}`;
+    expect(policy).not.toMatch(/cloudflareinsights/u);
+  });
+
   it("sends no X-Robots-Tag: staging is behind Access, so no crawler reaches it, and production is meant to be found", () => {
     const keys = blocks().flatMap((block) => block.headers.map((header) => header.key.toLowerCase()));
     expect(keys).not.toContain("x-robots-tag");
