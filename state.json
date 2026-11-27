@@ -19865,7 +19865,8 @@
       "started_at": "2026-11-27T20:56:59Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 7228153739
     },
     "5164": {
       "action": "plan",
