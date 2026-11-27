@@ -22321,10 +22321,9 @@
     "what": "review #5172 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-27T17:40:49Z",
+    "at": "2026-11-27T17:47:28Z",
     "notes": [
-      "#5156 waits: 3 approved themselves in the last day already",
-      "runner gate: started 1 of 1 waiting run(s) (run 46043796735 on claude/blissful-brahmagupta-yqq63b)"
+      "#5156 waits: 3 approved themselves in the last day already"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -23030,7 +23029,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T17:40:49Z",
+  "loop_tick": "2026-11-27T17:47:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
