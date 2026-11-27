@@ -44995,6 +44995,10 @@
       "5161": {
         "at": "2026-11-27T03:57:37Z",
         "why": "Confirmed: in `FightScreen.tsx:222-224` a finished fight's Main menu and corner Menu send the report and then call the page's `onLeave`, but sending the report has already moved the attempt to phase `briefing`, `lost` or `repelled`, so `away === fight` at `AssaultPage.tsx:85` never matches and the page shows the same screen Continue shows; going to Play is what R4742000 says (\"the match, dungeon a"
+      },
+      "5164": {
+        "at": "2026-11-27T04:26:32Z",
+        "why": "Confirmed on main: the ladder's only beaten cue is a `::marker` rule (`apps/web/src/assault/assault.css:50`) on rows that are `display: grid` (`:43-44`), so it draws nothing and \u00a716.7's \"those beaten today\u2026 marked\" (`spec/16-infinite-assault.md:115`) goes unmet; and `zh-CN.json` has no entry for the four Commanders at `crates/run/src/assault.json:53-57`, so `t(level.enemy)` (`DayScreen.tsx:102`, `"
       }
     },
     "auto_approved": [
