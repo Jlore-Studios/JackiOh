@@ -21727,15 +21727,8 @@
       "verdict_rounds": 0
     },
     "5123": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45918567571",
-        "model": "sonnet",
-        "provider": "claude-3",
-        "since": "2026-11-27T00:58:19Z",
-        "until": "2026-11-27T01:28:19Z"
-      },
       "difficulty_by": {
         "at": "2026-11-27T00:58:10Z",
         "difficulty": "medium",
@@ -21754,10 +21747,9 @@
         "reason": "planned on sonnet",
         "trail": "- said: I'll start by reading the code the issue points at.\n- Bash: {\"command\": \"ls .bot-plan.md 2>/dev/null; wc -l crates/tools/src/fork_screen.rs; grep -n \\\"fn next_batch\\\\|fn screen_done\\\\|fn resume_save\\\\|fn live_of\\\\|SCREEN_MIN_DECIDED\\\\|SCREEN_MAX_GAMES\\\\|SCREE\u2026\n- Read: {\"file\": \"crates/tools/src/fork_screen.rs\", \"offset\": 900, \"limit\": 340}\n- tool error: <tool_use_error>InputValidationError: Read failed due to the following issues: The required parameter `file_path` is missing An unexpected parameter `file` was provided</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5123/crates/tools/src/fork_screen.rs\", \"offset\": 900, \"limit\": 340}\n- Bash: {\"command\": \"grep -n \\\"SCREEN_MIN_DECIDED\\\\|SCREEN_MAX_GAMES\\\\|SCREEN_EXTEND_DEALS\\\\|fn screen_done\\\" -r crates/tools/src | head -30; grep -n \\\"FORK_TRUNK_DEALS\\\" crates/tools/src/*.rs | head\"}\n- Bash: {\"command\": \"grep -n \\\"r4607000\\\\|fn save_line\\\\|fn deal_line\\\\|fn hand_written\\\\|fn .*DealLine\\\" crates/tools/src/fork_screen.rs | head -50; cat spec/rulings/R4607000.md\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5123/crates/tools/src/fork_screen.rs\", \"offset\": 1425, \"limit\": 200}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5123/crates/tools/src/fork_screen.rs\", \"offset\": 2000, \"limit\": 95}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5123; grep -n \\\"FORK_ROLLOUTS\\\\b\\\" crates/tools/src/fork_screen.rs | head -5; grep -n \\\"fn edge_of_slots\\\" -A25 crates/tools/src/fork_screen.rs | hea\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5123; sed -n 640,690p crates/tools/src/fork_screen.rs; grep -n \\\"fn fork_tally\\\" -A40 crates/tools/src/fork_screen.rs | head -70; grep -n \\\"fn screen\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5123; grep -rn \\\"mutants\\\" .github/workflows/*.yml | head -8; sed -n 1,40p scripts/mutants.sh | head -50; ls spec/pending | head; grep -n \\\"resume\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5123; grep -n \\\"extend\\\" crates/tools/README.md | head -10; grep -n \\\"struct ForkTally\\\" -B4 -A25 crates/tools/src/fork_screen.rs | grep -n \\\"serde\\\\\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5123/.bot-plan.md\", \"content\": \"# Draft plan for #5123 (planner notes)\\n\\nRead: crates/tools/src/fork_screen.rs (next_batch 951, resume_save 973-1076,\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Rule 5 and rules 1-4 do not hold: the change is about 30 lines and three tests in crates/tools/src/fork_screen.rs, with no engine, AI, cross-crate or migration change.\"} --> ## Goal A fork screen resumed from `--save` decides each stop the way the uncut lo\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-27T00:45:09Z",
       "owner_why": "it plans it",
@@ -21770,9 +21762,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-26T23:19:39Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45918567571",
+      "run_id": "pending:e652e964-1795741219",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-27T00:45:09Z",
+      "started_at": "2026-11-27T01:00:36Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -21878,9 +21870,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T01:00:05Z",
+    "at": "2026-11-27T01:00:36Z",
     "url": "",
-    "what": "review #5144 on agy"
+    "what": "build #5123 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-27T00:51:15Z",
