@@ -20151,7 +20151,16 @@
       "feedback_since": "2026-11-27T20:07:25Z",
       "issue": 5178,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-3",
+        "rejections": [],
+        "reviews": [],
+        "sha": "3cfed32735d98cdc9d3e3d717448cbed34351492",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
