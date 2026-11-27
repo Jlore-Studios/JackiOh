@@ -20072,9 +20072,7 @@
       "started_at": "2026-11-27T20:56:21Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7227642752"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "5172": {
