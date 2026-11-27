@@ -22316,6 +22316,13 @@
     "5178": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "46055118143",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-27T20:06:30Z",
+        "until": "2026-11-27T20:36:30Z"
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
