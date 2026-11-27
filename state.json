@@ -20732,9 +20732,11 @@
         "by": "`claude` (strong)",
         "sha": "b5c373ce91bc5e0a2b22f7306a1cba9109723115"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-27T22:16:11Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-27T23:04:22Z",
         "family": "claude",
@@ -20744,6 +20746,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -60; git status --short; grep -n \\\"onMenu\\\\|onLeave\\\\|menuButton\\\" apps/web/src/assault/fight/FightScreen.tsx\"}\n- Bash: {\"command\": \"cd apps/web/src/assault/fight; sed -n 62,68p FightScreen.tsx; sed -n 205,226p FightScreen.tsx; sed -n 298,304p FightScreen.tsx; grep -n \\\"reportError\\\\|^ it(\\\\|^describe\\\\|function at\\\\|\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5161/apps/web/src/assault/fight; sed -n 296,320p FightScreen.test.tsx; sed -n 400,438p FightScreen.test.tsx; sed -n 494,538p FightScreen.test.tsx\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5161/apps/web/src/assault/fight; python3 - <<'EOF'\\np='FightScreen.tsx'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\" /** R4582001: the page's way back to it\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5161; until grep -q \\\"Tests \\\" /tmp/claude-1001/-home-runner-work--temp-work-item-5161/2fe7bc25-aee6-46a2-b9fa-f1658bab5e4e/tasks/btaxpe0jl.output 2>\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5161; pnpm --dir apps/web typecheck 2>&1 | tail -5; pnpm exec eslint apps/web/src/assault 2>&1 | tail -10; cargo run --release -q -p jackioh-tools --\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Main menu on a finished Infinite Assault fight goes to the Play menu, not the screen Continue shows\"} --> On a finished Infinite Assault fight, Main menu and the board's corner Menu now go to the Play menu instead of showing the Continue screen. The att\u2026"
       },
+      "interruptions": 0,
       "issue": 5161,
       "kind": "review",
       "live": "reviewing",
