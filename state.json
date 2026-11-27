@@ -20159,6 +20159,13 @@
     "5190": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "46070739375",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-27T21:43:28Z",
+        "until": "2026-11-27T22:13:28Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
