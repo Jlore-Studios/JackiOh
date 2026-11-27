@@ -814,85 +814,64 @@ mod tests {
         );
     }
 
-    /// #19 Midrange Menace, a 9/9 Taunt.
-    const MENACE: &str = "core-019";
+    /// #55 Lava Golem, a 10/5 Taunt: the Vanilla's 4 does not kill it.
+    const GOLEM: &str = "core-055";
+    /// S+ #126 Vela: its Activate opens a prompt for an enemy tile and deals 8 to the Units on its line.
+    const VELA: &str = "stinkyscapeplus-126";
 
     #[test]
-    fn r5119000_a_position_waiting_on_its_prompt_is_ordered_with_the_attackers_kept() {
+    fn r5119000_a_prompt_whose_answer_closes_the_gap_is_ordered_with_the_attackers_kept() {
         jackioh_cards::register_all();
-        // p1's ready Vanilla is walled by a Menace it cannot kill; p1 holds a Scarab and a second Vanilla.
+        // p1's ready Vanilla is walled by a Golem at 4 life; Vela's Activate can clear the wall.
         let root = scenario(json!({
             "seed": "lethal-r5119000-prompt", "active": P1, "turn": 9,
-            "p1": { "field": [VANILLA], "hand": [SCARAB, VANILLA], "mana": 2, "library": [VANILLA, VANILLA] },
-            "p2": { "field": [MENACE], "health": 8, "library": [VANILLA, VANILLA] },
+            "p1": { "field": [VANILLA, VELA], "mana": 2, "library": [VANILLA, VANILLA] },
+            "p2": { "field": [GOLEM], "health": 4, "library": [VANILLA, VANILLA] },
         }))
         .state()
         .clone();
-        let hand = |def_id: &str| {
-            root.players[P1]
-                .hand
-                .iter()
-                .find(|card| card.def_id == def_id)
-                .map(|card| card.id.clone())
-                .unwrap_or_default()
-        };
-        let (scarab, second) = (hand(SCARAB), hand(VANILLA));
+        assert_eq!(gaps(&root, P1).ready, 4.0, "the Golem walls the Vanilla");
         let legal = legal_actions(&root, P1);
-        let pick = |wanted: &dyn Fn(&ActionBody) -> bool| {
-            legal
-                .iter()
-                .find(|action| wanted(action))
-                .cloned()
-                .expect("the move is legal")
-        };
-        let attack = pick(
-            &|action| matches!(action, ActionBody::Attack { target_id, .. } if !target_id.starts_with("hero")),
-        );
-        let play =
-            pick(&|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == second));
-        let prompt =
-            pick(&|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == scarab));
+        let attack = legal
+            .iter()
+            .find(|action| matches!(action, ActionBody::Attack { target_id, .. } if !target_id.starts_with("hero")))
+            .cloned()
+            .expect("the Vanilla may attack the Golem");
+        let activate = legal
+            .iter()
+            .find(|action| matches!(action, ActionBody::Activate { .. }))
+            .cloned()
+            .expect("Vela may Activate");
         let counter = create_node_counter(AI_BUDGET.lethal_nodes, None);
-        let reach = |action: &ActionBody| {
-            simulate(&root, P1, action, &counter, Prices::NONE)
+        let reach = |from: &GameState, action: &ActionBody| {
+            simulate(from, P1, action, &counter, Prices::NONE)
                 .and_then(Result::ok)
                 .expect("the move runs")
         };
+        let spent = reach(&root, &attack);
+        let prompted = reach(&root, &activate);
+        assert!(prompted.pending.is_some(), "Vela's tile prompt is open");
+        let closes = legal_actions(&prompted, P1).iter().any(|answer| {
+            simulate(&prompted, P1, answer, &counter, Prices::NONE)
+                .and_then(Result::ok)
+                .is_some_and(|next| gaps(&next, P1).ready <= 0.0)
+        });
+        assert!(
+            closes,
+            "an answer clears the wall, and the Vanilla's hit is lethal"
+        );
+        // The walk opens the attack first, in move order: both children stand at the root's gap.
         let state = Rc::new(root.clone());
-        let branches = [
-            branch_at(0, 8.0),
-            branch_at(0, 8.0),
-            branch_at(0, 8.0),
-            branch_at(0, 8.0),
-        ];
-        // The walk opens the root's children in move order: the attack spends the Vanilla on the Menace,
-        // the play keeps it ready, and the Scarab's Cry leaves its Discover open.
-        let opened: Vec<Open> = [&attack, &play, &prompt]
-            .into_iter()
-            .zip(1u32..)
-            .map(|(action, order)| {
-                let next = reach(action);
-                let at = gaps(&next, P1);
-                assert_eq!(at.ready, 8.0, "no child comes closer than the root");
-                open_at(&state, at.ready, at.taunt_free, 1, order as usize, order)
-            })
-            .collect();
-        assert!(reach(&prompt).pending.is_some(), "the Discover is open");
+        let branches = [branch_at(0, 4.0), branch_at(0, 4.0), branch_at(0, 4.0)];
+        let opened = [(&spent, 1u32), (&prompted, 2)].map(|(next, order)| {
+            let at = gaps(next, P1);
+            assert_eq!(at.ready, 4.0);
+            open_at(&state, at.ready, at.taunt_free, 1, order as usize, order)
+        });
         assert_eq!(
             next_open(&opened, &branches, true),
             1,
-            "the play that kept the Vanilla ready"
-        );
-        // Once the play is expanded, the position waiting on its Discover comes before the spent attack,
-        // as the play did: its answer spends no attack.
-        let left = [opened.first(), opened.get(2)].map(|open| {
-            open.map(|at| open_at(&state, at.gap, at.taunt_free, 1, at.branch, at.order))
-                .expect("two opened")
-        });
-        assert_eq!(
-            next_open(&left, &branches, true),
-            1,
-            "the Discover before the spent attack"
+            "the prompt, whose answer spends no attack, before the attack that spent the Vanilla"
         );
     }
 

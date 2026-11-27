@@ -314,13 +314,14 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     // R5119000: on, with `lethal_dive_moves`. Both off are the walk before it, node for node. Mirror 26's
     // turn-12 lethal rests on this switch, hard-vs-easy 12's turn 21 on its read through a prompt.
     lethal_keep_attacks: true,
-    // R5119000: 75 moves, set inside the window the three fixtures left (40 to 150) before the logged sets
-    // were run across counts. With `lethal_keep_attacks` on, 60 to 150 holds every lethal of both logged
-    // sets. 40 and 50 lose hard-vs-easy 7's turn-18 lethal (R4788000's, 157 nodes). 200 loses
-    // hard-vs-easy 8's turn 12, a named fixture, which sets the upper edge and rests on this bound. It
-    // is a count, not a share of the walk's allowance: a share shrinks with a scaled-down allowance
-    // (R2575000), and at 0.15, 0.2, 0.33 and 0.5 it lost R4788000's reach on one of its four logged wide
-    // lethals.
+    // R5119000: 75 moves, set after a first sweep counted in nodes (40, 60, 75 and 100 on both logged
+    // sets: 40 lost a lethal, 60 to 100 held). Counted in moves, with `lethal_keep_attacks` on, and
+    // measured on both logged sets at 40, 50, 60, 65, 75, 90, 120 and 150: every count from 60 to 150
+    // holds every lethal there. 40 and 50 lose hard-vs-easy 7's turn-18 lethal (R4788000's, 157 nodes).
+    // 200, measured on the three fixtures alone, loses hard-vs-easy 8's turn 12, a named fixture that
+    // rests on this bound, so it sets the upper edge. It is a count, not a share of the walk's allowance:
+    // a share shrinks with a scaled-down allowance (R2575000), and at 0.15, 0.2, 0.33 and 0.5 it lost
+    // R4788000's reach on one of its four logged wide lethals.
     lethal_dive_moves: 75,
     lines_per_action: 2,
     // R4788000: on. Its deal screen, 400 games on improve-dev against the control at 3a83bd7741, read
