@@ -685,6 +685,9 @@ pub struct EvalWeights {
     /// §2.3: per crystal a side's next-turn rider moves its coming refresh by, signed, floored as the
     /// refresh floors it, and nothing while that refresh is lost (R844).
     pub next_turn_mana: f64,
+    /// R5122000: per crystal of unconditional price hike on the coming turn (`evaluate::coming_cost_hike`),
+    /// scaled by `next_turn_mana` and `AI_TAXED_PLAYS`.
+    pub cost_hike: f64,
     /// Per point of faceThreat(enemy) against the seat.
     pub threat_per_damage: f64,
     /// When faceThreat(enemy) >= the seat's life (`effective_life`, R964000), less the pool's coming loss
@@ -907,6 +910,12 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // unspent does.
     lost_refresh: 0.8,
     next_turn_mana: 0.8,
+    // R5122000 (issue #5122): 1.0. A price hike on the opponent's coming turn (Cost Injection, Total
+    // Compromise, Root Kit, Alignment Tax) counts in coming_refreshes against that player's next-turn
+    // crystals. At 1.0 its screen, 400 games on improve-dev against the control, read 200-200, edge
+    // 0.0 (-0.024 to 0.024); inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 0 diverged;
+    // its scene tests settle it (training/improve.md, A screen). 0 turns it off (GREEDY_EVAL).
+    cost_hike: 1.0,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,
@@ -916,6 +925,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     closing_from: 10.0,
     closing_weight: 3.0,
 };
+
+/// R5122000 (issue #5122): the minimum number of plays taxed by an unconditional price hike on
+/// a coming turn (`evaluate::coming_cost_hike`). Start at 1.
+pub const AI_TAXED_PLAYS: i32 = 1;
+const _: () = assert!(AI_TAXED_PLAYS >= 1);
 
 /// R3822000: the ticks over which the evaluation reads Burn and Toxic (`evaluate::afflicted`,
 /// `evaluate::coming_hero_ticks`): Toxic, which never fades, over its controller's next four turn starts;
@@ -1117,6 +1131,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     owed_mana: 0.0,
     lost_refresh: 0.0,
     next_turn_mana: 0.0,
+    cost_hike: 0.0,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,

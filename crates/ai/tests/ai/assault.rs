@@ -26,6 +26,18 @@ fn rows() -> Vec<(&'static str, &'static str, Value, Value)> {
             json!({ "hand": ["core-011"], "library": DECK }),
         ),
         (
+            "infiniteassault-123",
+            "Cost Injection: 1 mana to spare and its only play, so the tax harms the enemy's next turn",
+            json!({ "hand": [{ "def": "infiniteassault-123", "radiant": false }], "mana": 1, "library": DECK }),
+            json!({ "hand": ["core-011"], "library": DECK }),
+        ),
+        (
+            "infiniteassault-123",
+            "Cost Injection (Radiant): 1 mana to spare and its only play, so the (2) tax harms the enemy's next turn",
+            json!({ "hand": [{ "def": "infiniteassault-123", "radiant": true }], "mana": 1, "library": DECK }),
+            json!({ "hand": ["core-011"], "library": DECK }),
+        ),
+        (
             "infiniteassault-211",
             "Grey Goo: an empty board, so no neighbour of the AI's turns into a copy",
             json!({ "hand": [{ "def": "infiniteassault-211", "radiant": true }], "mana": 3, "library": DECK }),
@@ -60,6 +72,29 @@ fn assault_the_ai_plays_each_swept_card_in_its_clear_spot() {
                     "{id} ({why}) is not played at {budget:?} on {seed}"
                 );
             }
+        }
+    }
+}
+
+#[test]
+fn assault_cost_injection_yields_to_better_play() {
+    register_cards();
+    let s = scenario(json!({
+        "seed": "assault-cost-injection-yields",
+        "active": AI,
+        "turn": 9,
+        "p1": { "hand": ["infiniteassault-123", "core-008"], "mana": 1, "library": DECK },
+        "p2": { "hand": ["core-011"], "library": DECK },
+    }));
+    let vanilla = s.card("core-008").id.clone();
+    for budget in [AI_GATE_BUDGET, AI_BUDGET] {
+        for seed in ["assault-a", "assault-b"] {
+            let turn = play_ai_turn(s.state(), AI, &mut ai_options(seed, budget));
+            assert!(
+                turn.decisions.iter().any(|decision| matches!(&decision.action,
+                    ActionBody::Play { instance_id, .. } if *instance_id == vanilla)),
+                "core-008 is not played over Cost Injection at {budget:?} on {seed}"
+            );
         }
     }
 }
