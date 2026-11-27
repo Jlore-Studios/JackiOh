@@ -10,13 +10,17 @@
 //! The audit's (#4787) long lethals on boards of ordinary width are pinned beside it, as they stand
 //! (`the_audits_long_lethals_are_proved_given_room`): #5119, #4790's follow-up, must bring two of them
 //! within `AI_BUDGET.lethal_nodes` without losing the third.
+//!
+//! Its worlds sample the hidden cards from the catalog's pools, so a card joining one deals other worlds
+//! (R380, #3117): the R4788000 tests search its stream for a cursor that meets their premise
+//! (`premise_cursor`).
 
 use jackioh_ai::{
     AI_BUDGET, AI_SEARCH, AiOptions, DecisionReason, DeterminizeOptions, NodeCounter, Prices, SearchBudget,
     candidate_actions, create_node_counter, decide, det_ground, determinize_on, find_lethal,
     find_lethal_reaching, probe_world, ready_gap, redact,
 };
-use jackioh_engine::testkit::{GameState, PlayerId, Value, create_rng, json};
+use jackioh_engine::testkit::{GameState, PlayerId, Value, create_rng, cursor_where, json, with_pool_shift};
 
 use super::support::{AI, decision_prices_at, register_cards, scenario};
 
@@ -60,11 +64,11 @@ fn pinned(text: &str) -> Pinned {
     }
 }
 
-/// The worlds `decide` samples for the position, in its order, on its stream.
-fn worlds(at: &Pinned) -> Vec<GameState> {
+/// The worlds `decide` samples for the position, in its order, on its stream from `cursor`.
+fn worlds(at: &Pinned, cursor: u32) -> Vec<GameState> {
     let public = redact(&at.state, at.seat);
     let ground = det_ground(&public, at.seat);
-    let mut rng = create_rng(&at.rng_seed, at.rng_cursor);
+    let mut rng = create_rng(&at.rng_seed, cursor);
     (0..AI_BUDGET.determinizations)
         .map(|_| determinize_on(&public, at.seat, &mut rng, DeterminizeOptions::default(), &ground))
         .collect()
@@ -85,6 +89,20 @@ fn scaled_allowance(fat: usize) -> usize {
     AI_BUDGET.lethal_nodes * nodes / AI_BUDGET.nodes
 }
 
+/// R4788000's premise on the pinned wide position: the first cursor of its stream whose worlds the solver
+/// proves lethal within the caller's allowance (`AI_BUDGET.lethal_nodes`), past the `scaled` one, and not
+/// within it. Searched (#848), not the audit's own cursor, which pinned where the pools' rolls land.
+fn premise_cursor(at: &Pinned, scaled: usize, prices: &Prices) -> u32 {
+    cursor_where(&at.rng_seed, |cursor| {
+        let worlds = worlds(at, cursor);
+        let short = create_node_counter(scaled, None);
+        let whole = create_node_counter(AI_BUDGET.lethal_nodes, None);
+        find_lethal(&worlds, at.seat, &short, scaled, prices).is_none()
+            && find_lethal(&worlds, at.seat, &whole, AI_BUDGET.lethal_nodes, prices).is_some()
+            && whole.used() > scaled
+    })
+}
+
 #[test]
 fn r4788000_a_wide_decision_plays_the_lethal_its_scaled_allowance_cut_short() {
     let at = pinned(WIDE_LETHAL);
@@ -99,17 +117,12 @@ fn r4788000_a_wide_decision_plays_the_lethal_its_scaled_allowance_cut_short() {
         "the allowance is scaled down to {scaled}"
     );
 
-    // The premise: the solver proves the lethal within the caller's allowance and not within the scaled one.
-    let worlds = worlds(&at);
+    // The premise: on the worlds `decide` samples from this cursor, the solver proves the lethal within
+    // the caller's allowance and not within the scaled one.
     let prices = decision_prices_at(&at.state, at.seat);
-    let short = create_node_counter(scaled, None);
-    assert_eq!(find_lethal(&worlds, at.seat, &short, scaled, &prices), None);
-    let whole = create_node_counter(AI_BUDGET.lethal_nodes, None);
-    let proved = find_lethal(&worlds, at.seat, &whole, AI_BUDGET.lethal_nodes, &prices);
-    assert!(proved.is_some(), "the solver proves it in {} nodes", whole.used());
-    assert!(whole.used() > scaled, "{} nodes against {scaled}", whole.used());
+    let cursor = premise_cursor(&at, scaled, &prices);
 
-    let mut options = AiOptions::with_budget(create_rng(&at.rng_seed, at.rng_cursor), AI_BUDGET);
+    let mut options = AiOptions::with_budget(create_rng(&at.rng_seed, cursor), AI_BUDGET);
     let decision = decide(&at.state, at.seat, &mut options).expect("the seat has a decision to make");
     assert_eq!(decision.reason, DecisionReason::Lethal, "{:?}", decision.stats);
     assert!(decision.stats.nodes <= AI_BUDGET.nodes, "{:?}", decision.stats);
@@ -119,8 +132,8 @@ fn r4788000_a_wide_decision_plays_the_lethal_its_scaled_allowance_cut_short() {
 fn r4788000_past_its_allowance_the_walk_goes_on_from_a_position_that_reads_as_lethal() {
     let at = pinned(WIDE_LETHAL);
     let scaled = scaled_allowance(width(&at));
-    let worlds = worlds(&at);
     let prices = decision_prices_at(&at.state, at.seat);
+    let worlds = worlds(&at, premise_cursor(&at, scaled, &prices));
     let counter = create_node_counter(AI_BUDGET.nodes, None);
     let reach = AI_BUDGET.lethal_nodes;
     let proved = find_lethal_reaching(&worlds, at.seat, &counter, scaled, &counter, reach, &prices);
@@ -219,9 +232,16 @@ fn r4788000_a_walk_that_never_reads_as_lethal_stops_at_its_allowance() {
 /// The audit's (#4787) long lethals, each proved by the walk as it stands, given room. #5119, #4790's
 /// follow-up, must bring mirror 26's turn 12 and hard-vs-easy 8's turn 12 within `AI_BUDGET.lethal_nodes`
 /// without losing hard-vs-easy 12's turn 21, which the walk proves within it today (in 192 nodes); until
-/// then this keeps a change to the walk from losing any of the three unnoticed.
+/// then this keeps a change to the walk from losing any of the three unnoticed. Each is pinned as the audit
+/// dealt it, on its fixture's own cursor, so its worlds read the pools as they are, not as the pool probe
+/// (#3117) rotates them: a rotation deals other hidden cards and moves the walk's cost (hve-8's to 661
+/// nodes). A card joining a pool can move one the same way, and it is measured again.
 #[test]
 fn the_audits_long_lethals_are_proved_given_room() {
+    with_pool_shift(0, the_audits_long_lethals_as_they_stand);
+}
+
+fn the_audits_long_lethals_as_they_stand() {
     for (name, text, room) in [
         (
             "audit:ai-vs-greedy:26 turn 12",
@@ -236,7 +256,7 @@ fn the_audits_long_lethals_are_proved_given_room() {
         ),
     ] {
         let at = pinned(text);
-        let worlds = worlds(&at);
+        let worlds = worlds(&at, at.rng_cursor);
         let prices = decision_prices_at(&at.state, at.seat);
         let counter = create_node_counter(room, None);
         let proved = find_lethal(&worlds, at.seat, &counter, room, &prices);
