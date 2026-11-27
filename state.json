@@ -44960,7 +44960,12 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {},
+    "auto": {
+      "5156": {
+        "at": "2026-11-27T03:10:29Z",
+        "why": "Confirmed on main: the AI files both shipyard prices under the card's exact def_id (evaluate.rs:374-376, :473-478), a fuse rewrites that id (fuse.rs:2141), the yard fuses at the AI's turn start (turn.rs:398, which end_turn reaches at :840), and reply_score scores lines on that post-reply state with the root's prices (reply.rs:1026-1027), so a played shipyard reads 0 for both, contrary to R3575400'"
+      }
+    },
     "auto_approved": [
       "2026-11-26T23:19:32Z",
       "2026-11-27T03:08:24Z",
