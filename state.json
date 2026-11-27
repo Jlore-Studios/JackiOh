@@ -21772,11 +21772,11 @@
       "question": "",
       "queued_at": "2026-11-27T04:36:54Z",
       "round_tier": "medium",
-      "run_id": "45935123743",
+      "run_id": "pending:8efa54b4-1795754206",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-27T03:36:04Z",
+      "started_at": "2026-11-27T04:37:15Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -22212,9 +22212,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T04:27:34Z",
+    "at": "2026-11-27T04:37:15Z",
     "url": "",
-    "what": "suggestions (server) on claude-3"
+    "what": "revise #5144 on agy"
   },
   "last_sweep": {
     "at": "2026-11-27T04:25:03Z",
