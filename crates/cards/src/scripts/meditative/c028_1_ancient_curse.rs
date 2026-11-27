@@ -87,11 +87,11 @@ mod tests {
 
                 s.start_turn();
 
-                // One cast of the base face: 7 through 3 Armor is 4. Armor is a standing
-                // stat, not spent by the hit it softens.
+                // One cast of the base face: 7 through 3 Armor is 4, and the hit it softens
+                // wears 1 off it (R5183000).
                 assert_eq!(damage_to(&s, "hero-p1"), vec![4]);
                 assert_eq!(s.state().players[P1].hero.health, 26);
-                assert_eq!(s.state().players[P1].hero.armor, 3);
+                assert_eq!(s.state().players[P1].hero.armor, 2);
                 // The curse is in the graveyard and the draw repeated onto the next card.
                 s.expect_in_zone(CURSE, "graveyard");
                 assert!(s.hand(P1).iter().any(|card| card.def_id == FILLER));

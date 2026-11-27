@@ -477,9 +477,9 @@ describe("ANIMATIONS covers every event type", () => {
 
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
-    // pair of eyes on it, so it moves only when a type is deliberately added there (#5045's
-    // `damageNullified`, R5045000, the latest).
-    expect(rows).toHaveLength(98);
+    // pair of eyes on it, so it moves only when a type is deliberately added there (#5183's
+    // `armorWorn`, R5183000, the latest).
+    expect(rows).toHaveLength(99);
   });
 
   it("gives every row an animation name and a testid template", () => {

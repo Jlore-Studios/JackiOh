@@ -908,11 +908,14 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
                 flags: None,
             },
         );
-        // The pipeline's report is the last thing the hit emitted (`damage::land_hit`).
-        let at = sink.events.len().saturating_sub(1);
+        // The pipeline's report is the last thing the hit emitted (`damage::land_hit`) but the wear
+        // of the Armor that took it, reported after it (`armorWorn`, R5183000).
+        let at = (before..sink.events.len())
+            .rev()
+            .find(|at| !matches!(sink.events.get(*at), Some(GameEvent::ArmorWorn { .. })));
         if dealt <= 0
             && sink.state.result.is_none()
-            && at >= before
+            && let Some(at) = at
             && matches!(sink.events.get(at), Some(GameEvent::DamageAbsorbed { .. }))
         {
             crate::triggers::order_report(sink, at);

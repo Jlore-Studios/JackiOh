@@ -861,17 +861,17 @@ mod tests {
             assert_eq!(view_json(&s, P1)["you"]["hero"]["armor"], 2, "a second use adds to it");
         }
 
-        /// R767000, R5183001: the kept script's Armor Up gives its number until your next turn (the
-        /// build's catalog's 1 here; a replay's version declares its own, 2).
+        /// R767000, R5183001: the kept script's Armor Up gives 2 until your next turn, its own number
+        /// (`ARMOR_UP_ARMOR_KEPT_5183`) whatever the catalog declares.
         #[test]
         fn r5183001_the_kept_scripts_armor_up_lasts_until_your_next_turn() {
             crate::under_kept(HEROIC, script_kept_5183(), || {
                 let (mut s, card) = on_field("armor", turns());
                 s.activate(&card, json!({}));
-                assert_eq!(view_json(&s, P1)["you"]["hero"]["armor"], 1);
+                assert_eq!(view_json(&s, P1)["you"]["hero"]["armor"], 2);
                 assert_eq!(s.state().players.p1.hero.armor, 0, "a modifier, not the hero's own");
                 s.end_turn();
-                assert_eq!(view_json(&s, P1)["you"]["hero"]["armor"], 1);
+                assert_eq!(view_json(&s, P1)["you"]["hero"]["armor"], 2);
                 s.end_turn();
                 assert_eq!(view_json(&s, P1)["you"]["hero"]["armor"], 0);
             });
@@ -1090,15 +1090,14 @@ mod tests {
             assert_eq!(view_json(&s, P1)["you"]["hero"]["armor"], 2);
         }
 
-        /// R767000, R5183001: the kept script's Tank Up keeps its number (the build's catalog's 2 here;
-        /// a replay's version declares its own, 4), then refreshes into a different power you may use
-        /// this turn.
+        /// R767000, R5183001: the kept script's Tank Up keeps 4 (`TANK_UP_ARMOR_KEPT_5183`), then
+        /// refreshes into a different power you may use this turn.
         #[test]
         fn r757_r5183001_the_kept_scripts_tank_up_keeps_its_armor_then_refreshes() {
             crate::under_kept(HEROIC, script_kept_5183(), || {
                 let (mut s, card) = on_field("armor", OnField { radiant_face: true, ..turns() });
                 s.activate(&card, json!({}));
-                assert_eq!(s.state().players.p1.hero.armor, 2);
+                assert_eq!(s.state().players.p1.hero.armor, 4);
                 let now = must(s.backrow(P1, 1), "the Heroic Power");
                 let next = must(subsystems::power_of(&now), "the new power");
                 assert_ne!(js(&next.name), json!("armor"));
@@ -1106,7 +1105,7 @@ mod tests {
                 assert!(!panel.is_null(), "the hero panel's power");
                 assert!(matches_object(&panel, &json!({ "name": js(&next.name), "usedThisTurn": false })));
                 s.end_turn().end_turn();
-                assert!(view_json(&s, P1)["you"]["hero"]["armor"].as_i64().unwrap_or_default() >= 2);
+                assert!(view_json(&s, P1)["you"]["hero"]["armor"].as_i64().unwrap_or_default() >= 4);
             });
         }
 
@@ -1518,12 +1517,12 @@ mod tests {
         #[test]
         fn r1430_a_number_tuned_under_tank_up_keeps_its_tuning_through_the_reroll_and_counts_again_when_tank_up_is_back() {
             // R5183001: only the kept script's Tank Up refreshes (rerolls) its power, so the reroll is
-            // its; its number is the build's catalog's 2, upgraded to 3.
+            // its: its own 4 (`TANK_UP_ARMOR_KEPT_5183`) and the step's 1, 5.
             crate::under_kept(HEROIC, script_kept_5183(), || {
                 let (mut s, card) = on_field("armor", OnField { radiant_face: true, ..turns() });
                 assert_eq!(crate::upgrade_number(&mut s, HEROIC, "armor"), 3);
                 s.activate(&card, json!({}));
-                assert_eq!(s.state().players.p1.hero.armor, 3);
+                assert_eq!(s.state().players.p1.hero.armor, 5);
 
                 // Rerolled away (R757): the number keeps its step, and nothing reaches or lists it.
                 let now = must(s.backrow(P1, 1), "the Heroic Power");
@@ -1535,11 +1534,11 @@ mod tests {
                 assert!(!listed_numbers(&s, &now).contains(&"param:armor".to_string()));
                 assert_eq!(param_value(s.state(), Some(&now), "armor", Default::default()), 3);
 
-                // Rolled back into Tank Up: its 3 counts again. The refresh gave back the use (R757).
+                // Rolled back into Tank Up: its step counts again. The refresh gave back the use (R757).
                 let back = set_power(&mut s, &now, "armor");
                 assert!(listed_numbers(&s, &back).contains(&"param:armor".to_string()));
                 s.activate(&back, json!({}));
-                assert_eq!(s.state().players.p1.hero.armor, 6);
+                assert_eq!(s.state().players.p1.hero.armor, 10);
             });
         }
 

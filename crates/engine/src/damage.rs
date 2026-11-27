@@ -170,16 +170,23 @@ fn hero_armor_worn(state: &GameState, player: PlayerId, worn: i32) -> i32 {
     hero_armor_of(state, player) - worn.clamp(0, state.players[player].hero.armor.max(0))
 }
 
+/// R5183000: whether a hit the Armor on `player`'s hero meets wears it: it holds Armor of its own, and
+/// it is not immune to damage (step 3's cap of 0, Meditative #48, IA #168), whose hit touches nothing.
+fn armor_wears(state: &GameState, player: PlayerId) -> bool {
+    state.players[player].hero.armor > 0 && hero_damage_cap(state, player) != Some(0)
+}
+
 /// R5183000, §4.4 step 2: a hit on a hero that its Armor took something off (`absorbed` above 0, a
 /// hit it took whole included) wears 1 off the Armor the hero holds itself (`hero.armor`: what it
 /// gained and what its seat started with, R2922000), when it holds any; a backrow grant's (#84, R124)
-/// and a modifier's never wear. Reported by `armorWorn`, the badge's number after, withheld from the
-/// trigger loop as `armorGained` is (R3857000).
+/// and a modifier's never wear, and a hero immune to damage (a cap of 0, step 3) wears nothing.
+/// Reported by `armorWorn`, the badge's number after, withheld from the trigger loop as
+/// `armorGained` is (R3857000).
 fn wear_hero_armor(sink: &mut DamageSink<'_>, target: &DamageTarget, absorbed: i32) {
     let DamageTarget::Hero { player } = target else {
         return;
     };
-    if absorbed <= 0 || sink.state.players[*player].hero.armor <= 0 {
+    if absorbed <= 0 || !armor_wears(sink.state, *player) {
         return;
     }
     sink.state.players[*player].hero.armor -= 1;
@@ -1129,8 +1136,11 @@ pub fn project_hit(
         DamageTarget::Hero { player } => {
             let worn = pools.worn[*player];
             let after = hero_hit_amount_worn(state, *player, amount, pierce, worn);
-            // R5183000: a hit the Armor meets wears it for the projection's next hit.
-            if !pierce && hero_armor_worn(state, *player, worn) > 0 {
+            // R5183000: a hit the Armor meets wears it for the projection's next hit, as `land` wears it.
+            if !pierce
+                && hero_armor_worn(state, *player, worn) > 0
+                && hero_damage_cap(state, *player) != Some(0)
+            {
                 pools.worn[*player] += 1;
             }
             (*player, after)

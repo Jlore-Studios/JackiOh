@@ -627,6 +627,8 @@ mod r1360_r1361_r1362_the_reports_leave_the_state_as_it_was {
                 vec![
                     json!({ "type": "fatigue", "player": "p1", "count": 1, "amount": 1 }),
                     json!({ "type": "damageAbsorbed", "sourceId": null, "targetId": "hero-p1", "absorbed": 1, "combat": false }),
+                    // R5183000: the Armor wears, a report that takes no number.
+                    json!({ "type": "armorWorn", "player": "p1", "armor": 2 }),
                 ]
             );
             assert_eq!(sink.state.next_seq, seq + 2);
