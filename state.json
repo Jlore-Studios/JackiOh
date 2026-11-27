@@ -22166,6 +22166,7 @@
       "planned_at": "2026-11-27T03:27:02Z",
       "planned_by": "`claude-6` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-6",
+      "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-6",
       "queued_at": "2026-11-27T03:09:54Z",
