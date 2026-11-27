@@ -37997,5 +37997,30 @@
     ],
     "fragment": "immutable-stops-stat-buffs-debuffs-keyword-grants-and-auras",
     "changes": []
+  },
+  {
+    "version": "v0.6.15i",
+    "date": "2026-11-26",
+    "title": "Motion and glow budget reverted",
+    "source": "issue #5130",
+    "notes": "Reverts issue #5014's motion and glow budget (v0.6.15b) and its follow-up from issue #5091: card faces loop their decoration again (keyword treatments, the Mythic hand shimmer, the zzz, the Dormant seal and shipyard idle, marks, Glitch, the animated rarity foil, the full-screen view's camera), and the title screen's gold wordmark, hearth and embers are back; no card plays differently.",
+    "player": {
+      "title": "The table glows again",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card faces loop their decorations again, as they did before the calmer table, and the title screen's gold lettering, hearth and embers are back."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "bf57b99b3856c1483c90fda182911ccf9ba6f0e1"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "motion-and-glow-budget-reverted",
+    "changes": []
   }
 ]
