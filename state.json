@@ -46307,14 +46307,6 @@
         "run_id": "45931165037",
         "taken_asks": []
       },
-      "4": {
-        "area": "tests",
-        "count": 2,
-        "last_run": "2026-11-27T02:38:37Z",
-        "provider": "claude-3",
-        "run_id": "45929541010",
-        "taken_asks": []
-      },
       "5": {
         "area": "rules",
         "count": 2,
