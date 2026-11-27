@@ -22152,12 +22152,13 @@
     "what": "suggestions (rules) on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-27T04:10:41Z",
+    "at": "2026-11-27T04:17:55Z",
     "notes": [
       "#5156 waits: 3 approved themselves in the last day already",
-      "delivered suggest on claude-4 (run 45937183997): interrupted",
-      "started suggest on claude-8 (run 45938527457)",
-      "nothing more to start: nothing is queued"
+      "delivered suggest on claude-3 (run 45935310397): suggested",
+      "started suggest on claude-8 (run 45939224787)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22863,7 +22864,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-27T04:10:41Z",
+  "loop_tick": "2026-11-27T04:17:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
