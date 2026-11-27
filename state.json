@@ -22146,6 +22146,13 @@
     "5154": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-27T03:26:59Z",
+        "difficulty": "medium",
+        "provider": "claude-6",
+        "tier": "medium",
+        "why": "Rule 1\u20135 none hold: the change is the fuzz tool's reporting in crates/tools plus a test-support seam in the engine's testkit (no rules, no resolution loop, no AI, no migration, about 4 files)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
