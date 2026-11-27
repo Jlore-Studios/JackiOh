@@ -100,6 +100,9 @@ export const statsTestid = {
   modeSelect: "stats-mode-select",
   /** R2777000: a card row's adjusted win rate. */
   adjustedCell: "stats-adjusted-cell",
+  /** R5037000: a Running or Versions row's win rate and play rate. */
+  winRateCell: "stats-win-rate-cell",
+  playRateCell: "stats-play-rate-cell",
   /** R3185000: the card detail's Statistics panel's tier chip and adjusted win rate (beside `INSPECT_STATS`). */
   cardStatsTier: "inspect-stats-tier",
   cardStatsAdjusted: "inspect-stats-adjusted",
