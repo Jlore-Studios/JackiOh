@@ -27371,9 +27371,9 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-27T02:20:00Z",
-          "utilization": 0.36
+          "utilization": 0.44
         },
-        "observed_at": "2026-11-27T00:05:06Z",
+        "observed_at": "2026-11-27T01:40:56Z",
         "status": "allowed"
       }
     },
@@ -46061,7 +46061,8 @@
   },
   "usage_spool": {
     "readings": [
-      "2026-11-27T01:37:45Z,claude-8,ping,before,45923268346,91,2026-11-27T02:30:00Z,,,allowed_warning,85,,"
+      "2026-11-27T01:37:45Z,claude-8,ping,before,45923268346,91,2026-11-27T02:30:00Z,,,allowed_warning,85,,",
+      "2026-11-27T01:36:49Z,claude-1,ping,before,45923175542,44,2026-11-27T02:20:00Z,,,allowed,40,,"
     ],
     "runs": [
       "2026-11-27T01:37:45Z,45923268346,claude-8,opus,suggest,,,interrupted,5-hour cap,0,0,0,0,,91,91,,,,,none,,0"
