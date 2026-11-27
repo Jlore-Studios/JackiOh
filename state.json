@@ -21778,6 +21778,8 @@
       "taken_asks": []
     },
     "5144": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T23:21:03Z",
@@ -21791,8 +21793,11 @@
         "trail": "- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-409\"}\n- said: Waiting for the `cost_hike` test suite and sweep tasks to finish.\n- said: \n- manage_task: {\"Action\": \"list\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-361\"}\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5122/scripts/build-wasm.sh\", \"StartLine\": 1}\n- said: Waiting for `task-361` (single-card sweep) to complete.\n- said: \n- read_file: {\"EndLine\": 100, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5122/training/history/sweep-infiniteassault-123.md\", \"StartLine\": 1}\n- said: \n- run_command: grep -n \"infiniteassault-123\" /home/agent-agy/actions-runner/_work/_temp/work/item-5122/training/history/sweep-infiniteassault-123.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && cargo jackioh gate\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-429\"}\n- said: Waiting for `cargo jackioh gate` to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-429\"}\n- said: Waiting for `cargo jackioh gate` task to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && sh scripts/build-wasm.sh && pnpm --dir apps/web exec vitest run src/practice/claim.test.ts\n- said: Waiting for `build-wasm.sh` and the practice claim vitest run to complete.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-437\"}\n- said: Waiting for `task-437` to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && cargo jackioh spec check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0c43e05a-d522-43ce-8dc1-0ee41561a719/task-443\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && ls -la .bot-notes*\n- said: \n- read_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5122/.bot-notes.md\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5122/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && git diff\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI counts a price hike it puts on the opponent's next turn, so the Assault enemy casts Cost Injection\"} --> ## Summary of Changes ### 1. AI Evaluation (`crates/ai`) - **Config ([`crates/ai/src/config.rs`](file:///home/agent-agy/actions-runner/_work/\u2026"
       },
       "issue": 5122,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-27T01:00:05Z",
         "from_run": "45910419179",
         "gates": [
           {
@@ -21851,8 +21856,15 @@
         "source": "build",
         "until": "2026-11-27T01:29:21Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-27T00:59:21Z",
+      "run_id": "pending:975e0899-1795741190",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-27T01:00:05Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -21866,9 +21878,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T00:45:09Z",
+    "at": "2026-11-27T01:00:05Z",
     "url": "",
-    "what": "plan #5123 on claude-3"
+    "what": "review #5144 on agy"
   },
   "last_sweep": {
     "at": "2026-11-27T00:51:15Z",
