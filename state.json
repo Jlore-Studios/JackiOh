@@ -39667,10 +39667,10 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-27T02:30:00Z",
-          "utilization": 0.85
+          "utilization": 0.91
         },
-        "observed_at": "2026-11-26T22:39:45Z",
-        "status": "allowed"
+        "observed_at": "2026-11-27T01:40:33Z",
+        "status": "allowed_warning"
       }
     },
     "devin": {
@@ -46066,6 +46066,11 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-27T01:37:45Z,claude-8,ping,before,45923268346,91,2026-11-27T02:30:00Z,,,allowed_warning,85,,"
+    ]
   },
   "version": 1
 }
