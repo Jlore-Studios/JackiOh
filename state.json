@@ -41497,42 +41497,6 @@
       {
         "approver": {
           "family": "claude",
-          "model": "sonnet",
-          "provider": "claude-6",
-          "tier": "medium"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-6"
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-07T03:55:03Z",
-        "every": 5,
-        "findings": 0,
-        "head": "a4d0724238db14c2af29c6f820c600ae885b1670",
-        "issue": 3329,
-        "last_why": "interrupted: `claude-4` stops before it starts: 5-hour usage is 55%, at or over its 50% cap outside its hours; it resets at 2026-11-07T04:10:00Z",
-        "merged_at": "2026-11-07T01:34:46Z",
-        "n": 120,
-        "pr": 3356,
-        "queued_at": "2026-11-07T01:34:46Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-1",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42335423048",
-        "sha": "c62f023280ece602550c328276e4995720c53a6f",
-        "started_at": "2026-11-07T03:45:16Z",
-        "status": "done",
-        "title": "Patch: drop the square shadow behind the card face's cost gem",
-        "tries": 0,
-        "verdict": "clean"
-      },
-      {
-        "approver": {
-          "family": "claude",
           "model": "opus",
           "provider": "claude-4",
           "tier": "strong"
@@ -45022,7 +44986,9 @@
           "provider": "claude-3"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-27T02:54:26Z",
         "every": 5,
+        "findings": 0,
         "head": "bede0539d54f392033596adb3198dbb2b7224a82",
         "issue": 5036,
         "merged_at": "2026-11-27T02:41:55Z",
@@ -45035,12 +45001,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:0264badd-1795747650",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45930427985",
         "sha": "9cafcdb7a9f6d4bc19202ec76644cf65551bc479",
         "started_at": "2026-11-27T02:47:45Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: deeper card stats, X6, Decisiveness on the Experimental tab's Running and Versions",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 620
