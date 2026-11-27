@@ -29,7 +29,7 @@ const ATTACK_MULTIPLE: i32 = 1;
 /// R4285002: "twice its Attack", on the Radiant face.
 const RADIANT_ATTACK_MULTIPLE: i32 = 2;
 
-/// R4285001: "Embiggened (3): Starship Piece.": it holds only on a card stamped embiggened (R1878001).
+/// R4285001: "Embiggened (+2): Starship Piece.": it holds only on a card stamped embiggened (R1878001).
 fn embiggened_piece(args: HookArgs<'_>) -> Vec<Keyword> {
     if args.self_.embiggened == Some(true) {
         vec![Keyword::StarshipPiece]

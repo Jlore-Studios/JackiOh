@@ -33,7 +33,7 @@ fn going_long() -> Script {
 
 pub fn script() -> CardScripts {
     let base = going_long();
-    // "Armor 4 (Embiggened (4): 10)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
+    // "Armor 4 (Embiggened (+2): 10)": two numbers, both of them the pipeline's to read (`HERO_ARMOR.radiant`).
     let radiant = going_long();
     CardScripts { base, radiant }
 }

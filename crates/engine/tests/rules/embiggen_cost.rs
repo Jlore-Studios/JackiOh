@@ -289,6 +289,70 @@ fn r81_the_views_embiggen_cost_is_what_an_embiggened_play_then_charges_with_no_c
 }
 
 #[test]
+fn r81_one_mana_short_of_the_views_embiggen_cost_the_embiggened_play_is_neither_offered_nor_accepted() {
+    for prices in cases() {
+        for radiant in [false, true] {
+            let what = format!("{} (radiant {radiant})", prices.name);
+            let (state, id) = holding(&prices, radiant, prices.embiggened - 1);
+            let card = shown(&state, PlayerId::P1, &id).expect("p1 sees its own hand card");
+            assert_eq!(
+                card.embiggen_cost,
+                Some(prices.embiggened),
+                "{what}: the view still shows the price"
+            );
+            assert_eq!(
+                offered(&state, &id),
+                vec![Some(false)],
+                "{what}: only the normal price is offered"
+            );
+            assert!(
+                play(&state, &id, true).error.is_some(),
+                "{what}: the embiggened play is refused"
+            );
+        }
+    }
+}
+
+#[test]
+fn r81_embiggen_cost_rides_only_the_viewers_own_hand_cards_with_an_embiggen_price() {
+    let prices = &cases()[0];
+    let (mut state, id) = holding(prices, false, EMBIGGEN);
+    // A card with one price has none.
+    let plain = only(&in_hand(&mut state, "pb-three-spell", PlayerId::P1, 1));
+    assert_eq!(
+        shown(&state, PlayerId::P1, &plain.id).map(|card| card.embiggen_cost),
+        Some(None),
+        "a one-price card carries no embiggenCost"
+    );
+    // p2's view lists p1's hand as a count: no card of it, and no price, reaches p2.
+    assert!(matches!(
+        view_for(&state, PlayerId::P2).opponent.hand,
+        HandView::Count { .. }
+    ));
+    assert_eq!(shown(&state, PlayerId::P2, &id), None);
+
+    // R434: once the game is over p2 reads p1's hand in full, and still no embiggenCost on it.
+    let over = act(&state, json!({ "type": "concede", "playerId": "p2" }));
+    assert!(over.result.is_some());
+    let revealed = shown(&over, PlayerId::P2, &id).expect("the hand is revealed at the end");
+    assert_eq!(
+        revealed.embiggen_cost, None,
+        "the opponent's revealed card carries no embiggenCost"
+    );
+    // Played onto the field at its embiggen price, the card's field view carries none either.
+    let after = act(
+        &state,
+        json!({ "type": "play", "instanceId": id, "zone": { "row": "backrow", "lane": 1 }, "embiggen": true, "playerId": "p1" }),
+    );
+    let field =
+        serde_json::to_value(view_for(&after, PlayerId::P1).you.backrow).expect("the backrow serializes");
+    assert!(
+        !field.to_string().contains("embiggenCost"),
+        "no backrow view carries embiggenCost"
+    );
+}
+
+#[test]
 fn r5109000_the_embiggened_price_is_the_finished_normal_price_plus_the_premium_under_every_rung() {
     for prices in r5109000_cases() {
         view_offers_and_charges(&prices);

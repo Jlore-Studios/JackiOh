@@ -86,6 +86,11 @@
         "en": "Tradable\nChoose one. You also win while it holds: hero {health}+ Health; graveyard {graveyard}+ cards; or Units {board}+/{board}+. Draw {draw}."
       }
     },
+    "meditative-021": {
+      "radiant": {
+        "en": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (+1): {paidChance}% instead.\nEnd of turn: Add a Radiant API Key Fishing to hand."
+      }
+    },
     "meditative-022": {
       "base": 1,
       "radiant": 1

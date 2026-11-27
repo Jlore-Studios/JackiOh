@@ -27,7 +27,7 @@ fn add_random_card(ctx: &EffectContext, as_radiant: bool) -> Effect {
     if as_radiant {
         args["radiant"] = json!(true);
     }
-    // "(Embiggened (4): it costs (0))" — the Embiggened version, not the mana actually spent after discounts. The
+    // "(Embiggened (+2): it costs (0))" — the Embiggened version, not the mana actually spent after discounts. The
     // (0) is the declared number `setCost` (R386).
     if ctx.embiggened {
         args["costOverride"] = json!(param(ctx, "setCost"));

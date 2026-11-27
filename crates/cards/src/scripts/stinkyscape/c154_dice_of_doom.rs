@@ -28,7 +28,7 @@ const SIDES: i32 = 100;
 const RADIANT_SIDES: i32 = 80;
 const RADIANT_ROLLS: i32 = 2;
 const HIT: i32 = 67;
-/// "Embiggened (1): This also gains Lucky +1 for good."
+/// "Embiggened (+1): This also gains Lucky +1 for good."
 const LUCKY_GAIN: i32 = 1;
 
 /// The roll; `kept`, the script through v0.6.3b.

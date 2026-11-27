@@ -8,7 +8,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-056";
 
-/// "Embiggened (3): Equip.": Equip holds only on a card stamped embiggened, so it is offered only at the (3)
+/// "Embiggened (+1): Equip.": Equip holds only on a card stamped embiggened, so it is offered only at the (3)
 /// price (R831013).
 fn paid_equip(args: HookArgs<'_>) -> Vec<Keyword> {
     if args.self_.embiggened == Some(true) { vec![Keyword::Equip] } else { Vec::new() }

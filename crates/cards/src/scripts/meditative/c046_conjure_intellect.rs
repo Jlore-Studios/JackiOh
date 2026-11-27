@@ -22,7 +22,7 @@ fn pool(tag: &str) -> Value {
 fn conjure(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
-            // "Embiggened (4): They cost (0)" — the Embiggened version, read as the Cry resolves, so the paid
+            // "Embiggened (+2): They cost (0)" — the Embiggened version, read as the Cry resolves, so the paid
             // face is the declared `setCost` (R386).
             let paid = ctx.embiggened.then(|| param(&*ctx, "setCost"));
             ["KY", "CN", "Book"]

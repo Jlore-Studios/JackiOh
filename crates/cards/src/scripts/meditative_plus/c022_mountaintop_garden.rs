@@ -82,7 +82,7 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
-    /// Core #84 Going Long: (2, Embiggened 4) Field Spell, "Your hero has Armor 2. Embiggened (4):
+    /// Core #84 Going Long: (2, Embiggened 4) Field Spell, "Your hero has Armor 2. Embiggened (+2):
     const GOING_LONG: &str = "core-084";
     /// Core #36 Magic Jammed: (1) Spell, "Destroy target backrow card; Lock its zone".
     const MAGIC_JAMMED: &str = "core-036";

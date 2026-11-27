@@ -15,9 +15,9 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-096";
 
-/// "Embiggened (2): They cost (1) less", the base face's (R1748003: a price, printed, declared nowhere).
+/// "Embiggened (+2): They cost (1) less", the base face's (R1748003: a price, printed, declared nowhere).
 const DISCOUNT: i32 = 1;
-/// "Embiggened (2): They cost (0)", the Radiant face's (R1748003: a price, printed, declared nowhere).
+/// "Embiggened (+2): They cost (0)", the Radiant face's (R1748003: a price, printed, declared nowhere).
 const EMBIGGENED_COST: i32 = 0;
 
 /// R3538001: `first` unless its pool is empty, then `then`.

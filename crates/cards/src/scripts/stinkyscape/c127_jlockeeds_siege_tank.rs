@@ -15,7 +15,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-127";
 
-/// R1878001: "Embiggened (4): Starship Piece.": the keyword holds only on a card stamped embiggened.
+/// R1878001: "Embiggened (+1): Starship Piece.": the keyword holds only on a card stamped embiggened.
 fn embiggened_piece(args: HookArgs<'_>) -> Vec<Keyword> {
     if args.self_.embiggened == Some(true) { vec![Keyword::StarshipPiece] } else { Vec::new() }
 }
