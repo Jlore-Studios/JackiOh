@@ -21310,6 +21310,8 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-28T02:01:45Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "46098200312",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
