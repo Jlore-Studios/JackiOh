@@ -20201,15 +20201,8 @@
       "verdict_rounds": 3
     },
     "5189": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46114191109",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-28T06:23:40Z",
-        "until": "2026-11-28T06:53:40Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20221,25 +20214,24 @@
         "reason": "planned on opus",
         "trail": "ARDS.md | head -10\", \"description\": \"List pending\u2026\n- Bash: {\"command\": \"sed -n 200,225p docs/ADDING_CARDS.md\", \"description\": \"Read fragment player-note rules\"}\n- Bash: {\"command\": \"sed -n 1,30p .github/workflows/patches-ship.yml | grep -v \\\"^\\\\s*$\\\" | head -30\", \"description\": \"Check when patches ship runs\"}\n- Bash: {\"command\": \"grep -m1 \\\"^title\\\" spec/rulings/R2800000.md; sed -n 20,40p apps/web/src/game/runs.ts; sed -n 550,565p apps/web/src/game/runs.ts\", \"description\": \"Check what the client's run tracker is \u2026\n- Bash: {\"command\": \"grep -rln \\\"HookKind\\\\|startOfTurn\\\\b\\\" crates/wasm crates/shared/src crates/server/src 2>/dev/null | head; grep -rn \\\"HookKind\\\" crates --include=*.rs | grep -v \\\"crates/engine/\\\" | hea\u2026\n- Bash: {\"command\": \"grep -n \\\"hookResolving\\\\|\\\\\\\"activate\\\\\\\"\\\\|whenever\\\" apps/web/src/wire/index.test.ts | head -5; grep -rn \\\"HookKind\\\\b\\\" docs/v0.3.0/SURFACE.md | head -3\", \"description\": \"Check wire \u2026\n- Bash: {\"command\": \"sed -n 493,500p docs/v0.3.0/SURFACE.md | cut -c1-600\", \"description\": \"Read SURFACE.md's HookResolving line\"}\n- Bash: {\"command\": \"grep -n \\\"mod loop_cap\\\\|mod hook_marks\\\\|mod turn\\\\b\\\\|mod combat\\\\b\\\" crates/engine/src/lib.rs; grep -n \\\"mark_hook\\\\|loop_cap\\\" crates/engine/tests/rules/hook_marks.rs crates/engine/t\u2026\n- Bash: {\"command\": \"grep -rln \\\"hotseat\\\" crates/*/tests/*.rs 2>/dev/null | head -5\", \"description\": \"Find the hotseat fixture fold test\"}\n- Bash: {\"command\": \"grep -n \\\"hotseat\\\" crates/engine/tests/golden.rs | head -8\", \"description\": \"Check hotseat fixture handling in golden test\"}\n- Bash: {\"command\": \"grep -n \\\"^use crate::wire\\\" -A 4 crates/engine/src/combat.rs | head -8; grep -n \\\"impl OwedHook for\\\" -A 3 crates/engine/src/combat.rs | grep -v \\\"^--$\\\"\", \"description\": \"Read combat.r\u2026\n- Bash: {\"command\": \"grep -rn \\\"ResumeOptions {\\\" crates/engine/src --include=*.rs | wc -l; grep -rn \\\"pub struct ResumeOptions\\\" -A 22 crates/engine/src/prompts.rs\", \"description\": \"Count ResumeOptions lite\u2026\n- Bash: {\"command\": \"grep -rn \\\"ResumeOptions {\\\" -A 7 crates/engine/src --include=*.rs | grep -v \\\"^--$\\\" | grep -n \\\"Default\\\\|ResumeOptions {\\\" | head -20; sed -n 170,178p crates/engine/src/prompts.rs\", \"\u2026\n- Bash: {\"command\": \"grep -n \\\"run_resume_for\\\" crates/engine/src/turn.rs\", \"description\": \"Find run_resume_for callers\"}\n- Bash: {\"command\": \"grep -n \\\"^ Drawn {\\\\|^ CardAnnounced {\\\\|^ AttackDeclared {\\\\|^ CardPlayed {\\\" -A 6 crates/engine/src/wire/events.rs | head -40\", \"description\": \"Read Drawn, CardAnnounced, AttackDeclar\u2026\n- Bash: {\"command\": \"grep -n \\\"^export function\\\\|^export const\\\" apps/web/src/audio/soundTables.ts | head; sed -n 36,48p apps/web/src/audio/sound-space.test.ts\", \"description\": \"Check soundTables exports an\u2026\n- Bash: {\"command\": \"grep -n \\\"mutants\\\" .github/workflows/ci.yml | head -5; grep -n \\\"hookResolving\\\\|activate\\\\b\\\" apps/web/README.md | sed -n 1,5p | cut -c1-200; sed -n 20,24p docs/ADDING_CARDS.md | cut -\u2026\n- Bash: {\"command\": \"sed -n 1444,1448p apps/web/README.md | cut -c1-400; sed -n 62,74p spec/10-engine-guide/10.11-audio.md | cut -c1-300\", \"description\": \"Read web README and \\u00a710.11 anchor lines\"}\n- Bash: {\"command\": \"grep -rln \\\"hookResolving\\\\|HookKind\\\" apps/edge/src apps/admin/src e2e/cypress 2>/dev/null | head\", \"description\": \"Check edge/admin/e2e for HookKind uses\"}\n- Bash: {\"command\": \"for r in R0043 R0062 R0068 R0113 R0127 R0136 R0151 R0177 R0458 R0925 R1956001 R2285000 R2285001 R2396000 R1849008 R2199000 R3182000 R3543003 R3925000 R4599007 R0655 R0204 R5188000 R1026 \u2026\n- Bash: {\"command\": \"grep -n \\\"^use crate::wire\\\\|^use crate::state\\\\|HookKind\\\" crates/engine/src/prompts.rs | head -5; grep -n \\\"derive\\\" crates/engine/src/wire/mod.rs | sed -n 1,6p\", \"description\": \"Check\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5189/.bot-plan.md\", \"content\": \"## Goal\\n\\n`hookResolving` also marks the nine card hooks R2783000 leaves unmarked: `onPlayHook`, `whenAttacks`, `afte\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count the plan's words and characters\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5189/.bot-plan.md\", \"content\": \"## Goal\\n\\n`hookResolving` will also mark the nine card hooks R2783000 leaves unmarked: `onPlayHook`, `whenAttacks`, `\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Count the plan's words\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"`hookResolving` will also mark the nine card hooks R2783000 leaves unmarked: `onPlayHook`, `whenAttacks`, `afterAttack`, \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"Commands:\\\\n- `cargo test -p jackioh-engine --features testkit --test 'rules*' r5189000`\\\\n- `cargo test -p jackioh-engin\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\na=\\\"\\\"\\\"Do not touch any of the following:\\n- `crates/ai/`\\n- `crates/cards/src/`\\n- `catalog.json`\\n- `census-baseline.json`\\n- `v\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5189/.bot-plan.md\"}\n- Bash: {\"command\": \"grep -n \\\"for_rest_of_game\\\\|pub use delay\\\\|delay::{\\\" crates/engine/src/effects/mod.rs | head -5; grep -n \\\"pub use\\\\|effects\\\" crates/engine/src/testkit/mod.rs | head -8\", \"descriptio\u2026\n- Bash: {\"command\": \"grep -n \\\"^pub mod delay\\\\|^mod delay\\\\|pub mod \\\\*\\\\|^pub use\\\" crates/engine/src/effects/mod.rs | head -10; grep -rn \\\"for_rest_of_game\\\\|effects::delay\\\\b\\\\|delay::delay\\\" crates/engi\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\" - In `run_resume_now`, replace the guard's `resume.step.is_empty() && let Some(kind) = hook_kind_of(&resume.hook)` with \u2026\n- said: ## Goal `hookResolving` also marks `onPlayHook`, `whenAttacks`, `afterAttack`, `afterAttacked`, `allyAttacked`, `allyAttack`, `startOfGame`, `entersHand` and a delayed effect re-entering its card's step. Each is marked once per run, after its announcement and before its effects. Like R2783000's mar\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-7",
-      "owner_since": "2026-11-28T05:54:26Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-4",
+      "owner_since": "2026-11-28T06:24:24Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-28T06:23:34Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-7",
+      "provider": "claude-4",
       "queued_at": "2026-11-27T21:25:39Z",
       "requested_by": "jgoetzmann",
-      "run_id": "46114191109",
+      "run_id": "pending:0a48390d-1795847045",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T05:54:26Z",
+      "started_at": "2026-11-28T06:24:24Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -22142,9 +22134,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T06:09:59Z",
+    "at": "2026-11-28T06:24:24Z",
     "url": "",
-    "what": "review #5280 on claude-6"
+    "what": "build #5189 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-28T06:16:11Z",
