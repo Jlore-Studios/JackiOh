@@ -22169,7 +22169,16 @@
       "feedback_since": "2026-11-28T11:39:54Z",
       "issue": 5289,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-6",
+        "rejections": [],
+        "reviews": [],
+        "sha": "b26a93bbbe05b33cddea7c4242dd4fb49f65da6b",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
