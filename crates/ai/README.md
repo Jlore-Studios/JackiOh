@@ -191,7 +191,18 @@ the reply prices the counter instead, on a unit by `counter_price` (what `afflic
 much more on) and on a hero by `hero_ticks_added`. Each side's damage pools (S+ #42 Force Projector, #123
 Oct) soak what they have left (`query::damage_pool_of`), one pool a side spent once across a read's hits in
 the order it counts them (`Side.pool`, `Blow.soaked`, the walk's `WalkPools`): as they stand now for this
-turn's attacks, refilled where that side's turn starts before the hits land. A unit's Death
+turn's attacks, refilled where that side's turn starts before the hits land. With those, the riders of
+§4.4 step 7 count too (`damage_rider_read`, R5229000, #5229; off in `GREEDY_EVAL`): a hit from a source
+whose damage also Burns N, also applies Toxic N, or whose damage dealt also Burns (S+ #37 Scorch, #111 Mace,
+#114 Reign, the Rounds pieces and the Starships they fuse into) adds those counters to a target it deals
+something and leaves standing, as the engine's `ride_damage` reads them (`query::riders_of`,
+`Side.riders`, `Blow.rider_burn` and `Blow.rider_toxic`; none after a kill, a shield, an Indestructible or a
+hit the pools soak whole). The reply prices them on the unit as the blow leaves it (`riders_price`, so a
+Burn that finishes the hit reads as the kill), the strike back's on the attacker and each Cleave splash's at
+its share, and on a hero the hit leaves life by `hero_ticks_added_by`. The walk adds the Burn its hero hits
+leave as one more unpierced hit after them, the tick at the turn's end, so `face_threat`, `ready_gap` and
+the walls read it; no Toxic is walked, since it ticks at the hero's own turn start, and the lethal solver's
+own gaps leave the tick out (`LETHAL_WALK`), since it never ends the turn. A unit's Death
 counts by what it leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003), once for each controller, so each side's copy reads

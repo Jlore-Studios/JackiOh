@@ -569,6 +569,16 @@ pub struct EvalWeights {
     /// (`subsystems::projected_hero_damage_worn`); a Pierce hit, an aura's or a modifier's Armor and a hero
     /// immune to damage wear nothing. Off, each hit meets the whole Armor, as before.
     pub armor_wear_read: bool,
+    /// R5229000, #5229: whether the static reads of a hit, read with `pool_and_conversion_read`, follow
+    /// §4.4 step 7's riders (R3540002, R4783001, `riders_of`): a hit that leaves its target standing adds
+    /// the Burn and the Toxic its source's riders state for what it dealt. `blow` reports them on a target
+    /// it leaves standing (`Side.riders`, `Blow.rider_burn`, `Blow.rider_toxic`); `trade_value` prices them
+    /// on the struck unit, its strike back's and its splashes' (`riders_price`); `face_value` adds the life
+    /// their ticks take of a hero the hit does not kill (`hero_ticks_added_by`); and the Taunt walk of
+    /// `damage_past_taunts_with` (so `face_threat`, `ready_gap` and the walls) counts the Burn its hero hits
+    /// leave as one more hit at the turn's end (R4154000). The lethal solver's own walk reads it off, since
+    /// the solver never ends the turn (`lethal::LETHAL_WALK`). Off, no hit adds a counter, as before.
+    pub damage_rider_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -820,6 +830,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // -0.01 (-0.03 to 0.01); inconclusive (R4319000): 4 decided of 200 (won 1, lost 3), 29 diverged; its scene
     // tests (crates/ai/tests/ai/armor_wear.rs) settle it (training/improve.md, A screen).
     armor_wear_read: true,
+    // #5229: on. Its screen, 400 games on improve-dev against the control at cce57d1033, read 201-199,
+    // edge 0.005 (-0.028 to 0.038); inconclusive (R4319000): 11 decided of 200 (won 6, lost 5), 35
+    // diverged; its scene tests settle it (training/improve.md, A screen).
+    damage_rider_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -1119,7 +1133,7 @@ pub const AI_EVOLVE_PROBE_NODES: usize = 16;
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
 /// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
 /// `giga_cleave_read`, `strike_back_survival_read`, `splash_trample_read`, `reborn_body_read`,
-/// `armor_wear_read`) is off.
+/// `armor_wear_read`, `damage_rider_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -1144,6 +1158,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     splash_trample_read: false,
     reborn_body_read: false,
     armor_wear_read: false,
+    damage_rider_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {

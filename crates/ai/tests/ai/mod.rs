@@ -86,6 +86,7 @@ pub mod replay_fill;
 pub mod replay_versions;
 pub mod replays;
 pub mod reply;
+pub mod riders;
 pub mod scorer_casts;
 pub mod scraper;
 pub mod search;
