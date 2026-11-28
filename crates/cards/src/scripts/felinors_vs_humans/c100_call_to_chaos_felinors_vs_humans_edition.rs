@@ -339,49 +339,64 @@ mod tests {
             }
         }
 
-        /// A unit zone is filled when a Unit stands in it or a GIGA covers it (R3546000).
-        fn filled(s: &Scenario, player: PlayerId, lane: i32) -> bool {
-            occupant_at(
-                s.state(),
-                ZoneSlot {
-                    player,
-                    row: Row::Units,
-                    lane,
-                },
-            )
-            .is_some()
+        /// The unit-row summons onto `player`'s side since setup: each one's lane, definition and instance.
+        fn summons_onto(s: &Scenario, player: PlayerId) -> Vec<(i32, String, String)> {
+            s.events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Summoned {
+                        player: at,
+                        row: Row::Units,
+                        lane,
+                        def_id,
+                        instance_id,
+                        ..
+                    } if *at == player => Some((*lane, def_id.clone(), instance_id.clone())),
+                    _ => None,
+                })
+                .collect()
         }
 
+        fn prints_giga(def_id: &str) -> bool {
+            has_keyword(&card_def(def_id).base.keywords, KeywordKind::Giga)
+        }
+
+        /// R1080, R5262000: every unit zone of each side is filled as the entry resolves, read off the
+        /// summons, since a summoned card's own Aura may clear a side once it stands (an exiling Aura).
+        /// R3546000: a GIGA covers the zone beside its own, and one drawn for the last zone fits nowhere
+        /// there, so its summon fails and that zone alone may stay open.
         fn fills(entry: &str, own: Tag, theirs: Tag) {
-            // Whether each side's last zone was filled in some game: the GIGA case is rare, never the rule.
+            // Whether each side's last zone took a summon in some game: the GIGA case is rare, never the rule.
             let mut last_filled = [false; 2];
             for n in 0..GAMES {
                 let s = chaos_seeded(&format!("{SEED}-{entry}-{n}"), entry);
-                // R3546000: a GIGA drawn for the last zone fits nowhere there and its summon fails, so the
-                // last zone alone may stay open; a GIGA drawn for any other covers the zone beside it.
-                for lane in 1..UNIT_ZONES {
-                    assert!(filled(&s, P1, lane), "game {n}: your lane {lane} is filled");
-                    assert!(filled(&s, P2, lane), "game {n}: their lane {lane} is filled");
+                for (seat, (player, tag, radiant)) in
+                    [(P1, own, true), (P2, theirs, false)].into_iter().enumerate()
+                {
+                    let summons = summons_onto(&s, player);
+                    let reached = |lane: i32| {
+                        summons
+                            .iter()
+                            .any(|(at, def_id, _)| *at == lane || (*at == lane - 1 && prints_giga(def_id)))
+                    };
+                    for lane in 1..UNIT_ZONES {
+                        assert!(reached(lane), "game {n}: {player:?}'s lane {lane} is filled");
+                    }
+                    last_filled[seat] |= reached(UNIT_ZONES);
+                    for (lane, def_id, instance_id) in nonempty(summons.clone(), "the fill's summons") {
+                        let def = card_def(&def_id);
+                        assert_eq!(def.type_, CardType::Unit, "{def_id}");
+                        assert!(
+                            def.tags.contains(&tag),
+                            "game {n}: {def_id} in {player:?}'s lane {lane}"
+                        );
+                        assert_eq!(
+                            s.card(instance_id.as_str()).radiant,
+                            radiant,
+                            "game {n}: {def_id}"
+                        );
+                    }
                 }
-                for (seat, player) in [P1, P2].into_iter().enumerate() {
-                    last_filled[seat] |= filled(&s, player, UNIT_ZONES);
-                    let landed_last = s.events().iter().any(|event| {
-                        matches!(event, GameEvent::Summoned { player: at, row: Row::Units, lane, .. }
-                            if *at == player && *lane == UNIT_ZONES)
-                    });
-                    // Open only because nothing landed there, never because what landed left.
-                    assert!(
-                        filled(&s, player, UNIT_ZONES) || !landed_last,
-                        "game {n}: {player:?}'s last zone"
-                    );
-                }
-                let mine = s.unit_at(P1, 1);
-                assert!(mine.radiant, "{}", mine.def_id);
-                assert!(card_def(&mine.def_id).tags.contains(&own), "{}", mine.def_id);
-                let their = s.unit_at(P2, 1);
-                assert!(!their.radiant, "{}", their.def_id);
-                assert_eq!(their.controller, P2);
-                assert!(card_def(&their.def_id).tags.contains(&theirs), "{}", their.def_id);
             }
             assert_eq!(last_filled, [true, true], "the last zone is filled in most games");
         }
