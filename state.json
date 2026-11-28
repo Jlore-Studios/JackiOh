@@ -21112,6 +21112,13 @@
     "5231": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "46090549862",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-28T01:03:30Z",
+        "until": "2026-11-28T01:33:30Z"
+      },
       "difficulty_by": {
         "at": "2026-11-28T01:03:20Z",
         "difficulty": "medium",
