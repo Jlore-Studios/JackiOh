@@ -21522,6 +21522,13 @@
     "5248": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-28T02:44:52Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Sweep tooling only (crates/ai/src/sweep.rs plays no decision and search is untouched; classify marks it Internal), two crates agreeing on a call site and a function signature, a ruling and READMEs, about 10 files; no rule-1 to rule-5 line holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
