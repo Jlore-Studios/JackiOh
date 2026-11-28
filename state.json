@@ -21914,7 +21914,7 @@
       "started_at": "2026-11-28T08:12:41Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [],
         "builder": "claude",
