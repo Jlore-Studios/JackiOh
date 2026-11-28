@@ -70,6 +70,32 @@ fn spell(id: &str, index: u32) -> CardDef {
     def(id, index, "Spell", None, Vec::new())
 }
 
+/// A script-less (0) Felinors vs Humans Spell for a library: the Float of last turn (R5237002) and a
+/// play's hand place (R5237005) are kept only in a game holding a card of the set (FV3 E2, `fvh_kept`).
+const FVH_KEEPER: &str = "fvhl-fvh-keeper";
+
+fn fvh_keeper() -> CardDef {
+    let face = json!({ "keywords": [], "text": FVH_KEEPER });
+    json_as(json!({
+        "id": FVH_KEEPER,
+        "index": "523990",
+        "name": "fvhl-fvh-keeper (FvH lasting fixture)",
+        "set": "Felinors vs Humans",
+        "type": "Spell",
+        "tags": [],
+        "rarity": "Common",
+        "token": false,
+        "cost": 0,
+        "base": face,
+        "radiant": face,
+    }))
+}
+
+/// p2's library with the Felinors vs Humans keeper at its bottom, so `fvh_kept` holds and no hand moves.
+fn kept_library() -> Value {
+    json!([FILLER, FILLER, FILLER, FILLER, FILLER, FILLER, FVH_KEEPER])
+}
+
 /// This file's catalog on the calling test's thread: `DECK_SIZE` script-less (0) Spells (the filler
 /// deck and the libraries), then `cards`, each with its script on both faces.
 fn install(cards: Vec<(CardDef, Script)>) {
@@ -78,6 +104,8 @@ fn install(cards: Vec<(CardDef, Script)>) {
         let filler = spell(&format!("fvhl-filler-{n}"), 523_900 + n as u32);
         catalog.insert(filler.id.clone(), filler);
     }
+    let keeper = fvh_keeper();
+    catalog.insert(keeper.id.clone(), keeper);
     let mut scripts: IndexMap<String, CardScripts> = IndexMap::new();
     for (card, script) in cards {
         scripts.insert(
@@ -343,7 +371,7 @@ mod r5237002_float_last_turn {
         let mut s = board(
             "r5237002-float",
             json!({ "mana": 3, "hand": [FILLER] }),
-            json!({ "hand": [FILLER] }),
+            json!({ "hand": [FILLER], "library": kept_library() }),
         );
         s.end_turn();
         assert_eq!(float_last_turn(s.state(), P1), 3);
@@ -365,7 +393,7 @@ mod r5237002_float_last_turn {
         let mut s = board(
             "r5237002-none",
             json!({ "hand": [FILLER] }),
-            json!({ "hand": [FILLER] }),
+            json!({ "hand": [FILLER], "library": kept_library() }),
         );
         assert_eq!(float_last_turn(s.state(), P1), 0);
         assert_eq!(float_last_turn(s.state(), P2), 0);
@@ -379,7 +407,7 @@ mod r5237002_float_last_turn {
         let mut s = board(
             "r5237002-spent",
             json!({ "mana": 0, "hand": [FILLER] }),
-            json!({ "hand": [FILLER] }),
+            json!({ "hand": [FILLER], "library": kept_library() }),
         );
         s.end_turn().end_turn();
         assert_eq!(float_last_turn(s.state(), P1), 0);
@@ -546,7 +574,7 @@ mod r5237005_hand_place {
         board(
             seed,
             json!({ "hand": [FILLER, FILLER, FILLER] }),
-            json!({ "hand": [FILLER] }),
+            json!({ "hand": [FILLER], "library": kept_library() }),
         )
     }
 
@@ -575,7 +603,7 @@ mod r5237005_hand_place {
         let mut s = board(
             "r5237005-one",
             json!({ "hand": [FILLER] }),
-            json!({ "hand": [FILLER] }),
+            json!({ "hand": [FILLER], "library": kept_library() }),
         );
         let only = s.hand(P1)[0].clone();
         s.play(only.clone(), json!({}));

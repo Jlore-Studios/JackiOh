@@ -214,16 +214,22 @@ mod tests {
         assert_eq!(best, 92);
     }
 
-    /// R1440: with no Lucky (or a negative one) the flip is the one draw `coin` takes, at any cursor.
+    /// R1440: with no Lucky the flip is the one draw `coin` takes, at any cursor. R5236020: a net luck
+    /// below 0 is no longer read as none (Unlucky X): at -1 it flips twice and keeps tails if either
+    /// lands tails.
     #[test]
     fn r1440_lucky_coin_with_no_lucky_is_one_draw_exactly_as_coin() {
         for cursor in 0..10 {
             let mut plain = Rng::new("golden", cursor);
-            for x in [0, -1] {
-                let mut lucky = Rng::new("golden", cursor);
-                assert_eq!(lucky.lucky_coin(x), plain.clone().coin());
-                assert_eq!(lucky.cursor(), cursor + 1);
-            }
+            let mut lucky = Rng::new("golden", cursor);
+            assert_eq!(lucky.lucky_coin(0), plain.clone().coin());
+            assert_eq!(lucky.cursor(), cursor + 1);
+            let mut pair = plain.clone();
+            let first = pair.coin();
+            let both_heads = first && pair.coin();
+            let mut unlucky = Rng::new("golden", cursor);
+            assert_eq!(unlucky.lucky_coin(-1), both_heads);
+            assert_eq!(unlucky.cursor(), cursor + 2);
             plain.coin();
             assert_eq!(plain.cursor(), cursor + 1);
         }

@@ -1109,7 +1109,10 @@ fn backrow_view(
         params: view.params,
         tuning: view.tuning,
         enchantments: view.enchantments,
-        keywords: view.keywords,
+        // R5236031: a card with Durability shows the count it has left.
+        keywords: view
+            .keywords
+            .or_else(|| crate::instance_view::durability_keywords_view(state, card)),
         marks: view.marks,
         activations: view.activations,
         quest: view.quest,

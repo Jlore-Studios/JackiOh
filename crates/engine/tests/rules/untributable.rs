@@ -3,7 +3,7 @@
 //! never removes it.
 
 use jackioh_engine::config::{RANDOM_KEYWORD_POOL, TUNE_HARMFUL_KEYWORDS};
-use jackioh_engine::effects::{TuneDirection, TuneRow, applicable_changes};
+use jackioh_engine::effects::{TuneDirection, TuneItem, TuneRow, menu_offers};
 use jackioh_engine::subsystems::activate::why_cannot_activate_ability;
 use jackioh_engine::testkit::*;
 
@@ -158,10 +158,14 @@ mod r1220_untributable {
             slot(PlayerId::P1, Row::Units, 1),
             Value::Null,
         );
-        let rows = applicable_changes(&state, &live(&state, &safe), TuneDirection::Degrade);
+        // R5236011: the keyword row may now add Fragile to a Unit; it never takes Untributable off.
+        let offers = menu_offers(&state, &live(&state, &safe), TuneDirection::Degrade, false);
         assert!(
-            rows.iter().all(|row| *row != TuneRow::Keyword),
-            "no keyword row is offered: {rows:?}",
+            offers
+                .iter()
+                .filter(|offer| offer.row == TuneRow::Keyword)
+                .all(|offer| offer.item == Some(TuneItem::Add(KeywordKind::Fragile))),
+            "the keyword row only adds Fragile: {offers:?}",
         );
     }
 

@@ -493,16 +493,23 @@ fn r3888000_a_hidden_nerf_never_draws_a_paid_tribute() {
     let mut state = playing("r3888000-tribute-menu");
     let held = place(&mut state, &tributer(), At::Hand);
     // In a hand a Nerf may raise the Tribute still to pay; as it is played, step 2 has paid it, and
-    // the price with it. Crater, still to act as the card arrives at step 4, is what is left.
+    // the price with it. Crater, still to act as the card arrives at step 4, is what is left, and
+    // R5236011's Fragile, which lasts.
     let in_hand = offers(&state, &held.id, DEGRADE);
     assert!(item(&in_hand, tribute.clone()));
     assert!(row(&in_hand, TuneRow::Cost));
     assert_eq!(
         played_offers(&state, &held.id, DEGRADE),
-        vec![TuneOffer {
-            row: TuneRow::Keyword,
-            item: Some(TuneItem::Add(KeywordKind::Crater))
-        }]
+        vec![
+            TuneOffer {
+                row: TuneRow::Keyword,
+                item: Some(TuneItem::Add(KeywordKind::Crater))
+            },
+            TuneOffer {
+                row: TuneRow::Keyword,
+                item: Some(TuneItem::Add(KeywordKind::Fragile))
+            }
+        ]
     );
     for seed in 0..SEEDS {
         let mut state = playing(&format!("r3888000-tribute-{seed}"));
