@@ -22177,16 +22177,8 @@
     "what": "build #5189 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-28T10:50:11Z",
-    "notes": [
-      "#5189: `claude-8` can start again, so its hold is lifted",
-      "#5292: `claude-8` can start again, so its hold is lifted",
-      "delivered suggest on claude-3 (run 46134594012): suggested",
-      "started review #5292 on claude-8 (run 46137127383)",
-      "started build #5189 on claude-8 (run 46137159220)",
-      "nothing more to start: nothing is queued",
-      "#5296: typed it Feature"
-    ],
+    "at": "2026-11-28T10:57:53Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -22891,7 +22883,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T10:50:11Z",
+  "loop_tick": "2026-11-28T10:57:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
