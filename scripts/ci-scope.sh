@@ -46,7 +46,8 @@
 # among them), and the notebooks' project, analysis/
 # (#445: no file in crates/, apps/, e2e/, spec/ or a per-pull-request job reads it; super.yml's
 # `notebooks` job runs its tests once a day), but for the five record files and reports of
-# analysis/fixtures/ that the tools' R1994000 test holds `stats report --games` to, and the
+# analysis/fixtures/ that the tools' R1994000 test holds `stats report --games` to and the
+# dev-40.report.json that its `format-json --check` holds to the record-per-line layout (R5289000), and the
 # mutation-testing tooling, which mutants.yml runs and checks on its own trigger
 # (.cargo/mutants.toml, scripts/mutants.sh, scripts/mutants-runner.sh), and the pool probe
 # (scripts/pool-probe.sh), which a person runs. Nothing in crates/, apps/, e2e/ or spec/ reads
@@ -132,7 +133,9 @@
 #    ai;
 #    analysis/fixtures/'s dev-40.jsonl, live-40.jsonl, games.report.json, counts.jsonl and
 #    counts.report.json (the tools' test that holds `stats report --games` to them, R1994000) tools,
-#    wasm; apps/web/src/audio/voice-text.json (the
+#    wasm; analysis/fixtures/dev-40.report.json and apps/web/src/audio/voice-manifest.json (the
+#    tools' acceptance.rs runs `format-json --check` on them, R5289000) tools, wasm;
+#    apps/web/src/audio/voice-text.json (the
 #    tools' export_card_text.rs writes it from crates/cards/card-text.yaml, #2498) tools, wasm; and
 #    apps/web/src/game/cardModes.json (the tools' export_card_modes.rs writes it from the card
 #    scripts, #2646) tools, wasm; and spec/15-dungeon-run.md, spec/16-infinite-assault.md and
@@ -242,6 +245,7 @@ skipped() {
     training/history/*) return 1 ;;
     training/*.md) ;;
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) return 1 ;;
+    analysis/fixtures/dev-40.report.json) return 1 ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) return 1 ;;
     analysis/*) ;;
     .cargo/mutants.toml | scripts/mutants.sh | scripts/mutants-runner.sh | scripts/pool-probe.sh) ;;
@@ -388,12 +392,13 @@ for file in $files; do
     e2e/cypress/e2e/01-* | e2e/cypress/e2e/13-*) on rust_tools_wasm ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md) on rust_tools_wasm ;;
     training/history/hand.jsonl) on rust_ai ;;
-    apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;
+    apps/web/src/audio/voice-text.json | apps/web/src/audio/voice-manifest.json) on rust_tools_wasm ;;
     apps/web/src/game/cardModes.json) on rust_tools_wasm ;;
     spec/15-dungeon-run.md | spec/16-infinite-assault.md | spec/README.md) on rust_tools_wasm ;;
     scripts/ci-shards.toml) on $RUST ;;
     scripts/fuzz-slice.sh) on rust_tools_wasm ;;
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) on rust_tools_wasm ;;
+    analysis/fixtures/dev-40.report.json) on rust_tools_wasm ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) on rust_tools_wasm ;;
   esac
 

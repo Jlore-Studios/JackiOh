@@ -43,6 +43,8 @@
 //!    holds them to the Rust.
 //!  - No network (R4159000): `crates/ai` compiles no trained weights, no learned evaluation and no policy
 //!    prior, and the WebAssembly modules export no `learned_parity`.
+//!  - Layout (R5289000): `cargo jackioh format-json --check` passes on the tree, so every card data file
+//!    `format_json.rs` lays out is a record per line, and fails naming each file of a two-space copy.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -3798,4 +3800,88 @@ fn r4702002_r1085_the_engines_unreached_verbs_reads_and_tables_are_gone() {
         found.is_empty(),
         "an item nothing reaches is back in the engine (R4702002): {found:?}"
     );
+}
+
+/// R5289000: a file of each kind `format_json.rs`'s `LAYOUTS` lays out a record per line, relative to
+/// the repository: each single file, and from each folder its first table by name (`versions.json`,
+/// a map of strings, reads the same in the two-space form).
+const RECORD_PER_LINE_FILES: &[&str] = &[
+    "crates/cards/catalog.json",
+    "crates/cards/chinese.json",
+    "crates/cards/flavour.json",
+    "crates/cards/patches/patches.json",
+    "crates/cards/patches/technical.json",
+    "crates/cards/patches/index.json",
+    "analysis/fixtures/dev-40.report.json",
+    "apps/web/src/audio/voice-manifest.json",
+];
+
+/// R5289000: the folders of `LAYOUTS`, each `*.json` inside laid out a record per line.
+const RECORD_PER_LINE_FOLDERS: &[&str] = &[
+    "crates/cards/patches/deltas",
+    "crates/cards/patches/records",
+    "crates/cards/patches/win_rates",
+    "crates/cards/patches/card_metrics",
+];
+
+#[test]
+fn r5289000_format_json_check_passes_on_the_tree_and_fails_on_a_two_space_copy() {
+    let root = repo();
+    let tree = Command::new(BIN)
+        .args(["format-json", "--check", "--root"])
+        .arg(&root)
+        .output()
+        .expect("jackioh runs");
+    assert!(
+        tree.status.success(),
+        "the card data JSON is not laid out a record per line (R5289000): run `cargo jackioh format-json`\n{}{}",
+        String::from_utf8_lossy(&tree.stdout),
+        String::from_utf8_lossy(&tree.stderr)
+    );
+
+    let scratch = Scratch(std::env::temp_dir().join(format!(
+        "jackioh-format-json-{}-{}",
+        std::process::id(),
+        SCRATCH.fetch_add(1, Ordering::Relaxed)
+    )));
+    let mut copied: Vec<String> = RECORD_PER_LINE_FILES.iter().map(|rel| rel.to_string()).collect();
+    for folder in RECORD_PER_LINE_FOLDERS {
+        let mut tables: Vec<String> = fs::read_dir(root.join(folder))
+            .unwrap_or_else(|error| panic!("{folder}: {error}"))
+            .map(|entry| entry.expect("an entry").file_name().to_string_lossy().to_string())
+            .filter(|name| name.ends_with(".json") && name != "versions.json")
+            .collect();
+        tables.sort();
+        let first = tables
+            .first()
+            .unwrap_or_else(|| panic!("{folder} holds no table"));
+        copied.push(format!("{folder}/{first}"));
+    }
+    for rel in &copied {
+        let text = fs::read_to_string(root.join(rel)).unwrap_or_else(|error| panic!("{rel}: {error}"));
+        let value: Value = serde_json::from_str(&text).unwrap_or_else(|error| panic!("{rel}: {error}"));
+        let path = scratch.0.join(rel);
+        fs::create_dir_all(path.parent().expect("a parent")).expect("its directory");
+        fs::write(
+            &path,
+            format!("{}\n", serde_json::to_string_pretty(&value).expect("JSON")),
+        )
+        .expect("the two-space copy");
+    }
+    let out = Command::new(BIN)
+        .args(["format-json", "--check", "--root"])
+        .arg(&scratch.0)
+        .output()
+        .expect("jackioh runs");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        !out.status.success(),
+        "format-json --check passed two-space copies:\n{stdout}"
+    );
+    let named: BTreeSet<&str> = stdout
+        .lines()
+        .filter_map(|line| line.strip_prefix("not a record per line: "))
+        .collect();
+    let expected: BTreeSet<&str> = copied.iter().map(String::as_str).collect();
+    assert_eq!(named, expected, "{stdout}");
 }

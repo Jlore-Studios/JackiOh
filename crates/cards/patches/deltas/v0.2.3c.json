@@ -1,46 +1,6 @@
 {
   "set": {
-    "core-099": {
-      "id": "core-099",
-      "index": "99",
-      "name": "Craft a Card",
-      "set": "Core",
-      "type": "Spell",
-      "tags": [],
-      "rarity": "Mythic",
-      "token": false,
-      "cost": 4,
-      "loc": 42,
-      "base": {
-        "keywords": [],
-        "text": "Discover 2 Units. Fuse them and add the result to your hand. It costs (0)."
-      },
-      "radiant": {
-        "keywords": [],
-        "text": "Discover 3 Units. Fuse them and add the result to your hand. It costs (0)."
-      }
-    },
-    "classic-087": {
-      "id": "classic-087",
-      "index": "87",
-      "name": "Plague Chalice",
-      "set": "Classic",
-      "type": "Field Spell",
-      "tags": [
-        "Plague"
-      ],
-      "rarity": "Epic",
-      "token": false,
-      "cost": "X",
-      "loc": 28,
-      "base": {
-        "keywords": [],
-        "text": "This enters with X Plague Tokens on it.\nAura: Counter every card played whose cost equals the number of Plague Tokens on this."
-      },
-      "radiant": {
-        "keywords": [],
-        "text": "This enters with X Plague Tokens on it.\nAura: Counter every card your opponent plays whose cost equals the number of Plague Tokens on this."
-      }
-    }
+    "core-099": {"id":"core-099","index":"99","name":"Craft a Card","set":"Core","type":"Spell","tags":[],"rarity":"Mythic","token":false,"cost":4,"loc":42,"base":{"keywords":[],"text":"Discover 2 Units. Fuse them and add the result to your hand. It costs (0)."},"radiant":{"keywords":[],"text":"Discover 3 Units. Fuse them and add the result to your hand. It costs (0)."}},
+    "classic-087": {"id":"classic-087","index":"87","name":"Plague Chalice","set":"Classic","type":"Field Spell","tags":["Plague"],"rarity":"Epic","token":false,"cost":"X","loc":28,"base":{"keywords":[],"text":"This enters with X Plague Tokens on it.\nAura: Counter every card played whose cost equals the number of Plague Tokens on this."},"radiant":{"keywords":[],"text":"This enters with X Plague Tokens on it.\nAura: Counter every card your opponent plays whose cost equals the number of Plague Tokens on this."}}
   }
 }

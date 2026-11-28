@@ -1,46 +1,6 @@
 {
   "set": {
-    "core-095": {
-      "id": "core-095",
-      "index": "95",
-      "name": "Call to Chaos (Core Edition)",
-      "set": "Core",
-      "type": "Spell",
-      "tags": [
-        "Call to Chaos"
-      ],
-      "rarity": "Legendary",
-      "token": false,
-      "cost": 4,
-      "base": {
-        "keywords": [],
-        "text": "One random effect: summon 3 random 3-cost Units; heal your hero 30; draw your whole library and gain 4 mana; add 3 random cards to hand costing 0; your hand becomes Radiant; summon five Radiant Rush Tokens; every card in your hand and library costs 2 less; summon a Chaos Golem; summon 5 random Field Spells or Traps (Field Traps included, traps face-down) into your backrow; cast a random Call to Chaos"
-      },
-      "radiant": {
-        "keywords": [],
-        "text": "Two random effects: \"cast a random Call to Chaos\" plus one drawn from the other 9"
-      }
-    },
-    "core-t-coin": {
-      "id": "core-t-coin",
-      "index": "T-coin",
-      "name": "The Coin",
-      "set": "Core",
-      "type": "Spell",
-      "tags": [
-        "Token"
-      ],
-      "rarity": "Token",
-      "token": true,
-      "cost": 0,
-      "base": {
-        "keywords": [],
-        "text": "Gain 1 mana this turn"
-      },
-      "radiant": {
-        "keywords": [],
-        "text": "Gain 2 mana this turn"
-      }
-    }
+    "core-095": {"id":"core-095","index":"95","name":"Call to Chaos (Core Edition)","set":"Core","type":"Spell","tags":["Call to Chaos"],"rarity":"Legendary","token":false,"cost":4,"base":{"keywords":[],"text":"One random effect: summon 3 random 3-cost Units; heal your hero 30; draw your whole library and gain 4 mana; add 3 random cards to hand costing 0; your hand becomes Radiant; summon five Radiant Rush Tokens; every card in your hand and library costs 2 less; summon a Chaos Golem; summon 5 random Field Spells or Traps (Field Traps included, traps face-down) into your backrow; cast a random Call to Chaos"},"radiant":{"keywords":[],"text":"Two random effects: \"cast a random Call to Chaos\" plus one drawn from the other 9"}},
+    "core-t-coin": {"id":"core-t-coin","index":"T-coin","name":"The Coin","set":"Core","type":"Spell","tags":["Token"],"rarity":"Token","token":true,"cost":0,"base":{"keywords":[],"text":"Gain 1 mana this turn"},"radiant":{"keywords":[],"text":"Gain 2 mana this turn"}}
   }
 }

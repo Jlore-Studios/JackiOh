@@ -10,6 +10,9 @@ use indexmap::IndexMap;
 use jackioh_cards::CATALOG;
 use serde::{Deserialize, Serialize};
 
+#[path = "../src/json_layout.rs"]
+mod json_layout;
+
 /// The file a person edits, relative to this crate.
 const YAML: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../cards/card-text.yaml");
 
@@ -162,10 +165,21 @@ fn shipped() -> (Cards, Emotes) {
     parse(&text).unwrap_or_else(|error| panic!("{error}"))
 }
 
-/// `value` as the written files hold it: pretty JSON with a final newline.
+/// R5289000: the sidecars' records, each card's entry under its id: `format_json.rs`'s `SIDECAR_DEPTH`,
+/// which `cargo jackioh format-json --check` holds both files to.
+const SIDECAR_DEPTH: usize = 1;
+
+/// `value` as `voice-text.json` holds it: pretty JSON with a final newline.
 fn pretty(value: &impl Serialize) -> String {
     let text = serde_json::to_string_pretty(value).unwrap_or_else(|error| panic!("card-text.yaml: {error}"));
     format!("{text}\n")
+}
+
+/// `value` as `flavour.json` and `chinese.json` hold it: a record per line, its records `depth` levels
+/// down, with a final newline (R5289000).
+fn records(value: &impl Serialize, depth: usize) -> String {
+    let text = serde_json::to_string(value).unwrap_or_else(|error| panic!("card-text.yaml: {error}"));
+    json_layout::layout(&text, depth)
 }
 
 fn render() -> [(&'static str, String); 3] {
@@ -200,8 +214,8 @@ fn render() -> [(&'static str, String); 3] {
         emotes: &emotes,
     };
     [
-        (FLAVOUR, pretty(&flavour)),
-        (CHINESE, pretty(&chinese)),
+        (FLAVOUR, records(&flavour, SIDECAR_DEPTH)),
+        (CHINESE, records(&chinese, SIDECAR_DEPTH)),
         (VOICE_TEXT, pretty(&voice_text)),
     ]
 }

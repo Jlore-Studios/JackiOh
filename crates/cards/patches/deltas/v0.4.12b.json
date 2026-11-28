@@ -1,63 +1,6 @@
 {
   "set": {
-    "meditative-053": {
-      "id": "meditative-053",
-      "index": "53",
-      "name": "Prestige",
-      "set": "Meditative",
-      "type": "Spell",
-      "tags": [],
-      "rarity": "Common",
-      "token": false,
-      "cost": 1,
-      "loc": 83,
-      "base": {
-        "keywords": [
-          {
-            "kind": "Tradable"
-          }
-        ],
-        "text": "Tradable\nDe-Radiant a Radiant card on the field or in your hand. The next card you play this turn becomes Radiant."
-      },
-      "radiant": {
-        "keywords": [
-          {
-            "kind": "Tradable"
-          }
-        ],
-        "text": "Tradable\nDe-Radiant every enemy card on the field. The next card you play this turn becomes Radiant."
-      }
-    },
-    "meditative-098": {
-      "id": "meditative-098",
-      "index": "98",
-      "name": "Showdown",
-      "set": "Meditative",
-      "type": "Spell",
-      "tags": [],
-      "rarity": "Rare",
-      "token": false,
-      "cost": 1,
-      "refs": [
-        "classicplus-071"
-      ],
-      "loc": 154,
-      "base": {
-        "keywords": [
-          {
-            "kind": "Tradable"
-          }
-        ],
-        "text": "Tradable\nChoose an empty lane. Lock every other lane until the start of your next turn."
-      },
-      "radiant": {
-        "keywords": [
-          {
-            "kind": "Tradable"
-          }
-        ],
-        "text": "Tradable\nChoose an empty lane. Lock every other lane until the start of your next turn. This turn, after you put a card into that lane, cast Book of Buff on it."
-      }
-    }
+    "meditative-053": {"id":"meditative-053","index":"53","name":"Prestige","set":"Meditative","type":"Spell","tags":[],"rarity":"Common","token":false,"cost":1,"loc":83,"base":{"keywords":[{"kind":"Tradable"}],"text":"Tradable\nDe-Radiant a Radiant card on the field or in your hand. The next card you play this turn becomes Radiant."},"radiant":{"keywords":[{"kind":"Tradable"}],"text":"Tradable\nDe-Radiant every enemy card on the field. The next card you play this turn becomes Radiant."}},
+    "meditative-098": {"id":"meditative-098","index":"98","name":"Showdown","set":"Meditative","type":"Spell","tags":[],"rarity":"Rare","token":false,"cost":1,"refs":["classicplus-071"],"loc":154,"base":{"keywords":[{"kind":"Tradable"}],"text":"Tradable\nChoose an empty lane. Lock every other lane until the start of your next turn."},"radiant":{"keywords":[{"kind":"Tradable"}],"text":"Tradable\nChoose an empty lane. Lock every other lane until the start of your next turn. This turn, after you put a card into that lane, cast Book of Buff on it."}}
   }
 }

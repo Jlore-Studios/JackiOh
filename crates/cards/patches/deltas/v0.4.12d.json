@@ -1,38 +1,5 @@
 {
   "set": {
-    "core-075": {
-      "id": "core-075",
-      "index": "75",
-      "name": "Infinite Reserves",
-      "set": "Core",
-      "type": "Field Spell",
-      "tags": [],
-      "rarity": "Rare",
-      "token": false,
-      "cost": 0,
-      "refs": [
-        "core-t-rush"
-      ],
-      "params": [
-        {
-          "key": "draw",
-          "base": 1,
-          "radiant": 3,
-          "better": "up",
-          "step": 1,
-          "min": 1,
-          "cry": true
-        }
-      ],
-      "loc": 37,
-      "base": {
-        "keywords": [],
-        "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
-      },
-      "radiant": {
-        "keywords": [],
-        "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
-      }
-    }
+    "core-075": {"id":"core-075","index":"75","name":"Infinite Reserves","set":"Core","type":"Field Spell","tags":[],"rarity":"Rare","token":false,"cost":0,"refs":["core-t-rush"],"params":[{"key":"draw","base":1,"radiant":3,"better":"up","step":1,"min":1,"cry":true}],"loc":37,"base":{"keywords":[],"text":"Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."},"radiant":{"keywords":[],"text":"Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."}}
   }
 }
