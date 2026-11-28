@@ -21081,9 +21081,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-28T07:43:35Z",
-      "owner_why": "its turn came (#5278, which it waited behind, closed), and the lane that approved it resolves it",
+      "owner": "claude-8",
+      "owner_since": "2026-11-28T07:45:07Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-28T01:39:12Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
@@ -21781,7 +21781,7 @@
       "stop_requested": false
     },
     "5270": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -21803,12 +21803,12 @@
       "interruptions": 0,
       "issue": 5229,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-4",
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-8",
       "queued_at": "2026-11-28T07:43:35Z",
-      "run_id": "46111782759",
+      "run_id": "pending:d425f387-1795851890",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -21829,16 +21829,9 @@
         "run": "46111782759"
       },
       "source": "conflict",
-      "started_at": "2026-11-28T05:22:00Z",
+      "started_at": "2026-11-28T07:45:07Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-28T07:43:35Z",
-        "until": "2026-11-28T08:13:35Z",
-        "why": "#5278, which it waited behind, closed"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -22101,9 +22094,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T07:37:50Z",
+    "at": "2026-11-28T07:45:07Z",
     "url": "",
-    "what": "build #5284 on claude-8"
+    "what": "revise #5270 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-28T07:36:21Z",
