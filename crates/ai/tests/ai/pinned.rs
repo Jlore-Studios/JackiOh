@@ -251,7 +251,15 @@ fn r5044000_a_root_move_that_spends_the_last_node_leaves_the_beam_its_end_turn()
     // keeps the position the budget case #5044 pinned, with no lethal to find.
     const HEALTH_PAST_THE_WEAR: i32 = 6;
     at.state.players.p1.hero.health += HEALTH_PAST_THE_WEAR;
-    let mut options = AiOptions::with_budget(create_rng(&at.rng_seed, at.rng_cursor), TEST_BUDGET);
+    // R5236011, R5236021: a Nerf's menu now holds Fragile and Unlucky, which moves the draws of the
+    // turns Meditative #21's play runs ahead, so the one world the pinned stream deals ends in the seat's
+    // win there, a lethal played before the beam; the stream this many draws on deals a world that keeps
+    // the budget case #5044 pinned (150 nodes spent, End turn's line the beam's one).
+    const STREAM_PAST_THE_NERF_MENU: u32 = 4;
+    let mut options = AiOptions::with_budget(
+        create_rng(&at.rng_seed, at.rng_cursor + STREAM_PAST_THE_NERF_MENU),
+        TEST_BUDGET,
+    );
     let d = decide(&at.state, at.seat, &mut options).expect("a decision");
     assert_ne!(
         d.reason,
