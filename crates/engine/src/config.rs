@@ -122,6 +122,10 @@ pub const BUSTED_CODE_LINES: usize = 100;
 /// Shockwave447's pool). `crates/cards/build.rs` reads this line to compile the list in.
 pub const COMPLICATED_CODE_LINES: usize = 60;
 
+/// R5239009 (FvH #114 Kethspiracy): a card is simple when its script has at most this many code lines,
+/// counted as `COMPLICATED_CODE_LINES` counts them (`catalog::is_simple`).
+pub const SIMPLE_CODE_LINES: usize = 10;
+
 /// R1183003 (Meditative+ #18 Cognitive Offloading): the most actions the autopilot takes in one turn,
 /// a prompt's answer counted as one. Past it, the rest of the turn is a timeout's (R79): its open
 /// prompts answered by the random policy, then the turn ended. A turn rarely takes a third of it; the
@@ -346,6 +350,14 @@ pub fn fib(index: i32) -> i32 {
     let clamped = index.clamp(0, FIB.len() as i32 - 1);
     FIB.get(clamped as usize).copied().unwrap_or(0)
 }
+
+/// FvH #91 KY's Log Exp of the FFT (issue #5239): its damage at N points, ⌊N·√(log₂ N)⌋ for N = 0 to
+/// `KY_FFT_MAX_POINTS`, worked out offline so no float runs in a game (FV2 #91); N = 1 is 0, as log₂ 1 is.
+pub const KY_FFT_DAMAGE: &[i32] = &[0, 0, 2, 3, 5, 7, 9, 11, 13, 16, 18, 20, 22, 25, 27, 29, 32];
+
+/// FvH #91: the most points `KY_FFT_DAMAGE` is read at; a larger X (or a Radiant face's padded one) reads
+/// this row.
+pub const KY_FFT_MAX_POINTS: i32 = 16;
 
 /// R80: a library holds at most this many cards. Whether a library is full is `query::room_in`'s test,
 /// the one every rule reads.

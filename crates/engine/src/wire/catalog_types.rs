@@ -361,7 +361,8 @@ macro_rules! set_table {
             /// Training Grounds (issue #2193, R2194000; released by #2204) and Stinkyscape+ (issue #3535,
             /// R3535000; released by #3573) ship; Boss and Boss-X are reserved; the Infinite Assault
             /// (tracker #4576, R4577000) is a single-player set, held while it was built and open since
-            /// its release (#4597).
+            /// its release (#4597); Felinors vs Humans (tracker #5220, R5235000) is held while it is
+            /// built.
             pub enum SetName { $( $variant = $name ),+ }
         }
 
@@ -500,6 +501,7 @@ set_table![
     BossX = "Boss-X" { stage: SinglePlayer, segment: "bossx", abbreviation: None, shadow_ban_share: None },
     StinkyscapePlus = "Stinkyscape+" { stage: Shipped, segment: "stinkyscapeplus", abbreviation: Some("S+"), shadow_ban_share: Some((1, 5)) },
     InfiniteAssault = "Infinite Assault" { stage: SinglePlayer, segment: "infiniteassault", abbreviation: Some("IA"), shadow_ban_share: None },
+    FelinorsVsHumans = "Felinors vs Humans" { stage: Held, segment: "felinorsvshumans", abbreviation: Some("FvH"), shadow_ban_share: Some((1, 5)) },
 ];
 
 /// R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): the newest

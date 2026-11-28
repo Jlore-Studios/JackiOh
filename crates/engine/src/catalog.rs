@@ -649,6 +649,54 @@ pub struct CatalogQueryArgs {
     /// a card that declares no target; read off the registered script, as `tribute` is.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub aim: Option<TargetAim>,
+    /// R5239002 (FvH #100): only cards whose base face has at least one of these hooks (`has_hook`), read
+    /// off the registered script as `turn_hook` is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hooks: Option<Vec<HookFilter>>,
+    /// R5239002: the card must also match at least one of these queries, each narrowing by its own
+    /// fields alone: the set, token and held rules stay this query's (`sub_query_matches`). An empty
+    /// list matches nothing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub any_of: Option<Vec<CatalogQueryArgs>>,
+}
+
+/// R5239002: which hook `CatalogQueryArgs.hooks` asks a card's base face for.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub enum HookFilter {
+    /// A Death (`death`).
+    Death,
+    /// An Aura: a board aura, a hand aura or a cost aura (`aura`, `hand_aura`, `cost_aura`).
+    Aura,
+    /// A Cry (`cry`), a Spell's resolution included, since it runs from the same hook.
+    Cry,
+}
+
+/// R5239002: whether this definition's base face has the hook `which` names, read off the registered
+/// script without state like `has_turn_hook`. A card with no registered script has none.
+fn has_hook(def: &CardDef, which: HookFilter) -> bool {
+    crate::scripts::registered_entry(&def.id).is_some_and(|entry| match which {
+        HookFilter::Death => entry.base.death.is_some(),
+        HookFilter::Aura => {
+            entry.base.aura.is_some() || entry.base.hand_aura.is_some() || entry.base.cost_aura.is_some()
+        }
+        HookFilter::Cry => entry.base.cry.is_some(),
+    })
+}
+
+/// R5239002: whether a definition the outer query already let through matches one `anyOf` entry. The
+/// entry narrows by the fields it names: one naming no set takes the definition's own (the outer query
+/// chose the sets), and tokens the outer query let in stay in.
+fn sub_query_matches(def: &CardDef, sub: &CatalogQueryArgs) -> bool {
+    if sub.set.is_some() {
+        return matches_query(def, sub, true);
+    }
+    let narrowed = CatalogQueryArgs {
+        set: Some(OneOrMany::One(def.set)),
+        ..sub.clone()
+    };
+    matches_query(def, &narrowed, true)
 }
 
 string_union! {
@@ -920,6 +968,18 @@ fn matches_query(def: &CardDef, args: &CatalogQueryArgs, tokens_allowed: bool) -
     // R3134001: `turnHook` reads the registered base-face script.
     if let Some(which) = args.turn_hook
         && !has_turn_hook(def, which)
+    {
+        return false;
+    }
+    // R5239002: `hooks` reads the registered base-face script too, any one of them enough.
+    if let Some(hooks) = &args.hooks
+        && !hooks.iter().any(|which| has_hook(def, *which))
+    {
+        return false;
+    }
+    // R5239002: `anyOf` holds when one of its queries matches.
+    if let Some(any_of) = &args.any_of
+        && !any_of.iter().any(|sub| sub_query_matches(def, sub))
     {
         return false;
     }
@@ -1442,6 +1502,13 @@ pub fn is_busted(def_id: &str) -> bool {
 /// lines.
 pub fn is_complicated(def_id: &str) -> bool {
     card_metrics().complicated.binary_search(&def_id).is_ok()
+}
+
+/// R5239009 (FvH #114 Kethspiracy): whether a definition is simple, its script at most
+/// `SIMPLE_CODE_LINES` code lines as R1846000 counts them. A fused or crafted card, or one the metrics
+/// do not list (`code_lines_of` is `None`), is not.
+pub fn is_simple(def_id: &str) -> bool {
+    code_lines_of(def_id).is_some_and(|lines| lines <= crate::config::SIMPLE_CODE_LINES)
 }
 
 /// #3116, R846: whether a definition's script owes an extra turn (`CardMetrics::extra_turn_cards`), the

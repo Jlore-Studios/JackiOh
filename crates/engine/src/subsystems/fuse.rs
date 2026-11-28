@@ -1174,6 +1174,10 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 damage_is_toxic: flags(|f| f.damage_is_toxic),
                 // R4783001: a flag, so a fusion of two such cards adds the hit's Burn once.
                 damage_also_burns: flags(|f| f.damage_also_burns),
+                // R5239007: a flag, as `damage_also_burns` is, so the Toxic is added once.
+                damage_also_toxic: flags(|f| f.damage_also_toxic),
+                // R5239006: a fusion with such an ingredient plays its Flashback without its Cry.
+                flashback_without_cry: flags(|f| f.flashback_without_cry),
                 infinite_mana: flags(|f| f.infinite_mana),
                 // Stinkyscape+ E8 (issue #3558).
                 starts_at_bottom: flags(|f| f.starts_at_bottom),

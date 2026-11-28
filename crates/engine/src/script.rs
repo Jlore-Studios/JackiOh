@@ -839,6 +839,16 @@ pub struct StaticFlags {
     /// (`afflictions::ride_damage`). Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub damage_also_burns: Option<bool>,
+    /// R5239007 (FvH #112.12 Debuff Module's Radiant face): "Damage dealt also applies Toxic": each hit
+    /// this card deals lands as damage, and then, if its target survived it, adds Toxic equal to what the
+    /// hit dealt, beside `toxic_on_damage`'s N (`afflictions::ride_damage`). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub damage_also_toxic: Option<bool>,
+    /// R5239006 (FvH #112.1 Recursion Module's base face): "Flashback (without its Cry)": a play of this
+    /// card that spends its Flashback runs no Cry (§10.5 step 5); any other play runs it. Only ever
+    /// `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flashback_without_cry: Option<bool>,
     // Stinkyscape+ E6 (issue #3550)
     /// R3550001: "Can attack N times per turn": how many attacks the unit may declare a turn, read
     /// through the card's declared number `attacks` where it declares one.

@@ -21,6 +21,8 @@ pub use crate::catalog::{
     past_ids_of, pick_generated, pick_generated_unique, pick_unique, query, query_cost,
     register_past_versions, registered_catalog, roll_grape, roll_weighted, self_def_ids, split_past_id,
 };
+// R5239002, R5239009 (issue #5239): a pool's hook filter, and whether a card is simple.
+pub use crate::catalog::{HookFilter, is_simple};
 pub use crate::combat::*;
 pub use crate::config::*;
 pub use crate::cost_rules::*;

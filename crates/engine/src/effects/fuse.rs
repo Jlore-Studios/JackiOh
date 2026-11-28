@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::catalog::{CatalogQueryArgs, excluding_def_id, pick_unique, query};
 use crate::config::FUSE_MIN_INGREDIENTS;
-use crate::effects::choose::{DiscoverFromCatalogArgs, chosen_options, discover_from_catalog};
+use crate::effects::choose::{DiscoverFromCatalogArgs, DiscoverOrder, chosen_options, discover_from_catalog};
 use crate::effects::targets::{PlayerSpec, TargetSpec, instance_of, player_of, self_on_its_stay};
 
 use crate::script::{Effect, EffectContext, Hook, hook};
@@ -552,6 +552,10 @@ pub struct EquipPicksArgs {
     /// A Discover's prompt text, `EQUIP_PICK_PROMPT` by default.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
+    /// R5239005 (FvH #112 Jilliax Deluxe): which of the pool a Discover pick offers, its
+    /// `DiscoverFromCatalogArgs.order`; a random pick ignores it. Default `random`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub order: Option<DiscoverOrder>,
 }
 
 /// R1841002: the step an Equip pick's Discover resumes at, the engine's own whatever card asked
@@ -611,6 +615,8 @@ pub fn equip_picks(args: EquipPicksArgs) -> Effect {
                         EQUIP_PICKS_KEY.to_string(),
                         serde_json::to_value(&args).unwrap_or_default(),
                     )])),
+                    // R5239005: each pick's offer in the order the card names.
+                    order: args.order,
                     ..DiscoverFromCatalogArgs::default()
                 });
                 (ask.apply)(ctx);

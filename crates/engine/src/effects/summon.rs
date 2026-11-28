@@ -1068,6 +1068,10 @@ pub struct SummonRandomWithArgs {
     /// evolved where its text prints an Evolve hook (`SummonPlacement.enters_evolved`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enters_evolved: Option<bool>,
+    /// R5239001 (FvH #97): the card drawn enters Dormant for this many of its controller's turns though
+    /// its text prints none, as `summon`'s `dormantTurns` (R3541002); absent or 0 enters awake.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dormant_turns: Option<i32>,
 }
 
 /// §6.3 Summon from a random pool (#67 Zoomerbin Oomen, #95 Call to Chaos): one `rng.pick` over
@@ -1100,6 +1104,8 @@ pub fn summon_random_with(with: SummonRandomWithArgs) -> Effect {
         let at = SummonPlacement {
             giga: with.giga,
             enters_evolved: with.enters_evolved,
+            // R5239001: Dormant before it lands, as a fresh `summon` with `dormantTurns` is (R3541002).
+            dormant_turns: with.dormant_turns,
             ..args.placement()
         };
         let rows: IndexSet<Row> = pool.iter().filter_map(|def| row_of(def.type_)).collect();
