@@ -22207,12 +22207,12 @@
     "what": "review #5280 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-28T06:00:35Z",
+    "at": "2026-11-28T06:08:30Z",
     "notes": [
-      "delivered build #5246 on claude-7 (run 46101423203): built",
-      "started review #5278 on claude-7 (run 46114747409)",
+      "delivered build #5164 on claude-6 (run 46109561622): built",
+      "started review #5280 on claude-6 (run 46115344747)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 1 of 1 waiting run(s) (run 46114759178 on claude/stoic-brahmagupta-56ce8p)"
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22918,7 +22918,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T06:00:35Z",
+  "loop_tick": "2026-11-28T06:08:30Z",
   "machine_disk": {
     "issue": null,
     "reading": {
