@@ -121,7 +121,11 @@ mod tests {
         #[test]
         fn r5261000_a_card_cast_on_draw_is_copied() {
             let mut s = scenario(json!({
-                "p1": { "field": [{ "def": ID, "lane": 1 }], "hand": [FILLER], "library": [OUR_DRAW, OUR_DRAW] },
+                "p1": {
+                    "field": [{ "def": ID, "lane": 1 }],
+                    "hand": [FILLER],
+                    "library": [OUR_DRAW, OUR_DRAW],
+                },
                 "p2": { "hand": [FILLER], "library": [HINDER, THEIR_DRAW, THEIR_DRAW] },
             }));
             s.end_turn();
