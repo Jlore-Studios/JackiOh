@@ -21483,11 +21483,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-28T02:51:57Z",
+        "at": "2026-11-28T03:07:47Z",
         "difficulty": "hard",
         "provider": "claude-7",
-        "tier": "medium",
-        "why": "Rule line 2: it changes the AI's evaluation (crates/ai/src/evaluate.rs, config.rs), so its decisions change, and the weights need screens on improve-dev."
+        "tier": "strong",
+        "why": "Rule line 2: it changes the AI's evaluation, and with it its decisions (crates/ai/src/evaluate.rs, config.rs)"
       },
       "failures": 0,
       "forced": false,
