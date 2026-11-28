@@ -15,7 +15,11 @@ export type PlayerModifier = { id: string, expiry: ModifierExpiry, } & ({ "kind"
 /**
  * R1861002: due at the end of this player's turns, not the start. Only ever `Some(true)`.
  */
-atEnd?: boolean, } | { "kind": "healToDamage", converterId: string, } | { "kind": "heroArmor", amount: number, } | { "kind": "altWin", condition: AltWinCondition, threshold: number, } | { "kind": "laneWatch", lane: number, resume: Resume, label: string, } | { "kind": "heroImmune" } | { "kind": "unitsImmune" } | { "kind": "spellDamage", amount: number, } | { "kind": "healthPrice", multiple: number, echo?: number, } | { "kind": "keywordNextSpell", keyword: Keyword, } | { "kind": "randomTargetsNextSpell" } | { "kind": "starshipLaunchCost", cost: number, } | { "kind": "playWatch", defIds: Array<string>, resume: Resume, label: string, } | { "kind": "deathWatch", tag: Tag, resume: Resume, label: string, } | { "kind": "launchWatch", resume: Resume, label: string, } | { "kind": "unitsHaveKeyword", keyword: Keyword, 
+atEnd?: boolean, } | { "kind": "healToDamage", converterId: string, } | { "kind": "heroArmor", amount: number, } | { "kind": "altWin", condition: AltWinCondition, threshold: number, } | { "kind": "laneWatch", lane: number, resume: Resume, label: string, } | { "kind": "summonWatch", resume: Resume, label: string, 
+/**
+ * Only ever `Some(true)`.
+ */
+unitsOnly?: true, } | { "kind": "heroImmune" } | { "kind": "unitsImmune" } | { "kind": "spellDamage", amount: number, } | { "kind": "healthPrice", multiple: number, echo?: number, } | { "kind": "keywordNextSpell", keyword: Keyword, } | { "kind": "randomTargetsNextSpell" } | { "kind": "starshipLaunchCost", cost: number, } | { "kind": "playWatch", defIds: Array<string>, resume: Resume, label: string, } | { "kind": "deathWatch", tag: Tag, resume: Resume, label: string, } | { "kind": "launchWatch", resume: Resume, label: string, } | { "kind": "unitsHaveKeyword", keyword: Keyword, 
 /**
  * R4508000: set when a Spell made it (`restrictions::effect_is_from_spell`), so it passes a Unit
  * Immune to Spells by (§6.1, R4453000). Only ever `Some(true)`.
@@ -24,5 +28,15 @@ fromSpell?: true, } | { "kind": "unitsAttack", amount: number,
 /**
  * R4594002: set when a Spell made it (`restrictions::effect_is_from_spell`), so it passes a Unit
  * Immune to Spells by (§6.1, R4453000). Only ever `Some(true)`.
+ */
+fromSpell?: true, } | { "kind": "unitsStats", attack: number, health: number, tags?: Array<Tag>, 
+/**
+ * Set when a Spell made it, so it passes a Unit Immune to Spells by (R4508000). Only ever
+ * `Some(true)`.
+ */
+fromSpell?: true, } | { "kind": "cardsHaveKeyword", keyword: Keyword, 
+/**
+ * Set when a Spell made it, so it passes a card Immune to Spells by (R4508000). Only ever
+ * `Some(true)`.
  */
 fromSpell?: true, } | { "kind": "fatigueImmune" });

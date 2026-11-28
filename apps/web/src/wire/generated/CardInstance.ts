@@ -15,6 +15,7 @@ import type { SetAs } from "./SetAs";
 import type { Slumber } from "./Slumber";
 import type { StarshipMemory } from "./StarshipMemory";
 import type { Tag } from "./Tag";
+import type { TimedBuff } from "./TimedBuff";
 import type { Tuning } from "./Tuning";
 import type { TurnAttack } from "./TurnAttack";
 import type { TurnBuff } from "./TurnBuff";
@@ -57,6 +58,12 @@ tauntSuppressedTurn?: number,
  * R4587000: "+N Attack and <keywords> this turn" (layers.rs reads it while its turn is now).
  */
 turnBuff?: TurnBuff, 
+/**
+ * R5237001: "+N Attack and <keywords> for N turns" (`effects::turn_buff::grant_for_turns`), each
+ * held until its caster has started its turns; read in the layers beside `turn_buff`, cleared by
+ * R78's reset. Absent on every other card (D14).
+ */
+timedBuffs?: Array<TimedBuff>, 
 /**
  * A backrow card whose identity is public, e.g. a Field Trap that has fired (R33).
  */
@@ -119,6 +126,14 @@ tuning?: Tuning,
  * field, which a Vanilla switches off while a given one stays (B3.3 rule 5).
  */
 brittle?: BrittleCounter, 
+/**
+ * R5236000, R5236004: the Durability the card's uses have spent on this stay on the field
+ * (`subsystems::activate::spend_durability`), one counter for all its Activates. Absent until the
+ * first use, so a game no Durability card is used in stores and hashes as before (D14); R78's reset
+ * clears it, so a card back from leaving the field has its whole Durability again. Refresh never
+ * touches it (R5236003).
+ */
+durabilitySpent?: number, 
 /**
  * R2179001: what is left of the card's Temporary X once its first end of turn in a hand has
  * counted it down (`temporary.rs`); before that the keyword's own number is the count. Kept in
@@ -230,6 +245,13 @@ fixedX?: number,
  * and hashes as before (D3).
  */
 hiddenNerfs?: number, 
+/**
+ * R5238001: a secret grant's disguise (`effects::secret_grant`): keywords the seat that does not
+ * control the card is shown on it besides its own, on the true target and each decoy alike, so that
+ * seat cannot tell which holds the keyword. Taken off by R78's reset as the card leaves the field.
+ * Absent on every other card.
+ */
+shownToOpponent?: Array<Keyword>, 
 /**
  * R3536000: has evolved, so it evolves no more; R78's reset takes it off; only `Some(true)`.
  */

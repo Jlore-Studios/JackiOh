@@ -18,4 +18,10 @@ cooldownTurnsLeft?: number,
  * ability is the card's own text or the engine's (the Dormant Starship's launch, a Cloaked card's
  * reveal): the picker then wears the card's own art.
  */
-printedOn?: ActivationSource, };
+printedOn?: ActivationSource, 
+/**
+ * R5236001: the Durability the card has left, one counter every Activate of it shares
+ * (`subsystems::activate::durability_left`); `Some(0)` once spent, when the ability is refused.
+ * Absent for a card without Durability and for the engine's own abilities (R5236000).
+ */
+durabilityLeft?: number, };

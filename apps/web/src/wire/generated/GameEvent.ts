@@ -9,6 +9,7 @@ import type { FengShuiOutcome } from "./FengShuiOutcome";
 import type { FleeOpponent } from "./FleeOpponent";
 import type { GameOverReason } from "./GameOverReason";
 import type { GlitchOutcome } from "./GlitchOutcome";
+import type { HandPlace } from "./HandPlace";
 import type { HookKind } from "./HookKind";
 import type { Keyword } from "./Keyword";
 import type { KeywordKind } from "./KeywordKind";
@@ -61,7 +62,13 @@ exitsFrom?: number,
  * (R3920001), a cast that is no play: nothing that counts plays counted it, and no trigger
  * answers this event. Public, as the cast is. Only ever `Some(true)`.
  */
-onDraw?: true, } | { "type": "cardResolved", player: PlayerId, instanceId: string, defId: string, permanent: boolean, costPaid: number, radiant?: boolean, 
+onDraw?: true, 
+/**
+ * R5237005: where in its player's hand the card was as it left it (`HandPlace`), on a play from
+ * a hand only, in a game holding a Felinors vs Humans card (`recursion_log::fvh_kept`), so no
+ * other game's hash moves; rules read it (`query::played_leftmost`). Public.
+ */
+fromHand?: HandPlace, } | { "type": "cardResolved", player: PlayerId, instanceId: string, defId: string, permanent: boolean, costPaid: number, radiant?: boolean, 
 /**
  * R119: the permanents that arrived on the field while this play resolved, whatever put them
  * there — a Recruit by its Cry (#98), #95's backrow, a Reborn body its own Cry brought back, a
