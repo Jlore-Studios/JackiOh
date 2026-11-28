@@ -311,6 +311,67 @@ pub fn give_units_keyword_next_turn(args: GiveUnitsKeywordArgs) -> Effect {
     })
 }
 
+/// R5237008 (FvH #95, Radiant face): "For the rest of the game, your cards have <keyword>" — a `never`
+/// modifier lending it to every card its player controls on the field, in any row, or resolving, later
+/// ones too (`layers::lent_to_cards`), but a Vanilla, Dormant or buried one; one a Spell gives passes a
+/// card Immune to Spells by (R4508000).
+pub fn give_cards_keyword(args: GiveUnitsKeywordArgs) -> Effect {
+    Effect::new("giveCardsKeyword", move |ctx| {
+        let player = ctx.controller;
+        let from_spell = crate::restrictions::effect_is_from_spell(ctx).then_some(true);
+        add_modifier(
+            ctx,
+            player,
+            ModifierExpiry::Never,
+            ModifierKind::CardsHaveKeyword {
+                keyword: args.keyword.clone(),
+                from_spell,
+            },
+        );
+    })
+}
+
+/// `giveUnitsStats`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GiveUnitsStatsArgs {
+    /// Whose Units take it, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+    pub attack: i32,
+    pub health: i32,
+    /// The tags a Unit needs one of to take it (FvH #73's Human); absent, every Unit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<crate::wire::Tag>>,
+    pub expiry: ModifierExpiry,
+}
+
+/// R5237007 (FvH #73 Bloodforged Crusader, "for the rest of the game your Humans have +2/+2"): `attack`
+/// more Attack and `health` more max Health on every Unit the player controls whose tags hold one of
+/// `tags` (every Unit, absent), those arriving later too (`layers::stats_lent_by_player`), until
+/// `expiry`. One a Spell gives passes a Unit Immune to Spells by (R4508000). A lend of 0/0 makes none.
+pub fn give_units_stats(args: GiveUnitsStatsArgs) -> Effect {
+    Effect::new("giveUnitsStats", move |ctx| {
+        if args.attack == 0 && args.health == 0 {
+            return;
+        }
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let from_spell = crate::restrictions::effect_is_from_spell(ctx).then_some(true);
+        add_modifier(
+            ctx,
+            player,
+            args.expiry.clone(),
+            ModifierKind::UnitsStats {
+                attack: args.attack,
+                health: args.health,
+                tags: args.tags.clone(),
+                from_spell,
+            },
+        );
+    })
+}
+
 /// `giveUnitsAttack`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
