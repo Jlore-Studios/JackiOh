@@ -174,6 +174,7 @@ fn stats(overrides: Value) -> Value {
             "errors": 0,
             "timeouts": 0,
             "rawTimeouts": 0,
+            "cappedGames": 0,
             "evalDeltaSum": 0,
             "evalDeltaCount": 0,
             "losingPlays": 0,
@@ -607,10 +608,10 @@ mod both_faces_r186 {
             result(quiet_with(json!({ "face": "radiant", "errors": 1 }))),
         ]);
         assert_eq!(
-            face_flags("core-011", &pass1, &[], SweepFace::Radiant),
+            face_flags("core-011", &pass1, &[], Difficulty::Easy, SweepFace::Radiant),
             vec![SweepFlag::Error]
         );
-        assert!(face_flags("core-011", &pass1, &[], SweepFace::Base).is_empty());
+        assert!(face_flags("core-011", &pass1, &[], Difficulty::Easy, SweepFace::Base).is_empty());
         assert_eq!(
             sweep_verdict(&pass1, &[]).reason.as_deref(),
             Some("error: easy (Radiant): 1 engine or search error(s) over 8 games")
@@ -638,9 +639,24 @@ mod both_faces_r186 {
             "{reason}"
         );
         assert!(!reason.contains("easy: "), "{reason}");
-        assert!(face_flags("core-011", &results(&pass1), &passes(&pass2), SweepFace::Base).is_empty());
+        assert!(
+            face_flags(
+                "core-011",
+                &results(&pass1),
+                &passes(&pass2),
+                Difficulty::Easy,
+                SweepFace::Base
+            )
+            .is_empty()
+        );
         assert_eq!(
-            face_flags("core-011", &results(&pass1), &passes(&pass2), SweepFace::Radiant),
+            face_flags(
+                "core-011",
+                &results(&pass1),
+                &passes(&pass2),
+                Difficulty::Easy,
+                SweepFace::Radiant
+            ),
             vec![SweepFlag::SelfKill]
         );
     }
@@ -899,7 +915,7 @@ mod the_two_pass_sweep_r390 {
             ),
             (
                 "core-055",
-                "timeout: hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+                "timeout: hard: 1 decision(s) re-timed over 2500 ms, 0 game(s) past 600 actions",
             ),
             (
                 "core-057",
@@ -1378,8 +1394,9 @@ mod a_slow_decision_timed_again_r977000 {
         assert_eq!(
             sweep_verdict(&[result], &[]).reason,
             Some(format!(
-                "timeout: easy: 1 decision(s) over {} ms or game(s) past {} actions",
-                AI_SWEEP.decision_ms, AI_SWEEP.max_actions
+                "timeout: easy: 1 decision(s) re-timed over {} ms, 0 game(s) past {} actions",
+                retime_limit_ms(),
+                AI_SWEEP.max_actions
             ))
         );
     }
@@ -1432,6 +1449,91 @@ mod a_slow_decision_timed_again_r977000 {
         .expect("an old pass-1 line reads");
         assert_eq!(p1.raw_timeouts, 0);
         assert_eq!(js(&p1)["rawTimeouts"], json!(0));
+    }
+}
+
+/// R5248000: a re-timed decision counts only over `decision_ms` × `retime_margin`, and a game past
+/// maxActions is counted apart, named in the reason, and cleared on a tier that raised nothing.
+mod the_retime_margin_and_capped_games_r5248000 {
+    use super::*;
+
+    fn quiet() -> Value {
+        json!({ "affordableTurns": 4, "plays": 2, "evalDeltaCount": 2 })
+    }
+
+    #[test]
+    fn r5248000_a_retimed_decision_counts_only_over_the_margin() {
+        assert!(!retimed_over_limit(2242.0));
+        assert!(!retimed_over_limit(2500.0));
+        assert!(retimed_over_limit(2500.5));
+        assert!(retimed_over_limit(3500.0));
+        assert_eq!(
+            retime_limit_ms(),
+            f64::from(AI_SWEEP.decision_ms) * AI_SWEEP.retime_margin
+        );
+    }
+
+    #[test]
+    fn r5248000_a_game_past_max_actions_is_a_capped_game_and_a_timeout_named_as_such() {
+        let record = MatchRecord {
+            result: None,
+            log: vec![],
+            hash: String::new(),
+            turns: 0,
+            rejected: vec![],
+            thrown: vec![],
+            fallbacks: 0,
+            decisions: 0,
+            nodes: 0,
+            sim_panics: 0,
+            first_sim_panic: None,
+            played: jackioh_engine::PerPlayer::new(vec![], vec![]),
+        };
+        assert_eq!(record_counts(&record), (0, 1));
+
+        let capped = results(&[result(spread(
+            quiet(),
+            Some(&json!({ "timeouts": 1, "rawTimeouts": 1, "cappedGames": 1 })),
+        ))]);
+        assert_eq!(capped[0].capped_games, 1);
+        assert!(sweep_flags(&capped[0]).contains(&SweepFlag::Timeout));
+        assert_eq!(
+            sweep_verdict(&capped, &[]).reason.as_deref(),
+            Some("timeout: easy: 0 decision(s) re-timed over 2500 ms, 1 game(s) past 600 actions")
+        );
+
+        let slow = results(&[result(spread(
+            quiet(),
+            Some(&json!({ "timeouts": 2, "rawTimeouts": 3, "cappedGames": 0 })),
+        ))]);
+        assert_eq!(
+            sweep_verdict(&slow, &[]).reason.as_deref(),
+            Some("timeout: easy: 2 decision(s) re-timed over 2500 ms, 0 game(s) past 600 actions")
+        );
+    }
+
+    #[test]
+    fn r5248000_a_slice_written_before_the_capped_count_reads_it_as_0() {
+        let p1: SweepResult = serde_json::from_value(json!({
+            "defId": "core-030", "games": 8, "drawnGames": 6, "affordableTurns": 5, "plays": 3, "errors": 0,
+            "timeouts": 0, "evalDeltaSum": 12.5, "evalDeltaCount": 3, "tier": "easy", "flags": [], "unswept": false,
+        }))
+        .expect("an old pass-1 line reads");
+        assert_eq!(p1.capped_games, 0);
+        assert_eq!(js(&p1)["cappedGames"], json!(0));
+    }
+
+    #[test]
+    fn r5248000_face_flags_judges_one_tier() {
+        let pass1 = results(&[
+            result(spread(quiet(), Some(&json!({ "timeouts": 1 })))),
+            result(spread(quiet(), Some(&json!({ "tier": "hard" })))),
+        ]);
+        assert_eq!(
+            face_flags("core-011", &pass1, &[], Difficulty::Easy, SweepFace::Base),
+            vec![SweepFlag::Timeout]
+        );
+        assert!(face_flags("core-011", &pass1, &[], Difficulty::Hard, SweepFace::Base).is_empty());
     }
 }
 

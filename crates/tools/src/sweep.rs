@@ -45,7 +45,7 @@ use serde_json::Value;
 use jackioh_ai::{
     AI_GATE_BUDGET, AI_SWEEP, SHADOW_BAN, SHADOW_UNBANNED, SHADOW_WATCH, SlowDecision, SweepFace, SweepFlag,
     SweepOptions, SweepPass2, SweepResult, SweepStats, ai_generation, at_risk_ids, face_flags,
-    pass2_keep_out, pass2_stats, sweep_at_risk, sweep_card, sweep_verdict,
+    pass2_keep_out, pass2_stats, retimed_over_limit, sweep_at_risk, sweep_card, sweep_verdict,
 };
 use jackioh_engine::catalog::{CatalogQueryArgs, query};
 use jackioh_engine::testkit::preview_every_set;
@@ -250,8 +250,9 @@ fn milliseconds_since(origin: Instant) -> impl Fn() -> f64 {
     move || origin.elapsed().as_secs_f64() * MS_PER_SECOND
 }
 
-/// R977000: whether a decision the sweep's clock found slow is still slower than
-/// AI_SWEEP.decisionMs timed by the perf gate's method (`gate::time_decision`). The yardstick's
+/// R977000, R5248000: whether a decision the sweep's clock found slow is still slower than
+/// AI_SWEEP.decisionMs × AI_SWEEP.retimeMargin timed by the perf gate's method (`gate::time_decision`),
+/// which stops at the first run under AI_SWEEP.decisionMs. The yardstick's
 /// first run warms the caches and is no measurement, as in the perf gate (`warmed`). A yardstick
 /// that cannot run keeps the clock's verdict.
 fn still_slow(slow: &SlowDecision<'_>, warmed: &Cell<bool>) -> bool {
@@ -264,7 +265,7 @@ fn still_slow(slow: &SlowDecision<'_>, warmed: &Cell<bool>) -> bool {
     }
     match time_decision(slow.state, slow.seat, slow.rng, slow.budget, limit) {
         Ok(timing) => {
-            let still = timing.ms > limit;
+            let still = retimed_over_limit(timing.ms);
             let json = serde_json::to_string(&timing).unwrap_or_default();
             eprintln!("[ai:sweep] {}", slow_line(slow, &json, still));
             still
@@ -555,7 +556,7 @@ fn report(first: &[SweepResult], second: &[SweepPass2], elapsed: Option<i64>, da
                         // raised none reads as cleared.
                         let flags = match verdict {
                             Some(verdict) if verdict.reason.is_some() => {
-                                let raised = face_flags(id, &own_of(id), second, face);
+                                let raised = face_flags(id, &own_of(id), second, tier, face);
                                 if raised.is_empty() {
                                     "cleared".to_string()
                                 } else {
@@ -1499,6 +1500,40 @@ mod tests {
         );
     }
 
+    #[test]
+    fn r5248000_a_pass_2_row_shows_a_flag_only_on_the_tier_that_raised_it() {
+        jackioh_cards::register_all();
+        let lines: Vec<Value> = [
+            r#"{"defId":"core-011","games":8,"drawnGames":6,"affordableTurns":5,"playableTurns":5,"plays":3,"errors":0,"timeouts":1,"evalDeltaSum":6,"evalDeltaCount":3,"tier":"easy","flags":["timeout"],"unswept":false}"#,
+            r#"{"defId":"core-011","games":8,"drawnGames":6,"affordableTurns":5,"playableTurns":5,"plays":3,"errors":0,"timeouts":0,"evalDeltaSum":6,"evalDeltaCount":3,"tier":"hard","flags":[],"unswept":false}"#,
+        ]
+        .iter()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+        let second: Vec<SweepPass2> = [
+            r#"{"forced":"core-011","tier":"easy","games":24,"cards":[{"defId":"core-011","games":24,"drawnGames":18,"affordableTurns":20,"playableTurns":20,"plays":9,"errors":0,"timeouts":0,"evalDeltaSum":18,"evalDeltaCount":9}],"suspects":[]}"#,
+            r#"{"forced":"core-011","tier":"hard","games":24,"cards":[{"defId":"core-011","games":24,"drawnGames":18,"affordableTurns":20,"playableTurns":20,"plays":9,"errors":0,"timeouts":0,"evalDeltaSum":18,"evalDeltaCount":9}],"suspects":[]}"#,
+        ]
+        .iter()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+        let printed = report(&pass1_lines(&lines).unwrap(), &second, None, FIXTURE_DATE);
+        let table: Vec<&str> = printed
+            .lines()
+            .skip_while(|line| !line.starts_with("## Pass 2"))
+            .filter(|line| line.starts_with("| core-011 "))
+            .collect();
+        assert_eq!(table.len(), 2, "{printed}");
+        assert!(table[0].contains(" | easy | base | timeout | "), "{printed}");
+        assert!(table[1].contains(" | hard | base | cleared | "), "{printed}");
+    }
+
+    #[test]
+    fn r5248000_the_still_slow_verdict_is_the_margin() {
+        assert!(!retimed_over_limit(2242.0));
+        assert!(retimed_over_limit(3500.0));
+    }
+
     /// Pass-1 and pass-2 lines as the slices emit them: meditative-011 and -012 time out, core-001 and
     /// meditative-022 are at risk (pass 2 cleared meditative-022's deal but not its watch).
     const FIXTURE_LINES: &str = r#"{"defId":"meditative-011","games":8,"drawnGames":7,"affordableTurns":7,"playableTurns":7,"plays":2,"errors":0,"timeouts":3,"evalDeltaSum":3.6,"evalDeltaCount":2,"tier":"easy","flags":["timeout"],"unswept":false}
@@ -1544,11 +1579,11 @@ mod tests {
             ban: vec![
                 pair(
                     "meditative-011",
-                    "timeout: easy: 3 decision(s) over 2000 ms or game(s) past 600 actions; hard: 1 decision(s) over 2000 ms or game(s) past 600 actions",
+                    "timeout: easy: 3 decision(s) re-timed over 2500 ms, 0 game(s) past 600 actions; hard: 1 decision(s) re-timed over 2500 ms, 0 game(s) past 600 actions",
                 ),
                 pair(
                     "meditative-012",
-                    "timeout: easy: 11 decision(s) over 2000 ms or game(s) past 600 actions",
+                    "timeout: easy: 11 decision(s) re-timed over 2500 ms, 0 game(s) past 600 actions",
                 ),
             ],
             watch: vec![

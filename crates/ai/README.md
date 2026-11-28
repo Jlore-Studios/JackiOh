@@ -541,6 +541,8 @@ ships before the AI is trained on it is listing it there. It held the Stinkyscap
 (issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000), and is
 empty since. No deal is shaped: the unban lane's dealt-quality table and the option that read it are
 removed (R4702001), so practice, the quality gates and both seats of an arena deal by one rule (R976000).
+A sweep timeout counts a decision re-timed over `AI_SWEEP.decision_ms` × `retime_margin` (1.25, 2,500 ms)
+and, apart in `capped_games`, a game past `max_actions` (R5248000); the reason prints the two apart.
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand, and
 never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block

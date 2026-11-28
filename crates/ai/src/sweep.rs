@@ -20,7 +20,7 @@ use crate::config::{AI_EVAL, AI_GATE_BUDGET};
 use crate::deck::{AiDeckBoost, AiDeckOptions, build_ai_deck};
 use crate::evaluate::{NextSwing, evaluate};
 use crate::gate::subject_seat_of;
-use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match, seated};
+use crate::match_::{MatchConfig, MatchHooks, MatchRecord, MatchSetup, SeatController, play_match, seated};
 use crate::shadow_ban::SHADOW_BAN_IDS;
 use crate::types::SearchBudget;
 
@@ -89,6 +89,9 @@ pub struct AiSweep {
     /// Games per card, tier and face (#4466). Four left the neverPlayed flag at the mercy of one deal.
     pub seeds_per_card: i32,
     pub decision_ms: i32,
+    /// R5248000: a re-timed decision counts only above `decision_ms` × this; the re-timer's own spread
+    /// (1,756 to 2,242 ms on one decision) straddles `decision_ms`.
+    pub retime_margin: f64,
     pub max_actions: i32,
     /// R2425000: pass 1's neverPlayed needs this many playable turns.
     pub min_affordable_turns: i32,
@@ -115,6 +118,7 @@ pub const AI_SWEEP: AiSweep = AiSweep {
     tiers: &[Difficulty::Easy, Difficulty::Hard],
     seeds_per_card: 8,
     decision_ms: 2000,
+    retime_margin: 1.25,
     max_actions: 600,
     min_affordable_turns: 3,
     self_harm_delta: -40.0,
@@ -126,6 +130,27 @@ pub const AI_SWEEP: AiSweep = AiSweep {
     min_losing_plays: 2,
     ban_losing_plays: 4,
 };
+
+/// R5248000: the ms above which a re-timed decision counts as a timeout.
+pub fn retime_limit_ms() -> f64 {
+    f64::from(AI_SWEEP.decision_ms) * AI_SWEEP.retime_margin
+}
+
+/// R5248000: whether a decision re-timed at `ms` counts in `timeouts`.
+pub fn retimed_over_limit(ms: f64) -> bool {
+    ms > retime_limit_ms()
+}
+
+/// R5248000: what a finished game adds to the sweep's tallies: its errors, and 1 if it is a game still
+/// running at maxActions (one a throw ended is already an error).
+pub fn record_counts(record: &MatchRecord) -> (i32, i32) {
+    let errors = record.thrown.len() as i32
+        + record.rejected.len() as i32
+        + record.fallbacks
+        + record.sim_panics as i32;
+    let capped = i32::from(record.result.is_none() && record.thrown.is_empty());
+    (errors, capped)
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -148,6 +173,10 @@ pub struct SweepStats {
     /// game past maxActions. 0 in older slices.
     #[serde(default)]
     pub raw_timeouts: i32,
+    /// R5248000: the games still running at maxActions, counted in `timeouts` and `raw_timeouts` too. 0 in
+    /// older slices.
+    #[serde(default)]
+    pub capped_games: i32,
     /// R390: over the plays after which the game went on.
     pub eval_delta_sum: f64,
     pub eval_delta_count: i32,
@@ -485,6 +514,7 @@ fn empty_face_stats(def_id: &str, face: SweepFace) -> SweepStats {
         errors: 0,
         timeouts: 0,
         raw_timeouts: 0,
+        capped_games: 0,
         eval_delta_sum: 0.0,
         eval_delta_count: 0,
         losing_plays: 0,
@@ -528,6 +558,7 @@ fn add_stats(into: &mut SweepStats, from: &SweepStats) {
     into.errors += from.errors;
     into.timeouts += from.timeouts;
     into.raw_timeouts += from.raw_timeouts;
+    into.capped_games += from.capped_games;
     into.eval_delta_sum += from.eval_delta_sum;
     into.eval_delta_count += from.eval_delta_count;
     into.losing_plays += from.losing_plays;
@@ -546,6 +577,7 @@ struct SweepGame {
     errors: i32,
     timeouts: i32,
     raw_timeouts: i32,
+    capped_games: i32,
 }
 
 /// R390: one play of a card by `seat`, counted into its stats. Every play counts in `plays`. A play
@@ -630,6 +662,7 @@ fn play_sweep_game(
                 errors: 1,
                 timeouts: 0,
                 raw_timeouts: 0,
+                capped_games: 0,
             };
         }
     };
@@ -658,6 +691,7 @@ fn play_sweep_game(
     let mut errors = 0;
     let mut timeouts = 0;
     let mut raw_timeouts = 0;
+    let mut capped_games = 0;
     // The last AI turn whose start was already counted, so a turn is counted once however many
     // actions it holds.
     let mut counted_turn: Option<i32> = None;
@@ -736,15 +770,12 @@ fn play_sweep_game(
 
     match played {
         Ok(record) => {
-            errors += record.thrown.len() as i32
-                + record.rejected.len() as i32
-                + record.fallbacks
-                + record.sim_panics as i32;
-            // A game still running at maxActions is a timeout; one a throw ended is already an error.
-            if record.result.is_none() && record.thrown.is_empty() {
-                timeouts += 1;
-                raw_timeouts += 1;
-            }
+            let (record_errors, capped) = record_counts(&record);
+            errors += record_errors;
+            // A game still running at maxActions is a timeout, counted apart too (R5248000).
+            capped_games += capped;
+            timeouts += capped;
+            raw_timeouts += capped;
         }
         Err(_) => errors += 1,
     }
@@ -753,6 +784,7 @@ fn play_sweep_game(
         errors,
         timeouts,
         raw_timeouts,
+        capped_games,
     }
 }
 
@@ -795,6 +827,7 @@ pub fn sweep_card(def_id: &str, options: &SweepOptions) -> SweepResult {
                 errors: game.errors,
                 timeouts: game.timeouts,
                 raw_timeouts: game.raw_timeouts,
+                capped_games: game.capped_games,
                 ..card
             },
         );
@@ -852,6 +885,7 @@ pub fn sweep_at_risk(
                     errors: if forced { game.errors } else { 0 },
                     timeouts: if forced { game.timeouts } else { 0 },
                     raw_timeouts: if forced { game.raw_timeouts } else { 0 },
+                    capped_games: if forced { game.capped_games } else { 0 },
                     ..card.clone()
                 },
             );
@@ -906,8 +940,11 @@ fn flag_detail(stats: &SweepStats, flag: SweepFlag, pass2: bool) -> String {
             stats.errors, stats.games
         ),
         SweepFlag::Timeout => format!(
-            "{} decision(s) over {} ms or game(s) past {} actions",
-            stats.timeouts, AI_SWEEP.decision_ms, AI_SWEEP.max_actions
+            "{} decision(s) re-timed over {} ms, {} game(s) past {} actions",
+            (stats.timeouts - stats.capped_games).max(0),
+            retime_limit_ms(),
+            stats.capped_games,
+            AI_SWEEP.max_actions
         ),
         SweepFlag::NeverPlayed => format!(
             "affordable in hand on {} turns and playable on {}{over}, never played",
@@ -1015,16 +1052,17 @@ fn judge_card(def_id: &str, pass1: &[SweepResult], pass2: &[SweepPass2]) -> Vec<
     judged
 }
 
-/// #4466: the flags a card's numbers on one face raise at any tier, in a reason's order.
+/// #4466, R5248000: the flags a card's numbers on one face raise at one tier, in a reason's order.
 pub fn face_flags(
     def_id: &str,
     pass1: &[SweepResult],
     pass2: &[SweepPass2],
+    tier: Difficulty,
     face: SweepFace,
 ) -> Vec<SweepFlag> {
     let raised: IndexSet<SweepFlag> = judge_card(def_id, pass1, pass2)
         .into_iter()
-        .filter(|judged| judged.face == face)
+        .filter(|judged| judged.tier == tier && judged.face == face)
         .flat_map(|judged| judged.raised.into_iter().map(|(flag, _)| flag))
         .collect();
     FLAG_ORDER
