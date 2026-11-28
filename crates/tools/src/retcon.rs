@@ -36,6 +36,7 @@ use crate::patches::patch::bump_sites;
 use crate::patches::patches_io::{
     Catalog, ORDER_FILE, PatchEntry, TABLE_VERSIONS_FILE, delta_path, git_blob_hash, read_patches,
     read_shipped, read_table_map, rebuild_derived, records_path, snapshot_path, snapshots, write_json,
+    write_records,
 };
 use crate::patches::versions::name_by_tier;
 use crate::patches::{git, sets_of};
@@ -478,9 +479,17 @@ fn write_with(
         fs::write(path, text).with_context(|| format!("{} cannot be written", path.display()))?;
     }
     for (folder, map) in table_maps.iter().filter(|(_, map)| !map.is_empty()) {
-        write_json(&folder.join(TABLE_VERSIONS_FILE), map)?;
+        write_records(
+            &folder.join(TABLE_VERSIONS_FILE),
+            map,
+            crate::format_json::TABLE_VERSIONS_DEPTH,
+        )?;
     }
-    write_json(&dir.join("patches.json"), &patches)?;
+    write_records(
+        &dir.join("patches.json"),
+        &patches,
+        crate::format_json::PATCHES_DEPTH,
+    )?;
     write_json(&dir.join("shipped.json"), &shipped)?;
     rebuild_derived(&dir)?;
     for file in &tree {

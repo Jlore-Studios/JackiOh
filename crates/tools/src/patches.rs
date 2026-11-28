@@ -47,7 +47,7 @@ use self::patches_io::{
     ShippedEntry, check_fragments, differing_ids, fragment_name, fragment_stem, git_blob_hash,
     next_ship_name, player_note_problems, read_fragments, read_patches, read_shipped, read_snapshot,
     read_win_rates, rebuild_derived, records_path, remove_file, same_win_rates, snapshot_path, snapshot_text,
-    snapshots, win_rates_path, write_json, write_snapshot, write_table,
+    snapshots, win_rates_path, write_json, write_records, write_snapshot, write_table,
 };
 use self::versions::name_by_tier;
 use crate::card_lists;
@@ -271,6 +271,12 @@ pub(crate) mod js {
     /// Pretty JSON in the two-space form.
     pub fn stringify_pretty<T: serde::Serialize + ?Sized>(value: &T) -> String {
         serde_json::to_string_pretty(value).unwrap_or_else(|error| panic!("JSON.stringify: {error}"))
+    }
+
+    /// R5289000: JSON laid out a record per line, its records `depth` levels down (`json_layout.rs`),
+    /// with its final newline; `format_json.rs` names each file's depth.
+    pub fn stringify_records<T: serde::Serialize + ?Sized>(value: &T, depth: usize) -> String {
+        crate::json_layout::layout(&stringify(value), depth)
     }
 
     /// Integers print as integers; a fraction as Rust's shortest round-trip form, which equals JS's for
@@ -990,7 +996,11 @@ pub mod patches_io {
         fs::create_dir_all(dir.join(DELTAS_DIR))
             .with_context(|| format!("{} cannot be created", dir.join(DELTAS_DIR).display()))?;
         write_json(&dir.join(ORDER_FILE), &order)?;
-        write_json(&delta_path(version, dir)?, &delta_between(previous, snapshot))?;
+        write_records(
+            &delta_path(version, dir)?,
+            &delta_between(previous, snapshot),
+            crate::format_json::DELTA_DEPTH,
+        )?;
         Ok(snapshot_text(snapshot))
     }
 
@@ -1087,7 +1097,11 @@ pub mod patches_io {
                 }
                 fs::create_dir_all(dir.join(DELTAS_DIR))
                     .with_context(|| format!("{} cannot be created", dir.join(DELTAS_DIR).display()))?;
-                write_json(&delta_path(&version, dir)?, &delta)?;
+                write_records(
+                    &delta_path(&version, dir)?,
+                    &delta,
+                    crate::format_json::DELTA_DEPTH,
+                )?;
                 encoded.push(legacy);
                 delta
             } else {
@@ -1167,7 +1181,11 @@ pub mod patches_io {
             }
         };
         map.insert(version.to_string(), stem);
-        write_json(&folder.join(TABLE_VERSIONS_FILE), &map)
+        write_records(
+            &folder.join(TABLE_VERSIONS_FILE),
+            &map,
+            crate::format_json::TABLE_VERSIONS_DEPTH,
+        )
     }
 
     /// R5268001: `patches encode`'s pass over a table folder. In `versions`' order, every version
@@ -1210,7 +1228,11 @@ pub mod patches_io {
             };
             previous = text.map(|text| (map.get(version).cloned().unwrap_or_default(), text));
         }
-        write_json(&folder.join(TABLE_VERSIONS_FILE), &map)?;
+        write_records(
+            &folder.join(TABLE_VERSIONS_FILE),
+            &map,
+            crate::format_json::TABLE_VERSIONS_DEPTH,
+        )?;
         for path in &removed {
             fs::remove_file(path).with_context(|| format!("{} cannot be removed", path.display()))?;
         }
@@ -1253,11 +1275,21 @@ pub mod patches_io {
 
     /// Writes pretty JSON and a newline through a temporary file, so a reader never sees half a file.
     pub fn write_json<T: Serialize + ?Sized>(path: &Path, value: &T) -> anyhow::Result<()> {
+        write_text(path, &format!("{}\n", js::stringify_pretty(value)))
+    }
+
+    /// R5289000: writes JSON laid out a record per line, its records `depth` levels down
+    /// (`format_json.rs` names each file's), as `write_json` writes, through a temporary file.
+    pub fn write_records<T: Serialize + ?Sized>(path: &Path, value: &T, depth: usize) -> anyhow::Result<()> {
+        write_text(path, &js::stringify_records(value, depth))
+    }
+
+    /// Writes `text` through a temporary file, so a reader never sees half a file.
+    fn write_text(path: &Path, text: &str) -> anyhow::Result<()> {
         let mut temp = path.as_os_str().to_owned();
         temp.push(format!(".{}.tmp", std::process::id()));
         let temp = PathBuf::from(temp);
-        fs::write(&temp, format!("{}\n", js::stringify_pretty(value)))
-            .with_context(|| format!("{} cannot be written", temp.display()))?;
+        fs::write(&temp, text).with_context(|| format!("{} cannot be written", temp.display()))?;
         fs::rename(&temp, path).with_context(|| format!("{} cannot be written", path.display()))
     }
 
@@ -1412,8 +1444,16 @@ pub mod patches_io {
             previous = Some(snapshot);
             next.push(PatchEntry { changes, ..patch });
         }
-        write_json(&dir.join("patches.json"), &next)?;
-        write_json(&dir.join("index.json"), &build_index(&next))?;
+        write_records(
+            &dir.join("patches.json"),
+            &next,
+            crate::format_json::PATCHES_DEPTH,
+        )?;
+        write_records(
+            &dir.join("index.json"),
+            &build_index(&next),
+            crate::format_json::INDEX_DEPTH,
+        )?;
         Ok(next)
     }
 
@@ -1650,6 +1690,21 @@ pub mod patches_io {
         let mut data = format!("blob {}\0", text.len()).into_bytes();
         data.extend_from_slice(text.as_bytes());
         sha1_hex(&data)
+    }
+
+    /// R5289000: the blobs `shipped.json` may hold for a table file's text (a win-rate table, a card
+    /// list, a records table): its own bytes, as a table ships from R5289000 on, and its two-space form
+    /// with the final newline, as every table shipped before it was written (R646: a shipped entry is
+    /// never amended).
+    #[cfg(test)]
+    pub fn table_blobs(text: &str) -> [String; 2] {
+        [
+            git_blob_hash(text),
+            git_blob_hash(&format!(
+                "{}\n",
+                js::stringify_pretty(&js::parse(text).expect("a table is JSON"))
+            )),
+        ]
     }
 
     /// The name a fragment ships under (R646): the name its tier gives (R1366000), unless that name
@@ -2561,7 +2616,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let full: Catalog = serde_json::from_str(&file)
         .with_context(|| format!("{} is not a catalog", paths.catalog.display()))?;
     let scripts = card_lists::working(repo_root, &full)?;
-    let lists_text = format!("{}\n", js::stringify_pretty(&scripts.lists()));
+    let lists_text = js::stringify_records(&scripts.lists(), crate::format_json::CARD_LISTS_DEPTH);
     // Every snapshot, tier and name is computed before anything is written (R1366000): a name comes
     // from the tier, the tier from the snapshot, so an unnameable fragment fails before the first
     // write, never mid-promotion.
@@ -2694,7 +2749,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
                 let records = records_path(&version, &paths.dir)?;
                 fs::create_dir_all(paths.dir.join(RECORDS_DIR))
                     .with_context(|| format!("{} cannot be created", records.display()))?;
-                write_json(&records, table)?;
+                write_records(&records, table, crate::format_json::TABLE_DEPTH)?;
                 let text = fs::read_to_string(&records)
                     .with_context(|| format!("{} cannot be read", records.display()))?;
                 Some(git_blob_hash(&text))
@@ -2713,7 +2768,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         remove_file(&paths.pending_dir.join(&name));
         names.push(version);
     }
-    write_json(&paths.patches_json, &patches)?;
+    write_records(&paths.patches_json, &patches, crate::format_json::PATCHES_DEPTH)?;
     write_json(&paths.shipped_json, &shipped)?;
     rebuild_derived(&paths.dir)?;
     Ok(ShipResult { shipped: names })
@@ -2954,7 +3009,7 @@ pub fn cut_patch(repo_root: &Path, production: Option<&str>) -> anyhow::Result<C
         // R3882000: the cut ships no win rates of record of its own; the micros it rolls up shipped theirs.
         records_blob: None,
     });
-    write_json(&paths.patches_json, &patches)?;
+    write_records(&paths.patches_json, &patches, crate::format_json::PATCHES_DEPTH)?;
     write_json(&paths.shipped_json, &shipped)?;
     rebuild_derived(&paths.dir)?;
     Ok(CutResult::Cut { version, includes })
@@ -5320,6 +5375,48 @@ mod tests {
                 assert_eq!(read_snapshot("v0.1.1d", &dir).unwrap(), both);
             }
 
+            // R5289000: a ship writes patches.json, index.json and its delta a record per line, never
+            // in the two-space form.
+            #[test]
+            fn r5289000_patches_ship_writes_its_history_a_record_per_line() {
+                let base = catalog_of(vec![card("aaa", 1), card("bbb", 1)]);
+                let temp = shipped_repo("jackioh-ship-records-per-line-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                write_files(
+                    root,
+                    &[(
+                        "crates/cards/catalog.json",
+                        json(&base_with(&base, vec![card("aaa", 2)])),
+                    )],
+                );
+                write_fragment(root, &fragment_args("t", "s", "n", None)).unwrap();
+                commit_at(root, "fragment t", "2026-10-01T12:00:00+00:00");
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b"]));
+                for (path, depth) in [
+                    (dir.join("patches.json"), crate::format_json::PATCHES_DEPTH),
+                    (dir.join("index.json"), crate::format_json::INDEX_DEPTH),
+                    (
+                        delta_path("v0.1.1b", &dir).unwrap(),
+                        crate::format_json::DELTA_DEPTH,
+                    ),
+                ] {
+                    let text = read(&path);
+                    assert_eq!(
+                        crate::json_layout::layout(&text, depth),
+                        text,
+                        "{}",
+                        path.display()
+                    );
+                    assert_ne!(
+                        text,
+                        format!("{}\n", js::stringify_pretty(&js::parse(&text).unwrap())),
+                        "{}",
+                        path.display()
+                    );
+                }
+            }
+
             // R1329000, R3049000: no patch ships a win-rate table since #3049. The fragment holds no claim
             // of one, the version it ships gains no `win_rates/` file and no blob in shipped.json, and
             // the frozen table an earlier version shipped with stays as it was.
@@ -5406,6 +5503,11 @@ mod tests {
                     serde_json::from_str::<jackioh_engine::WinRateTable>(&text).unwrap(),
                     table
                 );
+                // R5289000: laid out a row per line.
+                assert_eq!(
+                    crate::json_layout::layout(&text, crate::format_json::TABLE_DEPTH),
+                    text
+                );
                 assert!(
                     !dir.join("win_rates/v0.1.1b.json").exists(),
                     "no win_rates/ table"
@@ -5487,11 +5589,12 @@ mod tests {
                 );
                 let shipped = read_shipped(&dir.join("shipped.json")).unwrap();
                 assert_eq!(shipped[1].card_metrics_blob, None);
+                let text = read(&crate::card_lists::lists_path(second, &dir).unwrap());
+                assert_eq!(shipped[2].card_metrics_blob, Some(git_blob_hash(&text)));
+                // R5289000: laid out a list per line.
                 assert_eq!(
-                    shipped[2].card_metrics_blob,
-                    Some(git_blob_hash(&read(
-                        &crate::card_lists::lists_path(second, &dir).unwrap()
-                    )))
+                    crate::json_layout::layout(&text, crate::format_json::CARD_LISTS_DEPTH),
+                    text
                 );
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
             }
@@ -6174,12 +6277,13 @@ mod tests {
                         );
                     }
                     // R1329000: and its win-rate table's, so a rewritten table fails too; a patch
-                    // with no table file, as every one before v0.3.15, has no blob.
+                    // with no table file, as every one before v0.3.15, has no blob. R5289000: a table
+                    // shipped before the record-per-line layout keeps the blob of its two-space form.
                     let table = win_rates_path(&entry.version, &patches_dir()).unwrap();
                     match &entry.win_rates_blob {
-                        Some(blob) => assert_eq!(
-                            *blob,
-                            git_blob_hash(&fs::read_to_string(&table).unwrap()),
+                        Some(blob) => assert!(
+                            crate::patches::patches_io::table_blobs(&fs::read_to_string(&table).unwrap())
+                                .contains(blob),
                             "win_rates/{}.json",
                             entry.version
                         ),
@@ -6188,9 +6292,9 @@ mod tests {
                     // R2173000: and its BUSTED and complicated lists', on a version that kept them.
                     let lists = crate::card_lists::lists_path(&entry.version, &patches_dir()).unwrap();
                     match &entry.card_metrics_blob {
-                        Some(blob) => assert_eq!(
-                            *blob,
-                            git_blob_hash(&fs::read_to_string(&lists).unwrap()),
+                        Some(blob) => assert!(
+                            crate::patches::patches_io::table_blobs(&fs::read_to_string(&lists).unwrap())
+                                .contains(blob),
                             "card_metrics/{}.json",
                             entry.version
                         ),
@@ -6200,15 +6304,46 @@ mod tests {
                     let records =
                         crate::patches::patches_io::records_path(&entry.version, &patches_dir()).unwrap();
                     match &entry.records_blob {
-                        Some(blob) => assert_eq!(
-                            *blob,
-                            git_blob_hash(&fs::read_to_string(&records).unwrap()),
+                        Some(blob) => assert!(
+                            crate::patches::patches_io::table_blobs(&fs::read_to_string(&records).unwrap())
+                                .contains(blob),
                             "records/{}.json",
                             entry.version
                         ),
                         None => assert!(!records.exists(), "records/{}.json", entry.version),
                     }
                 }
+            }
+
+            // R5289000: a table shipped in the two-space form keeps that form's blob once its file is laid
+            // out a row per line, and the blob still holds the table's rows: one changed row is another.
+            #[test]
+            fn r5289000_a_table_shipped_two_space_keeps_its_blob_laid_out() {
+                use crate::patches::js;
+                use crate::patches::patches_io::table_blobs;
+                let table = |wins: i32| jackioh_engine::WinRateTable {
+                    patch: "v1".to_string(),
+                    cards: vec![
+                        jackioh_engine::WinRateRow {
+                            id: "aaa".to_string(),
+                            wins,
+                            games: 40,
+                        },
+                        jackioh_engine::WinRateRow {
+                            id: "bbb".to_string(),
+                            wins: 12,
+                            games: 40,
+                        },
+                    ],
+                    ..jackioh_engine::WinRateTable::default()
+                };
+                let shipped = git_blob_hash(&format!("{}\n", js::stringify_pretty(&table(30))));
+                let laid = js::stringify_records(&table(30), crate::format_json::TABLE_DEPTH);
+                assert_eq!(laid.lines().count(), 8, "{laid}");
+                assert!(table_blobs(&laid).contains(&shipped));
+                assert!(table_blobs(&laid).contains(&git_blob_hash(&laid)));
+                let changed = js::stringify_records(&table(31), crate::format_json::TABLE_DEPTH);
+                assert!(!table_blobs(&changed).contains(&shipped));
             }
 
             // The Rust binaries compile the version in from patches.json (SURFACE §11.3), so no source site carries it.
@@ -7078,7 +7213,7 @@ mod tests {
                 // The file is as `patches ship` writes it, so the next promotion rewrites no note.
                 let text = std::fs::read_to_string(patches_json()).expect("patches.json");
                 assert_eq!(
-                    format!("{}\n", crate::patches::js::stringify_pretty(&patches())),
+                    crate::patches::js::stringify_records(&patches(), crate::format_json::PATCHES_DEPTH),
                     text
                 );
                 for patch in patches() {

@@ -373,7 +373,10 @@ pub fn render(
             created: &report.created,
             choices: &report.choices,
         };
-        return serde_json::to_string_pretty(&json).unwrap_or_default();
+        // R5289000: a row a line, as `analysis/fixtures/dev-40.report.json` holds it; `println!` ends the line.
+        return crate::patches::js::stringify_records(&json, crate::format_json::REPORT_DEPTH)
+            .trim_end()
+            .to_string();
     }
     let mut table = format_card_stats(report, &name_of);
     let Some(card) = &args.card else {

@@ -337,8 +337,12 @@ pub(crate) fn log(root: &Path, range: &str, bodies: &BTreeMap<String, String>) -
         logged.added.push(entry);
     }
     if !logged.added.is_empty() {
-        fs::write(&path, format!("{}\n", serde_json::to_string_pretty(&entries)?))
-            .with_context(|| format!("writing {TECHNICAL_PATH}"))?;
+        // R5289000: a commit a line.
+        fs::write(
+            &path,
+            crate::patches::js::stringify_records(&entries, crate::format_json::TECHNICAL_DEPTH),
+        )
+        .with_context(|| format!("writing {TECHNICAL_PATH}"))?;
     }
     Ok(logged)
 }

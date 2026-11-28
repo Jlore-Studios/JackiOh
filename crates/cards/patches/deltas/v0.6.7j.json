@@ -1,29 +1,5 @@
 {
   "set": {
-    "stinkyscape-018": {
-      "id": "stinkyscape-018",
-      "index": "18",
-      "name": "Imitated Instrumentality",
-      "set": "Stinkyscape",
-      "type": "Spell",
-      "tags": [],
-      "rarity": "Legendary",
-      "token": false,
-      "cost": 3,
-      "refs": [
-        "stinkyscape-018-1",
-        "stinkyscape-018-2",
-        "stinkyscape-018-3"
-      ],
-      "loc": 25,
-      "base": {
-        "keywords": [],
-        "text": "Tribute 1\nSummon MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but they can vote to remove you."
-      },
-      "radiant": {
-        "keywords": [],
-        "text": "Tribute 1\nSummon Radiant MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but can vote to remove you."
-      }
-    }
+    "stinkyscape-018": {"id":"stinkyscape-018","index":"18","name":"Imitated Instrumentality","set":"Stinkyscape","type":"Spell","tags":[],"rarity":"Legendary","token":false,"cost":3,"refs":["stinkyscape-018-1","stinkyscape-018-2","stinkyscape-018-3"],"loc":25,"base":{"keywords":[],"text":"Tribute 1\nSummon MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but they can vote to remove you."},"radiant":{"keywords":[],"text":"Tribute 1\nSummon Radiant MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but can vote to remove you."}}
   }
 }

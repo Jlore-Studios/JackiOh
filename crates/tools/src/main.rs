@@ -16,11 +16,13 @@ mod classify;
 mod duos_fuzz;
 mod duos_gate;
 mod fork_screen;
+mod format_json;
 mod fused_pairs;
 mod fuzz;
 mod fx_census;
 mod gate;
 mod golden;
+mod json_layout;
 mod names;
 mod patches;
 mod perf;
@@ -100,6 +102,8 @@ enum Command {
     Spec(spec::Args),
     /// A card's name comments, written from catalog.json (#3111).
     Names(names::Args),
+    /// `format-json [--check]`: the card data JSON laid out a record per line (R5289000).
+    FormatJson(format_json::Args),
     /// The training arena (part 29).
     Arena(arena::Args),
     /// The agent protocol on stdin and stdout (part 29).
@@ -136,6 +140,7 @@ fn main() -> ExitCode {
         Command::Golden(args) => golden::run(args),
         Command::Spec(args) => spec::run(args),
         Command::Names(args) => names::run(args),
+        Command::FormatJson(args) => format_json::run(args),
         Command::Arena(args) => arena::run(args),
         Command::Agent(args) => agent::run(args),
         Command::Selfplay(args) => selfplay::run(args),

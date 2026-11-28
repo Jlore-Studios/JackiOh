@@ -1,29 +1,5 @@
 {
   "set": {
-    "stinkyscape-t-dormant-starship": {
-      "id": "stinkyscape-t-dormant-starship",
-      "index": "T-dormant-starship",
-      "name": "Dormant Starship",
-      "set": "Stinkyscape",
-      "type": "Unit",
-      "tags": [],
-      "rarity": "Legendary",
-      "token": false,
-      "cost": 3,
-      "loc": 15,
-      "radiantFallback": true,
-      "base": {
-        "attack": 0,
-        "health": 0,
-        "keywords": [],
-        "text": "Dormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (3) to launch this."
-      },
-      "radiant": {
-        "attack": 0,
-        "health": 0,
-        "keywords": [],
-        "text": "Dormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (3) to launch this."
-      }
-    }
+    "stinkyscape-t-dormant-starship": {"id":"stinkyscape-t-dormant-starship","index":"T-dormant-starship","name":"Dormant Starship","set":"Stinkyscape","type":"Unit","tags":[],"rarity":"Legendary","token":false,"cost":3,"loc":15,"radiantFallback":true,"base":{"attack":0,"health":0,"keywords":[],"text":"Dormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (3) to launch this."},"radiant":{"attack":0,"health":0,"keywords":[],"text":"Dormant until it launches. Your Starship Pieces that die fuse into this.\nActivate: Pay (3) to launch this."}}
   }
 }

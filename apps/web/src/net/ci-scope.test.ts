@@ -224,6 +224,8 @@ describe("scripts/ci-scope.sh", () => {
     "training/history/sweep-2026-10-12.md",
     // R1994000: the tools' test holds `stats report --games` to the notebooks' fixtures.
     "analysis/fixtures/games.report.json",
+    // R5289000: the tools' `format-json --check` holds it to the record-per-line layout.
+    "analysis/fixtures/dev-40.report.json",
     "training/loop.sh.bak",
     "training/lanes/x.ts",
     "SPEC.md",
@@ -672,6 +674,9 @@ describe("scripts/ci-scope.sh", () => {
     // R1994000: the tools' test of `stats report --games` reads the notebooks' record files and reports.
     ["analysis/fixtures/games.report.json", ["rust_tools_wasm"]],
     ["analysis/fixtures/dev-40.jsonl", ["rust_tools_wasm"]],
+    // R5289000: the tools' acceptance.rs runs `format-json --check`, which reads the two files outside the crates.
+    ["analysis/fixtures/dev-40.report.json", ["rust_tools_wasm"]],
+    ["apps/web/src/audio/voice-manifest.json", ["rust_tools_wasm"]],
     // The tools' export_card_text.rs writes it from crates/cards/card-text.yaml (#2498).
     ["apps/web/src/audio/voice-text.json", ["rust_tools_wasm"]],
     // The tools' export_card_modes.rs writes it from the card scripts (#2646).

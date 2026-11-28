@@ -1,29 +1,5 @@
 {
   "set": {
-    "stinkyscapeplus-020": {
-      "id": "stinkyscapeplus-020",
-      "index": "20",
-      "name": "B-Patch",
-      "set": "Stinkyscape+",
-      "type": "Spell",
-      "tags": [],
-      "rarity": "Epic",
-      "token": false,
-      "cost": 1,
-      "loc": 27,
-      "base": {
-        "keywords": [],
-        "text": "Cast on draw: Flip a coin. Heads: Buff every card on the field and in both hands. Tails: Nerf them."
-      },
-      "radiant": {
-        "keywords": [
-          {
-            "kind": "Lucky",
-            "n": 1
-          }
-        ],
-        "text": "Lucky 1\nCast on draw: Flip a coin. Heads: Buff every card on the field and in both hands. Tails: Nerf them."
-      }
-    }
+    "stinkyscapeplus-020": {"id":"stinkyscapeplus-020","index":"20","name":"B-Patch","set":"Stinkyscape+","type":"Spell","tags":[],"rarity":"Epic","token":false,"cost":1,"loc":27,"base":{"keywords":[],"text":"Cast on draw: Flip a coin. Heads: Buff every card on the field and in both hands. Tails: Nerf them."},"radiant":{"keywords":[{"kind":"Lucky","n":1}],"text":"Lucky 1\nCast on draw: Flip a coin. Heads: Buff every card on the field and in both hands. Tails: Nerf them."}}
   }
 }

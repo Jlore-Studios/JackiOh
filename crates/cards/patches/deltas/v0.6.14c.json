@@ -1,39 +1,5 @@
 {
   "set": {
-    "stinkyscape-010-1": {
-      "id": "stinkyscape-010-1",
-      "index": "10.1",
-      "name": "Inner Fire",
-      "set": "Stinkyscape",
-      "type": "Spell",
-      "tags": [
-        "Other-Origins",
-        "Token"
-      ],
-      "rarity": "Token",
-      "printedRarity": "Epic",
-      "token": true,
-      "cost": 1,
-      "params": [
-        {
-          "key": "shift",
-          "base": 4,
-          "radiant": 4,
-          "better": "up",
-          "step": 1,
-          "min": 1,
-          "tunedOn": "radiant"
-        }
-      ],
-      "loc": 64,
-      "base": {
-        "keywords": [],
-        "text": "Set a Unit's Attack equal to its Health."
-      },
-      "radiant": {
-        "keywords": [],
-        "text": "Set a Unit's Attack equal to its Health, plus {shift} if it's yours or minus {shift} if it's an enemy."
-      }
-    }
+    "stinkyscape-010-1": {"id":"stinkyscape-010-1","index":"10.1","name":"Inner Fire","set":"Stinkyscape","type":"Spell","tags":["Other-Origins","Token"],"rarity":"Token","printedRarity":"Epic","token":true,"cost":1,"params":[{"key":"shift","base":4,"radiant":4,"better":"up","step":1,"min":1,"tunedOn":"radiant"}],"loc":64,"base":{"keywords":[],"text":"Set a Unit's Attack equal to its Health."},"radiant":{"keywords":[],"text":"Set a Unit's Attack equal to its Health, plus {shift} if it's yours or minus {shift} if it's an enemy."}}
   }
 }
