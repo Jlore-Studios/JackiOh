@@ -22126,15 +22126,8 @@
       "taken_asks": []
     },
     "5302": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46146548863",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-28T12:56:07Z",
-        "until": "2026-11-28T13:26:07Z"
-      },
       "difficulty_by": {
         "at": "2026-11-28T12:55:59Z",
         "difficulty": "medium",
@@ -22153,25 +22146,24 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5302; sed -n 100,175p crates/cards/src/code_lines.rs; sed -n 1590,1660p crates/tools/src/catalog.rs; grep -n \\\"code_lines_with_uses\\\\|script_code\\\\|f\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5302; sed -n 280,360p crates/tools/src/classify.rs; sed -n 2750,2775p crates/tools/src/catalog.rs; sed -n 2465,2535p crates/tools/src/classify.rs; ca\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5302; sed -n 55,75p crates/cards/src/lib.rs; sed -n 160,235p crates/cards/src/lib.rs; grep -n \\\"^#\\\\[cfg(test)\\\\]\\\" crates/cards/src/lib.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5302; grep -n -A3 \\\"^\\\\s*#\\\\[cfg(test)\\\\]\\\" crates/cards/src/lib.rs | sed -n 1,120p; grep -rn \\\"^\\\\s\\\\+#\\\\[cfg(test)\\\\]\\\" crates --include=*.rs | gre\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5302; grep -n \\\"repo_root\\\\|fn file(\\\\|fn side(\\\\|fn read_diff\\\" crates/tools/src/classify.rs | head; grep -n \\\"testkit::scenario(opts)\\\\|view.max_he\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5302; cat spec/rulings/R5228000.md | head -12; grep -n \\\"R2050000\\\" crates/tools/README.md crates/cards/src/code_lines.rs crates/cards/tests/cross/ca\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5302; echo \\\"Plan drafted in final message; see issue. Files: crates/tools/src/catalog.rs, classify.rs, spec/rulings/R5302000.md, R2050000.md, spec/p\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Tooling only in crates/tools plus a ruling note: no engine rules, AI, migration or cross-crate design, and about 5 files.\"} --> ## Goal `cargo jackioh classify` leaves out only each `#[cfg(test)]` item of a Rust file that is no card script, and reads every\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-8",
-      "owner_since": "2026-11-28T12:49:18Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-1",
+      "owner_since": "2026-11-28T13:03:19Z",
+      "owner_why": "handed off from `claude-8`: `claude-8` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-28T13:46:35Z",
       "pending_request": false,
       "planned_at": "2026-11-28T12:56:01Z",
       "planned_by": "`claude-8` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-8",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-8",
+      "provider": "claude-1",
       "queued_at": "2026-11-28T12:48:45Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46146548863",
+      "run_id": "pending:a55543f3-1795870984",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T12:49:18Z",
+      "started_at": "2026-11-28T13:03:19Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -22179,9 +22171,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T12:49:18Z",
+    "at": "2026-11-28T13:03:19Z",
     "url": "",
-    "what": "plan #5302 on claude-8"
+    "what": "build #5302 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-28T12:55:27Z",
