@@ -20960,7 +20960,8 @@
         "reviews": [],
         "sha": "e3fc7d725226157ed149998eb8c1c3aa7807f69d",
         "tiers": {}
-      }
+      },
+      "waiting_comment": 7231555988
     },
     "5226": {
       "action": "plan",
