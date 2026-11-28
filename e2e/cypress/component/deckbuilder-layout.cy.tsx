@@ -14,7 +14,6 @@ import { showsFullArt } from "../../../apps/web/src/cards/fullArt.ts";
 import { readCardSettings } from "../../../apps/web/src/cards/settings.ts";
 import { isFullBleed, lookOn } from "../../../apps/web/src/cards/versions.ts";
 import { setShips } from "../../../apps/web/src/wire/catalog.ts";
-import { DECK_HISTORY_BUTTON, DECK_HISTORY_PANEL } from "../../../apps/web/src/game/deckbuilder/testids.ts";
 import {
   CARD_POOL,
   DB_DETAIL_ADD,
@@ -23,19 +22,20 @@ import {
   DECK_CARDS,
   DECK_COSMETICS_BUTTON,
   DECK_EDITOR,
+  DECK_HISTORY_BUTTON,
+  DECK_HISTORY_PANEL,
   DECK_NAME_INPUT,
   DECK_VERDICT,
+  LOADOUT_ERRORS,
+  WORKSHOP,
+} from "../../../apps/web/src/game/deckbuilder/testids.ts";
+import { NAV_BACK, deckRowId, poolCardId, ts } from "../../support/testids.ts";
+import {
   INSPECT_CLOSE,
   INSPECT_DETAIL,
   INSPECT_FACE_BASE,
   INSPECT_FACE_RADIANT,
-  LOADOUT_ERRORS,
-  NAV_BACK,
-  WORKSHOP,
-  deckRowId,
-  poolCardId,
-  ts,
-} from "../../support/testids.ts";
+} from "../../../apps/web/src/cards/inspect/testids.ts";
 
 const VIEWPORTS = [
   { label: "phone", width: 390, height: 844 },

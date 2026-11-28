@@ -25,8 +25,10 @@ import {
   type PlayStep,
 } from "../../support/playthrough.ts";
 import { constants, timeouts } from "../../support/config.ts";
-import { GAME, INSPECT_HOVER, LOG, cardId, handCardId, handRegionId, ts } from "../../support/testids.ts";
+import { GAME, cardId, handCardId, handRegionId, ts } from "../../support/testids.ts";
 import type { JackiOhDevHandle } from "../../support/types.ts";
+import { INSPECT_HOVER } from "../../../apps/web/src/cards/inspect/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** Where the catalog sits, from e2e/ (Cypress's project root), read at run time. */
 const CATALOG_PATH = "../crates/cards/catalog.json";
@@ -80,7 +82,7 @@ function graveyardDefIds(handle: JackiOhDevHandle): Set<string> {
 
 function afterPlay(game: Game, step: Extract<PlayStep, { kind: "play" }>): void {
   cy.settled();
-  cy.get(`${ts(LOG)} .log-line`).then(($lines) => {
+  cy.get(`${ts(gameTestid.log)} .log-line`).then(($lines) => {
     const problems = [...new Set([...$lines].flatMap((line) => englishProblems(line.textContent ?? "", `${game.label}, after ${step.defId}`)))];
     expect(problems, `the log after ${step.defId}`).to.deep.equal([]);
   });

@@ -4,20 +4,7 @@
 // following the coach still wins.
 
 import { TUTORIAL_PROGRESS_KEY, TUTORIAL_PROGRESS_VERSION, timeouts } from "../../support/config.ts";
-import {
-  ACTION_ERROR,
-  COACH,
-  FIELD_GUIDE,
-  FIELD_GUIDE_CLOSE,
-  FIELD_GUIDE_PATH,
-  TUTORIAL_HUD,
-  TUTORIAL_PLAY_PRACTICE,
-  TUTORIAL_RESULT,
-  fieldGuideEntryId,
-  ts,
-  tutorialLessonId,
-  tutorialStartId,
-} from "../../support/testids.ts";
+import { ACTION_ERROR, fieldGuideEntryId, ts, tutorialLessonId, tutorialStartId } from "../../support/testids.ts";
 import type { TutorialData } from "../../support/tasks/lessons.ts";
 import {
   PRACTICE_PATH,
@@ -30,6 +17,7 @@ import {
   type Moment,
   type Taken,
 } from "../../support/tutorial.ts";
+import { tutorialTestid } from "../../../apps/web/src/tutorial/testids.ts";
 
 const LESSON_ID = "finale";
 
@@ -68,11 +56,11 @@ describe("48 — tutorial lesson 5, the final exam, played to a win by following
         .and("have.attr", "data-next", "true");
       cy.get(ts(tutorialStartId(LESSON_ID))).click();
 
-      cy.get(ts(TUTORIAL_HUD), { timeout: TUTORIAL_BOOT_TIMEOUT })
+      cy.get(ts(tutorialTestid.hud), { timeout: TUTORIAL_BOOT_TIMEOUT })
         .should("have.attr", "data-lesson", LESSON_ID)
         .and("have.attr", "data-human-seat", lesson.humanSeat)
         .and("contain.text", lesson.title);
-      cy.get(ts(COACH), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
+      cy.get(ts(tutorialTestid.coach), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
       cy.screenshot("48-tutorial-final-exam/1-first-moment", { capture: "viewport" });
 
       debugSnapshot().then((debug) => {
@@ -87,12 +75,12 @@ describe("48 — tutorial lesson 5, the final exam, played to a win by following
       const run: Run = { taken: { ack: 0, coach: 0, fallback: 0 }, modes: [], outcome: null };
       followCoach(run, MOVE_BUDGET);
 
-      cy.get(ts(TUTORIAL_RESULT), { timeout: timeouts.view })
+      cy.get(ts(tutorialTestid.result), { timeout: timeouts.view })
         .should("be.visible")
         .and("have.attr", "data-outcome", "win")
         .and("have.attr", "data-lesson", LESSON_ID);
       // The last lesson ends the tutorial: its result offers a practice game.
-      cy.get(ts(TUTORIAL_PLAY_PRACTICE)).should("be.visible");
+      cy.get(ts(tutorialTestid.playPractice)).should("be.visible");
       cy.screenshot("48-tutorial-final-exam/2-result", { capture: "viewport" });
 
       cy.then(() => {
@@ -122,12 +110,12 @@ describe("48 — tutorial lesson 5, the final exam, played to a win by following
 
       // The Field guide: what the exam found is there with its rule.
       cy.visit(PRACTICE_PATH);
-      cy.get(ts(FIELD_GUIDE_PATH), { timeout: TUTORIAL_BOOT_TIMEOUT }).click();
-      cy.get(ts(FIELD_GUIDE)).should("be.visible");
+      cy.get(ts(tutorialTestid.fieldGuidePath), { timeout: TUTORIAL_BOOT_TIMEOUT }).click();
+      cy.get(ts(tutorialTestid.fieldGuide)).should("be.visible");
       cy.get(ts(fieldGuideEntryId("quickdraw"))).should("have.attr", "data-found", "true");
       cy.screenshot("48-tutorial-final-exam/3-field-guide", { capture: "viewport" });
-      cy.get(ts(FIELD_GUIDE_CLOSE)).click();
-      cy.get(ts(FIELD_GUIDE)).should("not.exist");
+      cy.get(ts(tutorialTestid.fieldGuideClose)).click();
+      cy.get(ts(tutorialTestid.fieldGuide)).should("not.exist");
     });
   });
 });

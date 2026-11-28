@@ -749,7 +749,8 @@ is `_invariants.ts`'s I1–I4 monitor (used by `cargo jackioh fuzz`). `testkit::
 ## 9. The AI crate
 
 `crates/ai/src/lib.rs` re-exports what `packages/ai/src/index.ts` exported (by §4.2), except the R645
-emote personas, which are presentation and move to `apps/web/src/practice/personas.ts` (part 21).
+emote personas, which are presentation and moved to `apps/web/src/practice/personas.ts` (part 21), and since
+issue #5269 live in `jackioh-shared`'s `bots::persona`, which the page calls through the module's `bots` (R5269000).
 Fixed here:
 
 ```rust
@@ -895,7 +896,7 @@ config alias them:
 | `@jackioh/validator` | `apps/web/src/wire/validator.ts` (types + WASM-backed functions) |
 | `@jackioh/cards/catalog.json`, `@jackioh/cards/flavour.json` | `crates/cards/catalog.json`, `crates/cards/flavour.json` |
 | `@jackioh/cards` | `apps/web/src/wire/cards.ts` (`CATALOG`, `CATALOG_VERSION`, `type CardFlavour`) |
-| `@jackioh/ai`, `@jackioh/ai/config` | `apps/web/src/wire/ai.ts` (`decide`, `aiToAct`, `lethalHint` (R2102000), `buildAiDeck` over WASM; `AI_BUDGET`, `AI_GATE_BUDGET`, `SHADOW_BAN_IDS`, `type SearchBudget`, `AI_EMOTE`, `type AiEmote`, `type EmotePersona`, `createEmotePersona`, `pickPersona` re-exported from `../practice/personas.ts`) |
+| `@jackioh/ai`, `@jackioh/ai/config` | `apps/web/src/wire/ai.ts` (`decide`, `aiToAct`, `lethalHint` (R2102000), `buildAiDeck` over WASM; `AI_BUDGET`, `AI_GATE_BUDGET`, `SHADOW_BAN_IDS`, `type SearchBudget`; the emote personas are `jackioh-shared`'s, through `bots`, R5269000) |
 | `../../server/src/config` (relative, 23 web and 10 e2e files) | replaced by `@jackioh/server-config` → `apps/web/src/wire/serverConfig.ts` (generated, §5.1); part 21 rewrites those import lines |
 
 The hand-kept helpers are the runtime values the web imports from `@jackioh/shared` today

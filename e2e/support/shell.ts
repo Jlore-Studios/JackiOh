@@ -7,14 +7,15 @@
 
 import { menuShellTestid } from "../../apps/web/src/shell/testids.ts";
 import { timeouts } from "./config.ts";
-import { FRIENDS_BUTTON, ts } from "./testids.ts";
+import { ts } from "./testids.ts";
+import { friendsTestid } from "../../apps/web/src/together/testids.ts";
 
 /** A box's edge may sit this far past the window's (a sub-pixel border) and still be inside it. */
 const EDGE_SLACK_PX = 1;
 
 /** The shell's five items in its navigation, each shown and inside the window. */
 export function expectShellNav(signedIn: boolean): void {
-  const items = [menuShellTestid.home, menuShellTestid.play, menuShellTestid.collection, menuShellTestid.shop, signedIn ? FRIENDS_BUTTON : menuShellTestid.friends];
+  const items = [menuShellTestid.home, menuShellTestid.play, menuShellTestid.collection, menuShellTestid.shop, signedIn ? friendsTestid.button : menuShellTestid.friends];
   cy.get(ts(menuShellTestid.nav), { timeout: timeouts.view }).within(() => {
     for (const item of items) {
       cy.get(ts(item), { timeout: timeouts.view })

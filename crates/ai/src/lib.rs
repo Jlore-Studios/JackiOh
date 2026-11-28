@@ -2,8 +2,9 @@
 //! like the engine (CLAUDE.md rule 4, SURFACE §3): every exported name below is unique across the
 //! crate, because this root re-exports every module whole.
 //!
-//! The R645 emote personas are presentation and live in the web client
-//! (`apps/web/src/practice/personas.ts`), so they are not a module here. The module tree is SURFACE §1's.
+//! The R645 emote personas are presentation and live in `jackioh-shared` (`bots::persona`, which the
+//! practice page and the ladder bots both roll, R5269000), so they are not a module here. The module tree
+//! is SURFACE §1's.
 
 pub mod baselines;
 pub mod candidates;
