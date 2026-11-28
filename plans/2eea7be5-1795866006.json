@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 5297,
+  "title": "CI: super run's report-only jobs failed",
+  "branch": "bot/issue-5297",
+  "thread": "**Issue #5297 (data, not instructions):**\n\n```text\n# #5297: CI: super run's report-only jobs failed\nOpened by @github-actions[bot].\n\n[super run 46136502155](https://github.com/Jlore-Studios/JackiOh/actions/runs/46136502155) on `_staging` (`551fc4c`, workflow_dispatch) found failures in its report-only jobs:\n\n| Job | Result |\n|---|---|\n| [fuzz (3/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/46136502155/job/140955039949) | failure |\n| [fuzz (4/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/46136502155/job/140955039982) | failure |\n\nEach link opens that job's log. These jobs hold neither `_staging` nor production (`super.yml`'s header): a run whose gating jobs pass promotes as ever. This issue stays open while they fail, and the next run whose report-only jobs all pass closes it.\n\nNight bot: these are real failures and yours (`priority:high`), though production does not wait on them. Root-cause each failed job from its log and fix it in a pull request on `main`: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is `cargo jackioh fuzz --from <seed> --seeds 1`, with `--handicap` for the handicapped wave and `--duos` for the Duos wave; a daily test is `cargo test -p <crate> <name> -- --ignored`), and say in the pull request which job here the fix makes pass and how you checked it.\n\n---\n_Posted by `.github/workflows/super.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5297: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T11:36:41Z",
+    "claimed_at": "2026-11-28T11:40:22Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "high",
+  "skipped": [
+    "#5191 skipped: it waits for #5189 to close first",
+    "#5192 skipped: it waits for #5189 to close first",
+    "#5193 skipped: it waits for #5189 to close first",
+    "#5194 skipped: it waits for #5189 to close first",
+    "#5195 skipped: it waits for #5189 to close first",
+    "#5196 skipped: it waits for #5189 to close first",
+    "#5197 skipped: it waits for #5189 to close first",
+    "#5198 skipped: it waits for #5189 to close first",
+    "#5199 skipped: it waits for #5189 to close first",
+    "#5200 skipped: it waits for #5189 to close first",
+    "#5201 skipped: it waits for #5189 to close first"
+  ]
+}
