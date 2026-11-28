@@ -177,6 +177,9 @@ A Cleave splash in the walk lands on every unit it strikes. A unit without Taunt
 passed, is met as its earlier hits and splashes left it: gone once destroyed, or back as its Reborn body. Each
 splash spends the pools in the engine's order, and a Trample attacker's sends what it deals beyond the unit's
 health to the hero (§4.4 step 9) (`splash_trample_read`, R4805000, #4805; off in `GREEDY_EVAL`).
+Each hit on the defending hero in the walk meets the Armor its earlier hits have worn off it (R5183000); a
+Pierce hit, an aura's Armor and a hero immune to damage wear nothing (`armor_wear_read`, R5228000, #5228; off
+in `GREEDY_EVAL`).
 A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b
