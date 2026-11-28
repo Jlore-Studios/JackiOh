@@ -85,7 +85,9 @@ afterEach(() => {
  * stand-in curl that answers each request for the statistics with the next of `answers`: `gave-up` as curl
  * answers a request it gave up on (its -w line with status 000, an error, exit 52), or an HTTP status,
  * with one card for 200 and none for any other. It answers each ask of `/api/stats/loading` (R5186000)
- * with the next of `loading`, `false` once they run out.
+ * with the next of `loading`, `false` once they run out: `true` or `false` as the server's JSON, `down` as
+ * the Worker's plain 500 for a container it cannot reach, `gave-up` as a request curl gave up on, and
+ * `missing` as a server without the route.
  */
 function check(answers: string[], loading: string[] = []): { status: number | null; out: string; loadingAsks: number } {
   const root = mkdtempSync(join(tmpdir(), "stats-check-"));
@@ -110,7 +112,13 @@ case $url in
   */api/stats/loading)
     loaded=$(( $(cat "${root}/loading-asked") + 1 ))
     echo "$loaded" > "${root}/loading-asked"
-    printf '{"loading":%s}' "$(sed -n "$loaded"p "${root}/loading" | grep . || echo false)"
+    said=$(sed -n "$loaded"p "${root}/loading" | grep . || echo false)
+    case $said in
+      down) printf 'Internal Server Error' > "$body"; printf '500' ;;
+      gave-up) printf '000'; exit 28 ;;
+      missing) printf '{"error":"not found"}' > "$body"; printf '404' ;;
+      *) printf '{"loading":%s}' "$said" > "$body"; printf '200' ;;
+    esac
     exit 0
     ;;
 esac
@@ -174,6 +182,26 @@ describe("the card statistics' check, run as GitHub runs it (bash -e)", () => {
     expect(out).toContain("https://staging.example: the card statistics are still loading, 0s waited of 600s");
     expect(out).toContain("1 cards in 1.5s (attempt 2 of 2)");
     expect(loadingAsks).toBe(3);
+  });
+
+  it("waits out a server that does not answer the probe, as a rollout's draining container does, until it says the load is done", () => {
+    // deploy-staging run 46126109815: the first attempt reached the old image as Cloudflare rolled it, and the
+    // probe's plain 500 ended the wait, so the second attempt waited on the new server's first load.
+    const { status, out, loadingAsks } = check(["500", "200"], ["down", "gave-up", "true", "false"]);
+    expect(status).toBe(0);
+    expect(out).toContain(
+      "https://staging.example: the server did not say whether the card statistics are loading (HTTP 500), so it may be restarting; 0s waited of 600s",
+    );
+    expect(out).toContain("did not say whether the card statistics are loading (HTTP 000)");
+    expect(out).toContain("the card statistics are still loading");
+    expect(out).toContain("1 cards in 1.5s (attempt 2 of 2)");
+    expect(loadingAsks).toBe(4);
+  });
+
+  it("stops waiting at once for a server without the loading route", () => {
+    const { status, loadingAsks } = check(["500", "200"], ["missing", "true"]);
+    expect(status).toBe(0);
+    expect(loadingAsks).toBe(1);
   });
 
   it("names the last failure when every attempt fails, with an error from curl or without one", () => {
