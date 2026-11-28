@@ -22152,6 +22152,8 @@
       }
     },
     "5281": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-28T05:53:58Z",
@@ -22165,8 +22167,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; grep -n \\\"mod fuzz_daily_top_up\\\" crates/tools/src/fuzz.rs; sed -n 160,178p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"sed -n 8471,8580p crates/tools/src/fuzz.rs\"}\n- bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/fuzz.rs'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"none while those are enough) in both waves, up to `DAILY_TOP_UP_MAX`. Past that super.yml's own\\n//! \u2026\n- tool error: <tool_use_error>Error: No such tool available: bash. Tool names are case-sensitive: call Bash instead.</tool_use_error>\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/fuzz.rs'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"none while those are enough) in both waves, up to `DAILY_TOP_UP_MAX`. Past that super.yml's own\\n//! \u2026\n- Bash: {\"command\": \"until grep -q \\\"test result\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-5265/da519245-760c-47dc-ac37-04f71af06580/tasks/bf70ufx1n.output 2>/dev/null; do sleep 10; done; tail -15\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt ok; timeout 580 cargo clippy -p jackioh-tools --all-targets -- -D warnings 2>&1 | tail -5\", \"timeout\": 600000}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a card change that outgrows the daily fuzz's seed count fails its own pull request, not the next daily run\"} --> A card change that grows the fuzz pool past what the nightly run covers now fails its own pull request. It no longer fails the next daily ru\u2026"
       },
       "issue": 5265,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-28T06:51:29Z",
         "from_run": "46114159305",
         "gates": [
           {
@@ -22258,7 +22263,11 @@
         "source": "build",
         "until": "2026-11-28T07:20:44Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-28T06:50:44Z",
+      "run_id": "pending:1ca1ec67-1795848673",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -22277,6 +22286,9 @@
         "provider": "claude-8",
         "run": "46114159305"
       },
+      "started_at": "2026-11-28T06:51:29Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -22290,9 +22302,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T06:37:39Z",
+    "at": "2026-11-28T06:51:29Z",
     "url": "",
-    "what": "revise #5280 on claude-6"
+    "what": "review #5281 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-28T06:43:50Z",
