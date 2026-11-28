@@ -21112,6 +21112,13 @@
     "5231": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-28T01:03:20Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: one effect and a ref in one web component, its tests, and a ruling note; no engine, AI, server, wire or migration change, about 5 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
