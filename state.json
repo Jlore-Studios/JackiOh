@@ -21958,8 +21958,9 @@
     "5289": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
-      "forced": true,
+      "forced": false,
       "handoff": {
         "at": "2026-11-28T11:34:39Z",
         "family": "claude",
