@@ -16,22 +16,13 @@ import {
 } from "./config.ts";
 import {
   ANIMATING,
-  CONCEDE,
-  CONCEDE_CONFIRM,
-  CONCEDE_DIALOG,
-  DECK_DROP,
-  END_TURN,
-  OFFER_DRAW,
-  POWER,
   PROMPT,
   PROMPT_SUBMIT,
   PROMPT_X_INPUT,
-  RESULT_OVERLAY,
-  SEAT_SWITCH,
+  animating,
   cardId,
   handCardId,
   heroId,
-  animating,
   poolCardId,
   promptOf,
   promptOptionId,
@@ -54,6 +45,8 @@ import type {
   ZoneRef,
 } from "./types.ts";
 import { isPicked } from "./ux.ts";
+import { DECK_DROP } from "../../apps/web/src/game/deckbuilder/testids.ts";
+import { testid as gameTestid } from "../../apps/web/src/game/contract.ts";
 
 /** ASSUMPTION A1: where `seedGame` parks the fixture decks so a reload keeps them. */
 export const DECKS_STORAGE_KEY = "jackioh.e2e.decks";
@@ -483,10 +476,10 @@ Cypress.Commands.add("keepMulligans", () => {
  * `concede-confirm` sends `{ type: "concede" }`, so clicking `concede` alone concedes nothing.
  */
 Cypress.Commands.add("concede", () => {
-  cy.get(ts(CONCEDE), { timeout: timeouts.view }).should("not.be.disabled").click();
-  cy.get(ts(CONCEDE_DIALOG)).should("be.visible");
-  cy.get(ts(CONCEDE_CONFIRM)).click();
-  cy.get(ts(CONCEDE_DIALOG)).should("not.exist");
+  cy.get(ts(gameTestid.concede), { timeout: timeouts.view }).should("not.be.disabled").click();
+  cy.get(ts(gameTestid.concedeDialog)).should("be.visible");
+  cy.get(ts(gameTestid.concedeConfirm)).click();
+  cy.get(ts(gameTestid.concedeDialog)).should("not.exist");
   cy.settled();
 });
 
@@ -612,8 +605,8 @@ Cypress.Commands.add("answerPrompt", (kind: PromptKind | null, answer: PromptAns
 });
 
 Cypress.Commands.add("endTurn", (options: ActOptions & { handOver?: boolean } = {}) => {
-  cy.get(ts(END_TURN), { timeout: timeouts.view }).should("not.be.disabled");
-  cy.get(ts(END_TURN)).click();
+  cy.get(ts(gameTestid.endTurn), { timeout: timeouts.view }).should("not.be.disabled");
+  cy.get(ts(gameTestid.endTurn)).click();
   captureAnimating(options);
   cy.settled();
   if (options.handOver ?? true) cy.handOver();
@@ -621,9 +614,9 @@ Cypress.Commands.add("endTurn", (options: ActOptions & { handOver?: boolean } = 
 
 /** BUILD M5-T3: the hotseat seat-switch button. A no-op when the client switches by itself. */
 Cypress.Commands.add("handOver", () => {
-  exists(ts(SEAT_SWITCH)).then((present) => {
+  exists(ts(gameTestid.seatSwitch)).then((present) => {
     if (!present) return;
-    cy.get(ts(SEAT_SWITCH)).click();
+    cy.get(ts(gameTestid.seatSwitch)).click();
     cy.settled();
   });
 });
@@ -635,12 +628,12 @@ Cypress.Commands.add("switchPosition", (instanceId: string, options: ActOptions 
 });
 
 Cypress.Commands.add("offerDraw", () => {
-  cy.get(ts(OFFER_DRAW)).click();
+  cy.get(ts(gameTestid.offerDraw)).click();
   cy.settled();
 });
 
 Cypress.Commands.add("usePower", (options: ActOptions = {}) => {
-  cy.get(ts(POWER)).click();
+  cy.get(ts(gameTestid.power)).click();
   captureAnimating(options);
   cy.settled();
 });
@@ -690,7 +683,7 @@ Cypress.Commands.add("advanceToTurn", (turn: number, options: { budget?: number 
         // hand over and `seat` is this client's own seat for the whole match.
         if (handle.seat !== undefined && handle.seat !== state.active) cy.handOver();
       });
-      exists(ts(END_TURN)).then((present) => {
+      exists(ts(gameTestid.endTurn)).then((present) => {
         if (present) cy.endTurn();
         else cy.handOver();
       });
@@ -1081,8 +1074,8 @@ Cypress.Commands.add("wsPlayer", (command: WsPlayerCommand) => {
 });
 
 Cypress.Commands.add("expectResult", (text: "Win" | "Loss" | "Draw") => {
-  cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.game }).should("be.visible");
-  cy.get(ts(RESULT_OVERLAY)).should("contain.text", text);
+  cy.get(ts(gameTestid.result), { timeout: timeouts.game }).should("be.visible");
+  cy.get(ts(gameTestid.result)).should("contain.text", text);
 });
 
 /* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars --

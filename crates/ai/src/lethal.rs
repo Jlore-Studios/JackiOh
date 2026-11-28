@@ -5,6 +5,9 @@
 //!    surcharge of (`UNPAID_SURCHARGE`), walked or replayed on another determinization, leaves the walk
 //!    cut, not exhausted, so stage 2 still runs (R4807000).
 //! 2. Best-first walk ordered by `ready_gap` (enemy hero life including Duos pool R964000 less ready attacks).
+//!    R5119000: at a gap above 0 it keeps its attackers ready (`Gaps::taunt_free`), and a child whose dive
+//!    at gaps no closer than its parent's has tried more than `AI_SEARCH.lethal_dive_moves` moves is set
+//!    aside, so the positions below it come after the others of their gap.
 //!
 //! Each walk's visited set reads `position_key`, `search_signature` with the units' lanes (R4806000), so a
 //! play tried in two lanes reaches two positions.
@@ -25,9 +28,11 @@ use jackioh_engine::{
 };
 
 use crate::candidates::candidate_actions;
-use crate::config::{AI_SEARCH, LETHAL_HINT_DETERMINIZATIONS, LETHAL_HINT_NODES, LETHAL_HINT_SEED};
+use crate::config::{
+    AI_EVAL, AI_SEARCH, EvalWeights, LETHAL_HINT_DETERMINIZATIONS, LETHAL_HINT_NODES, LETHAL_HINT_SEED,
+};
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
-use crate::evaluate::{Prices, damage_past_taunts, deft_in_defense};
+use crate::evaluate::{Prices, damage_past_taunts_with, deft_in_defense};
 use crate::observe::redact;
 use crate::simulate::{
     LineStatus, UNPAID_SURCHARGE, create_node_counter, create_sub_counter, line_status, position_key,
@@ -46,7 +51,53 @@ struct Open {
     state: Rc<GameState>,
     line: Vec<ActionBody>,
     gap: f64,
+    /// R5119000: the gap were no Taunt standing (`Gaps::taunt_free`).
+    taunt_free: f64,
+    /// R5119000: the position's `Branch` in the walk.
+    branch: usize,
     order: u32,
+}
+
+/// R5119000: a position the best-first walk opened, as the moves tried below it count against it.
+struct Branch {
+    /// The branch of the position it was reached from; the root's is its own.
+    parent: usize,
+    gap: f64,
+    /// The moves the walk has tried at it and below it from positions no closer than its parent.
+    dive: usize,
+    /// Set once `dive` passes `AI_SEARCH.lethal_dive_moves`: the positions below it come after the
+    /// others of their gap.
+    aside: bool,
+}
+
+/// R5119000: whether `branch` or a branch above it is set aside.
+fn below_aside(branches: &[Branch], mut branch: usize) -> bool {
+    while let Some(at) = branches.get(branch) {
+        if at.aside {
+            return true;
+        }
+        if at.parent == branch {
+            return false;
+        }
+        branch = at.parent;
+    }
+    false
+}
+
+/// R5119000: counts an expansion's `tried` moves, made at `gap`, against `branch` and each branch above it
+/// whose parent stands no closer than `gap`, and sets aside each one whose count passes `dive_moves`.
+fn charge_dive(branches: &mut [Branch], mut branch: usize, gap: f64, tried: usize, dive_moves: usize) {
+    while let Some(parent) = branches.get(branch).map(|at| at.parent) {
+        if parent == branch {
+            return;
+        }
+        let flat = branches.get(parent).is_some_and(|up| gap >= up.gap);
+        if flat && let Some(at) = branches.get_mut(branch) {
+            at.dive += tried;
+            at.aside |= at.dive > dive_moves;
+        }
+        branch = parent;
+    }
 }
 
 /// What a walk ended with: a lethal line, a tree searched to the end, or a walk the counter cut short
@@ -185,44 +236,87 @@ fn attacks_left(state: &GameState, unit: &CardInstance) -> i32 {
     attacks_per_turn(state, unit) - spent
 }
 
-/// Gap to lethal: enemy hero life (including Duos pool R964000) less damage past Taunts (#1823).
+/// Gap to lethal: enemy hero life (including Duos pool R964000) less damage past Taunts (#1823), the Burn
+/// tick its hits leave at the turn's end counted (R5229000).
 pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
+    gaps(state, seat, &AI_EVAL).ready
+}
+
+/// R5229000: the weights the solver's own gaps walk the Taunts at, `AI_EVAL` with the damage riders unread.
+/// A rider's Burn ticks at the turn's end (R4154000), which the solver, never ending the turn
+/// (`lethal_moves`), cannot reach, so a gap that counted it would send the walk after a lethal it cannot
+/// prove.
+const LETHAL_WALK: EvalWeights = EvalWeights {
+    damage_rider_read: false,
+    ..AI_EVAL
+};
+
+/// `ready_gap` and, R5119000, the same gap were no Taunt standing.
+struct Gaps {
+    ready: f64,
+    /// The enemy hero's life less every ready attack that may hit it once no Taunt walls it
+    /// (`may_hit_hero`): what spending an attacker on a Taunt the gap already counted it against gives
+    /// up. It reads the attacks through an open prompt, where `ready` does not: `ready` is what the
+    /// seat can deal from this position, and `legal_actions` lists no attack until the prompt is
+    /// answered, but a play that opens a prompt is one step split in two and answering spends no attack,
+    /// so the attackers the line has not spent are still the ones it counts.
+    taunt_free: f64,
+}
+
+/// `ready_gap` at `w`'s Taunt walk, with `Gaps::taunt_free` beside it from the same ready attackers.
+fn gaps(state: &GameState, seat: PlayerId, w: &EvalWeights) -> Gaps {
+    let both = |gap: f64| Gaps {
+        ready: gap,
+        taunt_free: gap,
+    };
     if let Some(result) = &state.result {
-        return if result.winner.player() == Some(seat) {
+        return both(if result.winner.player() == Some(seat) {
             f64::NEG_INFINITY
         } else {
             f64::INFINITY
-        };
+        });
     }
     let opp = seat.opponent();
     // R2201000: a seat that cannot lose stands infinitely far from lethal.
     if !can_lose(state, opp) {
-        return f64::INFINITY;
+        return both(f64::INFINITY);
     }
     let life = effective_life(state, opp);
-    // legal_actions lists no attack while a prompt is open or outside the seat's own main phase.
-    if state.pending.is_some() || state.active != seat || state.phase != Phase::Main {
-        return f64::from(life);
+    // legal_actions lists no attack outside the seat's own main phase.
+    if state.active != seat || state.phase != Phase::Main {
+        return both(f64::from(life));
     }
     // Fused scripts are built from state on lookup (SURFACE §6.6).
     let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
+    let mut free = 0;
     // R4792000: while a Mayor acts each attack's target is drawn (R1200), so one counts only when the
     // hero is the only target it may draw.
     let drawn =
         crate::config::AI_REPLY.drawn_attacks && jackioh_engine::random_targets::targets_random(state);
     for unit in active_units_of(state, seat) {
         let attack = unit_view(state, unit).attack;
-        if attack > 0
-            && has_attack(state, unit)
-            && (!drawn || crate::candidates::draws_only_hero(state, unit))
-        {
+        if attack > 0 && has_attack(state, unit) {
             let hits_hero = may_hit_hero(state, unit);
-            for _ in 0..attacks_left(state, unit) {
-                attacks.push((unit, attack, hits_hero));
+            if hits_hero {
+                free += attack * attacks_left(state, unit).max(0);
+            }
+            if !drawn || crate::candidates::draws_only_hero(state, unit) {
+                for _ in 0..attacks_left(state, unit) {
+                    attacks.push((unit, attack, hits_hero));
+                }
             }
         }
     }
-    f64::from(life - damage_past_taunts(state, opp, &attacks))
+    // Nor while a prompt is open.
+    let ready = if state.pending.is_some() {
+        life
+    } else {
+        life - damage_past_taunts_with(state, opp, &attacks, w)
+    };
+    Gaps {
+        ready: f64::from(ready),
+        taunt_free: f64::from(life - free),
+    }
 }
 
 /// What a new position means for the walk: a proved lethal, a position to search on from, a lethal the
@@ -302,28 +396,42 @@ fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, pr
     if unpaid { Walk::Cut } else { Walk::Exhausted }
 }
 
-/// Index of the open position to expand next: the smallest gap, then the longest line, then the oldest.
-fn next_open(open: &[Open]) -> usize {
+/// Index of the open position to expand next: the smallest gap, then (R5119000) one below no set-aside
+/// branch, then the longest line, then (R5119000, with `keep_attacks`, while that gap is above 0) the
+/// smallest `taunt_free` gap, then the oldest.
+fn next_open(open: &[Open], branches: &[Branch], keep_attacks: bool) -> usize {
     let mut best = 0usize;
+    let mut best_aside = open
+        .first()
+        .is_some_and(|first| below_aside(branches, first.branch));
     for i in 1..open.len() {
         let (Some(a), Some(b)) = (open.get(i), open.get(best)) else {
             continue;
         };
+        let a_aside = below_aside(branches, a.branch);
         let closer = a.gap < b.gap;
-        let deeper = a.gap == b.gap && a.line.len() > b.line.len();
-        let older = a.gap == b.gap && a.line.len() == b.line.len() && a.order < b.order;
-        if closer || deeper || older {
+        let kept = a.gap == b.gap && !a_aside && best_aside;
+        let tied = a.gap == b.gap && a_aside == best_aside;
+        let deeper = tied && a.line.len() > b.line.len();
+        let level = tied && a.line.len() == b.line.len();
+        let by_free = level && keep_attacks && a.gap > 0.0;
+        let freer = by_free && a.taunt_free < b.taunt_free;
+        let older = level && (!by_free || a.taunt_free == b.taunt_free) && a.order < b.order;
+        if closer || kept || deeper || freer || older {
             best = i;
+            best_aside = a_aside;
         }
     }
     best
 }
 
 /// Stage 2: best-first by `ready_gap`, each expansion simulating its first AI_SEARCH.lethalWidth moves.
-/// R4788000: `near` is the walk's allowance. Once it is spent the walk goes on only from a position whose
-/// ready attacks already reach lethal (`ready_gap` at or under 0), on `far`, which also pays for every
-/// proof of a line that won on determinization 0 (`find_lethal_reaching`). With `far` no wider than `near`
-/// the walk stops where `near` does.
+/// R5119000: a child whose dive at gaps no closer than its parent's has tried more than
+/// `AI_SEARCH.lethal_dive_moves` moves is set aside, and while the gap is above 0 the walk keeps its
+/// attackers ready (`next_open`). R4788000: `near` is the walk's allowance. Once it is spent the walk goes
+/// on only from a position whose ready attacks already reach lethal (`ready_gap` at or under 0), on
+/// `far`, which also pays for every proof of a line that won on determinization 0
+/// (`find_lethal_reaching`). With `far` no wider than `near` the walk stops where `near` does.
 fn best_first(
     dets: &[GameState],
     seat: PlayerId,
@@ -334,17 +442,28 @@ fn best_first(
     let root = &dets[0]; // `find_lethal` answered an empty slice itself.
     let mut visited: IndexSet<String> = IndexSet::new();
     visited.insert(position_key(root, seat));
+    let root_gaps = gaps(root, seat, &LETHAL_WALK);
     let mut open: Vec<Open> = vec![Open {
         state: Rc::new(root.clone()),
         line: Vec::new(),
-        gap: ready_gap(root, seat),
+        gap: root_gaps.ready,
+        taunt_free: root_gaps.taunt_free,
+        branch: 0,
         order: 0,
     }];
+    let mut branches: Vec<Branch> = vec![Branch {
+        parent: 0,
+        gap: root_gaps.ready,
+        dive: 0,
+        aside: false,
+    }];
     let mut order: u32 = 1;
+    // R5119000: a negative bound sets nothing aside.
+    let dive_moves = usize::try_from(AI_SEARCH.lethal_dive_moves).unwrap_or(usize::MAX);
 
     let mut near_spent = false;
     while !open.is_empty() {
-        let node = open.remove(next_open(&open));
+        let node = open.remove(next_open(&open, &branches, AI_SEARCH.lethal_keep_attacks));
         // `next_open` takes the smallest gap first: when this one does not reach, none left does.
         let reaches = node.gap <= 0.0;
         if near_spent && !reaches {
@@ -352,7 +471,9 @@ fn best_first(
         }
         let counter = if reaches { far } else { near };
         let width = AI_SEARCH.lethal_width.max(0) as usize;
+        let mut tried = 0usize;
         for action in lethal_moves(&node.state, seat, prices).into_iter().take(width) {
+            tried += 1;
             let next = match simulate(&node.state, seat, &action, counter, prices) {
                 None if reaches => return Walk::Cut,
                 None => {
@@ -371,11 +492,19 @@ fn best_first(
             match verdict {
                 Verdict::Lethal => return Walk::Line(line),
                 Verdict::Deeper => {
-                    let gap = ready_gap(&next, seat);
+                    let next_gaps = gaps(&next, seat, &LETHAL_WALK);
+                    branches.push(Branch {
+                        parent: node.branch,
+                        gap: next_gaps.ready,
+                        dive: 0,
+                        aside: false,
+                    });
                     open.push(Open {
                         state: Rc::new(next),
                         line,
-                        gap,
+                        gap: next_gaps.ready,
+                        taunt_free: next_gaps.taunt_free,
+                        branch: branches.len() - 1,
                         order,
                     });
                     order += 1;
@@ -383,6 +512,7 @@ fn best_first(
                 Verdict::Dead | Verdict::Unpaid => {}
             }
         }
+        charge_dive(&mut branches, node.branch, node.gap, tried, dive_moves);
     }
     Walk::Exhausted
 }
@@ -569,6 +699,8 @@ mod tests {
     const VANILLA: &str = "core-008";
     /// #96 My Pawn: an attack it would answer costs `AI_SEARCH.ai_turn_trap_nodes` more (R4809001).
     const MY_PAWN: &str = "core-096";
+    /// #7 Jewelosco Scarab, a (1) Unit whose Cry opens a Discover.
+    const SCARAB: &str = "core-007";
 
     /// p1 on turn 9 with Mr. Vanilla on the field since before this turn and nothing in hand, against a
     /// hero at `health`; with `pawn`, p2 has My Pawn face-down in its backrow. p1's ids come first, so
@@ -648,5 +780,232 @@ mod tests {
             depth_first(&worlds, P1, &quick(), Prices::NONE),
             Walk::Exhausted
         ));
+    }
+
+    /// p1 on turn 9 with Mr. Vanilla ready and Jewelosco Scarab in hand, one crystal to play it, against a
+    /// hero at 10.
+    fn scarab_in_hand() -> GameState {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "seed": "lethal-r5119000", "active": P1, "turn": 9,
+            "p1": { "field": [VANILLA], "hand": [SCARAB], "mana": 1, "library": [VANILLA, VANILLA] },
+            "p2": { "health": 10, "library": [VANILLA, VANILLA] },
+        }))
+        .state()
+        .clone()
+    }
+
+    #[test]
+    fn r5119000_an_open_prompt_spends_no_attack() {
+        let state = scarab_in_hand();
+        let ready = gaps(&state, P1, &LETHAL_WALK);
+        assert_eq!(
+            (ready.ready, ready.taunt_free),
+            (6.0, 6.0),
+            "the Vanilla's 4 of the hero's 10"
+        );
+        let scarab = state.players[P1]
+            .hand
+            .first()
+            .map(|card| card.id.clone())
+            .unwrap_or_default();
+        let play = legal_actions(&state, P1)
+            .into_iter()
+            .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == scarab))
+            .expect("the Scarab can be played");
+        let counter = create_node_counter(AI_BUDGET.lethal_nodes, None);
+        let prompted = simulate(&state, P1, &play, &counter, Prices::NONE)
+            .and_then(Result::ok)
+            .expect("the play runs");
+        assert!(prompted.pending.is_some(), "the Cry's Discover is open");
+        let open = gaps(&prompted, P1, &LETHAL_WALK);
+        assert_eq!(open.ready, 10.0, "no attack is listed while the prompt is open");
+        assert_eq!(
+            open.taunt_free, 6.0,
+            "answering it spends no attack, so the Vanilla is still ready"
+        );
+    }
+
+    /// #55 Lava Golem, a 10/5 Taunt: the Vanilla's 4 does not kill it.
+    const GOLEM: &str = "core-055";
+    /// S+ #126 Vela: its Activate opens a prompt for an enemy tile and deals 8 to the Units on its line.
+    const VELA: &str = "stinkyscapeplus-126";
+
+    #[test]
+    fn r5119000_a_prompt_whose_answer_closes_the_gap_is_ordered_with_the_attackers_kept() {
+        jackioh_cards::register_all();
+        // p1's ready Vanilla is walled by a Golem at 4 life; Vela's Activate can clear the wall.
+        let root = scenario(json!({
+            "seed": "lethal-r5119000-prompt", "active": P1, "turn": 9,
+            "p1": { "field": [VANILLA, VELA], "mana": 2, "library": [VANILLA, VANILLA] },
+            "p2": { "field": [GOLEM], "health": 4, "library": [VANILLA, VANILLA] },
+        }))
+        .state()
+        .clone();
+        assert_eq!(
+            gaps(&root, P1, &LETHAL_WALK).ready,
+            4.0,
+            "the Golem walls the Vanilla"
+        );
+        let legal = legal_actions(&root, P1);
+        let attack = legal
+            .iter()
+            .find(|action| matches!(action, ActionBody::Attack { target_id, .. } if !target_id.starts_with("hero")))
+            .cloned()
+            .expect("the Vanilla may attack the Golem");
+        let activate = legal
+            .iter()
+            .find(|action| matches!(action, ActionBody::Activate { .. }))
+            .cloned()
+            .expect("Vela may Activate");
+        let counter = create_node_counter(AI_BUDGET.lethal_nodes, None);
+        let reach = |from: &GameState, action: &ActionBody| {
+            simulate(from, P1, action, &counter, Prices::NONE)
+                .and_then(Result::ok)
+                .expect("the move runs")
+        };
+        let spent = reach(&root, &attack);
+        let prompted = reach(&root, &activate);
+        assert!(prompted.pending.is_some(), "Vela's tile prompt is open");
+        let closes = legal_actions(&prompted, P1).iter().any(|answer| {
+            simulate(&prompted, P1, answer, &counter, Prices::NONE)
+                .and_then(Result::ok)
+                .is_some_and(|next| gaps(&next, P1, &LETHAL_WALK).ready <= 0.0)
+        });
+        assert!(
+            closes,
+            "an answer clears the wall, and the Vanilla's hit is lethal"
+        );
+        // The walk opens the attack first, in move order: both children stand at the root's gap.
+        let state = Rc::new(root.clone());
+        let branches = [branch_at(0, 4.0), branch_at(0, 4.0), branch_at(0, 4.0)];
+        let opened = [(&spent, 1u32), (&prompted, 2)].map(|(next, order)| {
+            let at = gaps(next, P1, &LETHAL_WALK);
+            assert_eq!(at.ready, 4.0);
+            open_at(&state, at.ready, at.taunt_free, 1, order as usize, order)
+        });
+        assert_eq!(
+            next_open(&opened, &branches, true),
+            1,
+            "the prompt, whose answer spends no attack, before the attack that spent the Vanilla"
+        );
+    }
+
+    /// An open position at `gap`, `taunt_free` and `depth`, on `branch`, the `order`-th the walk opened.
+    fn open_at(
+        state: &Rc<GameState>,
+        gap: f64,
+        taunt_free: f64,
+        depth: usize,
+        branch: usize,
+        order: u32,
+    ) -> Open {
+        Open {
+            state: Rc::clone(state),
+            line: vec![ActionBody::EndTurn; depth],
+            gap,
+            taunt_free,
+            branch,
+            order,
+        }
+    }
+
+    /// A branch reached from `parent` at `gap`, nothing tried below it yet.
+    fn branch_at(parent: usize, gap: f64) -> Branch {
+        Branch {
+            parent,
+            gap,
+            dive: 0,
+            aside: false,
+        }
+    }
+
+    #[test]
+    fn r5119000_at_a_flat_gap_the_walk_keeps_its_attackers_ready() {
+        let state = Rc::new(vanilla_into(5, false));
+        let branches = [branch_at(0, 4.0), branch_at(0, 4.0), branch_at(0, 4.0)];
+        // Two children of the root at its gap: the first spent its attacker on a Taunt the gap already
+        // counted it against, the second kept it ready.
+        let pair = [
+            open_at(&state, 4.0, 4.0, 1, 1, 1),
+            open_at(&state, 4.0, 0.0, 1, 2, 2),
+        ];
+        assert_eq!(
+            next_open(&pair, &branches, true),
+            1,
+            "the attacker kept ready first"
+        );
+        assert_eq!(next_open(&pair, &branches, false), 0, "without it, by age alone");
+        // Where the ready attacks already reach lethal the oldest comes first: there the kills that open
+        // the way are the line.
+        let lethal = [
+            open_at(&state, 0.0, 0.0, 1, 1, 1),
+            open_at(&state, 0.0, -4.0, 1, 2, 2),
+        ];
+        assert_eq!(next_open(&lethal, &branches, true), 0);
+    }
+
+    #[test]
+    fn r5119000_a_dive_past_its_moves_at_a_flat_gap_is_set_aside() {
+        let state = Rc::new(vanilla_into(5, false));
+        // The root at 4, two children at 4, and a grandchild below the first.
+        let mut branches = vec![
+            branch_at(0, 4.0),
+            branch_at(0, 4.0),
+            branch_at(0, 4.0),
+            branch_at(1, 4.0),
+        ];
+        let sibling_and_deep = || {
+            [
+                open_at(&state, 4.0, 4.0, 1, 2, 2),
+                open_at(&state, 4.0, 4.0, 2, 3, 3),
+            ]
+        };
+        let dive = 10;
+        assert_eq!(
+            next_open(&sibling_and_deep(), &branches, true),
+            1,
+            "the deeper first while nothing is set aside"
+        );
+        // An expansion that came closer than the root counts against neither branch above it.
+        charge_dive(&mut branches, 3, 3.0, dive + 1, dive);
+        assert!(!below_aside(&branches, 3));
+        // Moves tried at the root's gap below the first child, past the bound, set it aside.
+        charge_dive(&mut branches, 3, 4.0, dive + 1, dive);
+        assert!(branches[1].aside && branches[3].aside && !branches[2].aside);
+        assert_eq!(
+            next_open(&sibling_and_deep(), &branches, true),
+            0,
+            "the sibling before the dive set aside"
+        );
+        let sibling_and_closer = [
+            open_at(&state, 4.0, 4.0, 1, 2, 2),
+            open_at(&state, 3.0, 3.0, 2, 3, 4),
+        ];
+        assert_eq!(
+            next_open(&sibling_and_closer, &branches, true),
+            1,
+            "a closer position first, set aside or not"
+        );
+    }
+
+    /// S+ #114 Reign, a 12/8 Ranged Windfury Pierce: "Damage also Burns 4."
+    const REIGN: &str = "stinkyscapeplus-114";
+
+    /// R5229000: Reign's two swings at a hero on 30 deal 24 and leave Burn 8, which ticks at the turn's
+    /// end: `ready_gap` reads the tick, so 30 less 32, while the solver's own gap, which never ends the turn,
+    /// reads 30 less 24.
+    #[test]
+    fn r5229000_the_solvers_gap_counts_no_burn_tick() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "lethal-r5229000", "active": P1, "turn": 9,
+            "p1": { "field": [REIGN], "library": [VANILLA, VANILLA] },
+            "p2": { "health": 30, "library": [VANILLA, VANILLA] },
+        }))
+        .state()
+        .clone();
+        assert_eq!(ready_gap(&state, P1), -2.0);
+        assert_eq!(gaps(&state, P1, &LETHAL_WALK).ready, 6.0);
     }
 }

@@ -16,7 +16,8 @@ import { BREAKPOINT_PX } from "../../../apps/web/src/breakpoints.ts";
 import { menuShellTestid } from "../../../apps/web/src/shell/testids.ts";
 import { MENU_SIZES, accounts, routes, timeouts } from "../../support/config.ts";
 import { expectShellNav } from "../../support/shell.ts";
-import { COLLECTION_SCREEN, FRIENDS_BUTTON, FRIENDS_CLOSE, FRIENDS_PANEL, PLAY_HUB, SHOP_PANEL, ts } from "../../support/testids.ts";
+import { COLLECTION_SCREEN, PLAY_HUB, SHOP_PANEL, ts } from "../../support/testids.ts";
+import { friendsTestid } from "../../../apps/web/src/together/testids.ts";
 
 /**
  * R109 refuses an account past 300 requests a minute, and each size here opens about ten screens, so the sizes
@@ -71,12 +72,12 @@ function fanDealt(): void {
 }
 
 function openDrawer(): void {
-  navItem(FRIENDS_BUTTON).click();
-  cy.get(ts(FRIENDS_PANEL), { timeout: timeouts.view }).should("be.visible");
+  navItem(friendsTestid.button).click();
+  cy.get(ts(friendsTestid.panel), { timeout: timeouts.view }).should("be.visible");
 }
 
 function expectDrawerClosed(path: string): void {
-  cy.get(ts(FRIENDS_PANEL)).should("not.exist");
+  cy.get(ts(friendsTestid.panel)).should("not.exist");
   cy.location("pathname").should("eq", path);
 }
 
@@ -125,7 +126,7 @@ describe("51 — the menus' shell (issue #3728)", () => {
           cy.get(DRAWER_SCRIM).click(OUTSIDE_X_PX, Math.round(size.height / 2));
         } else {
           // At 600 px and under the drawer takes the whole width: its ✕ is the press that closes it.
-          cy.get(ts(FRIENDS_CLOSE)).click();
+          cy.get(ts(friendsTestid.close)).click();
         }
         expectDrawerClosed(routes.collection());
 

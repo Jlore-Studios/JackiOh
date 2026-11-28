@@ -41,23 +41,41 @@ struct CardText {
     zh: Option<Chinese>,
 }
 
-/// A card's voice lines by hook, a trigger's a list (R1088).
+/// A card's voice lines by hook, a trigger's a list (R1088), and since R5188000 the recurring hooks'
+/// (`apps/web/src/audio/constants.ts` CARD_HOOKS), any hook's a pool when it is a list.
 #[derive(Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct Voice {
     #[serde(skip_serializing_if = "Option::is_none")]
-    play: Option<String>,
+    play: Option<Line>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    attack: Option<String>,
+    attack: Option<Line>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    death: Option<String>,
+    death: Option<Line>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    cast: Option<String>,
+    cast: Option<Line>,
     #[serde(skip_serializing_if = "Option::is_none")]
     trigger: Option<Vec<String>>,
-    // R5264500: the line a card speaks as its End of turn entry runs (FvH #59).
-    #[serde(rename = "endOfTurn", skip_serializing_if = "Option::is_none")]
-    end_of_turn: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    start_of_turn: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    end_of_turn: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    whenever: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    activate: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hurt: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hit: Option<Line>,
+}
+
+/// R5188000: a hook's words: one line, or a pool of them that the client picks one of each time.
+#[derive(Deserialize, Serialize)]
+#[serde(untagged)]
+enum Line {
+    One(String),
+    Pool(Vec<String>),
 }
 
 /// A card's name and faces in Chinese, and its preview labels' templates (R280).
@@ -264,6 +282,31 @@ fn a_misspelled_field_fails_naming_its_card() {
     assert!(
         twice.contains("core-001"),
         "a key written twice is refused: {twice}"
+    );
+}
+
+#[test]
+fn r5188000_a_voice_takes_a_pool_on_any_hook_and_the_new_hooks() {
+    let voice: Voice = yaml_serde::from_str("play: [a, b]\nhurt: c\n")
+        .unwrap_or_else(|error| panic!("R5188000: a pool and a new hook parse: {error}"));
+    assert_eq!(
+        serde_json::to_string(&voice).unwrap_or_default(),
+        r#"{"play":["a","b"],"hurt":"c"}"#,
+        "R5188000: a pool stays a list and a single line a string"
+    );
+    let every: Voice =
+        yaml_serde::from_str("startOfTurn: a\nendOfTurn: b\nwhenever: c\nactivate: [d, e]\nhit: f\n")
+            .unwrap_or_else(|error| panic!("R5188000: every new hook parses by its camelCase name: {error}"));
+    assert_eq!(
+        serde_json::to_string(&every).unwrap_or_default(),
+        r#"{"startOfTurn":"a","endOfTurn":"b","whenever":"c","activate":["d","e"],"hit":"f"}"#
+    );
+    let error = parse("core-001: # Big D-fender\n  voice:\n    whenevr: x\nemotes: {}\n")
+        .err()
+        .unwrap_or_default();
+    assert!(
+        error.contains("core-001") && error.contains("unknown field `whenevr`"),
+        "R5188000: a misspelled hook is refused: {error}"
     );
 }
 

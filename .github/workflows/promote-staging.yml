@@ -1,7 +1,8 @@
 # Moves `_staging` to a snapshot of main every two hours (#3275, the owners' call of 2026-11-05):
 # main's newest commit whose push-to-main CI run passed, never backwards, by fast-forward. Its push
 # starts deploy-staging.yml, which deploys staging to https://staging.jackioh.com; once a day super.yml
-# tests staging's commit, and promote-production.yml puts it on jackioh.com when every job passed.
+# tests staging's commit, and promote-production.yml puts it on jackioh.com when every gating job passed
+# (super.yml's header names the report-only jobs, which hold nothing).
 # scripts/promote-staging.sh is the logic (read its header) and apps/web/src/net/promote-staging.test.ts
 # holds it; docs/deploy-cloudflare.md, section 2, is the plan.
 #

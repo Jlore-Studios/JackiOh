@@ -1,0 +1,1712 @@
+{
+  "set": {
+    "core-033": {
+      "id": "core-033",
+      "index": "33",
+      "name": "Unstable Clone Machine",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "copies",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 26,
+      "base": {
+        "keywords": [],
+        "text": "After you play a card, shuffle {copies|copy|copies} of it into your deck.\nActivate: Draw {draw|card|cards}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "After you play a card, shuffle {copies|Radiant copy|Radiant copies} of it into your deck.\nActivate: Draw {draw|card|cards}."
+      }
+    },
+    "classic-028": {
+      "id": "classic-028",
+      "index": "28",
+      "name": "Second Wind",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 0,
+      "loc": 24,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nCry: Discard your hand and exile your deck.\nAura: Every card in your deck and graveyard has Flashback."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nCry: Discard your hand and your deck.\nAura: Every card in your deck and graveyard has Flashback."
+      }
+    },
+    "classic-037": {
+      "id": "classic-037",
+      "index": "37",
+      "name": "Last Hurrah",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "discard",
+          "base": 4,
+          "radiant": 4,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Draw your deck. At the end of this turn, discard {discard|card|cards}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Draw your deck. At the end of your next turn, discard {discard|card|cards}."
+      }
+    },
+    "classicplus-033": {
+      "id": "classicplus-033",
+      "index": "33",
+      "name": "Ivory Tower",
+      "set": "Classic+",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "loc": 38,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Tradable"
+          }
+        ],
+        "text": "Indestructible, Tradable\nThe first Unit you stack onto this is fused into it.\nAura: Your Units have Flying and Stack."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Tradable"
+          }
+        ],
+        "text": "Indestructible, Tradable\nThe first Unit you stack onto this becomes Radiant and is fused into it.\nAura: Your Units have Flying and Stack."
+      }
+    },
+    "classicplus-037": {
+      "id": "classicplus-037",
+      "index": "37",
+      "name": "Wardrum",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Quickdraw",
+        "Acclaimed"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "threshold",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 2,
+          "read": "handOrDeck"
+        }
+      ],
+      "loc": 61,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Divine Shield"
+          }
+        ],
+        "text": "Divine Shield\nWhile this is in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of a random non-Unit you played this turn."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Divine Shield"
+          }
+        ],
+        "text": "Divine Shield\nWhile this is in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of each non-Unit you played this turn."
+      }
+    },
+    "classicplus-068": {
+      "id": "classicplus-068",
+      "index": "68",
+      "name": "Organic Produce",
+      "set": "Classic+",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "fruits",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "read": "cry"
+        }
+      ],
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Cry: Add {fruits|random Fruit|random Fruits} to your hand. Each costs ({setCost}).\nAura: Fruits you play are Radiant."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Cry: Add {fruits|random Fruit|random Fruits} to your hand. Each costs ({setCost}).\nAura: Fruits you play are Radiant."
+      }
+    },
+    "meditative-011": {
+      "id": "meditative-011",
+      "index": "11",
+      "name": "Double Header",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 53,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Tradable"
+          }
+        ],
+        "text": "Indestructible, Tradable\nThe first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Tradable"
+          }
+        ],
+        "text": "Indestructible, Tradable\nThe first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
+      }
+    },
+    "meditative-019-1": {
+      "id": "meditative-019-1",
+      "index": "19.1",
+      "name": "Temporal Rift",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Epic",
+      "token": true,
+      "cost": 1,
+      "refs": [
+        "meditative-019-1"
+      ],
+      "params": [
+        {
+          "key": "mana",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "nextMana",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        },
+        {
+          "key": "draw",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 18,
+      "base": {
+        "keywords": [],
+        "text": "Take an extra turn after this one. Gain {mana} mana.\nYou can take only one extra turn from Temporal Rift each game."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Take an extra turn after this one. Gain {mana} mana and {nextMana} mana next turn. Draw {draw}.\nYou can take only one extra turn from Temporal Rift each game."
+      }
+    },
+    "meditative-087": {
+      "id": "meditative-087",
+      "index": "87",
+      "name": "Tatches the Totem",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Felinor",
+        "KY",
+        "CN",
+        "Jlockeed"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "cards",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 58,
+      "base": {
+        "attack": 0,
+        "health": 3,
+        "keywords": [],
+        "text": "While this is in your hand or deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 6,
+        "keywords": [],
+        "text": "While this is in your hand or deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
+      }
+    },
+    "meditative-089": {
+      "id": "meditative-089",
+      "index": "89",
+      "name": "Jlarna",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "credit",
+          "base": 4,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "instalments",
+          "base": 4,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 46,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Credit line {credit}: spend up to {credit} mana you don't have. Repay it in {instalments|instalment|instalments}, one each start of turn.\nEnd of turn: Tribute this if you didn't use it this turn."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Credit line {credit}: spend up to {credit} mana you don't have. Repay it in {instalments|instalment|instalments}, one each start of turn."
+      }
+    },
+    "stinkyscape-046": {
+      "id": "stinkyscape-046",
+      "index": "46",
+      "name": "Circadian Halfcycler",
+      "set": "Stinkyscape",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "stinkyscape-t-drone-interceptor"
+      ],
+      "loc": 21,
+      "base": {
+        "keywords": [],
+        "text": "Aura: The AI plays the first 3 actions of each of your turns.\nEnd of turn: Summon 1 to 2 Drone Interceptors."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: The AI plays the first 3 actions of each of your turns.\nEnd of turn: Summon 1 to 2 Radiant Drone Interceptors."
+      }
+    },
+    "stinkyscape-112": {
+      "id": "stinkyscape-112",
+      "index": "112",
+      "name": "Job Application",
+      "set": "Stinkyscape",
+      "type": "Field Spell",
+      "tags": [
+        "Quest"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "stinkyscape-112-1"
+      ],
+      "params": [
+        {
+          "key": "buffs",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 253,
+      "base": {
+        "keywords": [],
+        "text": "Death: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 4 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\nDeath: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 4 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      }
+    },
+    "stinkyscape-128": {
+      "id": "stinkyscape-128",
+      "index": "128",
+      "name": "Jlockeed's Yamato Cannon",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Jlockeed"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 2
+      },
+      "loc": 14,
+      "base": {
+        "attack": 3,
+        "health": 1,
+        "keywords": [
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Cleave"
+          }
+        ],
+        "text": "Ranged, Cleave\nEmbiggened (2): Starship Piece."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Ranged, Cleave, Rush\nEmbiggened (2): Starship Piece."
+      }
+    },
+    "stinkyscape-173": {
+      "id": "stinkyscape-173",
+      "index": "173",
+      "name": "Abandoned Spice Tower",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "stinkyscape-089"
+      ],
+      "params": [
+        {
+          "key": "spices",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "selfDamage",
+          "base": 4,
+          "radiant": 4,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 44,
+      "base": {
+        "attack": 0,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Can't attack, Can't Defend\nDeath: Add {spices|Spice|Spices} to your hand.\nActivate: Take {selfDamage} damage. Tribute this."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 16,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Can't attack, Can't Defend\nDeath: Add {spices|Radiant Spice|Radiant Spices} to your hand.\nActivate: Take {selfDamage} damage. Tribute this."
+      }
+    },
+    "stinkyscape-177": {
+      "id": "stinkyscape-177",
+      "index": "177",
+      "name": "Cloaking Module",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "loc": 6,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          },
+          {
+            "kind": "Cloaked"
+          },
+          {
+            "kind": "Immutable"
+          }
+        ],
+        "text": "Starship Piece, Equip, Cloaked, Immutable"
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          },
+          {
+            "kind": "Cloaked"
+          },
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          }
+        ],
+        "text": "Starship Piece, Equip, Cloaked, Immutable, Immune to Spells"
+      }
+    },
+    "stinkyscape-t-axnit": {
+      "id": "stinkyscape-t-axnit",
+      "index": "T-axnit",
+      "name": "Axnit",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [
+        "Resource",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Epic",
+      "token": true,
+      "cost": 0,
+      "params": [
+        {
+          "key": "damage",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "resource": {
+        "rarity": "Epic",
+        "base": {
+          "sellMin": 4,
+          "sellMax": 14,
+          "buy": 14
+        },
+        "radiant": {
+          "sellMin": 8,
+          "sellMax": 28,
+          "buy": 28
+        }
+      },
+      "loc": 29,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage to an enemy, with Lifesteal."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Echo 1\nDeal {damage} damage to an enemy, with Lifesteal."
+      }
+    },
+    "stinkyscape-t-narcor": {
+      "id": "stinkyscape-t-narcor",
+      "index": "T-narcor",
+      "name": "Narcor",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [
+        "Resource",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 0,
+      "resource": {
+        "rarity": "Legendary",
+        "base": {
+          "sellMin": 10,
+          "sellMax": 21,
+          "buy": 21
+        },
+        "radiant": {
+          "sellMin": 20,
+          "sellMax": 42,
+          "buy": 42
+        }
+      },
+      "loc": 18,
+      "base": {
+        "keywords": [],
+        "text": "Add a random Legendary card to your hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Add a random Radiant Legendary card to your hand."
+      }
+    },
+    "stinkyscape-t-red-narcor": {
+      "id": "stinkyscape-t-red-narcor",
+      "index": "T-red-narcor",
+      "name": "Red Narcor",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [
+        "Resource",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Mythic",
+      "token": true,
+      "cost": 0,
+      "params": [
+        {
+          "key": "mana",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "resource": {
+        "rarity": "Mythic",
+        "base": {
+          "sellMin": 16,
+          "sellMax": 32,
+          "buy": 32
+        },
+        "radiant": {
+          "sellMin": 32,
+          "sellMax": 64,
+          "buy": 64
+        }
+      },
+      "loc": 22,
+      "base": {
+        "keywords": [],
+        "text": "Gain {mana} mana. Draw {draw|card|cards}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Gain {mana} mana. Draw {draw|card|cards}."
+      }
+    },
+    "traininggrounds-012": {
+      "id": "traininggrounds-012",
+      "index": "12",
+      "name": "Fortify",
+      "set": "Training Grounds",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "health",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "armor",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 30,
+      "base": {
+        "keywords": [],
+        "text": "Give a Unit +{health} Health, +{armor} Armor and Taunt."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Give a Unit +{health} Health, +{armor} Armor, Taunt and Divine Shield."
+      }
+    },
+    "traininggrounds-031": {
+      "id": "traininggrounds-031",
+      "index": "31",
+      "name": "Level Up!",
+      "set": "Training Grounds",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 68,
+      "base": {
+        "keywords": [],
+        "text": "After one of your Units attacks, if it destroyed an enemy Unit, it becomes Radiant."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "After one of your Units attacks, it becomes Radiant."
+      }
+    },
+    "traininggrounds-052": {
+      "id": "traininggrounds-052",
+      "index": "52",
+      "name": "Legacy: Snom Bunny Mind Control",
+      "set": "Training Grounds",
+      "type": "Spell",
+      "tags": [
+        "Legacy"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 4,
+      "loc": 26,
+      "base": {
+        "keywords": [],
+        "text": "Steal an enemy Unit. Set its stats to 2/2."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Steal an enemy card."
+      }
+    },
+    "stinkyscapeplus-023": {
+      "id": "stinkyscapeplus-023",
+      "index": "23",
+      "name": "GIGA-ify",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "loc": 35,
+      "base": {
+        "keywords": [],
+        "text": "Make a permanent in your hand GIGA and Indestructible."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Make two permanents in your hand GIGA and Indestructible."
+      }
+    },
+    "stinkyscapeplus-037": {
+      "id": "stinkyscapeplus-037",
+      "index": "37",
+      "name": "Scorch",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "loc": 18,
+      "base": {
+        "attack": 1,
+        "health": 5,
+        "keywords": [
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Can't Defend, Ranged, Pierce\nCan only attack the Unit directly across from this.\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Can't Defend, Ranged, Pierce\nCan only attack the Unit directly across from this.\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "burns",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-040": {
+      "id": "stinkyscapeplus-040",
+      "index": "40",
+      "name": "Mender",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 0,
+      "loc": 43,
+      "base": {
+        "keywords": [],
+        "text": "End of turn: Heal adjacent Units to full."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "End of turn: Heal adjacent Units to full and give them Divine Shield."
+      }
+    },
+    "stinkyscapeplus-046": {
+      "id": "stinkyscapeplus-046",
+      "index": "46",
+      "name": "Phase Fabric",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Mindustrial",
+        "Mineral"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "loc": 27,
+      "base": {
+        "keywords": [],
+        "text": "Give a Unit Immutable, Immune to Spells and Divine Shield."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Give a Unit Immutable, Immune to Spells, Divine Shield and Can't be attacked."
+      }
+    },
+    "stinkyscapeplus-055": {
+      "id": "stinkyscapeplus-055",
+      "index": "55",
+      "name": "Thorium Reactor",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "loc": 80,
+      "base": {
+        "keywords": [],
+        "text": "Start of turn: Gain {mana} mana and draw {card|card|cards}.\nEnd of turn: {chance}% chance to blow up, dealing {damage} damage to your hero.\nActivate: Discard a Thorium to skip the blow-up chance this turn."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\nStart of turn: Gain {mana} mana and draw {card|card|cards}.\nEnd of turn: {chance}% chance to blow up, dealing {damage} damage to your hero.\nActivate: Discard a Thorium to skip the blow-up chance this turn."
+      },
+      "params": [
+        {
+          "key": "mana",
+          "base": 4,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "card",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "chance",
+          "base": 15,
+          "radiant": 15,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "damage",
+          "base": 30,
+          "radiant": 30,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "refs": [
+        "stinkyscapeplus-048"
+      ]
+    },
+    "stinkyscapeplus-064": {
+      "id": "stinkyscapeplus-064",
+      "index": "64",
+      "name": "Surge Wall",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 4
+      },
+      "loc": 24,
+      "base": {
+        "attack": 0,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/24."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 12,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Armor",
+            "n": 2
+          }
+        ],
+        "text": "Can't attack, Taunt, Pierce, Armor 2\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
+      },
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedDamage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-065": {
+      "id": "stinkyscapeplus-065",
+      "index": "65",
+      "name": "Thorium Wall",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 4
+      },
+      "loc": 29,
+      "base": {
+        "attack": 0,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Can't attack, Taunt\nEmbiggened (4): GIGA, 0/32."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 16,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Armor",
+            "n": 2
+          }
+        ],
+        "text": "Can't attack, Taunt, Armor 2\nEmbiggened (4): GIGA, 0/64."
+      }
+    },
+    "stinkyscapeplus-066": {
+      "id": "stinkyscapeplus-066",
+      "index": "66",
+      "name": "Plastanium Wall",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 4
+      },
+      "loc": 18,
+      "base": {
+        "attack": 0,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Can't attack, Taunt\nEnd of turn: Gain Divine Shield.\nEmbiggened (4): GIGA, 0/16."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Armor",
+            "n": 2
+          }
+        ],
+        "text": "Can't attack, Taunt, Armor 2\nEnd of turn: Gain Divine Shield.\nEmbiggened (4): GIGA, 0/32."
+      }
+    },
+    "stinkyscapeplus-067": {
+      "id": "stinkyscapeplus-067",
+      "index": "67",
+      "name": "Phase Wall",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 4
+      },
+      "loc": 6,
+      "base": {
+        "attack": 0,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          }
+        ],
+        "text": "Can't attack, Taunt, Immutable, Immune to Spells\nEmbiggened (4): GIGA, 0/24."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 12,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Armor",
+            "n": 2
+          }
+        ],
+        "text": "Can't attack, Taunt, Immutable, Immune to Spells, Armor 2\nEmbiggened (4): GIGA, 0/48."
+      }
+    },
+    "stinkyscapeplus-079": {
+      "id": "stinkyscapeplus-079",
+      "index": "79",
+      "name": "A Glimpse into the Endless Sea",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Wincon",
+        "Terminus"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 4,
+      "loc": 28,
+      "base": {
+        "keywords": [],
+        "text": "Exile your deck. Start an {count|turn|turns} countdown. When it ends, win the game."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Exile your deck. Your hero gains {armor} Armor. Start an {count|turn|turns} countdown. When it ends, win the game."
+      },
+      "params": [
+        {
+          "key": "count",
+          "base": 8,
+          "radiant": 8,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "armor",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ]
+    },
+    "stinkyscapeplus-082": {
+      "id": "stinkyscapeplus-082",
+      "index": "82",
+      "name": "Endless Expedition",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Quickdraw"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 1,
+      "loc": 27,
+      "base": {
+        "keywords": [],
+        "text": "For the rest of the game, lose {mana} mana. Add a random Terminus card to your hand. It costs (2)."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "For the rest of the game, lose {mana} mana. Add a random Radiant Terminus card to your hand. It costs (2)."
+      },
+      "params": [
+        {
+          "key": "mana",
+          "base": 1,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-129": {
+      "id": "stinkyscapeplus-129",
+      "index": "129",
+      "name": "Multiplicative Reconstructor",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 32,
+      "base": {
+        "keywords": [],
+        "text": "Start of turn: Add a random (2) Cost Automa card to your hand. It has no Tribute cost."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Start of turn: Add a random Radiant (2) Cost Automa card to your hand. It has no Tribute cost."
+      }
+    },
+    "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim": {
+      "id": "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim",
+      "index": "T-terminus-starship-heat-death-pilgrim",
+      "name": "Heat Death Pilgrim",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Starship",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 3,
+      "loc": 9,
+      "printedRarity": "Legendary",
+      "base": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Trila 3, RR-5000 and Vamp Rounds, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Trila 3, Radiant RR-5000 and Radiant Vamp Rounds, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "refs": [
+        "stinkyscape-107",
+        "stinkyscape-108",
+        "stinkyscape-122"
+      ]
+    },
+    "stinkyscapeplus-t-terminus-starship-entropys-wake": {
+      "id": "stinkyscapeplus-t-terminus-starship-entropys-wake",
+      "index": "T-terminus-starship-entropys-wake",
+      "name": "Entropy's Wake",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Starship",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 3,
+      "loc": 9,
+      "printedRarity": "Legendary",
+      "base": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Disintegrex and Flak v4, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Disintegrex and Radiant Flak v4, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "refs": [
+        "stinkyscape-057",
+        "stinkyscape-105"
+      ]
+    },
+    "stinkyscapeplus-t-terminus-starship-red-giant-requiem": {
+      "id": "stinkyscapeplus-t-terminus-starship-red-giant-requiem",
+      "index": "T-terminus-starship-red-giant-requiem",
+      "name": "Red Giant Requiem",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Starship",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 3,
+      "loc": 8,
+      "printedRarity": "Legendary",
+      "base": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Cannon v5 and Ultra Capacitor, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Cannon v5 and Radiant Ultra Capacitor, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "refs": [
+        "stinkyscape-060",
+        "stinkyscape-133"
+      ]
+    },
+    "stinkyscapeplus-t-terminus-starship-cold-exodus": {
+      "id": "stinkyscapeplus-t-terminus-starship-cold-exodus",
+      "index": "T-terminus-starship-cold-exodus",
+      "name": "Cold Exodus",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Starship",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 3,
+      "loc": 9,
+      "printedRarity": "Legendary",
+      "base": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Frost Module, Reflective Plating and Beam v4, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Frost Module, Radiant Reflective Plating and Radiant Beam v4, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "refs": [
+        "stinkyscape-054",
+        "stinkyscape-104",
+        "stinkyscape-175"
+      ]
+    },
+    "stinkyscapeplus-t-terminus-starship-omega-drift": {
+      "id": "stinkyscapeplus-t-terminus-starship-omega-drift",
+      "index": "T-terminus-starship-omega-drift",
+      "name": "Omega Drift",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Starship",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 3,
+      "loc": 9,
+      "printedRarity": "Legendary",
+      "base": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Beam v5 and Warpfield Amplifier, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Beam v5 and Radiant Warpfield Amplifier, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "refs": [
+        "stinkyscape-058",
+        "stinkyscape-106"
+      ]
+    },
+    "stinkyscapeplus-t-terminus-starship-farthest-shore": {
+      "id": "stinkyscapeplus-t-terminus-starship-farthest-shore",
+      "index": "T-terminus-starship-farthest-shore",
+      "name": "Farthest Shore",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Starship",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 3,
+      "loc": 10,
+      "printedRarity": "Legendary",
+      "base": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Repeater v5, Ultra Capacitor and Healing Capsule, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Repeater v5, Radiant Ultra Capacitor and Radiant Healing Capsule, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "refs": [
+        "stinkyscape-043",
+        "stinkyscape-059",
+        "stinkyscape-133"
+      ]
+    },
+    "stinkyscapeplus-t-terminus-starship-nightfall-covenant": {
+      "id": "stinkyscapeplus-t-terminus-starship-nightfall-covenant",
+      "index": "T-terminus-starship-nightfall-covenant",
+      "name": "Nightfall Covenant",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Starship",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 3,
+      "loc": 10,
+      "printedRarity": "Legendary",
+      "base": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Flak v5 and Vamp Rounds, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Flak v5 and Radiant Vamp Rounds, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "refs": [
+        "stinkyscape-061",
+        "stinkyscape-122"
+      ]
+    },
+    "stinkyscapeplus-t-terminus-starship-vacuum-psalm": {
+      "id": "stinkyscapeplus-t-terminus-starship-vacuum-psalm",
+      "index": "T-terminus-starship-vacuum-psalm",
+      "name": "Vacuum Psalm",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Starship",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 3,
+      "loc": 8,
+      "printedRarity": "Legendary",
+      "base": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Cannon v3, Beam v3 and Flak v3, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Flying, Ranged\nDormant until it launches. It comes holding Radiant Cannon v3, Radiant Beam v3 and Radiant Flak v3, and can't be launched by hand.",
+        "attack": 0,
+        "health": 0
+      },
+      "refs": [
+        "stinkyscape-050",
+        "stinkyscape-052",
+        "stinkyscape-053"
+      ]
+    }
+  }
+}

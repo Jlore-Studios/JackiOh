@@ -4,7 +4,7 @@
 //! the plays of a last-resort card it may not play yet (R4783040).
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::afflictions::Affliction;
+use jackioh_engine::afflictions::{Affliction, Riders};
 use jackioh_engine::config::RANDOM_ATTACK_TARGET;
 use jackioh_engine::effects::PLAGUE_PLACEMENT_HOOK;
 use jackioh_engine::{
@@ -13,8 +13,8 @@ use jackioh_engine::{
     active_units_of, adjacent, attack_mod_for, attack_restriction, beneath_at, canonical, card_at,
     carried_at, cleave_struck, converts_to, damage_pool_of, effective_cost, effective_life, find_def,
     find_instance, find_instance_mut, flags_of, half_of_lane, has_keyword, is_locked, lane_multiplier_for,
-    legal_actions, midlane_lanes_of, occupant_at, pierces, position_after_switch, row_size, slot_of,
-    strike_back_multiplier_for, subsystems, unit_damage_cap, unit_view,
+    legal_actions, midlane_lanes_of, occupant_at, pierces, position_after_switch, riders_of, row_size,
+    slot_of, strike_back_multiplier_for, subsystems, unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
@@ -219,6 +219,10 @@ pub(crate) struct Side {
     /// R4064000: what its side's damage pools have left for a hit on it (§4.4 step 3b, `damage_pool_of`),
     /// read with `AI_EVAL.pool_and_conversion_read`; 0 without it.
     pub(crate) pool: i32,
+    /// R5229000: the Burn and the Toxic its hits add to a target they leave standing (§4.4 step 7,
+    /// `riders_of`), read with `AI_EVAL.pool_and_conversion_read` and `AI_EVAL.damage_rider_read`; none
+    /// without them.
+    pub(crate) riders: Riders,
 }
 
 pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
@@ -239,6 +243,11 @@ pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
         } else {
             0
         },
+        riders: if read && AI_EVAL.damage_rider_read {
+            riders_of(state, unit)
+        } else {
+            Riders::default()
+        },
         view,
     }
 }
@@ -253,6 +262,10 @@ pub(crate) struct Blow {
     pub(crate) soaked: i32,
     /// R4064001: the counter it adds instead of damage, of `from.converts`'s kind.
     pub(crate) converted: i32,
+    /// R5229000: the Burn `from.riders` adds to a target the blow leaves standing (§4.4 step 7).
+    pub(crate) rider_burn: i32,
+    /// R5229000: the Toxic `from.riders` adds to a target the blow leaves standing (§4.4 step 7).
+    pub(crate) rider_toxic: i32,
 }
 
 /// §4.4 steps 1 to 4 and 7 for one blow: what `from` deals to `to` with a strike of `amount`
@@ -261,7 +274,9 @@ pub(crate) struct Blow {
 /// deals nothing and is its counter (step 3a, R4064001), and `to.pool` soaks what it can of the rest
 /// (step 3b, R4064000). A blow from a side that exiles what it damages removes `to` with any damage
 /// left dealt, as a Poisonous one does (R1124, R4065001), and so does any blow on a Fragile `to`
-/// (R5236010).
+/// (R5236010). A blow that deals something and leaves `to` standing adds `from.riders`' Burn and Toxic for
+/// what it dealt (step 7, R5229000); a shield's, an Indestructible's, a converted one's, one the pools soak
+/// whole and a kill add none, as the engine adds none (`ride_damage`).
 pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow {
     if amount <= 0 {
         return Blow::default();
@@ -293,10 +308,14 @@ pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow
     let soaked = dealt.min(to.pool).max(0);
     let dealt = dealt - soaked;
     let kills = dealt >= to.view.health || ((poisonous || from.exiles || to.fragile) && dealt > 0);
+    // R5229000, step 7: a blow that leaves `to` standing adds `from`'s riders for what it dealt.
+    let (rider_burn, rider_toxic) = if kills { (0, 0) } else { from.riders.after(dealt) };
     Blow {
         dealt,
         kills,
         soaked,
+        rider_burn,
+        rider_toxic,
         ..Blow::default()
     }
 }
@@ -2148,6 +2167,263 @@ mod tests {
         assert!((value - AI_REPLY.face_per_damage).abs() < 1e-9, "{value}");
         s.attack(attacker.as_str(), "hero");
         assert_eq!(s.state().players[PlayerId::P2].hero.health, LIFE - 1);
+    }
+
+    /// S+ #37 Scorch, a 1/5 Ranged Pierce that can only attack the Unit across from it: "Damage also Burns 5."
+    const SCORCH: &str = "stinkyscapeplus-037";
+    /// S+ #111 Mace, a 2/2 Ranged Pierce: "Damage also Burns 1."
+    const MACE: &str = "stinkyscapeplus-111";
+    /// S+ #114 Reign, a 12/8 Ranged Windfury Pierce Cleave with Armor 4: "Damage also Burns 4."
+    const REIGN: &str = "stinkyscapeplus-114";
+    /// S+ #151 Volcanic Rounds: "Damage dealt also Burns." (R4783001)
+    const VOLCANIC: &str = "stinkyscapeplus-151";
+    /// S+ #152 Venomous Rounds: "Damage also applies Toxic 2."
+    const VENOMOUS: &str = "stinkyscapeplus-152";
+    /// An 8/8 with no text.
+    const EIGHT_EIGHT: &str = "stand-in (1) 8/8";
+    /// A 6/6 with no text.
+    const SIX_SIX: &str = "stand-in (1) 6/6";
+
+    /// R5229000: what `burn` more Burn and `toxic` more Toxic cost `unit` once a blow has dealt it `dealt`:
+    /// its worth as the blow leaves it, less its worth with the counters on too.
+    fn rider_cost(state: &GameState, unit: &CardInstance, dealt: i32, burn: i32, toxic: i32) -> f64 {
+        let mut struck = unit.clone();
+        struck.damage += dealt;
+        let mut afflicted = struck.clone();
+        if burn > 0 {
+            afflicted.counters.burn = Some(jackioh_engine::burn_on(&struck) + burn);
+        }
+        if toxic > 0 {
+            afflicted.counters.toxic = Some(jackioh_engine::toxic_on(&struck) + toxic);
+        }
+        unit_worth(state, &struck, &AI_EVAL, Prices::NONE)
+            - unit_worth(state, &afflicted, &AI_EVAL, Prices::NONE)
+    }
+
+    /// R5229000, §4.4 step 7: `blow` reads the Burn and the Toxic a hit adds to a target it leaves standing,
+    /// as the engine adds them: Scorch's 1 on Mr. Vanilla Burns 5, a 6/2 Volcanic Rounds' 6 on an 8/8 Burns
+    /// the 6 it dealt, and a 6/2 Venomous Rounds' applies Toxic 2. A body with no rider adds none.
+    #[test]
+    fn r5229000_blow_reads_the_riders_a_hit_leaves_on_a_survivor() {
+        let cases = [
+            ("Scorch", json!(SCORCH), json!(VANILLA), (1, false, 5, 0)),
+            (
+                "Volcanic Rounds",
+                rounds_six_two(VOLCANIC),
+                json!(EIGHT_EIGHT),
+                (6, false, 6, 0),
+            ),
+            (
+                "Venomous Rounds",
+                rounds_six_two(VENOMOUS),
+                json!(EIGHT_EIGHT),
+                (6, false, 0, 2),
+            ),
+            (
+                "Mr. Vanilla",
+                json!(VANILLA),
+                json!(EIGHT_EIGHT),
+                (4, false, 0, 0),
+            ),
+        ];
+        for (name, attacker, target, read) in cases {
+            let (mut s, attacker, target) = armed(attacker, &[], target, &[], (false, false));
+            let out = fight(s.state(), s.card(attacker.as_str()), s.card(target.as_str())).out;
+            assert_eq!(
+                (out.dealt, out.kills, out.rider_burn, out.rider_toxic),
+                read,
+                "{name}"
+            );
+            s.attack(attacker.as_str(), target.as_str());
+            let struck = s.card(target.as_str());
+            assert_eq!(struck.damage, read.0, "{name}");
+            assert_eq!(
+                (jackioh_engine::burn_on(struck), jackioh_engine::toxic_on(struck)),
+                (read.2, read.3),
+                "{name}: the engine adds what the read says"
+            );
+        }
+    }
+
+    /// R5229000: no rider follows a blow that kills (a 6/2 Volcanic Rounds on a 6/6, a Poisonous Scorch on
+    /// Mr. Vanilla), meets a Divine Shield or an Indestructible Unit, has nothing to strike with, or is
+    /// soaked whole by a Force Projector, and the engine adds none in each.
+    #[test]
+    fn r5229000_blow_adds_no_rider_on_a_kill_a_shield_an_indestructible_or_a_hit_dealing_nothing() {
+        let (mut s, attacker, target) =
+            armed(rounds_six_two(VOLCANIC), &[], json!(SIX_SIX), &[], (false, false));
+        let out = fight(s.state(), s.card(attacker.as_str()), s.card(target.as_str())).out;
+        assert_eq!(
+            (out.dealt, out.kills, out.rider_burn, out.rider_toxic),
+            (6, true, 0, 0)
+        );
+        s.attack(attacker.as_str(), target.as_str());
+        s.expect_in_zone(target.as_str(), "graveyard");
+
+        let (mut s, attacker, target) = armed(
+            json!(SCORCH),
+            &[Keyword::Poisonous],
+            json!(VANILLA),
+            &[],
+            (false, false),
+        );
+        let out = fight(s.state(), s.card(attacker.as_str()), s.card(target.as_str())).out;
+        assert_eq!(
+            (out.dealt, out.kills, out.rider_burn, out.rider_toxic),
+            (1, true, 0, 0)
+        );
+        s.attack(attacker.as_str(), target.as_str());
+        s.expect_in_zone(target.as_str(), "graveyard");
+
+        for keyword in [Keyword::DivineShield, Keyword::Indestructible] {
+            let (mut s, attacker, target) = armed(
+                rounds_six_two(VOLCANIC),
+                &[],
+                json!(EIGHT_EIGHT),
+                std::slice::from_ref(&keyword),
+                (false, false),
+            );
+            let out = fight(s.state(), s.card(attacker.as_str()), s.card(target.as_str())).out;
+            assert_eq!(
+                (out.dealt, out.kills, out.rider_burn, out.rider_toxic),
+                (0, false, 0, 0),
+                "{keyword:?}"
+            );
+            s.attack(attacker.as_str(), target.as_str());
+            assert_eq!(jackioh_engine::burn_on(s.card(target.as_str())), 0, "{keyword:?}");
+        }
+
+        let (mut s, attacker, target) = armed(json!(SCORCH), &[], json!(VANILLA), &[], (false, true));
+        let (from, to) = (
+            side_of(s.state(), s.card(attacker.as_str())),
+            side_of(s.state(), s.card(target.as_str())),
+        );
+        assert_eq!(from.riders.burn, 5);
+        let nothing = blow(&from, 0, false, &to);
+        assert_eq!(
+            (nothing.dealt, nothing.rider_burn, nothing.rider_toxic),
+            (0, 0, 0)
+        );
+        let soaked = blow(&from, 4, false, &to);
+        assert_eq!(
+            (soaked.dealt, soaked.soaked, soaked.rider_burn, soaked.rider_toxic),
+            (0, 4, 0, 0)
+        );
+        s.attack(attacker.as_str(), target.as_str());
+        let struck = s.card(target.as_str());
+        assert_eq!((struck.damage, jackioh_engine::burn_on(struck)), (0, 0));
+    }
+
+    /// R5229000: `trade_value` prices a blow's riders on the unit it leaves standing, as the blow leaves it:
+    /// Scorch's chip on Mr. Vanilla is worth its Burn 5 too, which destroys Mr. Vanilla at the turn's end; a
+    /// 6/2 Volcanic Rounds' 6 on an 8/8 its Burn 6 and a 6/2 Venomous Rounds' its Toxic 2, and Volcanic
+    /// Rounds' kill of a 6/6 no Burn. A strike back's riders cost the attacker: Mr. Vanilla's kill of a Mace
+    /// takes its Burn 1.
+    #[test]
+    fn r5229000_trade_value_prices_a_rider_on_the_survivor_and_the_strike_back() {
+        let chip = AI_REPLY.chip_per_damage;
+        let close = |value: f64, expected: f64, name: &str| {
+            assert!((value - expected).abs() < 1e-9, "{name}: {value} vs {expected}");
+        };
+
+        let (mut s, attacker, target) = armed(json!(SCORCH), &[], json!(VANILLA), &[], (false, false));
+        let (state, a, t) = (s.state(), s.card(attacker.as_str()), s.card(target.as_str()));
+        let burn = rider_cost(state, t, 1, 5, 0);
+        assert!(burn > 0.0, "{burn}");
+        close(
+            trade_value(state, a, &target, Prices::NONE).value,
+            chip + burn,
+            "Scorch",
+        );
+        s.attack(attacker.as_str(), target.as_str());
+        s.end_turn();
+        s.expect_in_zone(target.as_str(), "graveyard");
+
+        for (name, rounds, burn, toxic) in [
+            ("Volcanic Rounds", VOLCANIC, 6, 0),
+            ("Venomous Rounds", VENOMOUS, 0, 2),
+        ] {
+            let (s, attacker, target) = armed(
+                rounds_six_two(rounds),
+                &[],
+                json!(EIGHT_EIGHT),
+                &[],
+                (false, false),
+            );
+            let (state, a, t) = (s.state(), s.card(attacker.as_str()), s.card(target.as_str()));
+            let riders = rider_cost(state, t, 6, burn, toxic);
+            assert!(riders > 0.0, "{name}: {riders}");
+            close(
+                trade_value(state, a, &target, Prices::NONE).value,
+                chip * 6.0 + riders - kill_worth(state, a, &AI_EVAL, Prices::NONE),
+                name,
+            );
+        }
+
+        let (s, attacker, target) = armed(rounds_six_two(VOLCANIC), &[], json!(SIX_SIX), &[], (false, false));
+        let (state, a, t) = (s.state(), s.card(attacker.as_str()), s.card(target.as_str()));
+        assert_eq!(fight(state, a, t).out.rider_burn, 0);
+        close(
+            trade_value(state, a, &target, Prices::NONE).value,
+            kill_worth(state, t, &AI_EVAL, Prices::NONE) - kill_worth(state, a, &AI_EVAL, Prices::NONE),
+            "Volcanic Rounds' kill",
+        );
+
+        let (s, attacker, target) = armed(json!(VANILLA), &[], json!(MACE), &[], (false, false));
+        let (state, a, t) = (s.state(), s.card(attacker.as_str()), s.card(target.as_str()));
+        let back = fight(state, a, t).back;
+        assert_eq!((back.dealt, back.kills, back.rider_burn), (2, false, 1));
+        let burn = rider_cost(state, a, 2, 1, 0);
+        assert!(burn > 0.0, "{burn}");
+        close(
+            trade_value(state, a, &target, Prices::NONE).value,
+            kill_worth(state, t, &AI_EVAL, Prices::NONE) - burn,
+            "into Mace",
+        );
+    }
+
+    /// R5229000: a Reign hit on a hero at 30 is worth what a plain 12 is, plus the life its Burn 4's tick
+    /// takes (`hero_ticks_added`); on a hero at 12 it is the win, with no Burn to add. The engine adds the
+    /// Burn 4 to a hero the hit leaves standing.
+    #[test]
+    fn r5229000_face_value_adds_the_ticks_of_a_riders_burn() {
+        let at = |attacker: Value, life: i32| {
+            let (mut s, attacker, _) = armed(attacker, &[], json!(THREE_THREE), &[], (false, false));
+            s.state_mut().players[PlayerId::P2].hero.health = life;
+            (s, attacker)
+        };
+        let twelve = json!({ "def": VANILLA, "statsOverride": { "attack": 12, "health": 4 } });
+        let (s, reign) = at(json!(REIGN), 30);
+        let (p, plain) = at(twelve, 30);
+        let ticks = crate::evaluate::hero_ticks_added(s.state(), PlayerId::P2, Affliction::Burn, 4, &AI_EVAL);
+        let added = AI_REPLY.face_per_damage * AI_EVAL.hero_affliction * f64::from(ticks);
+        assert!(added > 0.0, "{added}");
+        let read = face_value(s.state(), s.card(reign.as_str()), PlayerId::P2, false);
+        let twelve_alone = face_value(p.state(), p.card(plain.as_str()), PlayerId::P2, false);
+        assert!(
+            (twelve_alone - 12.0 * AI_REPLY.face_per_damage).abs() < 1e-9,
+            "{twelve_alone}"
+        );
+        assert!(
+            (read - twelve_alone - added).abs() < 1e-9,
+            "{read} vs {twelve_alone}"
+        );
+
+        let (s, reign) = at(json!(REIGN), 12);
+        let read = face_value(s.state(), s.card(reign.as_str()), PlayerId::P2, false);
+        assert!((read - AI_EVAL.win).abs() < 1e-9, "{read}");
+
+        let (mut s, reign) = at(json!(REIGN), 30);
+        s.attack(reign.as_str(), "hero");
+        assert_eq!(s.state().players[PlayerId::P2].hero.health, 18);
+        assert_eq!(jackioh_engine::hero_burn_of(s.state(), PlayerId::P2), 4);
+    }
+
+    /// R5229000: the read is `AI_EVAL`'s and the greedy yardstick's stays frozen.
+    #[test]
+    fn r5229000_the_rider_flag_is_on_in_ai_eval_and_off_in_greedy_eval() {
+        const { assert!(AI_EVAL.damage_rider_read) };
+        const { assert!(!crate::config::GREEDY_EVAL.damage_rider_read) };
     }
 
     /// The bodies `r4064000_r4064001_the_trade_reads_agree_with_the_combat_forecast` sets against each

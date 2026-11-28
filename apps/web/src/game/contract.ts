@@ -333,6 +333,12 @@ export type HeroAside = { own?: ReactNode; enemy?: ReactNode };
 export type BoardProps = {
   view: PlayerView;
   highlight?: Highlight;
+  /**
+   * #5230: whether the turn still has a move (a playable card, an attacker, an Activate, a Heroic Power), read from
+   * the turn's own idle highlight, so a card picked up or an attacker aimed does not read as none. Absent: the
+   * board reads `hasMovesLeft(highlight)`.
+   */
+  movesLeft?: boolean;
   /** The opponent hero's seat label, drawn over the default `Opponent` (a practice game's `AI · Easy`). */
   enemyLabel?: string;
   /** Route controls drawn beside Concede on desktop and as rows of the `⋯` match menu on phones. */

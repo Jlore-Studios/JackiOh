@@ -8,7 +8,8 @@
 # many times an hour.
 #
 # The daily promotion. Every day super.yml runs on `_staging` (its `schedule` starts the run there).
-# When a run on `_staging` passes every job, the commit it tested goes to production: this script
+# When a run on `_staging` passes every gating job (super.yml's header: every job but the report-only
+# ones), the commit it tested goes to production: this script
 # opens a pull request of it into production and merges it at once, since the run that gates
 # production already passed on exactly that commit, and the workflow's `deploy` job then puts it on
 # jackioh.com, the site and its game server together (wrangler.jsonc). Each such run is acted on once
@@ -19,7 +20,7 @@
 #
 # By hand, sooner. A person comments `/promote` on the one issue labeled RELEASE_LABEL (or runs
 # promote-production.yml from the Actions tab); this opens a pull request of staging's commit into
-# production, super.yml runs on that pull request, and it merges once every one of its jobs passed.
+# production, super.yml runs on that pull request, and it merges once every gating job of it passed.
 # docs/deploy-cloudflare.md is the plan and the runbook, and apps/web/src/net/promote-production.test.ts
 # holds this in place, against a throwaway repository and a stand-in for `gh`.
 #
@@ -271,9 +272,9 @@ open_candidate() {
     echo "Promotes \`$STAGING_BRANCH\` up to \`${cand:0:12}\`, a commit of \`main\`, into \`$PRODUCTION_BRANCH\`, which is what players are served: the site and its server, together."
     echo
     if [ -n "${TESTED:-}" ]; then
-      echo "The daily promotion: the super run on \`$STAGING_BRANCH\` passed every job on this commit ($TESTED), so this merges at once, with no second super run, and \`promote-production.yml\` then deploys it."
+      echo "The daily promotion: the super run on \`$STAGING_BRANCH\` passed every gating job on this commit ($TESTED), so this merges at once, with no second super run, and \`promote-production.yml\` then deploys it."
     else
-      echo "The daily super run (\`super.yml\`) tests this pull request. It merges once every job passes, and \`promote-production.yml\` then deploys it. A red run hands its fix to the night bot (\`priority:high\`); this stays open, and re-running the failed jobs merges it once they pass."
+      echo "The daily super run (\`super.yml\`) tests this pull request. It merges once every gating job passes, and \`promote-production.yml\` then deploys it. A red run hands its fix to the night bot (\`priority:high\`); this stays open, and re-running the failed jobs merges it once they pass."
     fi
     echo
     echo "- Commit of main: \`${cand:0:12}\`"
@@ -363,7 +364,7 @@ skip_super() {
 
 # --- the daily promotion --------------------------------------------------------------------------
 
-# The newest super run on STAGING_BRANCH that passed every job, as "id sha url", or nothing. A run on
+# The newest super run on STAGING_BRANCH that passed every gating job, as "id sha url", or nothing. A run on
 # a promotion pull request is on its promote/ branch, never staging's.
 newest_staging_pass() {
   try gh run list --workflow "$SUPER_WORKFLOW" --branch "$STAGING_BRANCH" --status success --limit 1 \
@@ -402,7 +403,7 @@ daily_promotion() {
   case $RESULT in
     opened | testing)
       merge_pr "$PR_NUMBER" "$BRANCH" "$CAND"
-      say "Merged to production in #$PR_NUMBER, the daily promotion: the super run on \`$STAGING_BRANCH\` passed every job on \`${CAND:0:12}\` ([run]($url)). $COUNT commit(s), catalog $CATALOG; the deploy follows. $(run_link)"
+      say "Merged to production in #$PR_NUMBER, the daily promotion: the super run on \`$STAGING_BRANCH\` passed every gating job on \`${CAND:0:12}\` ([run]($url)). $COUNT commit(s), catalog $CATALOG; the deploy follows. $(run_link)"
       ;;
     waiting) daily=$((id - 1)) ;;
     noproduction) say "The super run on \`$STAGING_BRANCH\` passed on \`${CAND:0:12}\` ([run]($url)), but \`$PRODUCTION_BRANCH\` does not exist yet: \`/skip-super\` with a reason creates it." ;;
@@ -431,7 +432,7 @@ reconcile() {
     WHY="the super run passed"
     merge_pr "$num" "$head" "$sha"
     STATUS=idle
-    say "Merged to production in #$num: the super run passed every job on \`${sha:0:12}\` ([run]($SUPER_URL)). $COUNT commit(s), catalog $CATALOG; the deploy follows. $(run_link)"
+    say "Merged to production in #$num: the super run passed every gating job on \`${sha:0:12}\` ([run]($SUPER_URL)). $COUNT commit(s), catalog $CATALOG; the deploy follows. $(run_link)"
     return 0
   fi
   STATUS=failed
@@ -585,7 +586,7 @@ body_for() {
       if [ "$WAITING" = 0 ]; then
         printf '\n**Next for production:** nothing to do: everything on `main` is live.\n'
       else
-        printf '\n**Next for production:** the next daily full test run (super) on `_staging` that passes every job puts the commit it tested live. Comment `/promote` to test and promote staging'"'"'s commit now.\n'
+        printf '\n**Next for production:** the next daily full test run (super) on `_staging` that passes every gating job puts the commit it tested live. Comment `/promote` to test and promote staging'"'"'s commit now.\n'
       fi
       ;;
   esac
@@ -595,7 +596,7 @@ body_for() {
 ### How the sites move
 
 - **Staging** moves by itself every two hours: the `_staging` branch takes `main`'s newest commit whose checks (`ci.yml`) passed, and the site deploys it. While the full test run on `_staging` is red it holds still, until the night bot's fix closes "CI: daily super run failed"; then it takes `main`'s first green commit after that, and the full test run starts on it at once. *promote staging* in the Actions tab moves it now.
-- **Production** moves once a day by itself: the full test run (`super.yml`) runs on `_staging` every day, and when it passes every job, the commit it tested goes live. `/promote` goes sooner, once the same test run passes on staging's commit.
+- **Production** moves once a day by itself: the full test run (`super.yml`) runs on `_staging` every day, and when it passes every gating job, the commit it tested goes live. `/promote` goes sooner, once the same test run passes on staging's commit.
 
 ### Commands
 
@@ -603,7 +604,7 @@ Comment here. Only people with write access are heard; a command gets a 👍, or
 
 | Comment | Effect |
 | --- | --- |
-| `/promote` | Sooner than the daily promotion: opens a pull request of `_staging`'s commit into `_production`. The full test run (`super.yml`) tests it, and it merges and deploys once every job passes. A red run hands its fix to the night bot as `priority:high`, and the pull request waits. |
+| `/promote` | Sooner than the daily promotion: opens a pull request of `_staging`'s commit into `_production`. The full test run (`super.yml`) tests it, and it merges and deploys once every gating job passes. A red run hands its fix to the night bot as `priority:high`, and the pull request waits. |
 | `/promote <sha>` | The same, for that commit of `_staging`. |
 | `/skip-super <reason>` | The emergency way: merges the open pull request, or `_staging`'s commit, now, without the full test run. The reason is required, and it is recorded here and on the pull request with who and which commit. |
 | `/cancel` | Closes the open pull request. Nothing merges. |
@@ -694,7 +695,7 @@ react() { gh api -X POST "repos/$REPO/issues/comments/$1/reactions" -f content="
 # Says on the issue what came of a promotion's RESULT, asked by $1.
 said_promote() {
   case $RESULT in
-    opened) say "Opened #$PR_NUMBER ($1): $COUNT commit(s) of \`$STAGING_BRANCH\` up to \`${CAND:0:12}\`, catalog $CATALOG. The super run tests it now, and it merges and deploys once every job passes." ;;
+    opened) say "Opened #$PR_NUMBER ($1): $COUNT commit(s) of \`$STAGING_BRANCH\` up to \`${CAND:0:12}\`, catalog $CATALOG. The super run tests it now, and it merges and deploys once every gating job passes." ;;
     testing) say "#$PR_NUMBER already promotes \`${CAND:0:12}\`; the super run is on it." ;;
     uptodate) say "Nothing to merge: \`$PRODUCTION_BRANCH\` already has \`${CAND:0:12}\`." ;;
     waiting) say "Not promoting \`${CAND:0:12}\` yet: \`main\` has changed \`.github/workflows\` since it, and GitHub refuses this workflow's token that push. Ask again once \`$STAGING_BRANCH\` has main's change (promote-staging.yml moves it every two hours), or give the workflow BOT_GITHUB_TOKEN." ;;

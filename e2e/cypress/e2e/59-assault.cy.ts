@@ -169,7 +169,9 @@ describe("59 Infinite Assault — the day's deck through level 1, kept over a re
       .should("contain.text", `Best: level ${String(FIRST_LEVEL)}`)
       .and("contain.text", `Attempts: ${String(FIRST_ATTEMPT)}`);
     cy.get(ts(assaultTestid.level(FIRST_LEVEL))).should("have.attr", "data-beaten", "true");
+    cy.get(ts(assaultTestid.level(FIRST_LEVEL))).should("contain.text", "Beaten");
     cy.get(ts(assaultTestid.level(SECOND_LEVEL))).should("not.have.attr", "data-beaten");
+    cy.get(ts(assaultTestid.level(SECOND_LEVEL))).should("not.contain.text", "Beaten");
     cy.get(ts(assaultTestid.start)).should("be.visible");
     cy.get(ts(assaultTestid.resume)).should("not.exist");
   });

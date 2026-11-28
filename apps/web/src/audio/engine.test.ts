@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CARD_EFFECT_DELAY_MS,
   EFFECT_PITCH_JITTER,
+  EFFECT_SEQUENCE_GAP_MS,
   GAIN_SMOOTHING_S,
   HIDDEN_DEF_ID,
   LOG_LIMIT,
@@ -1507,6 +1508,79 @@ describe("B58 background voice work waits while the engine is busy", () => {
     await settle();
     expect(r.fetch.urls()).toHaveLength(1 + 2 * VOICE_PREFETCH_CONCURRENCY);
   });
+
+  it("R5284000 voice at 0 makes no prefetch request; raising it resumes the prefetch", async () => {
+    const r = rig({ engine: { manifest: PRELOAD_MANIFEST } });
+    unlocked(r);
+    r.fetch.mode = "hang";
+    r.engine.preloadVoices(["core-004-play"]);
+    await settle();
+
+    writeAudioSettings({ voice: 0 });
+    r.engine.preloadVoices(["core-200-play"]);
+    await elapse(r, VOICE_PREFETCH_DELAY_MS + 1_000);
+    expect(r.fetch.urls(), "voice at 0").toEqual([url("core-004-play")]);
+
+    writeAudioSettings({ voice: 0.7 });
+    await settle();
+    expect(r.fetch.urls()).toHaveLength(1 + VOICE_PREFETCH_CONCURRENCY);
+  });
+});
+
+// R5284000: a voice line or effect nobody can hear
+describe("R5284000 a voice line nobody can hear holds no channel and ducks nothing", () => {
+  /** Both a file line and a speech line, asked for at the level `write` sets. */
+  async function silent(write: { voice?: number; master?: number }): Promise<void> {
+    const r = rig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    writeAudioSettings({ duckMusic: true, ...write });
+    const music = audio.nodeOf(must(r.engine.musicOutput(), "the music bus").input);
+    const duck = must(music.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain"), "the duck");
+    const heard = vi.fn();
+    r.engine.subscribeSpeaking(heard);
+
+    expect(r.engine.playVoice("core-004", "play", 0), "file line").toBe(false);
+    expect(r.engine.playVoice("core-005", "cast", 0), "speech line").toBe(false);
+    await elapse(r, 10);
+    expect(r.engine.speaking()).toBe(false);
+    expect(heard).not.toHaveBeenCalled();
+    expect(r.speech.spoken).toEqual([]);
+    expect(voiceEntries(r)).toEqual([]);
+    expect(bus.sfxDuck.param("gain").targets(), "the effects duck stays at 1").toEqual([]);
+    expect(duck.param("gain").targets(), "the music duck stays at 1").toEqual([]);
+  }
+
+  it("R5284000 voice at 0 with Voice lines on: playVoice is false, speaking stays false, no duck and no speech", async () => {
+    await silent({ voice: 0 });
+  });
+
+  it("R5284000 master at 0 holds the same", async () => {
+    await silent({ master: 0 });
+  });
+
+  it("R5284000 dropping voice to 0 stops a playing file line and a speech line and frees the channel", async () => {
+    const r = rig();
+    unlocked(r);
+    const heard = vi.fn();
+    r.engine.subscribeSpeaking(heard);
+
+    expect(r.engine.playVoice("core-004", "play", 0)).toBe(true);
+    await settle();
+    expect(r.engine.speaking()).toBe(true);
+    heard.mockClear();
+    writeAudioSettings({ voice: 0 });
+    expect(r.engine.speaking(), "file line").toBe(false);
+    expect(heard).toHaveBeenCalledTimes(1);
+
+    writeAudioSettings({ voice: 0.7 });
+    expect(r.engine.playVoice("core-005", "cast", 0)).toBe(true);
+    await elapse(r, 10);
+    expect(r.engine.speaking()).toBe(true);
+    writeAudioSettings({ voice: 0 });
+    expect(r.speech.cancel).toHaveBeenCalled();
+    expect(r.engine.speaking(), "speech line").toBe(false);
+  });
 });
 
 /* Integration: `speaking`, behind `data-speaking` (SPEC §9.9: practice holds the AI's next step while a line plays) */
@@ -1868,6 +1942,137 @@ describe("R655 a card's effect and a Unit picked up to attack", () => {
     expect(r.engine.playPickup("core-004")).toBe(true);
     await settle();
     expect(r.engine.log().map((c) => c.kind)).toEqual(["effect"]);
+  });
+
+  it("R5284000 a pick-up at voice 0 plays its effect and no line", async () => {
+    const r = fxRig();
+    unlocked(r);
+    writeAudioSettings({ voice: 0 });
+
+    expect(r.engine.playPickup("core-004")).toBe(true);
+    await settle();
+    expect(effectEntries(r)).toHaveLength(1);
+    expect(voiceEntries(r)).toEqual([]);
+  });
+
+  it("R5284000 effects at 0 leave the music duck at 1 for a card effect, trapSting, victory and defeat; above 0 they duck", () => {
+    const r = fxRig();
+    const audio = unlocked(r);
+    writeAudioSettings({ duckMusic: true, sfx: 0 });
+    const music = audio.nodeOf(must(r.engine.musicOutput(), "the music bus").input);
+    const duck = must(music.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain"), "the duck");
+
+    expect(r.engine.playEffect("core-066", "attack")).toBe(true);
+    expect(duck.param("gain").targets(), "card effect").toEqual([]);
+    for (const id of ["trapSting", "victory", "defeat"] as const) {
+      tick(r, SFX_RETRIGGER_MS);
+      r.engine.playSfx(id);
+      expect(duck.param("gain").targets(), id).toEqual([]);
+    }
+
+    writeAudioSettings({ sfx: 0.3, master: 0 });
+    tick(r, SFX_RETRIGGER_MS);
+    r.engine.playSfx("trapSting");
+    expect(duck.param("gain").targets(), "master at 0").toEqual([]);
+
+    writeAudioSettings({ master: 0.5 });
+    tick(r, SFX_RETRIGGER_MS);
+    r.engine.playSfx("trapSting");
+    expect(duck.param("gain").targets().map((t) => t.value)).toEqual([MUSIC_DUCK_GAIN, 1]);
+  });
+
+  /** #91 with a list of effects on its Whenever, and a pool of attack lines. */
+  const SEQ_LINES: CardAudioTable = {
+    ...FX_LINES,
+    cards: {
+      ...FX_LINES.cards,
+      "core-091": {
+        kind: "unit",
+        whenever: { effect: ["thud", "rumble"] },
+        attack: { voice: "hustler", lines: ["One.", "Two.", "Three."] },
+      },
+    },
+  };
+
+  it("R5188000 an effect list plays in order, each after the last ends plus EFFECT_SEQUENCE_GAP_MS", () => {
+    const r = rig({ engine: { lines: SEQ_LINES, manifest: FX_MANIFEST, random: () => 0.5 } });
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    audio.currentTime = 2;
+    const before = audio.nodes.length;
+
+    expect(r.engine.playEffect("core-091", "whenever", 100)).toBe(true);
+
+    const entries = effectEntries(r);
+    expect(entries.map((e) => e.effect)).toEqual(["thud", "rumble"]);
+    const [first, second] = entries.map((e) => e.delayMs);
+    expect(first).toBe(100);
+    // The second starts once the first has ended, and the gap after it.
+    expect(must(second, "the second's delay") - must(first, "the first's delay")).toBeGreaterThan(EFFECT_SEQUENCE_GAP_MS);
+    // Each effect is its own cue on the sfx bus, its sources starting at or after its own moment.
+    const cues = cueGains(audio, bus.sfx, before);
+    expect(cues).toHaveLength(2);
+    const sources = audio.nodes.slice(before).filter((n) => n.started);
+    entries.forEach((entry, i) => {
+      const own = sources.filter((source) => audio.reaches(source, must(cues[i], "its cue")));
+      expect(own.length, `${entry.effect}'s sources`).toBeGreaterThan(0);
+      for (const source of own) expect(must(source.startTime, "a start time")).toBeGreaterThanOrEqual(2 + entry.delayMs / 1000 - 1e-9);
+    });
+    expect(audio.violations).toEqual([]);
+
+    // The list is guarded as one, by its first effect: at once again, all of it is refused.
+    expect(r.engine.playEffect("core-091", "whenever")).toBe(false);
+    expect(effectEntries(r)).toHaveLength(2);
+  });
+
+  it("R5188000 a context that is not running logs each effect of a list as suspended, at its hook's moment", () => {
+    const r = rig({
+      factory: fakeContextFactory({ state: "suspended", resumeMode: "stay" }),
+      engine: { lines: SEQ_LINES, manifest: FX_MANIFEST },
+    });
+    const audio = unlocked(r);
+    const before = audio.nodes.length;
+    expect(r.engine.playEffect("core-091", "whenever", 40)).toBe(true);
+    expect(r.engine.log()).toEqual([
+      { kind: "effect", defId: "core-091", hook: "whenever", effect: "thud", delayMs: 40, atMs: 10_000, suspended: true },
+      { kind: "effect", defId: "core-091", hook: "whenever", effect: "rumble", delayMs: 40, atMs: 10_000, suspended: true },
+    ]);
+    expect(audio.nodes.length).toBe(before);
+  });
+
+  it("R5188000 a pick-up speaks one line of an attack pool by the engine's random", async () => {
+    const draws = [0.5, 0.9];
+    const r = rig({ engine: { lines: SEQ_LINES, manifest: FX_MANIFEST, random: () => draws.shift() ?? 0 } });
+    unlocked(r);
+
+    expect(r.engine.playPickup("core-091")).toBe(true);
+    await settle();
+    await elapse(r, PICKUP_MIN_GAP_MS);
+    expect(r.engine.playPickup("core-091")).toBe(true);
+    await settle();
+
+    expect(voiceEntries(r).map((e) => `${e.line}!${String(e.priority)}`)).toEqual([
+      `attack2!${String(VOICE_PRIORITY.pickup)}`,
+      `attack3!${String(VOICE_PRIORITY.pickup)}`,
+    ]);
+    expect(draws, "one draw per pick-up, none for a pitch it has no effect to vary").toEqual([]);
+    // A single line draws nothing: #4's attack speaks with its effect's one pitch draw alone.
+    let calls = 0;
+    const single = rig({
+      engine: {
+        lines: SEQ_LINES,
+        manifest: FX_MANIFEST,
+        random: () => {
+          calls += 1;
+          return 0.5;
+        },
+      },
+    });
+    unlocked(single);
+    expect(single.engine.playPickup("core-004")).toBe(true);
+    await settle();
+    expect(voiceEntries(single).map((e) => e.line)).toEqual(["attack"]);
+    expect(calls, "the effect's pitch alone").toBe(1);
   });
 });
 

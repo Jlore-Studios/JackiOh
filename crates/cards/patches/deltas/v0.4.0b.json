@@ -1,0 +1,154 @@
+{
+  "set": {
+    "classic-040": {
+      "id": "classic-040",
+      "index": "40",
+      "name": "MC Tech",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "threshold",
+          "base": 4,
+          "radiant": 4,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 36,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [],
+        "text": "Cry: If your opponent controls {threshold} or more permanents, steal a random one."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: If your opponent controls {threshold} or more permanents, steal one of your choice."
+      }
+    },
+    "meditative-082": {
+      "id": "meditative-082",
+      "index": "82",
+      "name": "Medina Outfitter",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "times",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 17,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Buff every card in your hand."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Buff every card in your hand {times|time|times}."
+      }
+    },
+    "meditative-083": {
+      "id": "meditative-083",
+      "index": "83",
+      "name": "Medina Enforcer",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "times",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 17,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "End of turn: Buff every card in your hand."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [],
+        "text": "End of turn: Buff every card in your hand {times|time|times}."
+      }
+    },
+    "meditative-085": {
+      "id": "meditative-085",
+      "index": "85",
+      "name": "Playtester",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "classicplus-071",
+        "classicplus-072"
+      ],
+      "params": [
+        {
+          "key": "books",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 35,
+      "base": {
+        "attack": 4,
+        "health": 5,
+        "keywords": [],
+        "text": "Start of turn: Choose one: add {books|Book of Buff|Books of Buff} or {books|Book of Nerf|Books of Nerf} to your hand."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 10,
+        "keywords": [],
+        "text": "Start of turn: Choose one: add {books|Radiant Book of Buff|Radiant Books of Buff} or {books|Radiant Book of Nerf|Radiant Books of Nerf} to your hand."
+      }
+    }
+  }
+}

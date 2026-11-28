@@ -6,31 +6,11 @@ import { AI_DIFFICULTY } from "../../../apps/web/src/wire/engineConfig.ts";
 import { seedFor, timeouts } from "../../support/config.ts";
 import {
   ACTION_ERROR,
-  BOARD,
-  END_TURN,
   GAME,
-  LOG,
-  MULLIGAN_OPPONENT_READY,
-  MULLIGAN_OPPONENT_STATUS,
-  PRACTICE_DECK,
-  PRACTICE_ERROR,
-  PRACTICE_HUD,
-  PRACTICE_LEAVE,
-  PRACTICE_LEAVE_CONFIRM,
-  PRACTICE_LEAVE_SAVE,
-  PRACTICE_MENU,
-  PRACTICE_NEW_GAME,
-  PRACTICE_RESULT,
   PRACTICE_RESUME,
-  PRACTICE_SHARE_LAST_TURN,
-  PRACTICE_WATCH_REPLAY,
-  REPLAY_BACK,
   PRACTICE_RESUME_BANNER,
-  PRACTICE_SETUP,
-  PRACTICE_START,
-  PRACTICE_THINKING,
   PROMPT,
-  RESULT_OVERLAY,
+  REPLAY_BACK,
   cardId,
   handCountId,
   manaId,
@@ -44,6 +24,8 @@ import type { Action, Lane, PlayerId } from "../../support/types.ts";
 import { keepWholeHand, reachHumanTurn, settledThroughAiTurn } from "../../support/practice.ts";
 import { expectReplayBackIsBarPill } from "../../support/topBar.ts";
 import { preferReducedMotion } from "../../support/tutorial.ts";
+import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** The seed the replay, reload and save games below derive theirs from (`${SEED}:replay`, …). */
 const SEED = seedFor("13-practice-t");
@@ -115,9 +97,9 @@ function opponentUnitCount(doc: Document): number {
 }
 
 function sampleOf(doc: Document): Sample {
-  const board = doc.querySelector(ts(BOARD));
+  const board = doc.querySelector(ts(gameTestid.board));
   return {
-    thinking: doc.querySelector(ts(PRACTICE_THINKING)) !== null,
+    thinking: doc.querySelector(ts(practiceTestid.thinking)) !== null,
     turn: board?.getAttribute("data-turn") ?? null,
     active: board?.getAttribute("data-active") ?? null,
     phase: board?.getAttribute("data-phase") ?? null,
@@ -125,7 +107,7 @@ function sampleOf(doc: Document): Sample {
     opponentHand: doc.querySelector(ts(handCountId("opponent")))?.textContent?.trim() ?? null,
     opponentUnits: opponentUnitCount(doc),
     prompt: doc.querySelector(PROMPT)?.getAttribute("data-prompt-kind") ?? null,
-    opponentReady: doc.querySelector(ts(MULLIGAN_OPPONENT_STATUS))?.getAttribute("data-ready") ?? null,
+    opponentReady: doc.querySelector(ts(gameTestid.mulliganOpponentStatus))?.getAttribute("data-ready") ?? null,
   };
 }
 
@@ -203,7 +185,7 @@ function endHumanTurns(remaining: number): void {
   if (remaining === 0) return;
   reachHumanTurn();
   cy.get(ts(ACTION_ERROR)).should("not.exist");
-  cy.get(ts(END_TURN)).should("not.be.disabled").click();
+  cy.get(ts(gameTestid.endTurn)).should("not.be.disabled").click();
   settledThroughAiTurn();
   cy.get(ts(ACTION_ERROR)).should("not.exist");
   endHumanTurns(remaining - 1);
@@ -235,19 +217,19 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
   it("B40 anonymous /practice shows setup", () => {
     visitPractice("/practice");
 
-    cy.get(ts(PRACTICE_SETUP), { timeout: BOOT_TIMEOUT }).should("be.visible");
+    cy.get(ts(practiceTestid.setup), { timeout: BOOT_TIMEOUT }).should("be.visible");
     for (const difficulty of ["easy", "medium", "hard"] as const) {
       cy.get(ts(practiceDifficultyId(difficulty))).should("have.attr", "type", "radio");
     }
     cy.get(ts(practiceDifficultyId("easy"))).should("be.checked");
-    cy.get(ts(PRACTICE_DECK)).should(($select) => {
+    cy.get(ts(practiceTestid.deck)).should(($select) => {
       const values = Array.from(($select[0] as HTMLSelectElement).options).map((option) => option.value);
       expect(values, "a random deck is always offered").to.include("random");
       expect(values.filter((value) => value.startsWith("saved:")), "no saved decks without an account").to.deep.eq([]);
     });
-    cy.get(ts(PRACTICE_START)).should("be.visible");
-    cy.get(ts(PRACTICE_HUD)).should("not.exist");
-    cy.get(ts(PRACTICE_ERROR)).should("not.exist");
+    cy.get(ts(practiceTestid.start)).should("be.visible");
+    cy.get(ts(practiceTestid.hud)).should("not.exist");
+    cy.get(ts(practiceTestid.error)).should("not.exist");
 
     expectNoServer();
   });
@@ -259,12 +241,12 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-viewer", "p2");
     cy.get(ts("hero-opponent")).should("contain.text", "AI · Easy");
     cy.get(ts("hero-you")).should("contain.text", "You");
-    cy.get(ts(PRACTICE_HUD)).should("not.exist");
-    cy.get(ts(PRACTICE_SETUP)).should("not.exist");
+    cy.get(ts(practiceTestid.hud)).should("not.exist");
+    cy.get(ts(practiceTestid.setup)).should("not.exist");
 
     cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
     cy.get(promptOf("mulligan"))
-      .find(ts(MULLIGAN_OPPONENT_READY), { timeout: timeouts.view })
+      .find(ts(gameTestid.mulliganOpponentReady), { timeout: timeouts.view })
       .should("be.visible");
     recorder().then((recorded) => {
       const firstPrompt = recorded.samples.findIndex((sample) => sample.prompt === "mulligan");
@@ -290,7 +272,7 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
 
     let firstEnded = "";
     reachHumanTurn();
-    cy.get(ts(BOARD))
+    cy.get(ts(gameTestid.board))
       .invoke("attr", "data-turn")
       .then((turn) => {
         firstEnded = String(turn);
@@ -314,16 +296,16 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     // pool scrolls through, spec 33); the assertions themselves are unchanged.
     reachHumanTurn();
     cy.then(() => {
-      cy.get(ts(LOG)).scrollTo("top");
-      cy.get(`${ts(LOG)} .log-line[data-event="turnEnded"]`).should("contain.text", `You ended turn ${firstEnded} with`);
+      cy.get(ts(gameTestid.log)).scrollTo("top");
+      cy.get(`${ts(gameTestid.log)} .log-line[data-event="turnEnded"]`).should("contain.text", `You ended turn ${firstEnded} with`);
     });
-    cy.get(`${ts(LOG)} .log-line[data-event="turnStarted"]`).should("contain.text", "Turn 1: Opponent");
+    cy.get(`${ts(gameTestid.log)} .log-line[data-event="turnStarted"]`).should("contain.text", "Turn 1: Opponent");
 
     // §10.8 makes the concede overlay viewer-relative.
     reachHumanTurn();
     cy.concede();
-    cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.view }).should("be.visible").and("contain.text", "Loss");
-    cy.get(ts(PRACTICE_RESULT), { timeout: timeouts.view })
+    cy.get(ts(gameTestid.result), { timeout: timeouts.view }).should("be.visible").and("contain.text", "Loss");
+    cy.get(ts(practiceTestid.result), { timeout: timeouts.view })
       .should("be.visible")
       .and("have.attr", "data-outcome", "loss")
       .and("contain.text", "Defeat");
@@ -367,19 +349,19 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
     cy.get(ts("hero-opponent")).should("contain.text", "AI · Easy");
     reachHumanTurn();
     cy.concede();
-    cy.get(ts(PRACTICE_RESULT), { timeout: timeouts.view }).should("be.visible");
+    cy.get(ts(practiceTestid.result), { timeout: timeouts.view }).should("be.visible");
 
-    cy.get(ts(PRACTICE_WATCH_REPLAY)).click();
+    cy.get(ts(practiceTestid.watchReplay)).click();
     // R3218000: the replay's Back is the top bar's pill, the one control of its bar.
     expectReplayBackIsBarPill(REPLAY_BACK);
     stepForwardAndBack();
     cy.get(ts(REPLAY_BACK)).click();
-    cy.get(ts(PRACTICE_RESULT)).should("be.visible");
+    cy.get(ts(practiceTestid.result)).should("be.visible");
 
-    cy.get(ts(PRACTICE_SHARE_LAST_TURN)).click();
+    cy.get(ts(practiceTestid.shareLastTurn)).click();
     expectLastTurnGif();
     cy.get(ts(REPLAY_BACK)).click();
-    cy.get(ts(PRACTICE_RESULT)).should("be.visible");
+    cy.get(ts(practiceTestid.result)).should("be.visible");
 
     expectNoServer();
   });
@@ -457,8 +439,8 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
         visitPractice("/practice?pace=fast");
         cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-viewer", "p2");
         cy.get(ts("hero-opponent")).should("contain.text", "AI · Medium");
-        cy.get(ts(PRACTICE_SETUP)).should("not.exist");
-        cy.get(ts(PRACTICE_ERROR)).should("not.exist");
+        cy.get(ts(practiceTestid.setup)).should("not.exist");
+        cy.get(ts(practiceTestid.error)).should("not.exist");
         reachHumanTurn();
         practiceHandle()
           .then((handle) => handle.snapshot())
@@ -484,22 +466,22 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
       .then((before) => {
         expect(before.log.some((action) => action.playerId === "p1"), "the AI acted").to.eq(true);
 
-        cy.get(ts(PRACTICE_NEW_GAME)).click();
-        cy.get(ts(PRACTICE_LEAVE)).should("have.attr", "data-can-save", "true");
-        cy.get(ts(PRACTICE_LEAVE_SAVE)).click();
-        cy.get(ts(PRACTICE_SETUP), { timeout: BOOT_TIMEOUT }).should("be.visible");
+        cy.get(ts(practiceTestid.newGame)).click();
+        cy.get(ts(practiceTestid.leave)).should("have.attr", "data-can-save", "true");
+        cy.get(ts(practiceTestid.leaveSave)).click();
+        cy.get(ts(practiceTestid.setup), { timeout: BOOT_TIMEOUT }).should("be.visible");
         cy.get(ts(PRACTICE_RESUME_BANNER)).should("have.attr", "data-difficulty", "medium");
-        cy.get(ts(PRACTICE_HUD)).should("not.exist");
+        cy.get(ts(practiceTestid.hud)).should("not.exist");
 
         visitPractice("/practice?pace=fast");
-        cy.get(ts(PRACTICE_SETUP), { timeout: BOOT_TIMEOUT }).should("be.visible");
+        cy.get(ts(practiceTestid.setup), { timeout: BOOT_TIMEOUT }).should("be.visible");
         cy.get(ts(PRACTICE_RESUME_BANNER)).should("be.visible");
-        cy.get(ts(PRACTICE_HUD)).should("not.exist");
+        cy.get(ts(practiceTestid.hud)).should("not.exist");
 
         cy.get(ts(PRACTICE_RESUME)).click();
         cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("have.attr", "data-viewer", "p2");
         cy.get(ts("hero-opponent")).should("contain.text", "AI · Medium");
-        cy.get(ts(PRACTICE_ERROR)).should("not.exist");
+        cy.get(ts(practiceTestid.error)).should("not.exist");
         reachHumanTurn();
         practiceHandle()
           .then((handle) => handle.snapshot())
@@ -510,16 +492,16 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
           });
       });
 
-    cy.get(ts(PRACTICE_MENU)).click();
-    cy.get(ts(PRACTICE_LEAVE)).should("be.visible");
-    cy.get(ts(PRACTICE_LEAVE_CONFIRM)).click();
+    cy.get(ts(practiceTestid.menu)).click();
+    cy.get(ts(practiceTestid.leave)).should("be.visible");
+    cy.get(ts(practiceTestid.leaveConfirm)).click();
     // #4742: the main menu is the Play hub's Solo group.
     cy.location("pathname").should("eq", "/play");
     cy.location("hash").should("eq", "#solo");
     visitPractice("/practice?pace=fast");
-    cy.get(ts(PRACTICE_SETUP), { timeout: BOOT_TIMEOUT }).should("be.visible");
+    cy.get(ts(practiceTestid.setup), { timeout: BOOT_TIMEOUT }).should("be.visible");
     cy.get(ts(PRACTICE_RESUME_BANNER)).should("not.exist");
-    cy.get(ts(PRACTICE_HUD)).should("not.exist");
+    cy.get(ts(practiceTestid.hud)).should("not.exist");
 
     expectNoServer();
   });

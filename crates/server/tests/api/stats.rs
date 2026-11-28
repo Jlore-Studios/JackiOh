@@ -5,7 +5,7 @@ use std::sync::Arc;
 use axum::http::HeaderMap;
 use jackioh_server::app::App;
 use jackioh_server::config::{
-    CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX,
+    CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_MAX_AGE_SECONDS, CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX,
     PLAYER_STATS_CACHE_TTL_SECONDS, PUBLIC_STATS_MIN_LIVE_GAMES, USERNAME_CHANGE_COOLDOWN_MS,
 };
 use jackioh_server::db::store::{UsernameClaim, UsernameClaimOutcome};
@@ -239,6 +239,32 @@ async fn get_public(app: &Arc<App>, path: &str) -> (u16, HeaderMap, Value) {
     request(app, "GET", path, None, None).await
 }
 
+/// R5245000: how many turns of the runtime `settle` gives the refreshes the reads started: each runs to its
+/// end in a turn or two, as the fake store never waits.
+const SETTLE_TURNS: usize = 64;
+
+/// R5245000: lets every refresh the reads so far started finish, without moving a paused clock: a sleep
+/// would, and push a read meant for within the TTL past it.
+async fn settle() {
+    for _ in 0..SETTLE_TURNS {
+        tokio::task::yield_now().await;
+    }
+}
+
+/// R5245000: how many reads figures held past their time take to show their next: the first answers what is
+/// held and loads the next snapshot, the second answers what is held and cuts its figures from that snapshot.
+const REFRESH_READS: usize = 2;
+
+/// R5245000: `path`'s answer once the figures held past their time are worked out again.
+async fn refreshed(app: &Arc<App>, path: &str) -> Value {
+    for _ in 0..REFRESH_READS {
+        let (status, _, _) = get_public(app, path).await;
+        assert_eq!(status, 200, "{path}");
+        settle().await;
+    }
+    get_public(app, path).await.2
+}
+
 fn cache_control(headers: &HeaderMap) -> Option<&str> {
     headers.get("cache-control").and_then(|value| value.to_str().ok())
 }
@@ -333,7 +359,7 @@ mod r654_public_card_and_player_stats {
         assert_eq!(status, 200);
         assert_eq!(
             cache_control(&headers),
-            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+            Some(format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}").as_str())
         );
 
         assert_eq!(data["gate"]["cleared"], json!(false));
@@ -538,7 +564,7 @@ mod r654_public_card_and_player_stats {
         assert_eq!(status, 200);
         assert_eq!(
             cache_control(&headers),
-            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+            Some(format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}").as_str())
         );
 
         assert_eq!(drill["card"]["id"], "core-001");
@@ -1137,6 +1163,71 @@ mod r1771000_player_stats_account_copy {
     }
 }
 
+mod r5274000_fetch_live {
+    use super::*;
+    use crate::support::deps::{TestAppOptions, add_user, test_app_with};
+    use crate::support::store::fake;
+
+    /// An active dev account (`DEV_PROFILE_IDS`), beside the end-to-end fixtures, whose dev account is
+    /// pending and so refused every dev route.
+    const DEV_ID: &str = "d0000000-0000-4000-8000-000000005274";
+
+    /// The app with `DEV_ID` seeded active and listed, and its token.
+    async fn app_with_an_active_dev() -> (Arc<App>, String) {
+        let app = test_app_with(TestAppOptions {
+            env: vec![("DEV_PROFILE_IDS".to_string(), DEV_ID.to_string())],
+            ..TestAppOptions::default()
+        })
+        .await;
+        fake(&app).lock().await.seed_profile(json!({
+            "id": DEV_ID,
+            "userId": "user-5274",
+            "status": "active",
+            "username": "Dev5274",
+            "usernamePrompted": true,
+        }));
+        let token = add_user(&app, "user-5274", "user-5274@example.test", true);
+        (app, token)
+    }
+
+    fn live_game(id: &str) -> Value {
+        make_game_record(
+            id,
+            RecordOptions {
+                source: Some("live"),
+                ..RecordOptions::default()
+            },
+        )
+    }
+
+    /// R5274000: the figures are kept six hours, so a game filed meanwhile waits for them; a dev account's
+    /// Fetch live lets them go, and the next read answers the games filed since, where anyone else's ask is
+    /// refused and changes nothing.
+    #[tokio::test(start_paused = true)]
+    async fn r5274000_fetch_live_answers_the_games_filed_since_and_is_a_dev_accounts_alone() {
+        let (app, dev) = app_with_an_active_dev().await;
+        insert_records(&app, vec![live_game("live-1")]).await;
+        let (status, _, first) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        assert_eq!(first["totalGames"], json!(1));
+
+        insert_records(&app, vec![live_game("live-2")]).await;
+        for token in [None, Some(USER_TOKEN)] {
+            let (status, _, refused) = request(&app, "POST", "/api/dev/stats-refresh", token, None).await;
+            assert_ne!(status, 200, "{token:?}: {refused}");
+        }
+        let (_, _, kept) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(kept, first, "anyone's ask let the figures go");
+
+        let (status, _, loading) = request(&app, "POST", "/api/dev/stats-refresh", Some(&dev), None).await;
+        assert_eq!(status, 200, "{loading}");
+        assert_eq!(loading["steps"], json!(3));
+        let (status, _, live) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        assert_eq!(live["totalGames"], json!(2));
+    }
+}
+
 mod r978000_kept_card_stats {
     use super::*;
     use std::time::Duration;
@@ -1179,7 +1270,7 @@ mod r978000_kept_card_stats {
         assert_eq!(status, 200);
         assert_eq!(
             cache_control(&headers),
-            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+            Some(format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}").as_str())
         );
         assert_eq!(first["totalGames"], json!(1));
         assert_eq!(first["gate"]["liveGames"], json!(1));
@@ -1204,13 +1295,16 @@ mod r978000_kept_card_stats {
         let (_, _, within) = get_public(&app, "/api/stats/cards").await;
         assert_eq!(within, first);
 
+        // R5245000: the read at the TTL answers what is held at once, and the figures refresh beside it.
         tokio::time::advance(Duration::from_millis(1)).await;
-        let (_, _, after) = get_public(&app, "/api/stats/cards").await;
+        let (_, _, at_ttl) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(at_ttl, first);
+        let after = refreshed(&app, "/api/stats/cards").await;
         assert_eq!(after["totalGames"], json!(2));
         assert_eq!(after["gate"]["liveGames"], json!(2));
         assert_eq!(games_of(&after, "core-001"), json!(2));
         // R3067000: the snapshot is read again with it, so another pilot's report counts both records.
-        let (_, _, humans) = get_public(&app, "/api/stats/cards?pilot=human").await;
+        let humans = refreshed(&app, "/api/stats/cards?pilot=human").await;
         assert_eq!(humans["totalGames"], json!(2));
     }
 
@@ -1251,7 +1345,7 @@ mod r978000_kept_card_stats {
         assert!(find(&kept["byTurn"], "turn", &json!(1)).is_none());
 
         tokio::time::advance(Duration::from_millis(ttl_ms())).await;
-        let (_, _, after) = get_public(&app, "/api/stats/cards/core-002").await;
+        let after = refreshed(&app, "/api/stats/cards/core-002").await;
         assert_eq!(
             find(&after["patches"], "patch", &patch).expect("the current patch is listed")["games"],
             json!(gate + 1)
@@ -1336,6 +1430,8 @@ mod r2491000_kept_card_history {
     async fn reads_of(app: &Arc<App>, loads: &Loads, path: &str) -> (usize, usize) {
         let (status, _, _) = get_public(app, path).await;
         assert_eq!(status, 200, "{path}");
+        // R5245000: and the refresh it started beside it.
+        settle().await;
         (
             loads.all.swap(0, Ordering::SeqCst),
             loads.full.swap(0, Ordering::SeqCst),
@@ -1536,7 +1632,8 @@ mod r2491000_kept_card_history {
             assert_eq!(bodies[index], own, "{path}");
         }
 
-        // Within the TTL a new key is cut from the snapshot already held; at the TTL it is loaded again.
+        // Within the TTL a new key is cut from the snapshot already held; at the TTL it is loaded again, beside
+        // the read (R5245000).
         tokio::time::advance(Duration::from_millis(ttl_ms() - 1)).await;
         assert_eq!(reads_of(&app, &loads, &late).await, (0, 0), "{late}");
         tokio::time::advance(Duration::from_millis(1)).await;
@@ -1839,11 +1936,16 @@ mod r1044000_condensed_card_stats {
         tx.commit().await.expect("commit");
         assert!(held.is_empty(), "no record's detail is held");
 
-        // Past the kept reports' TTL, every figure is computed again, off the totals alone.
+        // Past the kept reports' TTL, every figure is computed again, off the totals alone (R5245000: beside
+        // the reads that answer what is held meanwhile).
         tokio::time::advance(Duration::from_secs(
             u64::try_from(CARD_STATS_CACHE_TTL_SECONDS).expect("a TTL") + 1,
         ))
         .await;
+        for _ in 0..REFRESH_READS {
+            figures(&app).await;
+            settle().await;
+        }
         assert_eq!(figures(&app).await, before);
     }
 }
@@ -2391,7 +2493,7 @@ mod r4677000_patches_by_reader {
         assert_eq!(cache_control(&dev_headers), Some("private, no-store"));
         assert_eq!(
             cache_control(&anyone_headers),
-            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+            Some(format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}").as_str())
         );
         for path in [
             "/api/stats/cards",
@@ -2409,7 +2511,7 @@ mod r4677000_patches_by_reader {
                 let expected = if token.is_some() {
                     "private, no-store".to_string()
                 } else {
-                    format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}")
+                    format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}")
                 };
                 assert_eq!(
                     cache_control(&headers),
@@ -2443,7 +2545,7 @@ mod r4675001_play_versions {
 
         let (status, headers, data) = get_public(&app, "/api/stats/versions").await;
         assert_eq!(status, 200);
-        let ttl = format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}");
+        let ttl = format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}");
         assert_eq!(cache_control(&headers), Some(ttl.as_str()));
         assert_eq!(
             keys(&data),
@@ -2603,7 +2705,7 @@ mod r4675001_play_versions {
         let (_, _, whole) = get_public(&app, "/api/stats/versions").await;
         let (status, headers, cut) = get_public(&app, "/api/stats/versions?scope=major").await;
         assert_eq!(status, 200);
-        let ttl = format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}");
+        let ttl = format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}");
         assert_eq!(cache_control(&headers), Some(ttl.as_str()));
         // The body never names the scope.
         assert_eq!(keys(&cut), keys(&whole));
@@ -3593,13 +3695,13 @@ mod r1583000_play_rates {
             .map(|i| game(&format!("pr-short-{i}"), vec!["core-001"], vec![]))
             .collect();
         insert_records(&app, records).await;
-        let (_, _, short) = get_public(&app, PATH).await;
+        let short = refreshed(&app, PATH).await;
         assert_eq!(short["decks"], json!(2 * (n - 1)));
         assert_eq!(short["cards"], json!([]));
 
         tokio::time::advance(Duration::from_millis(refresh_ms())).await;
         insert_records(&app, vec![game("pr-short-last", vec!["core-001"], vec![])]).await;
-        let (_, _, held) = get_public(&app, PATH).await;
+        let held = refreshed(&app, PATH).await;
         assert_eq!(
             ids_of(&held),
             vec!["core-001", "core-002", "core-003", "core-004"]
@@ -3621,8 +3723,11 @@ mod r1583000_play_rates {
         let (_, _, within) = get_public(&app, PATH).await;
         assert_eq!(within, first);
 
+        // R5245000: the read at the refresh interval answers what is held, and the rates refresh beside it.
         tokio::time::advance(Duration::from_millis(1)).await;
-        let (_, _, after) = get_public(&app, PATH).await;
+        let (_, _, at_refresh) = get_public(&app, PATH).await;
+        assert_eq!(at_refresh, first);
+        let after = refreshed(&app, PATH).await;
         assert_eq!(after["decks"], json!(2 * n + 2));
     }
 }
@@ -3665,7 +3770,7 @@ mod r1994000_game_figures {
         assert_eq!(status, 200);
         assert_eq!(
             cache_control(&headers),
-            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+            Some(format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}").as_str())
         );
         assert_eq!(data["patch"], json!(current_patch()));
         assert_eq!(data["source"], "provisional");
@@ -4039,7 +4144,7 @@ mod cache_poisoning {
         let app = test_app().await;
         insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
         let responses = seven_ways(&app, "/api/stats/cards").await;
-        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+        assert_same_bytes(&responses, CARD_STATS_MAX_AGE_SECONDS);
     }
 
     #[tokio::test]
@@ -4047,7 +4152,7 @@ mod cache_poisoning {
         let app = test_app().await;
         insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
         let responses = seven_ways(&app, "/api/stats/cards/core-001").await;
-        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+        assert_same_bytes(&responses, CARD_STATS_MAX_AGE_SECONDS);
     }
 
     #[tokio::test]
@@ -4063,7 +4168,7 @@ mod cache_poisoning {
         let app = test_app().await;
         insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
         let responses = seven_ways(&app, "/api/stats/games").await;
-        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+        assert_same_bytes(&responses, CARD_STATS_MAX_AGE_SECONDS);
     }
 
     #[tokio::test]
@@ -4071,7 +4176,7 @@ mod cache_poisoning {
         let app = test_app().await;
         insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
         let responses = seven_ways(&app, "/api/stats/versions").await;
-        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+        assert_same_bytes(&responses, CARD_STATS_MAX_AGE_SECONDS);
     }
 
     #[tokio::test]
@@ -4746,6 +4851,8 @@ mod r4681001_hall_of_fame {
     async fn reads_of(app: &Arc<App>, loads: &Loads, path: &str) -> (usize, usize) {
         let (status, _, _) = get_public(app, path).await;
         assert_eq!(status, 200, "{path}");
+        // R5245000: and the refresh it started beside it.
+        settle().await;
         (
             loads.all.swap(0, Ordering::SeqCst),
             loads.full.swap(0, Ordering::SeqCst),
@@ -4836,7 +4943,7 @@ mod r4681001_hall_of_fame {
         assert_eq!(reads_of(&app, &loads, "/api/stats/hall-of-fame").await, (1, 1));
         let (status, headers, data) = get_public(&app, "/api/stats/hall-of-fame").await;
         assert_eq!(status, 200);
-        let ttl = format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}");
+        let ttl = format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}");
         assert_eq!(cache_control(&headers), Some(ttl.as_str()));
         assert_eq!((&data["pilot"], &data["mode"]), (&json!("merged"), &json!("all")));
         assert_eq!(data["minSample"], json!(CARD_STATS_MIN_SAMPLE));
@@ -5790,5 +5897,91 @@ mod r5186000_load_progress {
             1,
             "the next read loaded every patch's card totals again"
         );
+    }
+}
+
+// R5245000: once figures are held, no read waits on their next. A read past the TTL answers what is held at
+// once and one load of every patch's totals refreshes them beside it, however many reads ask meanwhile; the
+// figures cut from the new snapshot follow on the next reads.
+mod r5245000_kept_while_they_refresh {
+    use super::*;
+    use jackioh_server::db::store::{Db, StoreError};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
+
+    const PATH: &str = "/api/stats/cards?mode=all";
+
+    /// How many reads arrive at the TTL before the refresh is let finish.
+    const READS_AT_TTL: usize = 3;
+
+    /// A live game on the current patch whose first seat plays `core-001` and `core-002`.
+    fn live_game(id: &str) -> Value {
+        make_game_record(
+            id,
+            RecordOptions {
+                source: Some("live"),
+                p1_deck: Some(vec!["core-001", "core-002"]),
+                ..RecordOptions::default()
+            },
+        )
+    }
+
+    /// Counts the fake store's loads of every patch's card totals from here on, through its `on_call` hook.
+    async fn count_snapshot_loads(app: &App) -> Arc<AtomicUsize> {
+        let loads = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&loads);
+        match &app.db {
+            Db::Fake(data) => {
+                data.lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+                    if method == "statsTotals.loadAllPatches" {
+                        counter.fetch_add(1, Ordering::SeqCst);
+                    }
+                    Ok(())
+                }));
+            }
+            Db::Pg(_) => panic!("the API tests run on the fake store"),
+        }
+        loads
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r5245000_a_read_past_the_ttl_answers_at_once_and_one_load_refreshes_beside_it() {
+        let app = test_app().await;
+        insert_records(&app, vec![live_game("refresh-1")]).await;
+        let (status, _, first) = get_public(&app, PATH).await;
+        assert_eq!(status, 200);
+        assert_eq!(first["totalGames"], json!(1));
+        let loads = count_snapshot_loads(&app).await;
+
+        insert_records(&app, vec![live_game("refresh-2")]).await;
+        tokio::time::advance(Duration::from_secs(
+            u64::try_from(CARD_STATS_CACHE_TTL_SECONDS).expect("a TTL"),
+        ))
+        .await;
+        let (status, _, at_ttl) = get_public(&app, PATH).await;
+        assert_eq!(status, 200);
+        assert_eq!(at_ttl, first, "the read at the TTL waited for the next figures");
+        for _ in 1..READS_AT_TTL {
+            let (status, _, _) = get_public(&app, PATH).await;
+            assert_eq!(status, 200);
+        }
+        settle().await;
+        assert_eq!(
+            loads.load(Ordering::SeqCst),
+            1,
+            "the reads at the TTL loaded every patch's totals more than once"
+        );
+
+        let fresh = refreshed(&app, PATH).await;
+        assert_eq!(fresh["totalGames"], json!(2));
+        // The match a game starts reads the same refreshed figures, without loading them again.
+        let table = jackioh_server::api::stats::win_rate_snapshot(&app).await;
+        let row = table
+            .cards
+            .iter()
+            .find(|row| row.id == "core-001")
+            .expect("core-001's row");
+        assert_eq!(row.games, 2);
+        assert_eq!(loads.load(Ordering::SeqCst), 1);
     }
 }

@@ -464,7 +464,7 @@ pub use crate::plague::{
 };
 
 // Burn and Toxic (Stinkyscape+ E2, R3540000), ruled by `afflictions.rs`.
-pub use crate::afflictions::{burn_on, converts_to, hero_burn_of, hero_toxic_of, toxic_on};
+pub use crate::afflictions::{burn_on, converts_to, hero_burn_of, hero_toxic_of, riders_of, toxic_on};
 
 // Readers: play pipeline A (B5 E1 announces, E4 play counters, R448, R451)
 

@@ -1,0 +1,98 @@
+{
+  "set": {
+    "core-076": {
+      "id": "core-076",
+      "index": "76",
+      "name": "Field of Dreams",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "core-072"
+      ],
+      "loc": 19,
+      "base": {
+        "keywords": [],
+        "text": "Replace your hand with the same number of Reminisce. Exile this."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Replace your hand with the same number of Radiant Reminisce. Exile this."
+      }
+    },
+    "classicplus-033": {
+      "id": "classicplus-033",
+      "index": "33",
+      "name": "Ivory Tower",
+      "set": "Classic+",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 38,
+      "base": {
+        "keywords": [],
+        "text": "The first Unit you stack onto this is fused into it.\nAura: Your Units have Flying and Stack."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "The first Unit you stack onto this becomes Radiant and is fused into it.\nAura: Your Units have Flying and Stack."
+      }
+    },
+    "classicplus-064": {
+      "id": "classicplus-064",
+      "index": "64",
+      "name": "Mulch Muncher",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 5,
+      "params": [
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 12,
+      "base": {
+        "attack": 9,
+        "health": 9,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Trample"
+          }
+        ],
+        "text": "Rush, Trample\nCosts ({discount}) less for each Fruit you've played this game."
+      },
+      "radiant": {
+        "attack": 18,
+        "health": 18,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Trample"
+          },
+          {
+            "kind": "Divine Shield"
+          }
+        ],
+        "text": "Rush, Trample, Divine Shield\nCosts ({discount}) less for each Fruit you've played this game."
+      }
+    }
+  }
+}

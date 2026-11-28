@@ -7,7 +7,7 @@
 
 import { type PlayerView, type PortraitId, type VoiceEmoteId } from "@jackioh/shared";
 
-import { HIDDEN_DEF_ID } from "./constants.ts";
+import { CARD_HOOK_NAMES, HIDDEN_DEF_ID } from "./constants.ts";
 import type {
   CardAudioEntry,
   CardAudioTable,
@@ -53,38 +53,81 @@ export function lineFor(
   defId: string,
   line: PlayableLineKind,
 ): { text: string; persona: Persona } | null {
-  // R1088: `trigger<n>` is the n-th line of the card's trigger list (1-based).
-  const trigger = /^trigger(\d+)$/.exec(line);
-  if (trigger !== null) {
-    const assignment = hookFor(table, defId, "trigger");
-    const spoken = assignment !== null && "lines" in assignment ? assignment.lines[Number(trigger[1]) - 1] : undefined;
-    if (spoken === undefined || assignment?.voice === undefined) return null;
-    const persona = table.voices[assignment.voice];
-    return persona === undefined ? null : { text: spoken, persona };
-  }
-  // A bare `trigger` is not a playable line: only its numbered lines are.
-  if (line === "trigger") return null;
-  // R5264500: an End of turn's line (`endOfTurn`) is a card's own hook too.
-  if (line !== "play" && line !== "death" && line !== "cast" && line !== "attack" && line !== "endOfTurn") {
-    return emoteLineFor(table, emotePortraitOf(defId), line as VoiceEmoteId);
-  }
-  const assignment = hookFor(table, defId, line);
-  // R1088: only a trigger lists lines; any other hook speaks its one text.
-  if (assignment?.voice === undefined || !("text" in assignment)) return null;
+  // R1088: `trigger<n>` is the n-th line of the card's trigger list (1-based). R5188000: any other hook's
+  // `<hook><n>`, n from 2, is the n-th line of its pool; its first is the bare hook's.
+  const numbered = /^([A-Za-z]+?)(\d+)$/.exec(line);
+  const hook = numbered?.[1] ?? line;
+  if (!isCardHook(hook)) return emoteLineFor(table, emotePortraitOf(defId), line as VoiceEmoteId);
+  const n = numbered === null ? null : Number(numbered[2]);
+  // A bare `trigger` is not a playable line: only its numbered lines are; nor is a pool's `<hook>1`.
+  if (hook === "trigger" ? n === null : n !== null && n < 2) return null;
+  const assignment = hookFor(table, defId, hook);
+  if (assignment?.voice === undefined) return null;
+  let spoken: string | undefined;
+  if ("lines" in assignment) spoken = assignment.lines[(n ?? 1) - 1];
+  else if (n === null) spoken = assignment.text;
   const persona = table.voices[assignment.voice];
-  return persona === undefined ? null : { text: assignment.text, persona };
+  return spoken === undefined || persona === undefined ? null : { text: spoken, persona };
 }
 
-/** R655: the hook's effect, with its bank name, or null when the hook has none. */
+function isCardHook(name: string): name is CardHook {
+  return (CARD_HOOK_NAMES as readonly string[]).includes(name);
+}
+
+/**
+ * R1088, R5188000: every line a readable card's hook may speak, in the file's order: a trigger's
+ * `trigger1` to `trigger<n>`, a pool's `<hook>`, `<hook>2` to `<hook><n>`, a single text's `<hook>`; none
+ * without a voice.
+ */
+export function hookLines(table: CardAudioTable, defId: string, hook: CardHook): PlayableLineKind[] {
+  const assignment = hookFor(table, defId, hook);
+  if (assignment?.voice === undefined) return [];
+  if (!("lines" in assignment)) return [hook];
+  return assignment.lines.map((_, i): PlayableLineKind => (hook === "trigger" ? `trigger${i + 1}` : i === 0 ? hook : `${hook}${i + 1}`));
+}
+
+/**
+ * R1088, R5188000: the line a hook speaks this time, or null when it has none: one of a pool's, drawn
+ * by the client's cosmetic `random` (never the match's), and a hook's only line without a draw.
+ */
+export function pickLine(
+  table: CardAudioTable,
+  defId: string,
+  hook: CardHook,
+  random: () => number,
+): PlayableLineKind | null {
+  const lines = hookLines(table, defId, hook);
+  const n = lines.length;
+  if (n <= 1) return lines[0] ?? null;
+  return lines[Math.min(n - 1, Math.floor(random() * n))] ?? null;
+}
+
+/**
+ * R655: the hook's effects, with their bank names, in the order they play: one, or (R5188000) a list's
+ * each; none when the hook has no effect.
+ */
+export function effectsFor(
+  table: CardAudioTable,
+  defId: string,
+  hook: CardHook,
+): { name: string; effect: CardEffect }[] {
+  const named = hookFor(table, defId, hook)?.effect;
+  if (named === undefined) return [];
+  const found: { name: string; effect: CardEffect }[] = [];
+  for (const name of typeof named === "string" ? [named] : named) {
+    const effect = table.effects[name];
+    if (effect !== undefined) found.push({ name, effect });
+  }
+  return found;
+}
+
+/** R655: the hook's first effect, with its bank name, or null when the hook has none. */
 export function effectFor(
   table: CardAudioTable,
   defId: string,
   hook: CardHook,
 ): { name: string; effect: CardEffect } | null {
-  const name = hookFor(table, defId, hook)?.effect;
-  if (name === undefined) return null;
-  const effect = table.effects[name];
-  return effect === undefined ? null : { name, effect };
+  return effectsFor(table, defId, hook)[0] ?? null;
 }
 
 /** `emote-vanilla` -> `vanilla`; anything else -> itself (only emote keys carry the prefix). */
@@ -117,16 +160,19 @@ export function emoteVoiceDef(portrait: PortraitId): string {
 
 /**
  * Keys worth preloading for a view, deduped, in order: the viewer's hand, every unit on both boards (death),
- * the viewer's own units (attack, R655), their face-up backrow traps (cast). Only hooks that have a line.
+ * the viewer's own units (attack, R655), their face-up backrow traps (cast). Only hooks that have a line,
+ * each line of a pool (R5188000).
  */
 export function voiceKeysForView(view: PlayerView, table: CardAudioTable): VoiceKey[] {
   const keys: VoiceKey[] = [];
   const seen = new Set<string>();
-  const add = (defId: string, line: VoiceLineKind): void => {
-    const key = voiceKey(defId, line);
-    if (seen.has(key) || lineFor(table, defId, line) === null) return;
-    seen.add(key);
-    keys.push(key);
+  const add = (defId: string, hook: VoiceLineKind): void => {
+    for (const line of hookLines(table, defId, hook)) {
+      const key = voiceKey(defId, line);
+      if (seen.has(key) || lineFor(table, defId, line) === null) continue;
+      seen.add(key);
+      keys.push(key);
+    }
   };
 
   const hand = view.you.hand;

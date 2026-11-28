@@ -1,0 +1,65 @@
+{
+  "set": {
+    "stinkyscape-068": {
+      "id": "stinkyscape-068",
+      "index": "68",
+      "name": "Stratos",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "loc": 6,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Starship Piece, Flying"
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Starship Piece, Flying"
+      }
+    },
+    "stinkyscape-158": {
+      "id": "stinkyscape-158",
+      "index": "158",
+      "name": "Stratos Swarm",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "refs": [
+        "stinkyscape-068"
+      ],
+      "loc": 20,
+      "base": {
+        "keywords": [],
+        "text": "Fill your board with Stratos."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Fill your board with Radiant Stratos."
+      }
+    }
+  }
+}

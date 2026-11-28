@@ -17,7 +17,17 @@
 #
 # Between two attempts it follows a load the server reports (`GET /api/stats/loading`, R5186000) for up to
 # LOAD_WAIT_SECONDS, as the page does behind its progress bar: the load runs on a task of its own, so the
-# next attempt finds the statistics it made rather than waiting on a load begun again.
+# next attempt finds the statistics it made rather than waiting on a load begun again. Only the server's
+# own answer that nothing is loading ends that wait early. Cloudflare rolls the container to the new image
+# a little after `wrangler deploy`, and the server on the old one, started under the new Worker, already
+# reports the deployed commit: on 2026-11-28 (deploy-staging run 46126109815) the first attempt reached it
+# as it drained, the probe's plain 500 from the Worker was read as "not loading", and the second attempt
+# then waited on the new server's first load. An ask with no JSON answer is waited out instead. Nor is
+# "not loading" alone the end: deploy-staging run 46133467395's first attempt got the Worker's 500 from a
+# server still starting, so nothing had asked for the statistics, and the probe's `{"loading": false}`
+# from the fresh server sent the second attempt into its first load. The wait ends on a load that
+# finished (`expected_ms`, R5186000); while a server has none under way and none finished, it asks for
+# the statistics, letting go after KICK_SECONDS, so a load starts.
 #
 # GitHub runs a composite step's `shell: bash` with `-e`, so each command whose failure the script reads
 # itself sits in an `if` or ends in `|| true`: a request curl itself gave up on (a timeout, a connection
@@ -57,6 +67,8 @@ runs:
         LOADING_PATH: /api/stats/loading
         LOAD_WAIT_SECONDS: "600"
         LOAD_POLL_SECONDS: "10"
+        # How long the ask that starts a load on a server that has loaded nothing waits before letting go.
+        KICK_SECONDS: "5"
       run: |
         set -uo pipefail
         timeout=$(sed -nE 's/^export const API_REQUEST_TIMEOUT_SECONDS = ([0-9_]+);.*/\1/p' "$CONFIG" | tr -d _) || true
@@ -100,13 +112,36 @@ runs:
           seen="HTTP ${status:-000} after ${seconds:-?}s, $cards$detail"
           echo "::warning::$SITE$STATS_PATH, attempt $attempt of $ATTEMPTS: $seen"
           [ "$attempt" = "$ATTEMPTS" ] && break
-          waited=0
-          while [ "$waited" -lt "$LOAD_WAIT_SECONDS" ]; do
-            loading=$(curl -sS -m "$timeout" "${access[@]}" "$SITE$LOADING_PATH" 2> /dev/null | jq -r '.loading // false' 2> /dev/null) || loading=false
-            [ "$loading" = true ] || break
-            echo "$SITE: the card statistics are still loading, ${waited}s waited of ${LOAD_WAIT_SECONDS}s"
+          # Only the server's own "not loading" ends the wait. No answer, or one that is not its JSON, is a
+          # server restarting (a rollout's old container draining, the new one booting) or too busy to say,
+          # and is waited out like a load: the time counts by the clock, since one ask can take $timeout.
+          started=$SECONDS
+          while :; do
+            waited=$(( SECONDS - started ))
+            [ "$waited" -lt "$LOAD_WAIT_SECONDS" ] || break
+            : > "$body"
+            code=$(curl -sS -m "$timeout" -o "$body" -w '%{http_code}' "${access[@]}" "$SITE$LOADING_PATH" 2> /dev/null) || true
+            # `done` is a load that finished since the server started (its `expected_ms`); `idle` is none
+            # under way and none finished, as on a server that has just started.
+            loading=$(jq -r 'if type != "object" or (has("loading") | not) then "unsaid"
+              elif .loading then "true" elif .expected_ms != null then "done" else "idle" end' "$body" 2> /dev/null) || loading=unsaid
+            if [ "$code" = 200 ] && [ "$loading" = done ]; then
+              break
+            elif [ "$code" = 200 ] && [ "$loading" = idle ]; then
+              # Nothing has asked this server for the statistics yet (the attempt before reached one still
+              # starting), so ask now and let go: the load runs on a task of its own and outlives the ask.
+              curl -sS -m "$KICK_SECONDS" -o /dev/null "${access[@]}" "$SITE$STATS_PATH" 2> /dev/null || true
+              echo "$SITE: the server has not loaded the card statistics since it started, so the check asked it to; ${waited}s waited of ${LOAD_WAIT_SECONDS}s"
+            elif [ "$code" = 200 ] && [ "$loading" = true ]; then
+              echo "$SITE: the card statistics are still loading, ${waited}s waited of ${LOAD_WAIT_SECONDS}s"
+            else
+              # A server without the route, or Access turning the ask away, says nothing more by waiting.
+              case $code in
+                404 | 301 | 302 | 303 | 307 | 401 | 403) break ;;
+              esac
+              echo "$SITE: the server did not say whether the card statistics are loading (HTTP ${code:-000}), so it may be restarting; ${waited}s waited of ${LOAD_WAIT_SECONDS}s"
+            fi
             sleep "$LOAD_POLL_SECONDS"
-            waited=$(( waited + LOAD_POLL_SECONDS ))
           done
           sleep "$PAUSE_SECONDS"
         done

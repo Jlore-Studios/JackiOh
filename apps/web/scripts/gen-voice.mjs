@@ -6,8 +6,10 @@
 // The file is JSON5 and only ever read. Its lines' words are crates/cards/card-text.yaml's (#2498),
 // read from src/audio/voice-text.json beside it, which crates/tools/tests/export_card_text.rs writes
 // from the YAML. A voice line is a card hook's assignment that names a voice from the voices bank
-// (with its text); its key is `<defId>-<hook>`. An assignment that is only an effect renders
-// nothing. Which hooks a card may carry is voiceData.ts's to check (CARD_HOOKS); this script holds
+// (with its text); its key is `<defId>-<hook>`. R5188000: any hook may give a pool of lines in place of
+// its one text, keyed `<defId>-<hook>` for the first (the key a single line has) and `<defId>-<hook>2`,
+// `<defId>-<hook>3` and on for the rest; a trigger's list is keyed `<defId>-trigger1` on (R1088). An
+// assignment that is only an effect, or a list of effects, renders nothing. Which hooks a card may carry is voiceData.ts's to check (CARD_HOOKS); this script holds
 // every catalog card to SPEC §10.11's lines: a Unit's play and death, anything else's cast.
 // A card of a set that has not shipped (R1420) is held to its lines too, but renders no file until its
 // set ships: no player meets it before then, and its files are owed with the patch that ships it.
@@ -63,8 +65,8 @@ const FFMPEG_ENCODE = [
 const TRIM_THRESHOLD_DB = -50;
 /** A SAPI render's loudest sample after normalizing, in dBFS (Core's `say` files peak near -5). */
 const PEAK_TARGET_DB = -4;
-/** VOICE_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks (R501, R1448, R1884000, R3596000, R5222002). */
-const BUDGET_BYTES = 30 * 1024 * 1024;
+/** VOICE_BUDGET_BYTES in src/audio/constants.ts: the whole set, counted in whole disk blocks (R501, R1448, R1884000, R3596000, R5188001). */
+const BUDGET_BYTES = 32 * 1024 * 1024;
 const BLOCK_BYTES = 4096;
 /** The mode every rendered file is written with. */
 const FILE_MODE = 0o644;
@@ -222,15 +224,18 @@ function expectedKeys(table, problems) {
         problems.push(`${key}: voice ${assignment.voice} cannot render`);
         continue;
       }
-      // R1088: a trigger lists its lines: one expected `${defId}-trigger${n}` key per line.
+      // R1088: a trigger lists its lines: one expected `${defId}-trigger${n}` key per line. R5188000: any
+      // other hook's pool keeps the bare key for its first line, then `${defId}-${hook}${n}` from 2.
+      const pool = (lineOf) => (Array.isArray(assignment.lines) ? assignment.lines : []).map((text, i) => {
+        const line = lineOf(i);
+        return { key: `${defId}-${line}`, line, text };
+      });
       const spoken =
         hook === "trigger"
-          ? (Array.isArray(assignment.lines) ? assignment.lines : []).map((text, i) => ({
-              key: `${defId}-trigger${i + 1}`,
-              line: `trigger${i + 1}`,
-              text,
-            }))
-          : [{ key, line: hook, text: assignment.text }];
+          ? pool((i) => `trigger${i + 1}`)
+          : Array.isArray(assignment.lines)
+            ? pool((i) => (i === 0 ? hook : `${hook}${i + 1}`))
+            : [{ key, line: hook, text: assignment.text }];
       const backend = backendOf(voice);
       for (const { key: lineKey, line: lineName, text } of spoken) {
         if (typeof text !== "string" || text.trim() === "") {
@@ -354,7 +359,7 @@ function dropUnshipped(catalog, expected) {
 }
 
 /**
- * #2498: the table with each voiced hook's text (a trigger's lines) and each portrait's five lines
+ * #2498: the table with each voiced hook's text (a trigger's lines, a pool's, R5188000) and each portrait's five lines
  * filled in from voice-text.json, where the table has none of its own. voiceData.ts's
  * `withVoiceText` is the client's join, which also refuses a line the table writes itself.
  */
@@ -364,7 +369,8 @@ function withVoiceText(table, voiceText) {
     const own = isObject(lines[defId]) ? lines[defId] : {};
     for (const [hook, assignment] of Object.entries(isObject(entry) ? entry : {})) {
       if (!isObject(assignment) || assignment.voice === undefined || !Object.hasOwn(own, hook)) continue;
-      if (hook === "trigger") assignment.lines ??= own[hook];
+      // R5188000: a pool, written as a list, fills `lines`, as a trigger's always does (R1088).
+      if (hook === "trigger" || Array.isArray(own[hook])) assignment.lines ??= own[hook];
       else assignment.text ??= own[hook];
     }
   }

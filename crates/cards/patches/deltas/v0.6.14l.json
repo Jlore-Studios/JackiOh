@@ -1,0 +1,56 @@
+{
+  "set": {
+    "stinkyscapeplus-094": {
+      "id": "stinkyscapeplus-094",
+      "index": "94",
+      "name": "PIP",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "loc": 25,
+      "base": {
+        "keywords": [],
+        "text": "Put a Unit on a performance improvement plan: it has {count|turn|turns} to get a kill, or it is destroyed."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Put a Unit on a performance improvement plan: it has {count2|turn|turns} to get a kill, or it is destroyed. If it fails, add {the|The Coin|The Coins} to your hand."
+      },
+      "params": [
+        {
+          "key": "count",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        },
+        {
+          "key": "count2",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        },
+        {
+          "key": "the",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "refs": [
+        "core-t-coin"
+      ]
+    }
+  }
+}

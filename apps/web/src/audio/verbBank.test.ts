@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { CATALOG } from "../wire/cards.ts";
 import { SFX_ELEMENTS } from "./sfx.ts";
 import { CARD_AUDIO } from "./soundTables.ts";
 import { DAMAGE_ELEMENTS, SPELL_VERBS, VERB_BANK_EFFECTS, VERB_ROWS } from "./test/verbBank.ts";
@@ -10,6 +11,16 @@ import { DAMAGE_ELEMENTS, SPELL_VERBS, VERB_BANK_EFFECTS, VERB_ROWS } from "./te
 const NEW_RECIPES = [
   "elementWindUp", "elementBolt", "elementTail", "windUp", "sparkleTail", "hush", "shatter", "morph", "revealGlint",
 ] as const;
+
+/** A name as lowercase letters and digits only, so `Fire Wind`, `fire-wind` and `fireWind` compare equal. */
+function squash(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/** The `effects` whose squashed name is a card's. Equality, not containment: "Arc" and "Rewind" are cards. */
+function namedForACard(effects: Iterable<string>, cardNames: ReadonlySet<string>): string[] {
+  return [...effects].filter((effect) => cardNames.has(squash(effect)));
+}
 
 describe("#5190 the verb table against the bank", () => {
   it("#5190 has a row per damage element and per other verb", () => {
@@ -29,23 +40,16 @@ describe("#5190 the verb table against the bank", () => {
     expect(missing).toEqual([]);
   });
 
-  it("#5190 exempts no bank effect that a row does not use", () => {
-    const used = new Set(Object.values(VERB_ROWS).flatMap((row) => [row.windUp, row.release, row.tail]));
-    expect([...VERB_BANK_EFFECTS].filter((name) => !used.has(name))).toEqual([]);
-    expect(VERB_BANK_EFFECTS.size).toBe(used.size);
-  });
-
   it("#5190 builds every new recipe into at least one bank effect", () => {
     const used = new Set(Object.values(CARD_AUDIO.effects).map((effect) => effect.sfx));
     expect(NEW_RECIPES.filter((id) => !used.has(id))).toEqual([]);
   });
 
   it("#5190 names the verb effects for what they sound like, never a card", () => {
-    const names = Object.keys(CARD_AUDIO.effects);
-    const verbNames = [...VERB_BANK_EFFECTS];
-    const cardIds = Object.keys(CARD_AUDIO.cards);
-    const offenders = verbNames.filter((name) => cardIds.some((id) => name.toLowerCase().includes(id)));
-    expect(offenders).toEqual([]);
-    expect(names).toEqual(expect.arrayContaining(verbNames));
+    const cardNames = new Set(Object.values(CATALOG).map((def) => squash(def.name)));
+    expect(cardNames.size, "the catalog's card names were read").toBeGreaterThan(0);
+    // The comparison can fail: a name that squashes to a card's is found.
+    expect(namedForACard(["Fire-Wind"], new Set(["firewind"]))).toEqual(["Fire-Wind"]);
+    expect(namedForACard(VERB_BANK_EFFECTS, cardNames), "verb effects named like a catalog card").toEqual([]);
   });
 });

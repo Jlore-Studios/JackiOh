@@ -177,6 +177,9 @@ A Cleave splash in the walk lands on every unit it strikes. A unit without Taunt
 passed, is met as its earlier hits and splashes left it: gone once destroyed, or back as its Reborn body. Each
 splash spends the pools in the engine's order, and a Trample attacker's sends what it deals beyond the unit's
 health to the hero (§4.4 step 9) (`splash_trample_read`, R4805000, #4805; off in `GREEDY_EVAL`).
+Each hit on the defending hero in the walk meets the Armor its earlier hits have worn off it (R5183000); a
+Pierce hit, an aura's Armor and a hero immune to damage wear nothing (`armor_wear_read`, R5228000, #5228; off
+in `GREEDY_EVAL`).
 A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b
@@ -188,7 +191,18 @@ the reply prices the counter instead, on a unit by `counter_price` (what `afflic
 much more on) and on a hero by `hero_ticks_added`. Each side's damage pools (S+ #42 Force Projector, #123
 Oct) soak what they have left (`query::damage_pool_of`), one pool a side spent once across a read's hits in
 the order it counts them (`Side.pool`, `Blow.soaked`, the walk's `WalkPools`): as they stand now for this
-turn's attacks, refilled where that side's turn starts before the hits land. A unit's Death
+turn's attacks, refilled where that side's turn starts before the hits land. With those, the riders of
+§4.4 step 7 count too (`damage_rider_read`, R5229000, #5229; off in `GREEDY_EVAL`): a hit from a source
+whose damage also Burns N, also applies Toxic N, or whose damage dealt also Burns (S+ #37 Scorch, #111 Mace,
+#114 Reign, the Rounds pieces and the Starships they fuse into) adds those counters to a target it deals
+something and leaves standing, as the engine's `ride_damage` reads them (`query::riders_of`,
+`Side.riders`, `Blow.rider_burn` and `Blow.rider_toxic`; none after a kill, a shield, an Indestructible or a
+hit the pools soak whole). The reply prices them on the unit as the blow leaves it (`riders_price`, so a
+Burn that finishes the hit reads as the kill), the strike back's on the attacker and each Cleave splash's at
+its share, and on a hero the hit leaves life by `hero_ticks_added_by`. The walk adds the Burn its hero hits
+leave as one more unpierced hit after them, the tick at the turn's end, so `face_threat`, `ready_gap` and
+the walls read it; no Toxic is walked, since it ticks at the hero's own turn start, and the lethal solver's
+own gaps leave the tick out (`LETHAL_WALK`), since it never ends the turn. A unit's Death
 counts by what it leaves behind (R2424000): at the root `death_prices` prices, within `AI_DEATH_PROBE_NODES`, each live
 Death on the field and in the seat's hand (spawned first, R923001) as its controller's evaluation after
 the sandbox's destroy less after its remove (R923003), once for each controller, so each side's copy reads
@@ -267,6 +281,12 @@ A passed line's Float counts toward the seat's own "Float reduces cost" cards (R
 `AI_EVAL.float_discount` for each crystal that went toward one still above the seat's crystals (its
 `mana.max`, never the handicap's), in `passed_score` and `replied_score` alike; `GREEDY_EVAL` keeps 0.
 An unconditional price hike on the coming turn (IA #123 Cost Injection, IA #144 Total Compromise, IA #225 Root Kit, C+ T-AI-7 Alignment Tax) counts in `coming_refreshes` as harm against that player's next-turn crystals (`coming_cost_hike`, R5122000): each crystal of the hike is priced at `next_turn_mana` times `AI_TAXED_PLAYS` (1), weighted by `cost_hike` in `AI_EVAL` (1.0), and preserved across reply scoring in `replied_score`; `GREEDY_EVAL` keeps 0.
+A Nerf on a card in the enemy's hand counts against that player in `material` at `enemy_hand_nerf` (0.5) a step
+(`hand_nerfs`, R5246000): a crystal its `costMod` made it dearer, a `TUNE_STAT_TOTAL` of stats below its face, a
+keyword lost or a harmful one gained, a step a number moved the worse way, never a secret Nerf (R1845000) nor what
+an Upgrade wrote. Each live `RandomTargetsNextSpell` on a side (IA #130 Prompt Injection) counts against it at
+`random_targets` (1.0) (`coming_random_targets`), beside `coming_refreshes` rather than in it, so a reply that
+spends one keeps no credit. `GREEDY_EVAL` keeps both at 0.
 A card beneath one of the seat's own Stack piles counts `AI_EVAL.dormant_share`, a half, of its
 `unit_worth` (`dormant_worth`, R3695001), so the Drone Battleship counts its two lower layers; the
 enemy's count `dormant_card` each, and `GREEDY_EVAL` keeps 0.
@@ -500,6 +520,12 @@ to the searched section, so the beam and the replies keep their nodes, and no de
 `nodes`. A state of ordinary width, and a wide one whose walk never reads as lethal, decide node for node
 as before; `lethal_hint` and `unstoppable_lethal` call `find_lethal` and have no reach;
 `AI_SEARCH.lethal_reach` off stops every walk at its scaled allowance.
+R5119000: among open positions of the same gap above 0 and the same depth, the best-first walk takes
+first the one whose ready attacks leave the enemy hero least were no Taunt standing (`Gaps::taunt_free`,
+read through an open prompt, whose answer spends no attack; `AI_SEARCH.lethal_keep_attacks`), and once
+it has tried `AI_SEARCH.lethal_dive_moves` (75) moves at and below one child, from positions no closer
+than that child's parent, it sets the child aside: the open positions below it come after the others of
+their gap. Both off are the walk before it, node for node.
 
 R4447000: `decide` replays each finalist's world-0 line on the other determinizations with
 `replay_line`, which says whether the line was cut there: whether it met a step that world does not
@@ -536,6 +562,8 @@ ships before the AI is trained on it is listing it there. It held the Stinkyscap
 Felinors vs Humans set alone from its release (issue #5222, R5222000) until wave 2's sweep (issue #5223)
 measures the AI on it. No deal is shaped: the unban lane's dealt-quality table and the option that read it are
 removed (R4702001), so practice, the quality gates and both seats of an arena deal by one rule (R976000).
+A sweep timeout counts a decision re-timed over `AI_SWEEP.decision_ms` × `retime_margin` (1.25, 2,500 ms)
+and, apart in `capped_games`, a game past `max_actions` (R5248000); the reason prints the two apart.
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand, and
 never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block

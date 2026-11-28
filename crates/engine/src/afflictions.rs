@@ -8,8 +8,8 @@
 //!     removed (`tick_burn_at_turn_end`, R4154000), and at the start of its owner's turn each Toxic deals
 //!     its count as piercing damage and stays (`tick_at_turn_start`, R3540001);
 //!   - an immunity: a Unit whose text says "Immune to Toxic" takes no Toxic (R4154001);
-//!   - the riders and the conversion (`ride_damage`, `converts_to`), which §4.4 reads off the source's
-//!     static flags (R3540002, R3540003, R4783001);
+//!   - the riders and the conversion (`ride_damage` through `riders_of`, `converts_to`), which §4.4 reads
+//!     off the source's static flags (R3540002, R3540003, R4783001, R5229000);
 //!   - a Vanilla's clearing (`clear_afflictions`, R3540004), and the reads, re-exported by `query.rs`.
 //!
 //! Only a Unit acting in a unit zone, or standing in the backrow, or a hero carries them; R78's reset
@@ -173,36 +173,66 @@ pub fn converts_to(state: &GameState, source: &CardInstance) -> Option<Afflictio
     }
 }
 
+/// R3540002, R4783001, §4.4 step 7: the riders a source's hits carry (`riders_of`), what `ride_damage`
+/// adds after a hit its target survived and what the AI reads ahead of one (R5229000).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Riders {
+    /// "Damage also Burns N": the N, its declared `burns` where it declares one (R386); 0 with none.
+    pub burn: i32,
+    /// R4783001, "Damage dealt also Burns": each hit adds what it dealt to that Burn, in the same gain.
+    pub burn_dealt: bool,
+    /// "Damage also applies Toxic N": the N, its declared `toxic` where it declares one (R386); 0 with none.
+    pub toxic: i32,
+    /// R5239007, "Damage dealt also applies Toxic": each hit adds what it dealt to that Toxic, in the same gain.
+    pub toxic_dealt: bool,
+}
+
+impl Riders {
+    /// The Burn and the Toxic one hit that dealt `dealt` at step 5 adds to a target that survived it: none
+    /// for a hit that dealt nothing, and never a negative count.
+    pub fn after(self, dealt: i32) -> (i32, i32) {
+        if dealt <= 0 {
+            return (0, 0);
+        }
+        let dealt_burn = if self.burn_dealt { dealt } else { 0 };
+        let dealt_toxic = if self.toxic_dealt { dealt } else { 0 };
+        (
+            self.burn.saturating_add(dealt_burn).max(0),
+            self.toxic.saturating_add(dealt_toxic).max(0),
+        )
+    }
+}
+
+/// R3540002, R4783001, R386: the riders `source`'s hits carry, read off its static flags, the one read
+/// `ride_damage` applies and the AI prices (R5229000).
+pub fn riders_of(state: &GameState, source: &CardInstance) -> Riders {
+    let flags = crate::scripts::flags_of(state, source);
+    Riders {
+        burn: flags
+            .burns_on_damage
+            .map_or(0, |n| crate::params::declared_or(state, source, BURNS_PARAM, n)),
+        burn_dealt: flags.damage_also_burns == Some(true),
+        toxic: flags
+            .toxic_on_damage
+            .map_or(0, |n| crate::params::declared_or(state, source, TOXIC_PARAM, n)),
+        toxic_dealt: flags.damage_also_toxic == Some(true),
+    }
+}
+
 /// R3540002, §4.4 step 7: the Burn and the Toxic a hit from `source` adds to its target after it landed,
 /// when the target survived it: a Unit still standing and not killed, a hero with life left. N is the
 /// source's declared number where it declares one (R386), the flag's otherwise; Burn goes on first.
 /// R4783001: "Damage dealt also Burns" adds `dealt`, what the hit dealt at step 5, to that Burn, one gain;
-/// R5239007: "Damage dealt also applies Toxic" adds it to the Toxic the same way.
+/// R5239007: "Damage dealt also applies Toxic" adds it to the Toxic the same way. Both are `riders_of`'s
+/// `Riders::after(dealt)` (R5229000).
 pub(crate) fn ride_damage(
     sink: &mut EngineSink<'_>,
     source: &CardInstance,
     target: &DamageTarget,
     dealt: i32,
 ) {
-    let flags = crate::scripts::flags_of(sink.state, source);
-    let rider = flags
-        .burns_on_damage
-        .map(|n| crate::params::declared_or(sink.state, source, BURNS_PARAM, n));
-    let burn = if flags.damage_also_burns == Some(true) {
-        Some(rider.unwrap_or(0) + dealt)
-    } else {
-        rider
-    };
-    let toxic_rider = flags
-        .toxic_on_damage
-        .map(|n| crate::params::declared_or(sink.state, source, TOXIC_PARAM, n));
-    // R5239007: "Damage dealt also applies Toxic" adds `dealt` to that Toxic, one gain, as Burn's twin.
-    let toxic = if flags.damage_also_toxic == Some(true) {
-        Some(toxic_rider.unwrap_or(0) + dealt)
-    } else {
-        toxic_rider
-    };
-    if burn.is_none() && toxic.is_none() {
+    let (burn, toxic) = riders_of(sink.state, source).after(dealt);
+    if burn <= 0 && toxic <= 0 {
         return;
     }
     let survived = match target {
@@ -213,12 +243,8 @@ pub(crate) fn ride_damage(
     if !survived {
         return;
     }
-    if let Some(n) = burn {
-        afflict(sink, target, Affliction::Burn, n);
-    }
-    if let Some(n) = toxic {
-        afflict(sink, target, Affliction::Toxic, n);
-    }
+    afflict(sink, target, Affliction::Burn, burn);
+    afflict(sink, target, Affliction::Toxic, toxic);
 }
 
 /// R3540001: the start of `player`'s turn, in the Brittle stage: their hero first, then their Units in

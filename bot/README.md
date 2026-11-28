@@ -351,6 +351,16 @@ waiting for a person, and keeps the rest for one:
    suggestions the judge approved on 2026-11-27. A survey runs only while lanes are spare, so
    approved work that fills the queue stops new surveys by itself. Its approval joins the decisions as `auto-approved`, which the judge is
    told is no person's decision, so it never learns from its own approvals.
+5. **A suggestion the judge never answered is judged again.** A judge call can fail: the
+   subscription reaches its cap after the survey (`callHeadroom`), the call times out or fails, or
+   its answer gives no verdict for a suggestion. So the run first makes one more fresh call for the
+   ones it left unanswered (`work.JudgeAttempts`, 2), and leaves a step that says which failure it
+   was. One still unanswered opens with no `**Judge:**` line, and the next survey, usually on
+   another subscription, judges it again before its own work (`plan.Unjudged`, the plan's
+   `rejudge`: at most `plan.RejudgeMax`, 3, oldest first; never one a person commented on or 👎'd).
+   Delivery puts the verdict on the issue as a comment carrying `<!-- jackioh-judge -->`, and one
+   it would approve is queued as any other (#5104). After `plan.RejudgeTries` (3) surveys that could
+   not answer it, a comment leaves it to a person (`suggest.judge_tries`).
 
 `enabled: false`, or no `auto_approve` at all, judges nothing and approves nothing. Squishy makes no
 suggestions.

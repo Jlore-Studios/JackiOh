@@ -7,9 +7,9 @@
 //! The pinned position is turn 8 of `audit:hard-vs-easy:2`, p2 to move with 32 root candidates: the
 //! solver proves its six-action lethal in 213 nodes, and the scaled allowance was 140.
 //!
-//! The audit's (#4787) long lethals on boards of ordinary width are pinned beside it, as they stand
-//! (`the_audits_long_lethals_are_proved_given_room`): #5119, #4790's follow-up, must bring two of them
-//! within `AI_BUDGET.lethal_nodes` without losing the third.
+//! The audit's (#4787) long lethals on boards of ordinary width are pinned beside it, each proved within
+//! `AI_BUDGET.lethal_nodes` since R5119000 kept the walk's attackers ready and set a long flat dive aside
+//! (`r5119000_the_audits_long_lethals_are_proved_within_the_lethal_allowance`).
 //!
 //! Its worlds sample the hidden cards from the catalog's pools, so a card joining one deals other worlds
 //! (R380, #3117): the R4788000 tests search its stream for a cursor that meets their premise
@@ -23,7 +23,7 @@ use jackioh_ai::{
 };
 use jackioh_engine::testkit::{GameState, PlayerId, Value, create_rng, cursor_where, json, with_pool_shift};
 
-use super::support::{AI, decision_prices_at, register_cards, scenario};
+use super::support::{AI, act, decision_prices_at, register_cards, scenario};
 
 const WIDE_LETHAL: &str = include_str!("../fixtures/pinned-wide-lethal.json");
 /// Turn 12 of the mirror game `audit:ai-vs-greedy:26`, p2 to move: a play, three Activates of it on the
@@ -35,18 +35,7 @@ const AUDIT_HVE_8_T12: &str = include_str!("../fixtures/pinned-audit-hve-8-t12.j
 /// prompt's answer drops it to 0.
 const AUDIT_HVE_12_T21: &str = include_str!("../fixtures/pinned-audit-hve-12-t21.json");
 
-/// The nodes `the_audits_long_lethals_are_proved_given_room` gives the two long lethals the walk did not
-/// prove within `AI_BUDGET.lethal_nodes`: it needed 510 for mirror 26's and 462 for hard-vs-easy 8's, so
-/// this leaves modest room over what the walk cost and still fails a walk that loses either. Since the
-/// Felinors vs Humans set shipped (#5222) the pools deal both other worlds: hard-vs-easy 8's own take 283
-/// nodes, and on mirror 26's own the walk proves none, since world 1 samples FvH #159 Plagiarized:
-/// Ransomware into p1's face-down backrow, which Freezes the Unit the line plays, and a Frozen card cannot
-/// Activate (R2246000); so mirror 26 takes cursor 4's worlds, proved in 160. Both now fit within
-/// `AI_BUDGET.lethal_nodes`, so this room no longer measures the walk's cost, and #5119 needs long
-/// positions of its own.
-const LONG_LETHAL_ROOM: usize = 600;
-
-/// The nodes that settle whether the walk proves a lethal on a position's worlds, well past every room the
+/// The nodes that settle whether the walk proves a lethal on a position's worlds, well past the room the
 /// audit test gives, so the premise it searches on does not depend on that room.
 const LETHAL_EXISTS_ROOM: usize = 2000;
 
@@ -254,38 +243,31 @@ fn r4788000_a_walk_that_never_reads_as_lethal_stops_at_its_allowance() {
     assert_eq!(reaching.used(), plain.used(), "no node past the allowance");
 }
 
-/// The audit's (#4787) long lethals, each proved by the walk as it stands, given room. #5119, #4790's
-/// follow-up, must bring mirror 26's turn 12 and hard-vs-easy 8's turn 12 within `AI_BUDGET.lethal_nodes`
-/// without losing hard-vs-easy 12's turn 21, which the walk proves within it today (in 192 nodes); until
-/// then this keeps a change to the walk from losing any of the three unnoticed. Each is pinned as the audit
-/// dealt it, on its fixture's own cursor, so its worlds read the pools as they are, not as the pool probe
-/// (#3117) rotates them: a rotation deals other hidden cards and moves the walk's cost (hve-8's to 661
-/// nodes). A card joining a pool can move one the same way, and it is measured again; one on whose own
+/// R5119000: the audit's (#4787) long lethals, each proved within `AI_BUDGET.lethal_nodes`. Before the
+/// ruling the walk needed 510 nodes for mirror 26's turn 12 and 462 for hard-vs-easy 8's, a dive below an
+/// attack on the Taunt and below a dead play, and proved hard-vs-easy 12's turn 21 in 192, which it still
+/// does. Each is pinned as the audit dealt it, on its fixture's own cursor, so its worlds read the pools as
+/// they are, not as the pool probe (#3117) rotates them: a rotation deals other hidden cards and moves the
+/// walk's cost. A card joining a pool can move one the same way, and it is measured again; one on whose own
 /// worlds the walk then proves no lethal is dealt the first worlds it does (`lethal_cursor`).
 #[test]
-fn the_audits_long_lethals_are_proved_given_room() {
-    with_pool_shift(0, the_audits_long_lethals_as_they_stand);
+fn r5119000_the_audits_long_lethals_are_proved_within_the_lethal_allowance() {
+    with_pool_shift(0, the_audits_long_lethals_within_the_allowance);
 }
 
-fn the_audits_long_lethals_as_they_stand() {
-    for (name, text, room) in [
-        (
-            "audit:ai-vs-greedy:26 turn 12",
-            AUDIT_MIRROR_26_T12,
-            LONG_LETHAL_ROOM,
-        ),
-        ("audit:hard-vs-easy:8 turn 12", AUDIT_HVE_8_T12, LONG_LETHAL_ROOM),
-        (
-            "audit:hard-vs-easy:12 turn 21",
-            AUDIT_HVE_12_T21,
-            AI_BUDGET.lethal_nodes,
-        ),
+fn the_audits_long_lethals_within_the_allowance() {
+    let room = AI_BUDGET.lethal_nodes;
+    for (name, text) in [
+        ("audit:ai-vs-greedy:26 turn 12", AUDIT_MIRROR_26_T12),
+        ("audit:hard-vs-easy:8 turn 12", AUDIT_HVE_8_T12),
+        ("audit:hard-vs-easy:12 turn 21", AUDIT_HVE_12_T21),
     ] {
         let at = pinned(text);
         let prices = decision_prices_at(&at.state, at.seat);
         // The worlds sample the hidden cards from the pools, so a set joining them can deal the audit's
-        // cursor worlds in which the line does not win (mirror 26's since #5222, a sampled Trap that
-        // Freezes the Unit it plays): those take the first cursor whose worlds hold a lethal, settled at
+        // cursor worlds in which the line does not win (mirror 26's since #5222: FvH #159 Plagiarized:
+        // Ransomware sampled into p1's backrow Freezes the Unit the line plays, and a Frozen card cannot
+        // Activate, R2246000): those take the first cursor whose worlds hold a lethal, settled at
         // `LETHAL_EXISTS_ROOM`, not at the room this asserts.
         let worlds = worlds(&at, lethal_cursor(&at, &prices));
         let counter = create_node_counter(room, None);
@@ -294,6 +276,37 @@ fn the_audits_long_lethals_as_they_stand() {
             proved.is_some(),
             "{name}: no lethal in {} of {room} nodes",
             counter.used()
+        );
+    }
+}
+
+/// R5119000: hard-vs-easy 8's turn-12 lethal, as the walk proves it within `AI_BUDGET.lethal_nodes`, played
+/// through the engine on the fixture's own state and on each of the walk's worlds: the game is won, so the
+/// proof is the engine's, not an artifact of the walk's judge. It is five actions (a play, a second play,
+/// two Activates of that one on the Taunt, and the hit the Taunt walled), not the ten the audit logged.
+#[test]
+fn r5119000_hard_vs_easy_8s_lethal_wins_the_game_through_the_engine() {
+    with_pool_shift(0, hard_vs_easy_8s_lethal_through_the_engine);
+}
+
+fn hard_vs_easy_8s_lethal_through_the_engine() {
+    let at = pinned(AUDIT_HVE_8_T12);
+    let worlds = worlds(&at, at.rng_cursor);
+    let prices = decision_prices_at(&at.state, at.seat);
+    let room = AI_BUDGET.lethal_nodes;
+    let counter = create_node_counter(room, None);
+    let line = find_lethal(&worlds, at.seat, &counter, room, &prices).expect("the walk proves the lethal");
+    assert_eq!(line.len(), 5, "{line:?}");
+    let starts =
+        std::iter::once(("the fixture", &at.state)).chain(worlds.iter().map(|world| ("a world", world)));
+    for (name, start) in starts {
+        let end = line
+            .iter()
+            .fold(start.clone(), |state, action| act(&state, at.seat, action));
+        assert_eq!(
+            end.result.and_then(|result| result.winner.player()),
+            Some(at.seat),
+            "{name}: {line:?}"
         );
     }
 }

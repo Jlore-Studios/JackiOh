@@ -1443,11 +1443,13 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
 Every card's sounds are in `src/audio/card-audio.json5` (R655), a JSON5 file edited by hand, whose
 header explains it: a `voices` bank, an `effects` bank (a procedural recipe from `sfx.ts` at its own
 `pitch` and `gain`, which renders nothing), and `cards`, in catalog order with each card's name in a
-comment beside its id, where each hook (`play`, `attack`, `death`, `cast`, `trigger`, `endOfTurn`; `CARD_HOOKS` in
-`constants.ts`) gives a voice line (its `voice`), an `effect`, or both — a `trigger` (R1088) gives
-a voice for a non-empty list of lines, one of which plays when the runner starts the `summoned`
-entry the card caused, an `endOfTurn` (R5264500) plays as its card's End of turn hook's `hookResolving`
-marker arrives, and an `emotes` section gives each portrait's voice (R644). The words the
+comment beside its id, where each hook (`play`, `attack`, `death`, `cast`, `trigger`, and R5188000's
+recurring `startOfTurn`, `endOfTurn`, `whenever`, `activate`, `hurt` and `hit`; `CARD_HOOKS` in
+`constants.ts`) gives a voice line (its `voice`), an `effect` (or a list of effects, played in order,
+each `EFFECT_SEQUENCE_GAP_MS` after the last ends), or both — a `trigger` (R1088) gives a voice for a
+non-empty list of lines, one of which plays when the runner starts the `summoned` entry the card
+caused, any other hook's line may be a pool, a list one line of which plays each time (keyed
+`<id>-<hook>`, `<id>-<hook>2` and on), and an `emotes` section gives each portrait's voice (R644). The words the
 lines speak are not in it: they are each card's `voice` and the portraits' `emotes` in
 `crates/cards/card-text.yaml` (#2498), which `cargo test -p jackioh-tools --test export_card_text`
 writes into `src/audio/voice-text.json`. `voiceData.ts` joins the two (`withVoiceText`), checks them
@@ -1462,7 +1464,7 @@ and encoded to the same mono AAC at 22050 Hz and about 32 kbps. After editing a 
 `PATH` for SAPI voices; with neither it exits 2. It renders only the keys whose input hash changed
 and whose backend this machine has, reports a stale key of the other backend as needing it, deletes
 orphan files, rewrites `src/audio/voice-manifest.json`, and fails if the set passes
-`VOICE_BUDGET_BYTES` (24 MiB since R3596000, 16 MiB since R1884000, 12 MiB since R1448; 6 MiB from R501) or a line runs past 4 s. `--only <defId>` limits it to one card
+`VOICE_BUDGET_BYTES` (32 MiB since R5188001, 24 MiB since R3596000, 16 MiB since R1884000, 12 MiB since R1448; 6 MiB from R501) or a line runs past 4 s. `--only <defId>` limits it to one card
 and `--force` renders everything this machine can again (legacy `say` voices such as Fred are not
 byte-deterministic, so expect a large diff). Commit the manifest together with `public/audio/voice/`.
 With neither machine at hand, push a commit whose message holds `[gen:voice]` (or run the `voice`
@@ -1471,7 +1473,8 @@ each committing what it rendered back to the branch, and a Linux job runs `--che
 (`.github/workflows/voice.yml`, R1448).
 `node apps/web/scripts/gen-voice.mjs --check` needs no synthesizer, runs on any OS and is what the
 asset test calls; `--catalog <file>` checks the lines against another catalog. A line must stay
-flavour text: `voice-lines.test.ts` enforces the word limits and bans rules words. At runtime a file
+flavour text: `voice-lines.test.ts` enforces the word limits (four words for every line added since
+`census-baseline.json`, R5188001) and bans rules words. At runtime a file
 missing from the manifest falls back to the browser's `speechSynthesis`, with the voice's `web`
 pitch and rate. The sound tables load with the first sound, not with the page. Each voice line is
 fetched under its manifest hash (`/audio/voice/<key>.m4a?v=<hash>`), so Cloudflare caches it for a

@@ -756,6 +756,60 @@ mod r4064001_the_conversion_read {
     }
 }
 
+mod r5229000_the_rider_read {
+    use super::*;
+    use jackioh_engine::afflictions::Riders;
+
+    /// R5229000: `riders_of` reads the riders a source's hits carry (R3540002, R4783001), and
+    /// `Riders::after` what one hit adds to a target it left standing: what `ride_damage` adds.
+    #[test]
+    fn r5229000_riders_of_reads_what_a_hit_adds_to_a_survivor() {
+        let s = board(
+            "r5229000-riders-of",
+            json!({ "field": [MACE, VENOM, MAGMA, VOLCANIC, PLAIN] }),
+            json!({}),
+        );
+        let read: Vec<Riders> = (1..=5)
+            .map(|lane| query::riders_of(s.state(), s.card(id_at(&s, P1, lane))))
+            .collect();
+        let rider = |burn, burn_dealt, toxic| Riders {
+            burn,
+            burn_dealt,
+            toxic,
+        };
+        assert_eq!(
+            read,
+            [
+                rider(BT_RIDER, false, 0),
+                rider(0, false, BT_RIDER),
+                rider(0, true, 0),
+                Riders::default(),
+                Riders::default(),
+            ],
+            "a conversion (VOLCANIC) and a plain Unit carry no rider"
+        );
+        assert_eq!(read[0].after(5), (BT_RIDER, 0));
+        assert_eq!(read[1].after(5), (0, BT_RIDER));
+        assert_eq!(read[2].after(5), (5, 0));
+        for riders in &read {
+            assert_eq!(riders.after(0), (0, 0), "a hit that dealt nothing adds nothing");
+        }
+
+        // What the read says a hit adds is what the hit adds.
+        let mut s = board(
+            "r5229000-armored",
+            json!({ "field": [MAGMA] }),
+            json!({ "field": [ARMORED] }),
+        );
+        let (magma, armored) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        let riders = query::riders_of(s.state(), s.card(&magma));
+        s.attack(&magma, &armored);
+        let dealt = s.card(&armored).damage;
+        assert_eq!(dealt, 2, "4 damage past Armor 2");
+        assert_eq!(burn(&s, &armored), riders.after(dealt).0);
+    }
+}
+
 mod r3540004_vanilla {
     use super::*;
 

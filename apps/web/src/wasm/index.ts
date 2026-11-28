@@ -28,6 +28,8 @@ import type {
   PlayerView,
   SetName,
 } from "../wire/index.ts";
+import type { BotAnswer } from "../wire/generated/BotAnswer.ts";
+import type { BotCall } from "../wire/generated/BotCall.ts";
 import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
 import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { PendingPromptView } from "../wire/generated/PendingPromptView.ts";
@@ -665,6 +667,8 @@ export type PracticeConstants = {
   PRACTICE_AI_CLOCK_MS: number;
   PRACTICE_LETHAL_HINT_CLOCK_MS: number;
   PRACTICE_REPLAYS_KEPT: number;
+  /** R645: the persona's numbers; the page reads only how long a player's turn runs before `playerTurnLong` rolls. */
+  AI_EMOTE: { longTurnMs: number };
 };
 
 let practiceConstantsCache: PracticeConstants | null = null;
@@ -867,6 +871,17 @@ export type ValidatorCall =
 /** One validator call: the TypeScript function's argument in, its result out (`wire/validator.ts`). */
 export function validator<T>(name: ValidatorCall, input: unknown): T {
   return call(name, () => parsed<T>(normal.validator(name, json(input))));
+}
+
+// the ladder bots' decisions, and the practice AI's persona (#3103, R5269000: `jackioh-shared`'s bots)
+
+/**
+ * One call of `jackioh-shared`'s bot boundary (`crates/shared/src/bots/boundary.rs`): a `BotCall` in, a
+ * `BotAnswer` out, both the generated wire types. The practice page deals and rolls its AI's persona
+ * through it (R5269000), holding the `PersonaStream` each answer hands back.
+ */
+export function bots(request: BotCall): BotAnswer {
+  return call("bots", () => parsed<BotAnswer>(normal.bots(json(request))));
 }
 
 // what a card face prints (#3106: `jackioh-shared`'s face model, in the reader's words)

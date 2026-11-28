@@ -12,7 +12,6 @@ import {
 import { CARD_NAMES } from "../../support/cards.ts";
 import { accounts, apiUrl, bearerHeaders, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
-  END_TURN,
   GRACE_OPPONENT,
   MANA_CRYSTAL,
   MODIFIER_BADGE,
@@ -29,6 +28,7 @@ import {
   zoneId,
 } from "../../support/testids.ts";
 import type { ActionInput, Lane, PlayerId, Side } from "../../support/types.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 // Local scaffolding; ASK items belong in `e2e/support/**`.
 
@@ -118,7 +118,7 @@ function seatTwoEndsTurn(): void {
 
 /** The turn is seat 1's again when the client re-enables its own `end-turn` (BUILD M5-T1). */
 function waitForMyTurn(): void {
-  cy.get(ts(END_TURN), { timeout: timeouts.view }).should("not.be.disabled");
+  cy.get(ts(gameTestid.endTurn), { timeout: timeouts.view }).should("not.be.disabled");
 }
 
 // The view fingerprint.

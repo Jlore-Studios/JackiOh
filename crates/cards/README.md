@@ -342,10 +342,15 @@ Every change to card data is a patch, and every patch is kept.
 - `patches/patches.json` lists every shipped patch in ship order (`{ version, date, title, source,
   notes, player, tier, plays }`, `player` the note players read on the Patch notes page, R724001;
   `tier` and `plays`, the families that play differently, recorded from R1366000 on);
-  `patches/<version>.json` is the whole catalog as that patch left it; `patches/win_rates/<version>.json`
+  `patches/deltas/<version>.json` is what that patch changed from the one before it (`{ set, unset }`,
+  R5268000), so the whole catalog as it left it, its snapshot, is the fold of its delta and every one
+  before it, its cards in `patches/order.json`'s order (`src/snapshot_fold.rs` for this crate's tests,
+  `build.rs` for the carried history); `patches/win_rates/<version>.json`
   the win-rate table it shipped with (R1329000; none for a patch before v0.3.15, which shipped with
   the empty one, and none since #3049, whose games read the server's snapshot of its card stats,
-  R3049000); `shipped.json` records each patch's commit, snapshot blob and
+  R3049000), kept once while it does not change: `win_rates/versions.json`, and `card_metrics/versions.json`
+  for the BUSTED and complicated lists, name the file each version's table is in (R5268001);
+  `shipped.json` records each patch's commit, snapshot blob and
   table blob (`winRatesBlob`); `index.json` maps each card to the versions it changed in. Shipped
   snapshots and tables are never amended. `aliases.json` is the version retcon's map (#1371,
   R1371000), each old name to its new one: only a reader of a file without the `versions` marker

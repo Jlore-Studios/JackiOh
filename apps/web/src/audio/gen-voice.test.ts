@@ -121,6 +121,51 @@ afterAll(() => {
   if (scratch !== "") rmSync(scratch, { recursive: true, force: true });
 });
 
+describe("R5188000 gen-voice.mjs --check knows pools and the new hooks", () => {
+  it(
+    "R5188000 --check keeps a pool's first key and asks for <id>-play2, -play3, and a new hook's <id>-hurt, -hurt2",
+    () => {
+      // A pool on core-004's play: its first line as shipped, so its file and key stand, and two more.
+      const pooled = copyTree();
+      const textPath = join(pooled, REL_VOICE_TEXT);
+      const voiceText = JSON.parse(readFileSync(textPath, "utf8")) as VoiceText;
+      const lines = voiceText.cards["core-004"];
+      if (typeof lines?.play !== "string") throw new Error("core-004's play line should be in voice-text.json");
+      lines.play = [lines.play, "Let it ride.", "All on red."];
+      writeFileSync(textPath, `${JSON.stringify(voiceText, null, 2)}\n`);
+      const pool = run(pooled, process.env, ["--check"]);
+      expect(pool.status, pool.output).toBe(1);
+      const poolLines = pool.output.split("\n");
+      expect(poolLines.filter((line) => line.startsWith("core-004-play:")), "the first line keeps its key and file").toEqual([]);
+      expect(poolLines).toContain("core-004-play2: missing from the manifest");
+      expect(poolLines).toContain("core-004-play2: missing file");
+      expect(poolLines).toContain("core-004-play3: missing from the manifest");
+
+      // A new hook with a voice: core-004's hurt, a pool of two.
+      const hurt = copyTree();
+      const audio = readAudio(hurt);
+      const entry = audio.cards["core-004"];
+      const voice = entry?.play?.voice;
+      if (entry === undefined || voice === undefined) throw new Error("core-004's play hook should name a voice");
+      entry.hurt = { voice };
+      writeAudio(hurt, audio);
+      const hurtPath = join(hurt, REL_VOICE_TEXT);
+      const hurtText = JSON.parse(readFileSync(hurtPath, "utf8")) as VoiceText;
+      const own = hurtText.cards["core-004"];
+      if (own === undefined) throw new Error("core-004 should have lines in voice-text.json");
+      own.hurt = ["Ow.", "Not the face."];
+      writeFileSync(hurtPath, `${JSON.stringify(hurtText, null, 2)}\n`);
+      const hooked = run(hurt, process.env, ["--check"]);
+      expect(hooked.status, hooked.output).toBe(1);
+      const hookedLines = hooked.output.split("\n");
+      expect(hookedLines).toContain("core-004-hurt: missing from the manifest");
+      expect(hookedLines).toContain("core-004-hurt2: missing from the manifest");
+      expect(hookedLines.filter((line) => line.startsWith("core-004-play:"))).toEqual([]);
+    },
+    RUN_TIMEOUT_MS,
+  );
+});
+
 describe("B45 gen-voice.mjs generate mode", () => {
   it(
     "B45 exits 2 with the needs-macOS line when say, afconvert or afinfo cannot be found",

@@ -8,7 +8,14 @@
 // Daily only (issue #4092): SMOKE in scripts/shard-specs.mjs does not hold 47, which took a smoke shard to
 // itself (6 minutes); super.yml plays it. Networked as 46.
 
-import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
+import {
+  consentTestid,
+  inviteTestid,
+  landingTestid,
+  loginTestid,
+  resetTestid,
+  shellTestid,
+} from "../../../apps/web/src/auth/testids.ts";
 import { BREAKPOINT_PX } from "../../../apps/web/src/breakpoints.ts";
 import { inboxTestid } from "../../../apps/web/src/inbox/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
@@ -19,26 +26,24 @@ import { MENU_SIZES, accounts, constants, routes, seedFor, timeouts, viewports }
 import { HIT_MIN_PX, PX_DIGITS, emulateTouch, expectHitAreas, hitAreaProblems } from "../../support/hitAreas.ts";
 import { visitStatsFigures } from "../../support/stats.ts";
 import {
-  BOARD,
-  CARD_POOL,
   COLLECTION_DECKS,
   COLLECTION_GRID,
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
   PLAY_HUB,
   PLAY_SIGN_IN,
-  PRACTICE_HUD,
   PROMPT_SUBMIT,
   REPLAYS_ROOT,
   SERIES_SCORE,
   SHOP_PANEL,
-  TOGETHER_ROOT,
-  WORKSHOP,
   deckRowId,
   promptOf,
   ts,
 } from "../../support/testids.ts";
 import { SETTINGS_OPEN_NAV, SETTINGS_PANEL } from "../../support/ux.ts";
+import { CARD_POOL, WORKSHOP } from "../../../apps/web/src/game/deckbuilder/testids.ts";
+import { togetherTestid } from "../../../apps/web/src/together/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** The practice worker loads the engine, the card scripts and the AI before its first answer. */
 const BOOT_TIMEOUT = 60_000;
@@ -246,8 +251,8 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
       cy.visit(`${routes.practice()}?${new URLSearchParams({ seed: SEED, difficulty: "easy", deck: "random", seat: "p1", pace: "fast" }).toString()}`);
       // No HUD above the board (#2878): the enemy hero's seat names the AI and the difficulty.
       cy.get(ts("hero-opponent"), { timeout: BOOT_TIMEOUT }).should("contain.text", "AI · Easy");
-      cy.get(ts(PRACTICE_HUD)).should("not.exist");
-      cy.get(ts(BOARD), { timeout: BOOT_TIMEOUT }).should("be.visible");
+      cy.get(ts(practiceTestid.hud)).should("not.exist");
+      cy.get(ts(gameTestid.board), { timeout: BOOT_TIMEOUT }).should("be.visible");
       cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
       cy.settled();
       expectHitAreas(viewports.phone);
@@ -451,7 +456,7 @@ describe(`47 — every control under a finger takes a tap across ${String(HIT_MI
 
         it("R2122000 /together", () => {
           cy.visitAs(SPARE(), "/together");
-          cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(togetherTestid.root), { timeout: timeouts.view }).should("be.visible");
           expectHitAreas(size);
         });
 

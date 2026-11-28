@@ -29,6 +29,19 @@ pub fn projected_hero_damage(state: &GameState, player: PlayerId, amount: i32, p
     crate::damage::hero_hit_amount(state, player, amount, pierce)
 }
 
+/// R5228000: `projected_hero_damage` for the next of several hits on `player`'s hero, through the Armor the
+/// earlier ones left: `worn` counts the points they wore off the hero's own Armor, and this hit adds its own
+/// (R5183000). Sourceless and pool-blind, as its neighbour; the AI's Taunt walk reads it.
+pub fn projected_hero_damage_worn(
+    state: &GameState,
+    player: PlayerId,
+    amount: i32,
+    pierce: bool,
+    worn: &mut i32,
+) -> i32 {
+    crate::damage::hero_hit_wearing(state, player, amount, pierce, worn)
+}
+
 /// §4.4 steps 5 and 9: what a hit of `amount` from `source` deals `unit`, and what it passes on to that
 /// unit's hero; steps 1 to 4 and the zero rule, as `damage::project_hit` reads them (a conversion and the
 /// unit's side's damage pool included, R4032000), can end the hit on the unit first. Only a Trample

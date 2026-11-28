@@ -27,7 +27,7 @@ use jackioh_engine::{
     Action, ActionBody, AttackTarget, CardInstance, DelayedAt, GameState, KeywordKind, Phase, PlayerId,
     Position, Rng, SECRET_KEY, Selection, active_units_of, burn_on, card_keywords, converts_to,
     effective_life, find_instance, has_countdown, has_keyword, legal_actions, pierces, reduce_unpiloted,
-    secret_of, subsystems, takes_strike_back, temporary_number, toxic_on, unit_view,
+    riders_of, secret_of, subsystems, takes_strike_back, temporary_number, toxic_on, unit_view,
 };
 
 use crate::candidates::{
@@ -37,7 +37,7 @@ use crate::candidates::{
 use crate::config::{AI_EVAL, AI_GUESS_SEED, AI_REPLY};
 use crate::evaluate::{
     NextSwing, Prices, coming_mana, evaluate_priced, float_credit, heal_converted, heal_worth,
-    hero_ticks_added, kill_worth, unit_worth,
+    hero_ticks_added, hero_ticks_added_by, kill_worth, unit_worth,
 };
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
@@ -124,8 +124,24 @@ pub(crate) fn fight(state: &GameState, attacker: &CardInstance, target: &CardIns
     }
 }
 
-/// R4064001: what `amount` more of `kind` costs `unit`, as `afflicted` prices its counters (R3822000):
-/// the worth it loses with them on. A hit that Burns or is Toxic instead is worth this to its striker.
+/// R4064001, R5229000: what `burn` more Burn and `toxic` more Toxic cost `unit`, as `afflicted` prices its
+/// counters (R3822000): the worth it loses with them on.
+fn counters_price(state: &GameState, unit: &CardInstance, burn: i32, toxic: i32, prices: &Prices) -> f64 {
+    if burn <= 0 && toxic <= 0 {
+        return 0.0;
+    }
+    let mut afflicted = unit.clone();
+    if burn > 0 {
+        afflicted.counters.burn = Some(burn_on(unit).saturating_add(burn));
+    }
+    if toxic > 0 {
+        afflicted.counters.toxic = Some(toxic_on(unit).saturating_add(toxic));
+    }
+    (unit_worth(state, unit, &AI_EVAL, prices) - unit_worth(state, &afflicted, &AI_EVAL, prices)).max(0.0)
+}
+
+/// R4064001: what `amount` more of `kind` costs `unit` (`counters_price`). A hit that Burns or is Toxic
+/// instead is worth this to its striker.
 fn counter_price(
     state: &GameState,
     unit: &CardInstance,
@@ -133,15 +149,29 @@ fn counter_price(
     amount: i32,
     prices: &Prices,
 ) -> f64 {
-    if amount <= 0 {
+    match kind {
+        Affliction::Burn => counters_price(state, unit, amount, 0, prices),
+        Affliction::Toxic => counters_price(state, unit, 0, amount, prices),
+    }
+}
+
+/// R5229000, §4.4 step 7: what a blow's riders, `burn` more Burn and `toxic` more Toxic, cost `unit` once
+/// the blow has dealt it `dealt` and left it standing (`counters_price` of the unit as the blow leaves
+/// it), so a Burn that finishes what the hit started reads as the kill it becomes at the turn's end.
+fn riders_price(
+    state: &GameState,
+    unit: &CardInstance,
+    dealt: i32,
+    burn: i32,
+    toxic: i32,
+    prices: &Prices,
+) -> f64 {
+    if burn <= 0 && toxic <= 0 {
         return 0.0;
     }
-    let mut afflicted = unit.clone();
-    match kind {
-        Affliction::Burn => afflicted.counters.burn = Some(burn_on(unit).saturating_add(amount)),
-        Affliction::Toxic => afflicted.counters.toxic = Some(toxic_on(unit).saturating_add(amount)),
-    }
-    (unit_worth(state, unit, &AI_EVAL, prices) - unit_worth(state, &afflicted, &AI_EVAL, prices)).max(0.0)
+    let mut struck = unit.clone();
+    struck.damage = struck.damage.saturating_add(dealt.max(0));
+    counters_price(state, &struck, burn, toxic, prices)
 }
 
 /// The opponent's static value of `attacker` hitting `target` (§4.3): what killing the target removes
@@ -156,7 +186,9 @@ fn counter_price(
 /// and a Lifesteal heal by `heal_worth` (#1820). With
 /// `AI_EVAL.pool_and_conversion_read`, a blow that Burns or is Toxic instead kills nothing and heals
 /// nothing and is worth its counter (`counter_price`, R4064001), and the target side's damage pools soak
-/// the blow, then its splashes (R4064000). The move order reads `kills` and `splash_kills` too
+/// the blow, then its splashes (R4064000); with `AI_EVAL.damage_rider_read` too, a blow, a strike back or
+/// a splash that leaves its unit standing is worth, or costs, the Burn and the Toxic its striker's riders
+/// add (`riders_price`, §4.4 step 7, R5229000). The move order reads `kills` and `splash_kills` too
 /// (`candidates.rs`'s even trades, #1779, #1821).
 pub(crate) fn trade_value(
     state: &GameState,
@@ -214,6 +246,17 @@ pub(crate) fn trade_value(
             } else if let Some(kind) = a.converts {
                 cleave_value +=
                     AI_REPLY.cleave_share * counter_price(state, &neighbour, kind, splash.converted, prices);
+            } else {
+                // R5229000: a splash that leaves its unit standing adds the attacker's riders.
+                cleave_value += AI_REPLY.cleave_share
+                    * riders_price(
+                        state,
+                        &neighbour,
+                        splash.dealt,
+                        splash.rider_burn,
+                        splash.rider_toxic,
+                        prices,
+                    );
             }
         }
     }
@@ -240,6 +283,9 @@ pub(crate) fn trade_value(
     if lands && let Some(kind) = a.converts {
         value += counter_price(state, target, kind, out.converted, prices);
     }
+    // R5229000, §4.4 step 7: a blow that leaves its unit standing adds its striker's riders, the target's
+    // and the strike back's alike (`fight` empties a blow that never lands).
+    value += riders_price(state, target, out.dealt, out.rider_burn, out.rider_toxic, prices);
     if dies {
         value -= removed(&t, attacker);
     }
@@ -248,6 +294,14 @@ pub(crate) fn trade_value(
     {
         value -= counter_price(state, attacker, kind, back.converted, prices);
     }
+    value -= riders_price(
+        state,
+        attacker,
+        back.dealt,
+        back.rider_burn,
+        back.rider_toxic,
+        prices,
+    );
     // §4.4 step 9: what the attack's hits deal beyond each unit's health goes on to the target's hero
     // through its Armor and caps (`projected_damage`: a Cleave's hits too, R176, and nothing when a
     // First Strike defender destroys the attacker first).
@@ -292,8 +346,10 @@ pub fn reply_face_value(state: &GameState, seat: PlayerId, damage: i32) -> f64 {
 /// `face_is_lethal`, else `reply_face_value` of what the hit deals through the hero's Armor and caps
 /// (`projected_hero_damage`), and with `AI_EVAL.pool_and_conversion_read` its side's damage pools
 /// (R4064000); a hit that Burns or is Toxic instead is worth `face_per_damage` of `hero_affliction` of
-/// the life its counter's ticks add (R4064001). A Lifesteal attacker's hit that is not lethal adds the
-/// heal of what it deals (`lifesteal_value`, the term `trade_value` adds for a hit on a unit, #3858).
+/// the life its counter's ticks add (R4064001). With `AI_EVAL.damage_rider_read` too, a hit that leaves
+/// the hero life adds the life its source's riders' ticks take (`hero_ticks_added_by`, §4.4 step 7,
+/// R5229000). A Lifesteal attacker's hit that is not lethal adds the heal of what it deals
+/// (`lifesteal_value`, the term `trade_value` adds for a hit on a unit, #3858).
 /// The reply's ranking and the seat's own move order (`candidates.rs`, #2825) read it alike.
 pub(crate) fn face_value(
     state: &GameState,
@@ -320,10 +376,24 @@ pub(crate) fn face_value(
     } else {
         subsystems::projected_hero_damage(state, defender, view.attack, pierce)
     };
-    let hit = reply_face_value(state, defender, damage);
+    let mut hit = reply_face_value(state, defender, damage);
+    // A lethal hit is the win, whatever it heals or adds.
+    if hit >= AI_EVAL.win {
+        return hit;
+    }
+    // R5229000, §4.4 step 7: a hit that leaves the hero life adds its source's riders, worth the life
+    // their ticks take, as a converted hit's counter is.
+    if read && AI_EVAL.damage_rider_read && damage < effective_life(state, defender) {
+        let (burn, toxic) = riders_of(state, attacker).after(damage);
+        if burn > 0 || toxic > 0 {
+            hit += AI_REPLY.face_per_damage
+                * AI_EVAL.hero_affliction
+                * f64::from(hero_ticks_added_by(state, defender, burn, toxic, &AI_EVAL));
+        }
+    }
     // §4.4 step 8: Lifesteal heals the attacker's hero by what the hit deals, on a hero as on a unit
-    // (#3858). A lethal hit is the win, whatever it heals.
-    if hit >= AI_EVAL.win || !has_keyword(&view.keywords, KeywordKind::Lifesteal) {
+    // (#3858).
+    if !has_keyword(&view.keywords, KeywordKind::Lifesteal) {
         return hit;
     }
     hit + lifesteal_value(state, attacker.controller, damage)

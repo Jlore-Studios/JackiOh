@@ -5021,11 +5021,16 @@ const hush: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
-/** shatter: a noise burst and a run of clicks falling in pitch; `amount` scales it. */
+/**
+ * shatter: a noise burst and a run of clicks falling in pitch; `amount` scales it. The burst, the first
+ * clicks and the thump land together in its first 50 ms and render at about 1.9 times `peak`, so `peak`
+ * tops out at 0.45 and the loudest stays under full scale (B15: 0.4 per unit of `t` rendered 1.33 at
+ * amount 25, super run 154).
+ */
 const shatter: SfxRecipe = (ctx, out, at, params) => {
   const len = 0.6;
   const t = amountT(params);
-  const peak = 0.3 + 0.4 * t;
+  const peak = 0.3 + 0.15 * t;
   const k = kit(ctx, out, at, len);
   const burst = noiseSource(k);
   chain(burst, biquad(k, "highpass", 2500, 0.7), envelope(k, 0, 0.002, peak, 0.35), out);

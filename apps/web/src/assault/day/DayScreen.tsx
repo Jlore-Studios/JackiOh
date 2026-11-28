@@ -103,6 +103,7 @@ export function DayScreen({ assault, saved, onResume }: DayScreenProps): ReactEl
                   {doctrine === undefined ? null : <span>{t(doctrine.name)}</span>}
                   {constants.commanderLevels.includes(level.level) ? <span>{t("Commander")}</span> : null}
                   {constants.checkpoints.includes(level.level) ? <span>{t("Checkpoint")}</span> : null}
+                  {level.level <= record.best ? <span>{t("Beaten")}</span> : null}
                 </li>
               );
             })}

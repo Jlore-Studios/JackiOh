@@ -5,16 +5,8 @@ import { timeouts, TUTORIAL_PROGRESS_KEY } from "./config.ts";
 import {
   ACTION_ERROR,
   ANIMATING,
-  BOARD,
-  COACH,
-  COACH_ACK,
-  END_TURN,
-  POWER,
   PROMPT,
   PROMPT_SUBMIT,
-  TUTORIAL_HUD,
-  TUTORIAL_RESULT,
-  TUTORIAL_STEP,
   cardId,
   handCardId,
   heroId,
@@ -26,6 +18,8 @@ import {
 } from "./testids.ts";
 import type { Action, ActionBody, Lane, PlayerId, Row, Selection, Side } from "./types.ts";
 import { isPicked } from "./ux.ts";
+import { tutorialTestid } from "../../apps/web/src/tutorial/testids.ts";
+import { testid as gameTestid } from "../../apps/web/src/game/contract.ts";
 
 export const PRACTICE_PATH = "/practice";
 
@@ -211,7 +205,7 @@ export type StepCounter = { step: number; of: number };
 
 /** Read each child because responsive long and short forms concatenate at the root. */
 export function stepCounterIn(doc: Document): StepCounter | null {
-  const root = doc.querySelector(ts(TUTORIAL_STEP));
+  const root = doc.querySelector(ts(tutorialTestid.step));
   if (root === null) return null;
   const texts = [root, ...Array.from(root.querySelectorAll("*"))].map((element) => (element.textContent ?? "").trim());
   for (const pattern of [/^Step\s+(\d+)\s+of\s+(\d+)$/, /^(\d+)\s*\/\s*(\d+)$/]) {
@@ -229,7 +223,7 @@ export function stepCounter(): Cypress.Chainable<StepCounter> {
     .document({ log: false })
     .should((doc) => {
       found = stepCounterIn(doc);
-      expect(found, `"Step k of n" in ${TUTORIAL_STEP}`).to.not.eq(null);
+      expect(found, `"Step k of n" in ${tutorialTestid.step}`).to.not.eq(null);
     })
     .then(() => found as StepCounter);
 }
@@ -237,7 +231,7 @@ export function stepCounter(): Cypress.Chainable<StepCounter> {
 export type CoachMark = { mode: string; step: string | null };
 
 export function coachMarkIn(doc: Document): CoachMark | null {
-  const coach = doc.querySelector(ts(COACH));
+  const coach = doc.querySelector(ts(tutorialTestid.coach));
   if (coach === null) return null;
   return { mode: coach.getAttribute("data-coach-mode") ?? "", step: coach.getAttribute("data-coach-step") };
 }
@@ -258,19 +252,19 @@ type Waiting = { waiting: string };
 
 function momentIn(win: Window): Moment | Waiting {
   const doc = win.document;
-  const result = doc.querySelector(ts(TUTORIAL_RESULT));
+  const result = doc.querySelector(ts(tutorialTestid.result));
   if (result !== null) return { kind: "over", outcome: result.getAttribute("data-outcome") };
   const busy = doc.querySelector(ANIMATING);
   if (busy !== null) return { waiting: `the board is animating ${busy.getAttribute("data-animating") ?? ""}` };
-  const coach = doc.querySelector(ts(COACH));
+  const coach = doc.querySelector(ts(tutorialTestid.coach));
   if (coach?.getAttribute("data-stale") === "true") return { waiting: "the coach has not caught up with the board" };
   const tutorial = handlesOf(win).__jackiohTutorial;
   if (tutorial === undefined) return { waiting: "window.__jackiohTutorial is not set" };
   const mark = coachMarkIn(doc);
   const counter = stepCounterIn(doc);
-  if (doc.querySelector(ts(COACH_ACK)) !== null) return { kind: "ack", coach: mark, counter };
+  if (doc.querySelector(ts(tutorialTestid.coachAck)) !== null) return { kind: "ack", coach: mark, counter };
 
-  const hud = doc.querySelector(ts(TUTORIAL_HUD));
+  const hud = doc.querySelector(ts(tutorialTestid.hud));
   if (hud?.getAttribute("data-thinking") !== "false") return { waiting: "the AI owes an action" };
   const prompt = doc.querySelector(PROMPT);
   if (prompt !== null) {
@@ -282,8 +276,8 @@ function momentIn(win: Window): Moment | Waiting {
       suggested: tutorial.suggested,
     };
   }
-  const board = doc.querySelector(ts(BOARD));
-  const endTurn = doc.querySelector<HTMLButtonElement>(ts(END_TURN));
+  const board = doc.querySelector(ts(gameTestid.board));
+  const endTurn = doc.querySelector<HTMLButtonElement>(ts(gameTestid.endTurn));
   const mine = board?.getAttribute("data-active") === "you" && board.getAttribute("data-phase") === "main";
   if (mine && endTurn !== null && !endTurn.disabled) {
     return { kind: "turn", coach: mark, counter, suggested: tutorial.suggested };
@@ -535,14 +529,14 @@ export function performThroughUi(action: ActionBody, hooks: PerformHooks = {}): 
         cy.get(ts(attackTargetTestid(view, action.targetId))).should("have.attr", "data-legal", "true").click();
         return;
       case "endTurn":
-        cy.get(ts(END_TURN)).should("not.be.disabled").click();
+        cy.get(ts(gameTestid.endTurn)).should("not.be.disabled").click();
         return;
       case "switchPosition":
         cy.get(ts(switchPositionId(action.instanceId))).should("not.be.disabled").click();
         return;
       case "activatePower":
         expect(action.targets ?? [], "a power the coach asks for names no target (the spec clicks `power` alone)").to.deep.eq([]);
-        cy.get(ts(POWER)).should("have.attr", "data-legal", "true").click();
+        cy.get(ts(gameTestid.power)).should("have.attr", "data-legal", "true").click();
         return;
       case "answer":
         answerThroughUi(action);
@@ -562,7 +556,7 @@ export function fallbackTurn(): void {
       .filter((testid) => testid !== "");
     const first = attackers[0];
     if (first === undefined) {
-      cy.get(ts(END_TURN)).should("not.be.disabled").click();
+      cy.get(ts(gameTestid.endTurn)).should("not.be.disabled").click();
       return;
     }
     cy.get(ts(first)).click();
@@ -572,7 +566,7 @@ export function fallbackTurn(): void {
         return;
       }
       cy.get(ts(first)).click();
-      cy.get(ts(END_TURN)).should("not.be.disabled").click();
+      cy.get(ts(gameTestid.endTurn)).should("not.be.disabled").click();
     });
   });
 }
@@ -584,7 +578,7 @@ export type Taken = "ack" | "coach" | "fallback";
 export function takeMoment(moment: Exclude<Moment, { kind: "over" }>, hooks: PerformHooks = {}): Cypress.Chainable<Taken> {
   if (moment.kind === "ack") {
     const before = moment.coach;
-    cy.get(ts(COACH_ACK)).click();
+    cy.get(ts(tutorialTestid.coachAck)).click();
     cy.document({ log: false, timeout: MOMENT_TIMEOUT }).should((doc) => {
       expect(sameMark(coachMarkIn(doc), before), `the coach moved on from ${JSON.stringify(before)}`).to.eq(false);
     });

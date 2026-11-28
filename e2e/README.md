@@ -170,7 +170,8 @@ for contract reasons rather than rules reasons.
    seats of 41 and 55 are `support/duos.ts`'s sockets. The component spec `lobby-screen.cy.tsx`
    shoots the lobby, a 2v2's among them, at each of `MENU_SIZES`. All but the component spec are networked, so the server must be up. Their test ids
    (`together-*`, `chat-*`, `lobby-*`, `duos-*`)
-   are `apps/web/README.md`'s list, mirrored in `support/testids.ts`; the
+   are `apps/web/README.md`'s list, imported from the web's `testids.ts` files where it exports them
+   and kept in `support/testids.ts` where it does not (#5269); the
    sockets are `/ws/duos` and `/ws/watch` beside `WS_PATH`, on the same host. Spec 44 watches a
    friend's live game over `/ws/watch`. A watcher holds no seat, so it reseeds and activates
    `e2e-pending` (R144) for the other seat, whose Node socket hears the watcher's emote from the
@@ -184,7 +185,7 @@ for contract reasons rather than rules reasons.
    (`POST /daily-sweep`), and seat one's board says "Lost on time". Both are networked. A daily game
    has no socket: every move is `POST /api/daily/games/:id/actions`, which `support/daily.ts` sends as
    the board does (after the read's `seq`, under a fresh nonce). Their test ids (`daily-*`) are
-   `apps/web/src/daily/testids.ts`'s, mirrored in `support/testids.ts`. Spec 58 (#4039, R4039001) makes
+   `apps/web/src/daily/testids.ts`'s, which the specs import from there (#5269). Spec 58 (#4039, R4039001) makes
    a daily game the same way, opens seat one's Play and waits for its social socket to be live (the
    bell's `data-live="true"`); seat two's move over HTTP then shows seat one "Your move against …" as
    the notification toast (`notification-toast`) and as a `dailyMove` row of the inbox's Recent section

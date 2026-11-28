@@ -1,8 +1,10 @@
 // Static public patch data (§5.1) loads lazily one file at a time (R388).
 // Patch order follows patches.json, never version-string sorting (R105 as B4.2 rewrites it).
+// R5268000: a snapshot is the fold of its version's delta (`deltas/<version>.json`) and every one
+// before it, its cards in `order.json`'s order; no version keeps a whole-catalog file.
 // Keep the glob path-based: Vite rejects package specifiers.
 
-import type { CardDef, CardDefs } from "@jackioh/shared";
+import type { CardDefs } from "@jackioh/shared";
 import { isRecord } from "../wire/json.ts";
 
 export type PatchChange = {
@@ -66,12 +68,14 @@ export type PatchSource = {
   technical(): Promise<readonly TechnicalEntry[]>;
 };
 
-/** R646: files that are not snapshots. */
 const PATCHES_FILE = "patches";
 const INDEX_FILE = "index";
-const SHIPPED_FILE = "shipped";
 const TECHNICAL_FILE = "technical";
+/** R5268000: every card id ever shipped, in the order each snapshot lists its own. */
+const ORDER_FILE = "order";
 
+
+import { applyDelta, readDelta, readOrder } from "./deltas.ts";
 import { loadersByStem, type Loader } from "./loaders.ts";
 
 function readPatches(value: unknown): readonly Patch[] {
@@ -99,24 +103,40 @@ function readIndex(value: unknown): HistoryIndex {
   return value as HistoryIndex;
 }
 
-function readSnapshot(value: unknown, version: string): Snapshot {
-  if (!isRecord(value)) throw new Error(`${version}.json is not a catalog snapshot`);
-  return value as Record<string, CardDef>;
-}
-
-/** One cached loader per file; failures leave no cache entry so callers can retry. */
-export function sourceFromLoaders(loaders: Readonly<Record<string, Loader>>): PatchSource {
+/**
+ * One cached loader per file; failures leave no cache entry so callers can retry. `deltas` are each
+ * version's delta by version (R5268000), and each snapshot is folded once.
+ */
+export function sourceFromLoaders(loaders: Readonly<Record<string, Loader>>, deltas: Readonly<Record<string, Loader>> = {}): PatchSource {
   const cache = new Map<string, Promise<unknown>>();
-  const load = (stem: string): Promise<unknown> | null => {
-    const loader = loaders[stem];
+  const loadFrom = (from: Readonly<Record<string, Loader>>, key: string, stem: string): Promise<unknown> | null => {
+    const loader = from[stem];
     if (loader === undefined) return null;
-    const cached = cache.get(stem);
+    const cached = cache.get(key);
     if (cached !== undefined) return cached;
     const pending = loader().catch((error: unknown) => {
-      cache.delete(stem);
+      cache.delete(key);
       throw error;
     });
-    cache.set(stem, pending);
+    cache.set(key, pending);
+    return pending;
+  };
+  const load = (stem: string): Promise<unknown> | null => loadFrom(loaders, stem, stem);
+  const snapshots = new Map<string, Promise<Snapshot>>();
+  const foldTo = (versions: readonly string[], at: number): Promise<Snapshot> => {
+    const version = versions[at] ?? "";
+    const cached = snapshots.get(version);
+    if (cached !== undefined) return cached;
+    const delta = loadFrom(deltas, `deltas/${version}`, version);
+    const order = load(ORDER_FILE);
+    if (delta === null || order === null) return Promise.reject(new Error(`${version} has no delta to fold`));
+    const pending = Promise.all([at === 0 ? Promise.resolve({}) : foldTo(versions, at - 1), delta, order])
+      .then(([before, value, ids]) => applyDelta(before, readDelta(value, version), readOrder(ids), version))
+      .catch((error: unknown) => {
+        snapshots.delete(version);
+        throw error;
+      });
+    snapshots.set(version, pending);
     return pending;
   };
   return {
@@ -129,9 +149,11 @@ export function sourceFromLoaders(loaders: Readonly<Record<string, Loader>>): Pa
       return pending === null ? {} : readIndex(await pending);
     },
     snapshot: async (version) => {
-      if (version === PATCHES_FILE || version === INDEX_FILE || version === SHIPPED_FILE || version === TECHNICAL_FILE) return null;
-      const pending = load(version);
-      return pending === null ? null : readSnapshot(await pending, version);
+      if (deltas[version] === undefined) return null;
+      const pending = load(PATCHES_FILE);
+      const versions = pending === null ? [] : readPatches(await pending).map((patch) => patch.version);
+      const at = versions.indexOf(version);
+      return at < 0 ? null : foldTo(versions, at);
     },
     technical: async () => {
       const pending = load(TECHNICAL_FILE);
@@ -157,5 +179,6 @@ export function sourceFromData(data: {
 export const EMPTY_PATCH_SOURCE: PatchSource = sourceFromData({ patches: [], index: {}, snapshots: {} });
 
 const PATCH_FILES = import.meta.glob<unknown>("../../../../crates/cards/patches/*.json", { import: "default" });
+const DELTA_FILES = import.meta.glob<unknown>("../../../../crates/cards/patches/deltas/*.json", { import: "default" });
 
-export const realPatchSource: PatchSource = sourceFromLoaders(loadersByStem(PATCH_FILES));
+export const realPatchSource: PatchSource = sourceFromLoaders(loadersByStem(PATCH_FILES), loadersByStem(DELTA_FILES));
