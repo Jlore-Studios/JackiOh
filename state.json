@@ -21722,13 +21722,12 @@
     "what": "review #5250 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-28T02:51:22Z",
+    "at": "2026-11-28T02:59:14Z",
     "notes": [
-      "delivered plan #5246 on claude-7 (run 46098983065): planned",
-      "started review #5244 on claude-8 (run 46100183733)",
-      "started plan #5246 on claude-7 (run 46100217893)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered review #5244 on claude-8 (run 46100183733): reviewed",
+      "delivered build #5226 on claude-3 (run 46092339786): built",
+      "started review #5250 on claude-3 (run 46100824715)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22434,7 +22433,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T02:51:22Z",
+  "loop_tick": "2026-11-28T02:59:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
