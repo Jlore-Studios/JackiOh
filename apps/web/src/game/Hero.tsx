@@ -191,7 +191,7 @@ export default function Hero(props: HeroProps): ReactElement {
             {seat.jade}
           </span>
         )}
-        {/* #4251: R3540000's Burn and Toxic and R3548000's Tipsy ride the tray now
+        {/* #4251: R3540000's Burn and Toxic and R3548000's Woozy ride the tray now
             (`HeroTray.tsx`), as labelled chips beside the plate, so no portrait badge covers
             them; R987's Luck went with them. */}
         {/* R1840005: the Credits, 0 included, once the view carries them. */}
@@ -273,7 +273,7 @@ export default function Hero(props: HeroProps): ReactElement {
           jade={seat.jade}
           burn={hero.burn}
           toxic={hero.toxic}
-          tipsy={seat.tipsy}
+          woozy={seat.tipsy}
           marketCredits={seat.marketCredits}
           menu={menu}
           hand={emotes.hand}

@@ -1,5 +1,473 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`#5190 the element recipes build one graph per element > #5190 elementBolt as arcane: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.700000
+#0 oscillator sine start 0.000000 stop 0.400000 -> #1
+  frequency: set 70.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.100000 @0.010000; exponential 0.000100 @0.400000
+#2 oscillator sine start 0.000000 stop 0.600000 -> #5
+  frequency: set 660.000000 @0.000000
+#3 oscillator sine start 0.000000 stop 0.600000 -> #4
+  frequency: set 990.000000 @0.000000
+#4 gain -> #2.frequency
+  gain: set 250.000000 @0.000000; exponential 12.500000 @0.600000
+#5 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.140000 @0.004000; exponential 0.000100 @0.600000
+#6 oscillator sine start 0.050000 stop 0.650000 -> #9
+  frequency: set 990.000000 @0.050000
+#7 oscillator sine start 0.050000 stop 0.650000 -> #8
+  frequency: set 1485.000000 @0.050000
+#8 gain -> #6.frequency
+  gain: set 250.000000 @0.050000; exponential 12.500000 @0.650000
+#9 gain -> out
+  gain: set 0.000000 @0.050000; linear 0.140000 @0.054000; exponential 0.000100 @0.650000
+#10 oscillator sine start 0.100000 stop 0.700000 -> #13
+  frequency: set 1320.000000 @0.100000
+#11 oscillator sine start 0.100000 stop 0.700000 -> #12
+  frequency: set 1980.000000 @0.100000
+#12 gain -> #10.frequency
+  gain: set 250.000000 @0.100000; exponential 12.500000 @0.700000
+#13 gain -> out
+  gain: set 0.000000 @0.100000; linear 0.140000 @0.104000; exponential 0.000100 @0.700000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementBolt as fire: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.700000
+#0 oscillator sine start 0.000000 stop 0.400000 -> #1
+  frequency: set 70.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.100000 @0.010000; exponential 0.000100 @0.400000
+#2 bufferSource loop buffer 44100 start 0.000000 stop 0.650000 -> #3
+#3 biquad lowpass -> #4
+  frequency: set 3200.000000 @0.000000; exponential 300.000000 @0.620000
+  Q: set 1.000000 @0.000000
+#4 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.350000 @0.010000; exponential 0.000100 @0.650000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementBolt as frost: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.700000
+#0 oscillator sine start 0.000000 stop 0.400000 -> #1
+  frequency: set 70.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.100000 @0.010000; exponential 0.000100 @0.400000
+#2 bufferSource loop buffer 44100 start 0.000000 stop 0.120000 -> #3
+#3 biquad highpass -> #4
+  frequency: set 5200.000000 @0.000000
+  Q: set 0.700000 @0.000000
+#4 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.350000 @0.002000; exponential 0.000100 @0.120000
+#5 oscillator sine start 0.020000 stop 0.650000 -> #8
+  frequency: set 2637.000000 @0.020000
+#6 oscillator sine start 0.020000 stop 0.650000 -> #7
+  frequency: set 9229.500000 @0.020000
+#7 gain -> #5.frequency
+  gain: set 400.000000 @0.020000; exponential 20.000000 @0.650000
+#8 gain -> out
+  gain: set 0.000000 @0.020000; linear 0.175000 @0.022000; exponential 0.000100 @0.650000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementBolt as holy: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.700000
+#0 oscillator sine start 0.000000 stop 0.400000 -> #1
+  frequency: set 70.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.100000 @0.010000; exponential 0.000100 @0.400000
+#2 oscillator sine start 0.000000 stop 0.650000 -> #5
+  frequency: set 523.000000 @0.000000
+#3 oscillator sine start 0.000000 stop 0.650000 -> #4
+  frequency: set 1046.000000 @0.000000
+#4 gain -> #2.frequency
+  gain: set 150.000000 @0.000000; exponential 7.500000 @0.650000
+#5 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.105000 @0.005000; exponential 0.000100 @0.650000
+#6 oscillator sine start 0.000000 stop 0.650000 -> #9
+  frequency: set 659.000000 @0.000000
+#7 oscillator sine start 0.000000 stop 0.650000 -> #8
+  frequency: set 1318.000000 @0.000000
+#8 gain -> #6.frequency
+  gain: set 150.000000 @0.000000; exponential 7.500000 @0.650000
+#9 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.105000 @0.005000; exponential 0.000100 @0.650000
+#10 oscillator sine start 0.000000 stop 0.650000 -> #13
+  frequency: set 784.000000 @0.000000
+#11 oscillator sine start 0.000000 stop 0.650000 -> #12
+  frequency: set 1568.000000 @0.000000
+#12 gain -> #10.frequency
+  gain: set 150.000000 @0.000000; exponential 7.500000 @0.650000
+#13 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.105000 @0.005000; exponential 0.000100 @0.650000
+#14 oscillator sine start 0.000000 stop 0.650000 -> #17
+  frequency: set 1047.000000 @0.000000
+#15 oscillator sine start 0.000000 stop 0.650000 -> #16
+  frequency: set 2094.000000 @0.000000
+#16 gain -> #14.frequency
+  gain: set 150.000000 @0.000000; exponential 7.500000 @0.650000
+#17 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.105000 @0.005000; exponential 0.000100 @0.650000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementBolt as lightning: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.700000
+#0 oscillator sine start 0.000000 stop 0.400000 -> #1
+  frequency: set 70.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.100000 @0.010000; exponential 0.000100 @0.400000
+#2 oscillator sawtooth start 0.000000 stop 0.250000 -> #3
+  frequency: set 1800.000000 @0.000000; exponential 90.000000 @0.220000
+#3 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.210000 @0.003000; exponential 0.000100 @0.250000
+#4 bufferSource loop buffer 44100 start 0.000000 stop 0.120000 -> #6
+#5 gain -> out
+  gain: set 0.000000 @0.000000; set 0.000000 @0.000000; linear 0.350000 @0.001000; exponential 0.000100 @0.030000; set 0.000000 @0.040000; linear 0.350000 @0.041000; exponential 0.000100 @0.070000; set 0.000000 @0.090000; linear 0.350000 @0.091000; exponential 0.000100 @0.120000
+#6 biquad bandpass -> #5
+  frequency: set 3500.000000 @0.000000
+  Q: set 2.000000 @0.000000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementBolt as physical: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.700000
+#0 oscillator sine start 0.000000 stop 0.400000 -> #1
+  frequency: set 70.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.100000 @0.010000; exponential 0.000100 @0.400000
+#2 oscillator sine start 0.000000 stop 0.250000 -> #3
+  frequency: set 110.000000 @0.000000; exponential 45.000000 @0.240000
+#3 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.420000 @0.003000; exponential 0.000100 @0.250000
+#4 bufferSource loop buffer 44100 start 0.000000 stop 0.060000 -> #5
+#5 biquad bandpass -> #6
+  frequency: set 1800.000000 @0.000000
+  Q: set 1.200000 @0.000000
+#6 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.350000 @0.001000; exponential 0.000100 @0.060000
+#7 oscillator triangle start 0.000000 stop 0.100000 -> #8
+  frequency: set 260.000000 @0.000000; exponential 130.000000 @0.090000
+#8 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.175000 @0.002000; exponential 0.000100 @0.100000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementBolt as poison: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.700000
+#0 oscillator sine start 0.000000 stop 0.400000 -> #1
+  frequency: set 70.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.100000 @0.010000; exponential 0.000100 @0.400000
+#2 bufferSource loop buffer 44100 start 0.000000 stop 0.300000 -> #3
+#3 biquad bandpass -> #4
+  frequency: set 900.000000 @0.000000; exponential 300.000000 @0.280000
+  Q: set 3.000000 @0.000000
+#4 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.350000 @0.010000; exponential 0.000100 @0.300000
+#5 oscillator sine start 0.000000 stop 0.200000 -> #6
+  frequency: set 500.000000 @0.000000; exponential 200.000000 @0.180000
+#6 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.140000 @0.005000; exponential 0.000100 @0.200000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementBolt as shadow: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.700000
+#0 oscillator sine start 0.000000 stop 0.400000 -> #1
+  frequency: set 70.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.100000 @0.010000; exponential 0.000100 @0.400000
+#2 oscillator sine start 0.000000 stop 0.500000 -> #3
+  frequency: set 140.000000 @0.000000; exponential 40.000000 @0.480000
+#3 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.350000 @0.010000; exponential 0.000100 @0.500000
+#4 bufferSource loop buffer 44100 start 0.000000 stop 0.450000 -> #5
+#5 biquad lowpass -> #6
+  frequency: set 420.000000 @0.000000
+  Q: set 1.000000 @0.000000
+#6 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.210000 @0.010000; exponential 0.000100 @0.450000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementTail as arcane: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.900000
+#0 gain -> out
+  gain: set 0.700000 @0.000000
+#1 oscillator sine start 0.000000 stop 0.900000 -> #2
+  frequency: set 9.000000 @0.000000
+#2 gain -> #0.gain
+  gain: set 0.300000 @0.000000
+#3 oscillator sine start 0.000000 stop 0.700000 -> #6
+  frequency: set 1047.000000 @0.000000
+#4 oscillator sine start 0.000000 stop 0.700000 -> #5
+  frequency: set 3141.000000 @0.000000
+#5 gain -> #3.frequency
+  gain: set 120.000000 @0.000000; exponential 6.000000 @0.700000
+#6 gain -> #0
+  gain: set 0.000000 @0.000000; linear 0.140000 @0.004000; exponential 0.000100 @0.700000
+#7 oscillator sine start 0.100000 stop 0.800000 -> #10
+  frequency: set 1319.000000 @0.100000
+#8 oscillator sine start 0.100000 stop 0.800000 -> #9
+  frequency: set 3957.000000 @0.100000
+#9 gain -> #7.frequency
+  gain: set 120.000000 @0.100000; exponential 6.000000 @0.800000
+#10 gain -> #0
+  gain: set 0.000000 @0.100000; linear 0.140000 @0.104000; exponential 0.000100 @0.800000
+#11 oscillator sine start 0.200000 stop 0.900000 -> #14
+  frequency: set 1568.000000 @0.200000
+#12 oscillator sine start 0.200000 stop 0.900000 -> #13
+  frequency: set 4704.000000 @0.200000
+#13 gain -> #11.frequency
+  gain: set 120.000000 @0.200000; exponential 6.000000 @0.900000
+#14 gain -> #0
+  gain: set 0.000000 @0.200000; linear 0.140000 @0.204000; exponential 0.000100 @0.900000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementTail as fire: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.900000
+#0 bufferSource loop buffer 44100 start 0.000000 stop 0.730000 -> #2
+#1 gain -> out
+  gain: set 0.000000 @0.000000; set 0.000000 @0.050000; linear 0.300000 @0.051000; exponential 0.000100 @0.080000; set 0.000000 @0.170000; linear 0.300000 @0.171000; exponential 0.000100 @0.200000; set 0.000000 @0.240000; linear 0.300000 @0.241000; exponential 0.000100 @0.270000; set 0.000000 @0.410000; linear 0.300000 @0.411000; exponential 0.000100 @0.440000; set 0.000000 @0.520000; linear 0.300000 @0.521000; exponential 0.000100 @0.550000; set 0.000000 @0.700000; linear 0.300000 @0.701000; exponential 0.000100 @0.730000
+#2 biquad bandpass -> #1
+  frequency: set 2200.000000 @0.000000
+  Q: set 3.000000 @0.000000
+#3 bufferSource loop buffer 44100 start 0.000000 stop 0.800000 -> #4
+#4 biquad lowpass -> #5
+  frequency: set 500.000000 @0.000000
+  Q: set 1.000000 @0.000000
+#5 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.120000 @0.020000; exponential 0.000100 @0.800000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementTail as frost: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.900000
+#0 oscillator sine start 0.000000 stop 0.200000 -> #1
+  frequency: set 3136.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.120000 @0.003000; exponential 0.000100 @0.200000
+#2 oscillator sine start 0.140000 stop 0.340000 -> #3
+  frequency: set 3951.000000 @0.140000
+#3 gain -> out
+  gain: set 0.000000 @0.140000; linear 0.120000 @0.143000; exponential 0.000100 @0.340000
+#4 oscillator sine start 0.280000 stop 0.480000 -> #5
+  frequency: set 2637.000000 @0.280000
+#5 gain -> out
+  gain: set 0.000000 @0.280000; linear 0.120000 @0.283000; exponential 0.000100 @0.480000
+#6 oscillator sine start 0.420000 stop 0.620000 -> #7
+  frequency: set 4186.000000 @0.420000
+#7 gain -> out
+  gain: set 0.000000 @0.420000; linear 0.120000 @0.423000; exponential 0.000100 @0.620000
+#8 oscillator sine start 0.560000 stop 0.760000 -> #9
+  frequency: set 3520.000000 @0.560000
+#9 gain -> out
+  gain: set 0.000000 @0.560000; linear 0.120000 @0.563000; exponential 0.000100 @0.760000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementTail as holy: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.900000
+#0 oscillator sine start 0.000000 stop 0.900000 -> #3
+  frequency: set 1047.000000 @0.000000
+#1 oscillator sine start 0.000000 stop 0.900000 -> #2
+  frequency: set 1047.000000 @0.000000
+#2 gain -> #0.frequency
+  gain: set 40.000000 @0.000000; exponential 2.000000 @0.900000
+#3 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.200000 @0.010000; exponential 0.000100 @0.900000
+#4 oscillator sine start 0.050000 stop 0.900000 -> #7
+  frequency: set 1568.000000 @0.050000
+#5 oscillator sine start 0.050000 stop 0.900000 -> #6
+  frequency: set 1568.000000 @0.050000
+#6 gain -> #4.frequency
+  gain: set 40.000000 @0.050000; exponential 2.000000 @0.900000
+#7 gain -> out
+  gain: set 0.000000 @0.050000; linear 0.120000 @0.060000; exponential 0.000100 @0.900000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementTail as lightning: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.900000
+#0 bufferSource loop buffer 44100 start 0.000000 stop 0.800000 -> #1
+#1 biquad highpass -> #2
+  frequency: set 4000.000000 @0.000000
+  Q: set 0.700000 @0.000000
+#2 gain -> #5
+  gain: set 0.500000 @0.000000
+#3 oscillator square start 0.000000 stop 0.900000 -> #4
+  frequency: set 60.000000 @0.000000
+#4 gain -> #2.gain
+  gain: set 0.500000 @0.000000
+#5 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.200000 @0.010000; exponential 0.000100 @0.800000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementTail as physical: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.900000
+#0 bufferSource loop buffer 44100 start 0.000000 stop 0.600000 -> #1
+#1 biquad highpass -> #2
+  frequency: set 1500.000000 @0.000000
+  Q: set 0.700000 @0.000000
+#2 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.200000 @0.020000; exponential 0.000100 @0.600000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementTail as poison: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.900000
+#0 oscillator sine start 0.050000 stop 0.150000 -> #1
+  frequency: set 900.000000 @0.050000; exponential 400.000000 @0.130000
+#1 gain -> out
+  gain: set 0.000000 @0.050000; linear 0.180000 @0.053000; exponential 0.000100 @0.150000
+#2 oscillator sine start 0.350000 stop 0.450000 -> #3
+  frequency: set 900.000000 @0.350000; exponential 400.000000 @0.430000
+#3 gain -> out
+  gain: set 0.000000 @0.350000; linear 0.180000 @0.353000; exponential 0.000100 @0.450000
+#4 oscillator sine start 0.600000 stop 0.700000 -> #5
+  frequency: set 900.000000 @0.600000; exponential 400.000000 @0.680000
+#5 gain -> out
+  gain: set 0.000000 @0.600000; linear 0.180000 @0.603000; exponential 0.000100 @0.700000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementTail as shadow: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.900000
+#0 bufferSource loop buffer 44100 start 0.000000 stop 0.900000 -> #1
+#1 biquad lowpass -> #2
+  frequency: set 300.000000 @0.000000
+  Q: set 1.000000 @0.000000
+#2 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.300000 @0.100000; exponential 0.000100 @0.900000
+#3 oscillator sine start 0.000000 stop 0.900000 -> #4
+  frequency: set 70.000000 @0.000000
+#4 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.200000 @0.100000; exponential 0.000100 @0.900000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementWindUp as arcane: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.300000
+#0 oscillator sine start 0.000000 stop 0.300000 -> #3
+  frequency: set 660.000000 @0.000000
+#1 oscillator sine start 0.000000 stop 0.300000 -> #2
+  frequency: set 1326.600000 @0.000000
+#2 gain -> #0.frequency
+  gain: set 300.000000 @0.000000; exponential 15.000000 @0.300000
+#3 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.300000 @0.255000; exponential 0.000100 @0.300000
+#4 oscillator sine start 0.030000 stop 0.300000 -> #7
+  frequency: set 990.000000 @0.030000
+#5 oscillator sine start 0.030000 stop 0.300000 -> #6
+  frequency: set 1485.000000 @0.030000
+#6 gain -> #4.frequency
+  gain: set 200.000000 @0.030000; exponential 10.000000 @0.300000
+#7 gain -> out
+  gain: set 0.000000 @0.030000; linear 0.200000 @0.285000; exponential 0.000100 @0.300000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementWindUp as fire: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.300000
+#0 bufferSource loop buffer 44100 start 0.000000 stop 0.300000 -> #1
+#1 biquad bandpass -> #2
+  frequency: set 400.000000 @0.000000; exponential 1800.000000 @0.300000
+  Q: set 1.500000 @0.000000
+#2 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.500000 @0.255000; exponential 0.000100 @0.300000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementWindUp as frost: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.300000
+#0 oscillator sine start 0.060000 stop 0.220000 -> #1
+  frequency: set 1760.000000 @0.060000; exponential 2200.000000 @0.200000
+#1 gain -> out
+  gain: set 0.000000 @0.060000; linear 0.180000 @0.065000; exponential 0.000100 @0.220000
+#2 oscillator sine start 0.120000 stop 0.280000 -> #3
+  frequency: set 2349.000000 @0.120000; exponential 2936.250000 @0.260000
+#3 gain -> out
+  gain: set 0.000000 @0.120000; linear 0.180000 @0.125000; exponential 0.000100 @0.280000
+#4 oscillator sine start 0.180000 stop 0.300000 -> #5
+  frequency: set 3136.000000 @0.180000; exponential 3920.000000 @0.300000
+#5 gain -> out
+  gain: set 0.000000 @0.180000; linear 0.180000 @0.185000; exponential 0.000100 @0.300000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementWindUp as holy: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.300000
+#0 oscillator sine start 0.000000 stop 0.300000 -> #1
+  frequency: set 392.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.200000 @0.255000; exponential 0.000100 @0.300000
+#2 oscillator sine start 0.024000 stop 0.300000 -> #3
+  frequency: set 587.000000 @0.024000
+#3 gain -> out
+  gain: set 0.000000 @0.024000; linear 0.200000 @0.279000; exponential 0.000100 @0.300000
+#4 oscillator sine start 0.048000 stop 0.300000 -> #5
+  frequency: set 784.000000 @0.048000
+#5 gain -> out
+  gain: set 0.000000 @0.048000; linear 0.200000 @0.300000; exponential 0.000100 @0.300000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementWindUp as lightning: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.300000
+#0 oscillator sawtooth start 0.000000 stop 0.300000 -> #1
+  frequency: set 160.000000 @0.000000; exponential 900.000000 @0.300000
+#1 biquad lowpass -> #2
+  frequency: set 2600.000000 @0.000000
+  Q: set 1.000000 @0.000000
+#2 gain -> #5
+  gain: set 0.500000 @0.000000
+#3 oscillator square start 0.000000 stop 0.300000 -> #4
+  frequency: set 34.000000 @0.000000
+#4 gain -> #2.gain
+  gain: set 0.500000 @0.000000
+#5 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.220000 @0.255000; exponential 0.000100 @0.300000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementWindUp as physical: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.300000
+#0 bufferSource loop buffer 44100 start 0.000000 stop 0.300000 -> #1
+#1 biquad lowpass -> #2
+  frequency: set 300.000000 @0.000000; exponential 900.000000 @0.300000
+  Q: set 0.800000 @0.000000
+#2 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.600000 @0.255000; exponential 0.000100 @0.300000
+#3 oscillator sine start 0.000000 stop 0.300000 -> #4
+  frequency: set 90.000000 @0.000000
+#4 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.300000 @0.255000; exponential 0.000100 @0.300000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementWindUp as poison: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.300000
+#0 bufferSource loop buffer 44100 start 0.000000 stop 0.300000 -> #2
+#1 gain -> out
+  gain: set 0.000000 @0.000000; set 0.000000 @0.030000; linear 0.400000 @0.031000; exponential 0.000100 @0.100000; set 0.000000 @0.090000; linear 0.400000 @0.091000; exponential 0.000100 @0.160000; set 0.000000 @0.150000; linear 0.400000 @0.151000; exponential 0.000100 @0.220000; set 0.000000 @0.210000; linear 0.400000 @0.211000; exponential 0.000100 @0.280000; set 0.000000 @0.270000; linear 0.400000 @0.271000; exponential 0.000100 @0.300000
+#2 biquad bandpass -> #1
+  frequency: set 600.000000 @0.000000
+  Q: set 4.000000 @0.000000
+#3 oscillator sine start 0.030000 stop 0.110000 -> #4
+  frequency: set 260.000000 @0.030000; exponential 460.000000 @0.090000
+#4 gain -> out
+  gain: set 0.000000 @0.030000; linear 0.140000 @0.034000; exponential 0.000100 @0.110000
+#5 oscillator sine start 0.090000 stop 0.170000 -> #6
+  frequency: set 300.000000 @0.090000; exponential 500.000000 @0.150000
+#6 gain -> out
+  gain: set 0.000000 @0.090000; linear 0.140000 @0.094000; exponential 0.000100 @0.170000
+#7 oscillator sine start 0.150000 stop 0.230000 -> #8
+  frequency: set 340.000000 @0.150000; exponential 540.000000 @0.210000
+#8 gain -> out
+  gain: set 0.000000 @0.150000; linear 0.140000 @0.154000; exponential 0.000100 @0.230000
+#9 oscillator sine start 0.210000 stop 0.290000 -> #10
+  frequency: set 380.000000 @0.210000; exponential 580.000000 @0.270000
+#10 gain -> out
+  gain: set 0.000000 @0.210000; linear 0.140000 @0.214000; exponential 0.000100 @0.290000
+#11 oscillator sine start 0.270000 stop 0.300000 -> #12
+  frequency: set 420.000000 @0.270000; exponential 620.000000 @0.300000
+#12 gain -> out
+  gain: set 0.000000 @0.270000; linear 0.140000 @0.274000; exponential 0.000100 @0.300000"
+`;
+
+exports[`#5190 the element recipes build one graph per element > #5190 elementWindUp as shadow: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.300000
+#0 oscillator triangle start 0.000000 stop 0.300000 -> #1
+  frequency: set 220.000000 @0.000000; exponential 70.000000 @0.300000
+#1 biquad lowpass -> #2
+  frequency: set 1200.000000 @0.000000; exponential 180.000000 @0.300000
+  Q: set 1.000000 @0.000000
+#2 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.500000 @0.255000; exponential 0.000100 @0.300000"
+`;
+
 exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 anomaly: every node, wire, start, stop and automation as recorded 1`] = `
 "length 0.330000
 #0 bufferSource loop buffer 44100 start 0.000000 stop 0.330000 -> #1
@@ -1726,6 +2194,52 @@ exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by e
   gain: set 0.000000 @0.000000; linear 0.500000 @0.005000; exponential 0.000100 @0.130000"
 `;
 
+exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 elementBolt: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.700000
+#0 oscillator sine start 0.000000 stop 0.400000 -> #1
+  frequency: set 70.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.100000 @0.010000; exponential 0.000100 @0.400000
+#2 oscillator sine start 0.000000 stop 0.250000 -> #3
+  frequency: set 110.000000 @0.000000; exponential 45.000000 @0.240000
+#3 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.420000 @0.003000; exponential 0.000100 @0.250000
+#4 bufferSource loop buffer 44100 start 0.000000 stop 0.060000 -> #5
+#5 biquad bandpass -> #6
+  frequency: set 1800.000000 @0.000000
+  Q: set 1.200000 @0.000000
+#6 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.350000 @0.001000; exponential 0.000100 @0.060000
+#7 oscillator triangle start 0.000000 stop 0.100000 -> #8
+  frequency: set 260.000000 @0.000000; exponential 130.000000 @0.090000
+#8 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.175000 @0.002000; exponential 0.000100 @0.100000"
+`;
+
+exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 elementTail: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.900000
+#0 bufferSource loop buffer 44100 start 0.000000 stop 0.600000 -> #1
+#1 biquad highpass -> #2
+  frequency: set 1500.000000 @0.000000
+  Q: set 0.700000 @0.000000
+#2 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.200000 @0.020000; exponential 0.000100 @0.600000"
+`;
+
+exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 elementWindUp: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.300000
+#0 bufferSource loop buffer 44100 start 0.000000 stop 0.300000 -> #1
+#1 biquad lowpass -> #2
+  frequency: set 300.000000 @0.000000; exponential 900.000000 @0.300000
+  Q: set 0.800000 @0.000000
+#2 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.600000 @0.255000; exponential 0.000100 @0.300000
+#3 oscillator sine start 0.000000 stop 0.300000 -> #4
+  frequency: set 90.000000 @0.000000
+#4 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.300000 @0.255000; exponential 0.000100 @0.300000"
+`;
+
 exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 emoteAngry: every node, wire, start, stop and automation as recorded 1`] = `
 "length 0.700000
 #0 biquad lowpass -> out
@@ -3158,6 +3672,20 @@ exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by e
   frequency: set 280.000000 @0.780000; exponential 1300.000000 @1.400000"
 `;
 
+exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 hush: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.900000
+#0 oscillator sine start 0.000000 stop 0.900000 -> #1
+  frequency: set 110.000000 @0.000000; exponential 60.000000 @0.900000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.350000 @0.050000; exponential 0.000100 @0.900000
+#2 bufferSource loop buffer 44100 start 0.000000 stop 0.900000 -> #3
+#3 biquad lowpass -> #4
+  frequency: set 1200.000000 @0.000000; exponential 200.000000 @0.900000
+  Q: set 1.000000 @0.000000
+#4 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.250000 @0.050000; exponential 0.000100 @0.900000"
+`;
+
 exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 impact: every node, wire, start, stop and automation as recorded 1`] = `
 "length 0.153000
 #0 bufferSource loop buffer 44100 start 0.000000 stop 0.153000 -> #1
@@ -4138,6 +4666,34 @@ exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by e
   gain: set 0.000000 @0.700000; linear 0.450000 @0.750000; linear 0.300000 @1.200000; exponential 0.000100 @1.500000"
 `;
 
+exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 morph: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.700000
+#0 oscillator sine start 0.000000 stop 0.450000 -> #1
+  frequency: set 220.000000 @0.000000; exponential 660.000000 @0.420000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.300000 @0.020000; exponential 0.000100 @0.450000
+#2 oscillator sine start 0.000000 stop 0.450000 -> #3
+  frequency: set 9.000000 @0.000000
+#3 gain -> #0.frequency
+  gain: set 15.000000 @0.000000
+#4 oscillator triangle start 0.000000 stop 0.450000 -> #5
+  frequency: set 660.000000 @0.000000; exponential 220.000000 @0.420000
+#5 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.300000 @0.020000; exponential 0.000100 @0.450000
+#6 oscillator sine start 0.000000 stop 0.450000 -> #7
+  frequency: set 7.000000 @0.000000
+#7 gain -> #4.frequency
+  gain: set 12.000000 @0.000000
+#8 oscillator sine start 0.400000 stop 0.700000 -> #11
+  frequency: set 880.000000 @0.400000
+#9 oscillator sine start 0.400000 stop 0.700000 -> #10
+  frequency: set 1760.000000 @0.400000
+#10 gain -> #8.frequency
+  gain: set 150.000000 @0.400000; exponential 7.500000 @0.700000
+#11 gain -> out
+  gain: set 0.000000 @0.400000; linear 0.300000 @0.410000; exponential 0.000100 @0.700000"
+`;
+
 exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 notify: every node, wire, start, stop and automation as recorded 1`] = `
 "length 0.280000
 #0 oscillator sine start 0.000000 stop 0.140000 -> #1
@@ -4847,6 +5403,40 @@ exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by e
   gain: set 0.000000 @0.000000; linear 1.000000 @0.010000; exponential 0.000100 @0.190000"
 `;
 
+exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 revealGlint: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.800000
+#0 bufferSource loop buffer 44100 start 0.000000 stop 0.400000 -> #1
+#1 biquad bandpass -> #2
+  frequency: set 800.000000 @0.000000; exponential 4000.000000 @0.350000
+  Q: set 2.000000 @0.000000
+#2 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.300000 @0.300000; exponential 0.000100 @0.400000
+#3 oscillator sine start 0.250000 stop 0.650000 -> #6
+  frequency: set 784.000000 @0.250000
+#4 oscillator sine start 0.250000 stop 0.650000 -> #5
+  frequency: set 1568.000000 @0.250000
+#5 gain -> #3.frequency
+  gain: set 100.000000 @0.250000; exponential 5.000000 @0.650000
+#6 gain -> out
+  gain: set 0.000000 @0.250000; linear 0.200000 @0.254000; exponential 0.000100 @0.650000
+#7 oscillator sine start 0.330000 stop 0.730000 -> #10
+  frequency: set 988.000000 @0.330000
+#8 oscillator sine start 0.330000 stop 0.730000 -> #9
+  frequency: set 1976.000000 @0.330000
+#9 gain -> #7.frequency
+  gain: set 100.000000 @0.330000; exponential 5.000000 @0.730000
+#10 gain -> out
+  gain: set 0.000000 @0.330000; linear 0.200000 @0.334000; exponential 0.000100 @0.730000
+#11 oscillator sine start 0.410000 stop 0.800000 -> #14
+  frequency: set 1175.000000 @0.410000
+#12 oscillator sine start 0.410000 stop 0.800000 -> #13
+  frequency: set 2350.000000 @0.410000
+#13 gain -> #11.frequency
+  gain: set 100.000000 @0.410000; exponential 5.000000 @0.800000
+#14 gain -> out
+  gain: set 0.000000 @0.410000; linear 0.200000 @0.414000; exponential 0.000100 @0.800000"
+`;
+
 exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 riffle: every node, wire, start, stop and automation as recorded 1`] = `
 "length 0.460000
 #0 bufferSource loop buffer 44100 start 0.000000 stop 0.415000 -> #2
@@ -5094,6 +5684,38 @@ exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by e
   gain: set 0.000000 @1.120000; linear 0.090000 @1.130000; exponential 0.000100 @1.280000"
 `;
 
+exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 shatter: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.600000
+#0 bufferSource loop buffer 44100 start 0.000000 stop 0.350000 -> #1
+#1 biquad highpass -> #2
+  frequency: set 2500.000000 @0.000000
+  Q: set 0.700000 @0.000000
+#2 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.300000 @0.002000; exponential 0.000100 @0.350000
+#3 bufferSource loop buffer 44100 start 0.000000 stop 0.080000 -> #5
+#4 gain -> out
+  gain: set 0.000000 @0.000000; set 0.000000 @0.020000; linear 0.240000 @0.021000; exponential 0.000100 @0.050000; set 0.000000 @0.050000; linear 0.240000 @0.051000; exponential 0.000100 @0.080000
+#5 biquad bandpass -> #4
+  frequency: set 5000.000000 @0.000000
+  Q: set 3.000000 @0.000000
+#6 bufferSource loop buffer 44100 start 0.000000 stop 0.170000 -> #8
+#7 gain -> out
+  gain: set 0.000000 @0.000000; set 0.000000 @0.090000; linear 0.210000 @0.091000; exponential 0.000100 @0.130000; set 0.000000 @0.130000; linear 0.210000 @0.131000; exponential 0.000100 @0.170000
+#8 biquad bandpass -> #7
+  frequency: set 3200.000000 @0.000000
+  Q: set 3.000000 @0.000000
+#9 bufferSource loop buffer 44100 start 0.000000 stop 0.310000 -> #11
+#10 gain -> out
+  gain: set 0.000000 @0.000000; set 0.000000 @0.190000; linear 0.180000 @0.191000; exponential 0.000100 @0.240000; set 0.000000 @0.260000; linear 0.180000 @0.261000; exponential 0.000100 @0.310000
+#11 biquad bandpass -> #10
+  frequency: set 1800.000000 @0.000000
+  Q: set 3.000000 @0.000000
+#12 oscillator sine start 0.000000 stop 0.300000 -> #13
+  frequency: set 120.000000 @0.000000; exponential 50.000000 @0.280000
+#13 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.240000 @0.003000; exponential 0.000100 @0.300000"
+`;
+
 exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 shieldShatter: every node, wire, start, stop and automation as recorded 1`] = `
 "length 0.480000
 #0 oscillator sine start 0.000000 stop 0.300000 -> #1
@@ -5267,6 +5889,40 @@ exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by e
   frequency: set 28.000000 @1.000000
 #11 gain -> #8.frequency
   gain: set 60.000000 @1.000000"
+`;
+
+exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 sparkleTail: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.710000
+#0 gain -> out
+  gain: set 0.800000 @0.000000
+#1 oscillator sine start 0.000000 stop 0.710000 -> #2
+  frequency: set 8.000000 @0.000000
+#2 gain -> #0.gain
+  gain: set 0.200000 @0.000000
+#3 oscillator sine start 0.000000 stop 0.400000 -> #6
+  frequency: set 3136.000000 @0.000000
+#4 oscillator sine start 0.000000 stop 0.400000 -> #5
+  frequency: set 10976.000000 @0.000000
+#5 gain -> #3.frequency
+  gain: set 120.000000 @0.000000; exponential 6.000000 @0.400000
+#6 gain -> #0
+  gain: set 0.000000 @0.000000; linear 0.140000 @0.003000; exponential 0.000100 @0.400000
+#7 oscillator sine start 0.070000 stop 0.470000 -> #10
+  frequency: set 2637.000000 @0.070000
+#8 oscillator sine start 0.070000 stop 0.470000 -> #9
+  frequency: set 9229.500000 @0.070000
+#9 gain -> #7.frequency
+  gain: set 120.000000 @0.070000; exponential 6.000000 @0.470000
+#10 gain -> #0
+  gain: set 0.000000 @0.070000; linear 0.140000 @0.073000; exponential 0.000100 @0.470000
+#11 oscillator sine start 0.140000 stop 0.540000 -> #14
+  frequency: set 2349.000000 @0.140000
+#12 oscillator sine start 0.140000 stop 0.540000 -> #13
+  frequency: set 8221.500000 @0.140000
+#13 gain -> #11.frequency
+  gain: set 120.000000 @0.140000; exponential 6.000000 @0.540000
+#14 gain -> #0
+  gain: set 0.000000 @0.140000; linear 0.140000 @0.143000; exponential 0.000100 @0.540000"
 `;
 
 exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 spell: every node, wire, start, stop and automation as recorded 1`] = `
@@ -6730,6 +7386,29 @@ exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by e
   Q: set 1.000000 @0.000000
 #26 gain -> out
   gain: set 0.000000 @0.980000; linear 0.260000 @0.983000; exponential 0.000100 @1.600000"
+`;
+
+exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 windUp: every node, wire, start, stop and automation as recorded 1`] = `
+"length 0.250000
+#0 biquad lowpass -> #1
+  frequency: set 400.000000 @0.000000; exponential 3200.000000 @0.250000
+  Q: set 1.000000 @0.000000
+#1 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.450000 @0.212500; exponential 0.000100 @0.250000
+#2 oscillator sawtooth start 0.000000 stop 0.250000 -> #3
+  frequency: set 110.000000 @0.000000; exponential 330.000000 @0.250000
+#3 gain -> #0
+  gain: set 0.500000 @0.000000
+#4 oscillator sine start 0.000000 stop 0.250000 -> #5
+  frequency: set 220.000000 @0.000000; exponential 660.000000 @0.250000
+#5 gain -> #0
+  gain: set 0.500000 @0.000000
+#6 bufferSource loop buffer 44100 start 0.000000 stop 0.250000 -> #7
+#7 biquad bandpass -> #8
+  frequency: set 500.000000 @0.000000; exponential 2500.000000 @0.250000
+  Q: set 1.000000 @0.000000
+#8 gain -> out
+  gain: set 0.000000 @0.000000; linear 0.120000 @0.212500; exponential 0.000100 @0.250000"
 `;
 
 exports[`B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear > B14 wireRatchet: every node, wire, start, stop and automation as recorded 1`] = `

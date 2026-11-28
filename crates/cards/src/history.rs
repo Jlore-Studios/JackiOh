@@ -65,8 +65,8 @@ use crate::scripts::meditative::{
     c097_2_wishing_well, c097_8_prison, c099_paranoia, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
-    c001_bobs_plan, c002_na_tech, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
-    c022_mountaintop_garden, c023_enormous_elderberry,
+    c001_bobs_plan, c002_na_tech, c003_wondrous_wand, c009_magic_amplifier, c012_living_armor_potion,
+    c019_grubby_gloves, c022_mountaintop_garden, c023_enormous_elderberry,
 };
 use crate::scripts::stinkyscape::{
     c004_olivian_expanse, c007_the_greatest_heist, c009_ticketed, c010_1_inner_fire, c010_2_divine_spirit,
@@ -83,7 +83,7 @@ use crate::scripts::stinkyscape::{
     c149_wildar, c153_stimmycheck, c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities,
     c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
     c172_huge_asteroid, c173_abandoned_spice_tower, c176_preemptive_strike, t_drone_corvette,
-    t_drone_interceptor, t_narcor, t_red_narcor,
+    t_drone_interceptor, t_narcor, t_red_narcor, t_reknite,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c007_churnwalker, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie,
@@ -1596,6 +1596,24 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c176_preemptive_strike::ID,
         "fragment:starfleet-commander-and-preemptive-strike-still-discover-a",
         c176_preemptive_strike::script_before_launch_read_once,
+    ),
+    // #5183 (R5183001, R5183002, R5183003): Armor Up's 2 until your next turn and Tank Up's refresh, and
+    // Reknite's and Living Armor Potion's Armor until your next turn, before each gave Armor the hero
+    // keeps (R4779000: keyed by the pending fragment).
+    (
+        c098_heroic_power::ID,
+        "fragment:hero-armor-wears-down-by-1-with-each-hit-and-the-armor-cards",
+        c098_heroic_power::script_kept_5183,
+    ),
+    (
+        t_reknite::ID,
+        "fragment:hero-armor-wears-down-by-1-with-each-hit-and-the-armor-cards",
+        t_reknite::script_kept_5183,
+    ),
+    (
+        c012_living_armor_potion::ID,
+        "fragment:hero-armor-wears-down-by-1-with-each-hit-and-the-armor-cards",
+        c012_living_armor_potion::script_kept_5183,
     ),
 ];
 

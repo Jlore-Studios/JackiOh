@@ -72,8 +72,9 @@ reserved: RowFlags, fatigueCount: number,
  */
 jade?: number, 
 /**
- * R3548000: this seat's Tipsy counter, shown to both seats beside its hero. Absent at none,
- * so a game without one sends the view it always did.
+ * R3548000: this seat's Woozy counter, shown to both seats beside its hero. Absent at none,
+ * so a game without one sends the view it always did. Sent as `tipsy`, the keyword's old name,
+ * so the view is what it was before the rename (R5181000).
  */
 tipsy?: number, 
 /**

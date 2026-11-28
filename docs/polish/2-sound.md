@@ -1249,3 +1249,67 @@ for what this branch could not reach:
 - **The mute moved into the board's control bar**, beside the settings gear, where task 7's panel
   mounts `AudioControls`: fixed in the corner it covered the practice HUD's Menu and the match bar.
   On a phone held upright the bar is one row, so there the mute steps aside and the gear holds it.
+
+## Spell verbs (#5190)
+
+The effects bank in `apps/web/src/audio/card-audio.json5` holds a wind-up, a release and a tail for each
+verb a Spell, Field Spell, Trap or Field Trap's script calls, for the card parts of #5187 to build a cast's
+sounds from. Nine procedural recipes fill what `sfx.ts` lacked: `elementWindUp`, `elementBolt` and
+`elementTail` (all three take `params.element`, one of fire, frost, lightning, arcane, shadow, poison, holy
+or physical, and the first takes `amount` for how long and high the build is), `windUp` (a verb-neutral
+build; the bank's pitch colours it), `sparkleTail` (3 to 7 bells by `amount`), `hush`, `shatter`, `morph`
+and `revealGlint`. Bank entries are named for what they sound like (`fireRelease`, `hushTail`), never a card.
+Nothing ships as a file and `SOUND_CUES` gains no row. The recipes' gzipped chunk is held by
+`SFX_CHUNK_GZIP_CAP_BYTES` in `sfxSize.test.ts` (29,695 bytes before these recipes, 31,128 with them).
+The table is also in the bank's head comment, and `test/verbBank.ts` holds it as data for `verbBank.test.ts`.
+
+How the counts were made (a one-off script, not in the tree). Each of the 652 non-Unit cards of
+`crates/cards/catalog.json` (Spell 454, Field Spell 132, Trap 51, Field Trap 15) has its script in
+`crates/cards/src/scripts/`, read without its `#[cfg(test)]` module. A card counts once for each verb whose
+effect functions (`jackioh_engine::effects`) its script calls: damage (`damage`, `damage_all`,
+`damage_split`, `damage_random_enemies`, `burn`, `burn_all`, `chain_lightning`, `line_damage_begin`,
+`slash_board`), destroy (`destroy*`, `exile*`, `sacrifice`, `crush`), heal, draw (`draw*`, `add_to_hand`,
+`add_random_from_catalog`, `discover_*`), discard (`discard*`), summon (`summon*`, `fill_board*`, `recruit*`),
+transform (`transform*`), bounce (`bounce*`), steal (`steal`, `give_control`, `swap_control`), buff (`buff*`,
+`grant_keyword*`, `grant_random_keywords`, `upgrade`), debuff (`degrade`, `give_brittle`), lock (`lock*`,
+`freeze*`), armor (`gain_hero_armor`), mana (`gain_mana`, `next_turn_mana`, `refresh_mana`,
+`gain_resources`), shuffle (`shuffle*`, `fuse*`), counter (`counter_play`) and reveal (`reveal`). So a card
+that deals damage and draws counts in both rows. 111 cards call none of them (their effects are the
+engine's other verbs: choices, forced attacks, stages, turns and the like): the card parts give those
+cards the generic `spell` or `sting` sound as today.
+
+The element of a damage card is a heuristic, since no catalog field names one and the tags are families
+(AI, Fruit, Book). Its `flavor` (SPEC §5, display only) gives it where it names one: Fire is fire, Holy is
+holy, Dark is shadow, Toxic is poison, Physical, Brute and Beast are physical. For the rest, a keyword in
+the card's name or text: fire (burn, flame, fire, ember, meteor, molten), frost (frost, ice, freeze, cold,
+glacier), lightning (lightning, thunder, shock, zap, storm), arcane (arcane, magic, rune, spell), shadow
+(shadow, dark, curse, void), poison (poison, venom, toxic, acid), holy (holy, radiant, light, sacred); none:
+physical. So the damage rows are approximate, and no card's name or text names lightning; its entries wait for
+the sets that will. Frost damage doubles as the freeze release (`frostRelease`).
+
+| verb | element | recipe | wind-up | release | tail | Core | Classic | Classic+ | Training Grounds | Meditative | Meditative+ | Stinkyscape | Stinkyscape+ | Infinite Assault |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| damage | fire | elementWindUp / elementBolt / elementTail | `fireWind` | `fireRelease` | `fireTail` | 1 | 4 | 2 | 2 | 3 | 1 | 5 | 0 | 2 |
+| damage | frost | elementWindUp / elementBolt / elementTail | `frostWind` | `frostRelease` | `frostTail` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
+| damage | lightning | elementWindUp / elementBolt / elementTail | `lightningWind` | `lightningRelease` | `lightningTail` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| damage | arcane | elementWindUp / elementBolt / elementTail | `arcaneWind` | `arcaneRelease` | `arcaneTail` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
+| damage | shadow | elementWindUp / elementBolt / elementTail | `shadowWind` | `shadowRelease` | `shadowTail` | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| damage | poison | elementWindUp / elementBolt / elementTail | `poisonWind` | `poisonRelease` | `poisonTail` | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 |
+| damage | holy | elementWindUp / elementBolt / elementTail | `holyWind` | `holyRelease` | `holyTail` | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 |
+| damage | physical | elementWindUp / elementBolt / elementTail | `physicalWind` | `physicalRelease` | `physicalTail` | 7 | 5 | 4 | 3 | 3 | 1 | 4 | 2 | 12 |
+| destroy | - | `shatter` | `dreadWind` | `shatterRelease` | `hushTail` | 16 | 15 | 11 | 5 | 9 | 1 | 7 | 6 | 5 |
+| heal | - | `heal` | `calmWind` | `healRelease` | `sparkleTail` | 4 | 4 | 4 | 2 | 5 | 1 | 2 | 2 | 0 |
+| draw | - | `draw` | `calmWind` | `drawRelease` | `sparkleTail` | 22 | 25 | 23 | 9 | 34 | 12 | 39 | 30 | 26 |
+| discard | - | `poof` | `dreadWind` | `discardRelease` | `hushTail` | 3 | 8 | 2 | 0 | 3 | 1 | 3 | 2 | 4 |
+| summon | - | `summon` | `surgeWind` | `summonRelease` | `sparkleTail` | 9 | 7 | 11 | 4 | 6 | 0 | 23 | 8 | 30 |
+| transform | - | `morph` | `twistWind` | `morphRelease` | `ringTail` | 2 | 0 | 0 | 0 | 3 | 0 | 0 | 3 | 7 |
+| bounce | - | `returnToHand` | `twistWind` | `bounceRelease` | `ringTail` | 4 | 1 | 1 | 1 | 1 | 0 | 2 | 1 | 1 |
+| steal | - | `steal` | `dreadWind` | `stealRelease` | `hushTail` | 2 | 2 | 0 | 1 | 1 | 0 | 1 | 0 | 3 |
+| buff | - | `buff` | `surgeWind` | `buffRelease` | `sparkleTail` | 2 | 1 | 10 | 1 | 6 | 1 | 8 | 20 | 22 |
+| debuff | - | `debuff` | `dreadWind` | `debuffRelease` | `hushTail` | 0 | 0 | 4 | 0 | 0 | 0 | 0 | 6 | 7 |
+| lock | - | `lock` | `snapWind` | `lockRelease` | `ringTail` | 1 | 1 | 1 | 0 | 1 | 0 | 7 | 3 | 8 |
+| armor | - | `armorClank` | `surgeWind` | `armorRelease` | `ringTail` | 0 | 0 | 0 | 0 | 3 | 0 | 1 | 2 | 3 |
+| mana | - | `mana` | `calmWind` | `manaRelease` | `sparkleTail` | 6 | 3 | 2 | 1 | 9 | 1 | 15 | 7 | 4 |
+| shuffle | - | `riffle` | `twistWind` | `shuffleRelease` | `ringTail` | 7 | 2 | 7 | 0 | 8 | 2 | 6 | 6 | 9 |
+| counter | - | `counterspell` | `snapWind` | `counterRelease` | `ringTail` | 0 | 5 | 1 | 0 | 0 | 0 | 1 | 1 | 3 |
+| reveal | - | `revealGlint` | `calmWind` | `revealRelease` | `sparkleTail` | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |

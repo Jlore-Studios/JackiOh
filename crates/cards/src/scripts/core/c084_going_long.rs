@@ -209,6 +209,24 @@ mod tests {
             s.expect_health(P1, 26);
         }
 
+        /// R5183000: Going Long's Armor is an aura's, which no hit wears; the Armor on the hero itself
+        /// wears 1 with the same hit.
+        #[test]
+        fn r5183000_its_armor_never_wears_and_the_heros_own_does() {
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": { "backrow": [GOING_LONG], "hand": [STOCKPILE], "armor": 1 },
+                "p2": { "field": [six_one()], "hand": [STOCKPILE] },
+            }));
+            assert_eq!(shown_armor(&s, P1), 3, "Going Long's 2 and the hero's own 1");
+
+            s.attack(SPECIESIST, "hero");
+
+            assert_eq!(damage_to(&s, "hero-p1"), vec![3]);
+            assert_eq!(s.state().players.p1.hero.armor, 0, "the hero's own Armor wore");
+            assert_eq!(shown_armor(&s, P1), 2, "Going Long's stays whole");
+        }
+
         #[test]
         fn your_hero_the_armor_protects_its_controller_only() {
             let mut s = scenario(json!({

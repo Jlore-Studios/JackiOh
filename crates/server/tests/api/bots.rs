@@ -38,6 +38,7 @@ use jackioh_shared::bots::fallback::{fallback_seconds_keyed, hour_of};
 use jackioh_shared::bots::pick::{pick_due_at, pick_slot};
 use jackioh_shared::bots::signals::{RematchPlan, rematch_plan};
 
+use crate::api::queue::restamp_older;
 use crate::support::deps::{TestAppOptions, add_user, call, test_app_with};
 use crate::support::engine::playable;
 use crate::support::store::{fake_lock, from, q, record_calls};
@@ -452,6 +453,77 @@ async fn r897000_a_stale_ticket_seats_no_ladder_bot() {
     );
     assert!(matches(&app).await.is_empty());
     assert!(seated(&app, &[&bot]).await.is_empty());
+}
+
+/// R5159000: the ticket's row in the store, as its JSON.
+async fn held_ticket(app: &App, id: &str) -> Value {
+    serde_json::to_value(q!(app, tickets_get(id)).expect("the ticket")).expect("a ticket")
+}
+
+#[tokio::test(start_paused = true)]
+async fn r5159000_an_older_ticket_past_its_fallback_seats_no_ladder_bot() {
+    let app = app_with_bots(true).await;
+    let (person, token) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let waiting = ticket(&app, &person, 1000.0, past_any_fallback(), "bo1").await;
+    // The wait began before the patch: the ticket's stamp is the earlier build's.
+    restamp_older(&app, &waiting.id).await;
+    // PREMISE: past its fallback time, so the bot would seat it at once were it not for the stamp.
+    assert!(fallback_due(&waiting, now_ms()));
+    assert!(!app.queue_presence.expiry_due(now_ms()));
+
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
+
+    assert_eq!(held_ticket(&app, &waiting.id).await["status"], "cancelled");
+    assert!(matches(&app).await.is_empty());
+    assert!(seated(&app, &[&bot]).await.is_empty());
+    let held = q!(app, profiles_get_by_id(&person)).expect("the profile");
+    assert_eq!(held.in_match_id, None);
+    let (status, _, me) = call(&app, "GET", "/api/auth/me", Some(&token), Value::Null).await;
+    assert_eq!(status, 200);
+    assert_eq!(me["queued"], false);
+}
+
+#[tokio::test(start_paused = true)]
+async fn r5159000_an_older_conquest_ticket_past_its_fallback_starts_no_series() {
+    let app = app_with_bots(true).await;
+    let (person, _) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    give_trio(&app, &bot).await;
+    let waiting = conquest_ticket(&app, &person, 1000.0, past_any_fallback()).await;
+    restamp_older(&app, &waiting.id).await;
+    assert!(fallback_due(&waiting, now_ms()));
+
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 0);
+
+    assert_eq!(held_ticket(&app, &waiting.id).await["status"], "cancelled");
+    assert!(fake_lock(&app).await.tables.series.is_empty());
+    assert!(matches(&app).await.is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn r5159000_a_current_ticket_still_meets_its_bot_beside_an_older_one() {
+    let app = app_with_bots(true).await;
+    let (older_person, _) = new_person(&app, 1000.0).await;
+    let (current_person, _) = new_person(&app, 1000.0).await;
+    let bot = new_bot(&app, BotSpec::rated(1000.0)).await;
+    let older = ticket(&app, &older_person, 1000.0, past_any_fallback(), "bo1").await;
+    let current = ticket(&app, &current_person, 1000.0, past_any_fallback(), "bo1").await;
+    restamp_older(&app, &older.id).await;
+    assert!(fallback_due(&older, now_ms()) && fallback_due(&current, now_ms()));
+
+    assert_eq!(try_pair(&app).await.expect("a sweep").made, 1);
+
+    assert_eq!(held_ticket(&app, &older.id).await["status"], "cancelled");
+    assert_eq!(held_ticket(&app, &current.id).await["status"], "matched");
+    assert_eq!(seated(&app, &[&bot]).await, vec![bot.clone()]);
+    let seated_people: Vec<String> = matches(&app)
+        .await
+        .into_iter()
+        .flat_map(|(a, b)| [a, b])
+        .filter(|id| id == &older_person || id == &current_person)
+        .collect();
+    assert_eq!(seated_people, vec![current_person.clone()]);
 }
 
 #[tokio::test(start_paused = true)]

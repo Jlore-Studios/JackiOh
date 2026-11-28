@@ -36,6 +36,10 @@
 //! R4675001: `GET /api/stats/versions` is every play version's figures (R4675000), through the engine's
 //! `play_version_figures`, one table per `?pilot=` and `?mode=` cut from the same snapshot and cached as
 //! long. It sends figures only: a client reads a version's definition from its catalog at `last`.
+//! R5186000: the kept snapshot loads on a task of its own, so a read that gives up leaves the load to
+//! finish for the next read, and `GET /api/stats/loading` answers what that load is doing (its step, how
+//! long it has run, and how long the last one took), never waiting and kept by no cache, for the page's
+//! progress bar.
 //! R5040000: `?scope=major` sends the live play versions alone, each cut to the newest major's line
 //! (`major_line_versions`) and read against those rows' own field, one table per scope too.
 //!
@@ -93,7 +97,7 @@ use crate::config::{
     PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES, PUBLIC_STATS_PATCHES_LINE_BEFORE,
     PUBLIC_STATS_PATCHES_NEWEST,
 };
-use crate::db::store::{CardFiling, CardRows, PlayerStatsListOptions, StatsTotalsQuery};
+use crate::db::store::{CardFiling, CardRows, Db, PlayerStatsListOptions, StatsTotalsQuery};
 use crate::env::js_number;
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -1170,7 +1174,17 @@ async fn totals_for(
     drills: bool,
     cards: CardRows,
 ) -> Result<StatsTotals, ApiError> {
-    let mut tx = app.db.begin(None).await?;
+    totals_in(&app.db, patch, drills, cards).await
+}
+
+/// `totals_for` on the store `db`, which a load on a task of its own owns (R5186000).
+async fn totals_in(
+    db: &Db,
+    patch: Option<&str>,
+    drills: bool,
+    cards: CardRows,
+) -> Result<StatsTotals, ApiError> {
+    let mut tx = db.begin(None).await?;
     let totals = tx
         .stats_totals_load(&StatsTotalsQuery {
             source: SourceFilter::All,
@@ -1190,24 +1204,144 @@ async fn totals_for(
 /// first, and the card totals then as `snapshot_filing` files them by those records. R5174000: only the
 /// versions kept as filed unless `reach` asks for the older play versions too, which only the play
 /// versions' table does, so the page's own read costs the patches it shows and not every version filed.
+/// R5186000: the load runs on a task of its own, so a read that gives up (the client's timeout, a proxy
+/// closing the connection) leaves it running for the next read to join. In the read's own future it was
+/// dropped half done, and the next read began it again from nothing.
 async fn kept_snapshot(app: &App, reach: Reach) -> Result<KeptTotals, ApiError> {
     let (made_at, cell, folds) = app.card_stats.totals_cell(now_ms(), reach);
-    let snapshot = cell
-        .get_or_try_init(|| async {
-            let history = patch_history();
-            let records = totals_for(app, None, false, CardRows::None).await?;
-            let mut filing = snapshot_filing(&history, &records, &deck_play_versions(), &app.catalog.version);
-            if !folds {
-                filing.folded.clear();
-            }
-            let totals = totals_for(app, None, false, CardRows::Filed(filing.clone())).await?;
-            Ok::<_, ApiError>(Arc::new(Snapshot::new(&history, totals, filing)))
-        })
-        .await?;
-    Ok(KeptTotals {
-        made_at,
-        held: Arc::clone(snapshot),
+    if let Some(held) = cell.get() {
+        return Ok(KeptTotals {
+            made_at,
+            held: Arc::clone(held),
+        });
+    }
+    let source = SnapshotSource {
+        db: app.db.clone(),
+        version: app.catalog.version.clone(),
+        load: Arc::clone(&app.card_stats.load),
+        folds,
+    };
+    let held = tokio::spawn(async move {
+        let snapshot = cell.get_or_try_init(|| source.load()).await?;
+        Ok::<_, ApiError>(Arc::clone(snapshot))
     })
+    .await
+    .map_err(|error| ApiError::internal(format!("the card statistics' load stopped: {error}")))??;
+    Ok(KeptTotals { made_at, held })
+}
+
+/// R5186000: the steps of a load of the kept snapshot, in order, which `GET /api/stats/loading` numbers
+/// from 1.
+#[derive(Clone, Copy)]
+enum LoadStep {
+    /// The records and game totals.
+    Records = 1,
+    /// The card totals, as `snapshot_filing` files them by the records.
+    CardTotals = 2,
+    /// The snapshot every kept window and history is cut from.
+    Snapshot = 3,
+}
+
+/// R5186000: how many steps a load of the kept snapshot takes.
+const LOAD_STEPS: u32 = LoadStep::Snapshot as u32;
+
+/// R5186000: what the kept snapshot's loads are doing, which `GET /api/stats/loading` answers: how many
+/// are under way, the step the newest is on and when it began, and how long the last one that finished
+/// took.
+#[derive(Default)]
+struct SnapshotLoad {
+    running: u32,
+    step: u32,
+    started_at: i64,
+    last_ms: Option<i64>,
+}
+
+/// R5186000: one load of the kept snapshot as `SnapshotLoad` counts it: under way from `begin`, at each
+/// `step`, and over when dropped, its time kept as the last load's only once it is `done`.
+struct LoadTicket {
+    load: Arc<Mutex<SnapshotLoad>>,
+    started_at: i64,
+    done: bool,
+}
+
+impl LoadTicket {
+    fn begin(load: Arc<Mutex<SnapshotLoad>>) -> LoadTicket {
+        let started_at = now_ms();
+        {
+            let mut state = lock(&load);
+            state.running += 1;
+            state.step = LoadStep::Records as u32;
+            state.started_at = started_at;
+        }
+        LoadTicket {
+            load,
+            started_at,
+            done: false,
+        }
+    }
+
+    fn step(&self, step: LoadStep) {
+        lock(&self.load).step = step as u32;
+    }
+}
+
+impl Drop for LoadTicket {
+    fn drop(&mut self) {
+        let mut state = lock(&self.load);
+        state.running = state.running.saturating_sub(1);
+        if self.done {
+            state.last_ms = Some((now_ms() - self.started_at).max(0));
+        }
+        if state.running == 0 {
+            state.step = 0;
+        }
+    }
+}
+
+/// R3067000, R5186000: what a load of the kept snapshot reads from, owned, so the load can run on a task
+/// of its own.
+struct SnapshotSource {
+    db: Db,
+    version: String,
+    load: Arc<Mutex<SnapshotLoad>>,
+    folds: bool,
+}
+
+impl SnapshotSource {
+    /// R4965000, R5174000: the records and game totals, then the card totals as `snapshot_filing` files
+    /// them by those records, then the snapshot, each a step `GET /api/stats/loading` reports (R5186000).
+    async fn load(&self) -> Result<Arc<Snapshot>, ApiError> {
+        let mut ticket = LoadTicket::begin(Arc::clone(&self.load));
+        let history = patch_history();
+        let records = totals_in(&self.db, None, false, CardRows::None).await?;
+        let mut filing = snapshot_filing(&history, &records, &deck_play_versions(), &self.version);
+        if !self.folds {
+            filing.folded.clear();
+        }
+        ticket.step(LoadStep::CardTotals);
+        let totals = totals_in(&self.db, None, false, CardRows::Filed(filing.clone())).await?;
+        ticket.step(LoadStep::Snapshot);
+        let snapshot = Arc::new(Snapshot::new(&history, totals, filing));
+        ticket.done = true;
+        Ok(snapshot)
+    }
+}
+
+/// R5186000: `GET /api/stats/loading`'s answer.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct StatsLoading {
+    /// Whether a load of the kept snapshot is under way.
+    pub loading: bool,
+    /// The step it is on, from 1, or 0 when none is.
+    pub step: u32,
+    /// How many steps a load takes.
+    pub steps: u32,
+    /// How long it has run, 0 when none is.
+    pub elapsed_ms: i64,
+    /// How long the last load that finished took, which the page shows as the time to expect; none
+    /// before a load has finished since the server started.
+    pub expected_ms: Option<i64>,
 }
 
 /// SPEC §11 R4965000: how the kept snapshot files the card totals (R3067000), by the records' patches
@@ -1516,6 +1650,8 @@ pub struct KeptReports {
     totals: Mutex<Option<TotalsCells>>,
     /// R1583000: the play rates `GET /api/stats/play-rates` reads, with when they were first asked for.
     play_rates: Mutex<Option<(i64, PlayRatesCell)>>,
+    /// R5186000: what the kept snapshot's loads are doing, shared with each load's task.
+    load: Arc<Mutex<SnapshotLoad>>,
 }
 
 /// Kept cells by what they were computed from, each with when it was first asked for.
@@ -1560,6 +1696,23 @@ impl KeptReports {
 
     fn hall_cell(&self, key: PublicStatsMode, now: i64) -> KeptHallCell {
         kept_cell(&self.hall, key, now)
+    }
+
+    /// R5186000: what the kept snapshot's load is doing at `now`.
+    pub fn loading(&self, now: i64) -> StatsLoading {
+        let state = lock(&self.load);
+        let loading = state.running > 0;
+        StatsLoading {
+            loading,
+            step: if loading { state.step } else { 0 },
+            steps: LOAD_STEPS,
+            elapsed_ms: if loading {
+                (now - state.started_at).max(0)
+            } else {
+                0
+            },
+            expected_ms: state.last_ms,
+        }
     }
 
     /// R3067000: the cell of every patch's totals made less than `CARD_STATS_CACHE_TTL_SECONDS` before
@@ -2630,6 +2783,16 @@ fn play_rates_of(totals: &StatsTotals, defs: &CardDefs) -> PlayRatesResponse {
         })
         .collect();
     PlayRatesResponse { decks, cards }
+}
+
+/// GET /api/stats/loading (R5186000): what the kept snapshot's load is doing, for the page's progress
+/// bar. It never waits on a load, and no cache keeps it.
+pub async fn get_loading(app: &Arc<App>, _req: Req) -> ApiResult {
+    let mut response = ok_of(&app.card_stats.loading(now_ms()))?;
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    Ok(response)
 }
 
 /// GET /api/stats/play-rates (R1583000, `PLAY_RATES_REFRESH_SECONDS`).

@@ -16,8 +16,8 @@ import type { Slumber } from "./Slumber";
 import type { StarshipMemory } from "./StarshipMemory";
 import type { Tag } from "./Tag";
 import type { TallyView } from "./TallyView";
-import type { TipsyBlur } from "./TipsyBlur";
 import type { Tuning } from "./Tuning";
+import type { WoozyBlur } from "./WoozyBlur";
 
 /**
  * `CardView & { … }`: a unit on the field. Every `CardView` field is repeated here, since the unit
@@ -138,10 +138,12 @@ switchReason?: string,
  */
 tallies?: Array<TallyView>, 
 /**
- * R3548001: what of this Unit the owner's Tipsy stamp blurs on their view alone, or nothing.
+ * R3548001: what of this Unit the owner's Woozy stamp blurs on their view alone, or nothing.
  * Never on the opponent's view of it.
+ * Sent as `tipsyBlur`, the keyword's old name, so the view is what it was before the rename
+ * (R5181000).
  */
-tipsyBlur?: TipsyBlur, 
+tipsyBlur?: WoozyBlur, 
 /**
  * R3554007: the shared damage chain this Unit is in, on both seats. Absent otherwise (D14).
  */

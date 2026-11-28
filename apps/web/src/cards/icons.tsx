@@ -132,7 +132,7 @@ const ALTAR = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <path d='M21 42 V52 M43 42 V52 M17 52 H47' fill='none' stroke='#e8ecf8' stroke-width='4' stroke-linecap='round'/>
 </svg>`;
 
-// R3548000: a stein (a Tipsy counter's badge), a mug with a lid and foam, drawn as the badges are.
+// R3548000: a stein (a Woozy counter's badge), a mug with a lid and foam, drawn as the badges are.
 const STEIN = `<svg xmlns='${SVG_NS}' viewBox='0 0 64 64'>
 <circle cx='32' cy='32' r='30' fill='#101522' stroke='#e8ecf8' stroke-width='3'/>
 <path d='M22 22 H44 V50 H22 Z' fill='none' stroke='#e8ecf8' stroke-width='4' stroke-linejoin='round'/>

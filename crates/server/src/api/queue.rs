@@ -34,8 +34,8 @@ use crate::config::{
     QUEUE_WAIT_MIN_SAMPLES, QUEUE_WAIT_QUANTILE, QUEUE_WAIT_STEP_SECONDS, SEAT_COIN_LABEL, rating_window,
 };
 use crate::db::store::{
-    BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, Ticket,
-    TicketStatus, ladder_of_mode,
+    BotRow, FrozenTrio, MatchSeat, PerMode, Profile, QueueMode, SeriesRow, StartMatchInput, StoreError,
+    Ticket, TicketStatus, ladder_of_mode,
 };
 use crate::loops::FailingStreak;
 use crate::seats::{Lease, Seat};
@@ -699,6 +699,7 @@ async fn start_paired_match(app: &Arc<App>, a: &Ticket, b: &Ticket, match_id: &s
 /// One pairing sweep. R166: the oldest ticket is paired first, against the oldest opponent its window
 /// admits, not the closest in rating; ties break on ticket id. A pair's failed claim or start is
 /// logged (`queue.start_failed`) and the sweep moves on; only a failure of its opening reads is `Err`.
+/// R5159000: an open ticket stamped with another catalog version than the running one is canceled first.
 pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
     let now = now_ms();
     let mut tx = app.db.begin(None).await?;
@@ -714,6 +715,52 @@ pub async fn try_pair(app: &Arc<App>) -> Result<SweepReport, ApiError> {
             made: 0,
             failed: Vec::new(),
         });
+    }
+
+    // SPEC §11 R5159000: a ticket enqueued under another catalog version than the running one waited
+    // through a card patch, and its frozen deck or trio was checked against cards no longer played, so
+    // it is canceled before any pair or ladder-bot start. A stamp needs no listening, so this does not
+    // wait for R897000's window below. The cancel takes the claims' fence (R1523000): a draining older
+    // server, whose version differs from the newer server's, must not cancel the newer server's tickets.
+    let (current, outdated): (Vec<Ticket>, Vec<Ticket>) = open
+        .into_iter()
+        .partition(|ticket| ticket.catalog_version == app.catalog.version);
+    open = current;
+    if !outdated.is_empty() {
+        // The listing read commits before the cancels write: each cancel is its own transaction.
+        tx.commit().await?;
+        for ticket in &outdated {
+            let canceled: Result<(), StoreError> = async {
+                let mut tx = app.db.begin(None).await?;
+                tx.seats_fence(app.seats.epoch()).await?;
+                tx.tickets_cancel(&ticket.id, now).await?;
+                tx.commit().await
+            }
+            .await;
+            match canceled {
+                Ok(()) => {
+                    forget_seed(&ticket.id);
+                    forget_seat(&ticket.id);
+                    app.queue_presence.forget(&ticket.profile_id);
+                    tracing::info!(
+                        event = "queue.catalog_changed",
+                        profileId = %ticket.profile_id,
+                        ticketId = %ticket.id,
+                        catalogVersion = %ticket.catalog_version,
+                    );
+                }
+                // A newer server holds the seats: its sweep judges this ticket, not ours.
+                Err(StoreError::Fenced) => {}
+                Err(error) => return Err(error.into()),
+            }
+        }
+        if open.is_empty() {
+            return Ok(SweepReport {
+                made: 0,
+                failed: Vec::new(),
+            });
+        }
+        tx = app.db.begin(None).await?;
     }
 
     // SPEC §11 R897000: a ticket unheard from for longer than `QUEUE_TICKET_STALE_MS` is canceled

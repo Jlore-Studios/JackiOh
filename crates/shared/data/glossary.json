@@ -122,12 +122,12 @@
       "row": "Lucky X"
     },
     {
-      "id": "Tipsy",
-      "label": "Tipsy",
-      "rule": "Playing this adds X to your Tipsy counter, which drops by 1 at your Start of turn; while it is up, new cards may blur",
+      "id": "Woozy",
+      "label": "Woozy",
+      "rule": "Playing this adds X to your Woozy counter, which drops by 1 at your Start of turn; while it is up, new cards may blur",
       "section": "§6.1",
       "aliases": [],
-      "row": "Tipsy X"
+      "row": "Woozy X"
     },
     {
       "id": "Animated",

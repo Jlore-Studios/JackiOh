@@ -43,18 +43,20 @@
 # R4607000 save tests then put shards 1/4 and 4/4 past ten minutes again (13m 43s and 14m 33s on
 # bot/issue-4607, #4690), and #4690 daily-moved those two, each with a hand-written keeper that
 # reprints without playing a game. #4721's shards 1/4 and 4/4 still ran 12m 21s and 13m 5s on `main`,
-# with no single test over the threshold: the slowest tests measured here (two threads, slower than
-# CI's four) are fork_screen's r4607000_resume_refuses_a_changed_header (90 s),
-# r4607000_a_finished_save_plays_nothing (86 s) and r4607000_a_deal_finished_before_a_batch_error
-# (68 s); every other test of the jackioh binary runs in 41 s or less, and every other binary of the
-# old shards finishes its share in 46 s altogether, so no daily-move was needed and the fix is the
-# count alone. 8 is the most a count may be (matrix.py's MAX_SHARDS; the web unit
+# with no single test over the threshold: the slowest tests then were fork_screen's three
+# r4607000 save tests that played live deals with fork arms (90, 86 and 68 s on two threads, slower
+# than CI's four); every other test of the jackioh binary ran in 41 s or less, and every other binary
+# of the old shards finished its share in 46 s altogether, so no daily-move was needed and the fix was
+# the count alone. #5171 then made those three tests, and the two identity tests, play no fork's
+# arm: hand-written saves, `echo` deals and one trunk game, about 20 s together on four cores
+# against about 239 s. Which test is now the binary's slowest is whatever the next measurement
+# shows. 8 is the most a count may be (matrix.py's MAX_SHARDS; the web unit
 # job already runs at 8): each shard's tests run in about half the old three minutes at most here,
 # so every shard should finish well under eight. Any count other than 8 needs
 # bot/tests/test_ci_matrix.py's pin changed.
 # #5046 flagged `rust (test tools, wasm 4/4)` at 10m 19s. That run (d9fb4d6) predates #4739
 # (#4721's fix, the count of 8), so its copy of this file still said 4: no change was needed.
-# The three slow tests above land in shards 5, 8 and 1 of 8 (matrix.py's `shard` hash,
+# The three slow tests then landed in shards 5, 8 and 1 of 8 (matrix.py's `shard` hash,
 # zlib.crc32(name) % total + 1); at 4 shards two of them shared shard 1 and the third sat in
 # shard 4, which is why 1/4 and 4/4 were the slow ones. The count is at its cap, so if a
 # `tools, wasm k/8` shard still passes eight minutes on a base that holds #4739, split the

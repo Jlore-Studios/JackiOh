@@ -138,7 +138,7 @@ function counterSelectors(side: "you" | "opponent"): string[] {
     '[data-testid="hero-luck"]',
     ".hero-burn",
     ".hero-toxic",
-    ".hero-tipsy",
+    ".hero-woozy",
     `[data-testid="market-credits-${side}"]`,
   ];
 }

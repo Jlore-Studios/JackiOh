@@ -14,6 +14,16 @@
 # schedule runs it for that reason; staging redeploys whenever main has moved, as often as every two
 # hours). Staging's site is behind Cloudflare Access, which lets a request through with an Access service
 # token's two headers. A refusal from Access fails at once.
+#
+# Between two attempts it follows a load the server reports (`GET /api/stats/loading`, R5186000) for up to
+# LOAD_WAIT_SECONDS, as the page does behind its progress bar: the load runs on a task of its own, so the
+# next attempt finds the statistics it made rather than waiting on a load begun again.
+#
+# GitHub runs a composite step's `shell: bash` with `-e`, so each command whose failure the script reads
+# itself sits in an `if` or ends in `|| true`: a request curl itself gave up on (a timeout, a connection
+# the site closed) is an attempt that failed, not the end of the step. Until 2026-11-27 such a request
+# ended the step at once with no message, and so did any failed attempt curl wrote no error for, on the
+# first attempt each time (deploy-staging run 46066268550).
 name: check the card statistics load
 description: GET a site's /api/stats/cards?mode=all and fail unless it answers 200 with cards within the client's timeout
 inputs:
@@ -42,9 +52,14 @@ runs:
         ATTEMPTS: "2"
         # Between two attempts.
         PAUSE_SECONDS: "5"
+        # R5186000: what the server's load of the statistics is doing, which the check follows between
+        # attempts for up to LOAD_WAIT_SECONDS, asking every LOAD_POLL_SECONDS.
+        LOADING_PATH: /api/stats/loading
+        LOAD_WAIT_SECONDS: "600"
+        LOAD_POLL_SECONDS: "10"
       run: |
         set -uo pipefail
-        timeout=$(sed -nE 's/^export const API_REQUEST_TIMEOUT_SECONDS = ([0-9_]+);.*/\1/p' "$CONFIG" | tr -d _)
+        timeout=$(sed -nE 's/^export const API_REQUEST_TIMEOUT_SECONDS = ([0-9_]+);.*/\1/p' "$CONFIG" | tr -d _) || true
         if [ -z "$timeout" ]; then
           echo "::error::API_REQUEST_TIMEOUT_SECONDS is not in $CONFIG, so the check cannot hold the server to the client's timeout"
           exit 1
@@ -59,7 +74,8 @@ runs:
         for attempt in $(seq 1 "$ATTEMPTS"); do
           : > "$body"
           : > "$errors"
-          out=$(curl -sS -m "$timeout" -o "$body" -w '%{http_code} %{time_total}' "${access[@]}" "$SITE$STATS_PATH" 2> "$errors")
+          # curl writes its -w line (status 000) even for a request it gave up on, and exits non-zero.
+          out=$(curl -sS -m "$timeout" -o "$body" -w '%{http_code} %{time_total}' "${access[@]}" "$SITE$STATS_PATH" 2> "$errors") || true
           status=${out%% *}
           seconds=${out##* }
           cards=$(jq -r 'if (.cards | type) == "array" then (.cards | length) else "no cards list" end' "$body" 2> /dev/null || echo "no JSON")
@@ -77,9 +93,22 @@ runs:
               fi
               ;;
           esac
-          seen="HTTP ${status:-000} after ${seconds:-?}s, $cards$( [ -s "$errors" ] && printf '; %s' "$(head -c 300 "$errors")" )"
+          detail=""
+          if [ -s "$errors" ]; then
+            detail="; $(head -c 300 "$errors")"
+          fi
+          seen="HTTP ${status:-000} after ${seconds:-?}s, $cards$detail"
           echo "::warning::$SITE$STATS_PATH, attempt $attempt of $ATTEMPTS: $seen"
-          [ "$attempt" = "$ATTEMPTS" ] || sleep "$PAUSE_SECONDS"
+          [ "$attempt" = "$ATTEMPTS" ] && break
+          waited=0
+          while [ "$waited" -lt "$LOAD_WAIT_SECONDS" ]; do
+            loading=$(curl -sS -m "$timeout" "${access[@]}" "$SITE$LOADING_PATH" 2> /dev/null | jq -r '.loading // false' 2> /dev/null) || loading=false
+            [ "$loading" = true ] || break
+            echo "$SITE: the card statistics are still loading, ${waited}s waited of ${LOAD_WAIT_SECONDS}s"
+            sleep "$LOAD_POLL_SECONDS"
+            waited=$(( waited + LOAD_POLL_SECONDS ))
+          done
+          sleep "$PAUSE_SECONDS"
         done
         echo "::error::$SITE$STATS_PATH did not answer 200 with cards within ${timeout}s (API_REQUEST_TIMEOUT_SECONDS) in $ATTEMPTS attempts; last: $seen. Players see \"The card statistics didn't load.\" (#5174)"
         echo "$SITE: the card statistics did not load in $ATTEMPTS attempts; last: $seen" >> "$GITHUB_STEP_SUMMARY"
