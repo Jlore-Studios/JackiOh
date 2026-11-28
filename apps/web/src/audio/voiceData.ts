@@ -64,7 +64,8 @@ export function lineFor(
   }
   // A bare `trigger` is not a playable line: only its numbered lines are.
   if (line === "trigger") return null;
-  if (line !== "play" && line !== "death" && line !== "cast" && line !== "attack") {
+  // R5264500: an End of turn's line (`endOfTurn`) is a card's own hook too.
+  if (line !== "play" && line !== "death" && line !== "cast" && line !== "attack" && line !== "endOfTurn") {
     return emoteLineFor(table, emotePortraitOf(defId), line as VoiceEmoteId);
   }
   const assignment = hookFor(table, defId, line);

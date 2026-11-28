@@ -38,7 +38,8 @@ fn drungar(radiant: bool) -> Script {
             ..StaticFlags::default()
         }),
         cry: Some(hook(move |ctx| {
-            let mut effects: Vec<Effect> = SHIPPED_SETS.iter().map(|set| recruit_from(*set, radiant)).collect();
+            let mut effects: Vec<Effect> =
+                SHIPPED_SETS.iter().map(|set| recruit_from(*set, radiant)).collect();
             // R4353021: the Overload is the Cry's, paid whatever the Recruits find.
             effects.push(next_turn_mana(json_as(json!({ "amount": -param(ctx, "mana") }))));
             effects

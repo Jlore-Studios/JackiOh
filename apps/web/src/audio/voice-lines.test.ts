@@ -26,7 +26,7 @@ const AUDIO_PATH = resolve(here, "card-audio.json5");
 const VOICE_TEXT_PATH = resolve(here, "voice-text.json");
 
 type EntryKind = "unit" | "spell" | "trap";
-type Hook = "play" | "attack" | "death" | "cast" | "trigger";
+type Hook = "play" | "attack" | "death" | "cast" | "trigger" | "endOfTurn";
 
 /** As docs/polish/2-sound.md maps them. */
 const KIND_OF_TYPE: Readonly<Record<string, EntryKind>> = {
@@ -39,8 +39,8 @@ const KIND_OF_TYPE: Readonly<Record<string, EntryKind>> = {
 
 /** The hooks each kind may carry (constants.ts CARD_HOOKS), and the lines SPEC §10.11 requires of it. */
 const HOOKS_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
-  unit: ["play", "attack", "death", "trigger"],
-  spell: ["cast", "trigger"],
+  unit: ["play", "attack", "death", "trigger", "endOfTurn"],
+  spell: ["cast", "trigger", "endOfTurn"],
   trap: ["cast", "trigger"],
 };
 const LINES_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
@@ -251,7 +251,7 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
   });
 
   it("B33 puts no hook on an entry outside CARD_HOOK_NAMES and its kind's, and no field on a hook but voice, text and effect", () => {
-    expect([...CARD_HOOK_NAMES], "the hooks constants.ts CARD_HOOKS names").toEqual(["play", "attack", "death", "cast", "trigger"]);
+    expect([...CARD_HOOK_NAMES], "the hooks constants.ts CARD_HOOKS names").toEqual(["play", "attack", "death", "cast", "trigger", "endOfTurn"]);
     const wrong: string[] = [];
     for (const { defId, key, hook, value } of allAssignments()) {
       const kind = catalogKind(defId);

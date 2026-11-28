@@ -44,9 +44,9 @@ fn trigger_the_summoned_death() -> Effect {
 fn base() -> Script {
     Script {
         cry: Some(hook(|_ctx| {
-            let mut summon: SummonRandomArgs = json_as(json!({}));
-            summon.query = Some(death_units());
-            vec![summon_random(summon), trigger_the_summoned_death()]
+            let mut random: SummonRandomArgs = json_as(json!({}));
+            random.query = Some(death_units());
+            vec![summon_random(random), trigger_the_summoned_death()]
         })),
         ..Script::default()
     }

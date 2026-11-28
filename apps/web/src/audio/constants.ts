@@ -18,6 +18,8 @@ export const CARD_HOOKS = {
   cast: { kinds: ["spell", "trap"] },
   /** R1088: a card whose effect summons — one of its lines plays for the summon it caused. */
   trigger: { kinds: ["spell", "trap", "unit"] },
+  /** R5264500: a Unit's or a Field Spell's End of turn resolving (its `hookResolving` marker), FvH #59's. */
+  endOfTurn: { kinds: ["unit", "spell"] },
 } as const satisfies Record<string, { kinds: readonly CardKind[] }>;
 export const CARD_HOOK_NAMES = Object.keys(CARD_HOOKS) as readonly CardHook[];
 

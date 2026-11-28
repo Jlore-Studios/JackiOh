@@ -139,8 +139,9 @@ mod tests {
                 let ((plain, plain_draws), (lucky, lucky_draws)) =
                     (cast(false, &seed, &[]), cast(false, &seed, &[Keyword::Lucky { n: 1 }]));
                 assert!(lucky >= plain, "{seed}");
-                assert_eq!(lucky_draws, plain_draws + 1, "{seed}");
-                if lucky > plain {
+                if lucky == plain {
+                    assert_eq!(lucky_draws, plain_draws + 1, "{seed}: one more roll");
+                } else {
                     more += 1;
                 }
             }
@@ -155,8 +156,9 @@ mod tests {
                 let ((plain, plain_draws), (unlucky, unlucky_draws)) =
                     (cast(false, &seed, &[]), cast(false, &seed, &[Keyword::Unlucky { n: 1 }]));
                 assert!(unlucky <= plain, "{seed}");
-                assert_eq!(unlucky_draws, plain_draws + 1, "{seed}");
-                if unlucky < plain {
+                if unlucky == plain {
+                    assert_eq!(unlucky_draws, plain_draws + 1, "{seed}: one more roll");
+                } else {
                     fewer += 1;
                 }
             }

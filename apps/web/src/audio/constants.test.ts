@@ -92,8 +92,9 @@ import {
 } from "./constants.ts";
 
 describe("audio constants", () => {
-  it("names the card hooks in card-audio.json5 order, with the kinds each may carry", () => {
-    expect(CARD_HOOK_NAMES).toEqual(["play", "attack", "death", "cast", "trigger"]);
+  it("R5264500 names the card hooks in card-audio.json5 order, with the kinds each may carry", () => {
+    expect(CARD_HOOK_NAMES).toEqual(["play", "attack", "death", "cast", "trigger", "endOfTurn"]);
+    expect(CARD_HOOKS.endOfTurn).toEqual({ kinds: ["unit", "spell"] });
     expect(CARD_HOOKS.play).toEqual({ kinds: ["unit"] });
     expect(CARD_HOOKS.attack).toEqual({ kinds: ["unit"] });
     expect(CARD_HOOKS.death).toEqual({ kinds: ["unit"] });

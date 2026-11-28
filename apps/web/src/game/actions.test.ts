@@ -19,12 +19,14 @@ import {
   onClickTarget,
   onControl,
   outstandingNeed,
+  parseZoneKey,
   pendingHighlight,
   pickInPlay,
   selectionForOption,
   selectionKey,
   selectionTestid,
   targetBoardKeys,
+  zoneKey,
   type Interaction,
 } from "./actions.ts";
 import { NOT_NOW, testid, type ClickTarget } from "./contract.ts";
@@ -1120,6 +1122,50 @@ describe("R3543000 a Flexible play lights both rows", () => {
     const result = onClickTarget(view, legal, playing, { on: "zone", side: "you", row: "backrow", lane: 1 });
 
     expect(result.action).toEqual(backrow);
+  });
+});
+
+describe("R5238002 a card that plays on either side lights the other side's open zones and plays into them", () => {
+  const view = seatedView();
+  const ownZone = { row: "units", lane: 3 } as const;
+  const theirZone = { row: "units", lane: 3, player: "p2" } as const;
+  const own: ActionBody = { type: "play", instanceId: "h1", zone: ownZone };
+  const theirs: ActionBody = { type: "play", instanceId: "h1", zone: theirZone };
+
+  it("R5238002 R5264500 both sides' lane 3 light, each on its own side, and each click sends its own play (FvH #42 Big Billy)", () => {
+    const legal = [own, theirs];
+    const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+
+    const { legal: lit, glow } = highlightFor(view, legal, playing);
+
+    expect(lit.has(testid.zone("you", "units", 3))).toBe(true);
+    expect(lit.has(testid.zone("opponent", "units", 3))).toBe(true);
+    expect(glow?.has(testid.zone("opponent", "units", 3))).toBe(true);
+    expect(lit.has(testid.zone("opponent", "units", 2))).toBe(false);
+    // The two zones are two choices, never one lane read twice.
+    expect(outstandingNeed(playing)).toEqual({ kind: "zone", min: 1, max: 1, zones: [ownZone, theirZone] });
+    expect(onClickTarget(view, legal, playing, { on: "zone", side: "opponent", row: "units", lane: 3 }).action).toEqual(theirs);
+    expect(onClickTarget(view, legal, playing, { on: "zone", side: "you", row: "units", lane: 3 }).action).toEqual(own);
+  });
+
+  it("R5238002 R5264500 a play the engine lists no other-side zone for takes no click there, and lights none", () => {
+    const legal = [own, playZone("h1", 4)];
+    const playing = onClickTarget(view, legal, IDLE, { on: "hand", instanceId: "h1" }).interaction;
+
+    const result = onClickTarget(view, legal, playing, { on: "zone", side: "opponent", row: "units", lane: 3 });
+
+    expect(result.action).toBeUndefined();
+    expect(result.interaction).toEqual(playing);
+    expect(highlightFor(view, legal, playing).legal.has(testid.zone("opponent", "units", 3))).toBe(false);
+  });
+
+  it("R5238002 R5264500 a zone's key keeps the other side's player, and an own-side zone's key is unchanged", () => {
+    expect(zoneKey(ownZone)).toBe("units:3");
+    expect(zoneKey(theirZone)).toBe("units:3:p2");
+    expect(parseZoneKey("units:3:p2")).toEqual(theirZone);
+    expect(parseZoneKey("backrow:2")).toEqual({ row: "backrow", lane: 2 });
+    expect(parseZoneKey("units:3:p9")).toBeNull();
+    expect(parseZoneKey("units:3:p2:x")).toBeNull();
   });
 });
 

@@ -109,7 +109,7 @@ mod tests {
     fn fills_the_board_with_felinor_units(radiant: bool) {
         let s = played(radiant, json!([]));
         let units = nonempty(summoned(&s), "the Felinors the fill summoned");
-        assert_eq!(units.len(), (UNIT_ZONES - 1) as usize, "every open zone but its own");
+        assert_eq!(units.len(), usize::try_from(UNIT_ZONES - 1).unwrap_or(0), "every open zone but its own");
         for unit in &units {
             let def = def_of(Some(s.state()), &unit.def_id);
             assert_eq!(def.type_, CardType::Unit);

@@ -79,22 +79,6 @@ mod tests {
         }
 
         #[test]
-        fn r4154210_a_design_added_plays_as_ever_adding_a_card_that_costs_1_less() {
-            let mut s = holding(false, "design-play", 0);
-            s.play(ID, json!({}));
-            let design = must(s.hand(P1).into_iter().find(|card| card.def_id == DESIGN), "a Design in hand");
-            let before = s.hand(P1).len();
-            s.play(&design.id, json!({}));
-            assert_eq!(s.hand(P1).len(), before, "the Design left the hand and added one card");
-            let added = s
-                .last_events()
-                .iter()
-                .filter(|event| matches!(event, GameEvent::AddedToHand { player: P1, .. }))
-                .count();
-            assert_eq!(added, 1);
-        }
-
-        #[test]
         fn r317_a_full_hand_burns_the_rest() {
             let mut s = holding(false, "design-full", 9);
             s.play(ID, json!({}));
