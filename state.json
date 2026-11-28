@@ -21969,13 +21969,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-7",
         "rejections": [],
-        "reviews": [],
-        "sha": "fe7b58a17049c499dbf6664624df73c23644c296",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-7",
+            "run": "46114747409",
+            "tier": "strong"
+          }
+        ],
+        "sha": "71142941745326563936c457e52220ff9db924eb",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "5280": {
