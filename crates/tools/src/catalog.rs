@@ -1621,8 +1621,10 @@ pub fn count_loc(source: &str) -> usize {
 /// attribute, the attributes after it, and the one item it marks. A line ending in `;` or `,` or a
 /// braced item on one line is the whole item; otherwise it runs to the first later line at the
 /// attribute's indent that starts with `}` (rustfmt puts a braced item's closing brace there), or
-/// with `]` or `)` and ends in `;` (a multi-line `const`). An item whose end is not found drops only
-/// its attribute, so a misreading counts test code as code and never the other way.
+/// with `]` or `)` and ends in `;` (a multi-line `const`). The search stops, and drops only the
+/// attribute, at a line at that indent that is no continuation (`)`, `]`, `{`, `where`): it starts
+/// the next item, as after a `const X: &str =` broken before its value. An item whose end is not
+/// found drops only its attribute, so a misreading counts test code as code and never the other way.
 fn test_item_end(lines: &[String], attr: usize) -> usize {
     let indent = |line: &str| line.len() - line.trim_start().len();
     let attr_indent = indent(&lines[attr]);
@@ -1648,6 +1650,11 @@ fn test_item_end(lines: &[String], attr: usize) -> usize {
         if code.starts_with('}') || ((code.starts_with(']') || code.starts_with(')')) && code.ends_with(';'))
         {
             return at + 1;
+        }
+        // rustfmt puts every following item at this indent, so a line here that does not continue
+        // this one starts the next item: stop before the search swallows it.
+        if !code.is_empty() && !code.starts_with(['}', ']', ')', '{']) && !code.starts_with("where") {
+            return attr + 1;
         }
     }
     attr + 1
@@ -2847,6 +2854,36 @@ mod tests {
         assert_eq!(
             reads("fn a() {}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n}\n"),
             ["fn a() {}"]
+        );
+        // An item broken before its value ends nowhere the search can see: the next item at the
+        // attribute's indent stops it, and the production code after it is read.
+        assert_eq!(
+            reads(
+                "#[cfg(test)]\npub const X: &str =\n    \"a\";\n\npub const N: usize = 5;\n\npub fn go() {\n    run()\n}\n"
+            ),
+            [
+                "pub const X: &str =",
+                "\"a\";",
+                "pub const N: usize = 5;",
+                "pub fn go() {",
+                "run()",
+                "}"
+            ]
+        );
+        assert_eq!(
+            reads(
+                "fn f() {\n    #[cfg(test)]\n    let x = foo\n        .bar();\n    if a {\n        b();\n    }\n    c();\n}\n"
+            ),
+            [
+                "fn f() {",
+                "let x = foo",
+                ".bar();",
+                "if a {",
+                "b();",
+                "}",
+                "c();",
+                "}"
+            ]
         );
         // An end that is not found drops only the attribute: test code counts as code.
         assert_eq!(
