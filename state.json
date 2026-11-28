@@ -22068,6 +22068,7 @@
       "planned_at": "2026-11-28T13:52:26Z",
       "planned_by": "`claude-6` (claude, `opus`, strong)",
       "planned_by_id": "claude-6",
+      "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-6",
       "run_id": "46140983320",
