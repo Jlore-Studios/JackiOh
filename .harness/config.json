@@ -104,7 +104,6 @@
     ".harness/",
     ".squishy/",
     "bot/",
-    "!bot/go/internal/*/testdata/*.json",
     ".claude/",
     ".mcp.json",
     ".vscode/",
