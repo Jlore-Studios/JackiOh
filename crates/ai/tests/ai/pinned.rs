@@ -3,8 +3,8 @@
 //! and node budgets while blind to hidden cards (R185).
 
 use jackioh_ai::{
-    AI_BUDGET, AI_SEARCH, AiOptions, Decision, DecisionReason, Prices, SearchBudget, create_node_counter,
-    decide, hidden_instance_ids, redact, simulate, surcharge_nodes,
+    AI_BUDGET, AI_SEARCH, AiOptions, Decision, DecisionReason, Prices, SearchBudget, StoppedBy,
+    create_node_counter, decide, hidden_instance_ids, redact, simulate, surcharge_nodes,
 };
 use jackioh_engine::testkit::{
     ActionBody, GameState, PlayerId, Value, create_rng, find_instance, hash_state, legal_actions, subsystems,
@@ -240,9 +240,10 @@ fn r2575000_a_state_of_ordinary_width_spends_past_600_nodes() {
     assert!(decision.stats.nodes > 600, "{:?}", decision.stats);
 }
 
-/// R5044000: #5044's position at the test budget. The lethal search leaves 72 of 150 nodes, and the
-/// root holds two moves: a play of Meditative #21 whose simulation draws every one of them, then End turn.
-/// The beam simulates End turn first, so the cut play still leaves it a line and the decision searches.
+/// R5044000: #5044's position at the test budget. The lethal search leaves part of the 150 nodes (72 on
+/// the stream #5044 pinned), and the root holds two moves: a play of Meditative #21 whose simulation
+/// draws every one of them, then End turn. The beam simulates End turn first, so the cut play still
+/// leaves it a line and the decision searches, stopped by the budget.
 #[test]
 fn r5044000_a_root_move_that_spends_the_last_node_leaves_the_beam_its_end_turn() {
     let mut at = pinned(ASSAULT_ROOT_CUT);
@@ -269,4 +270,10 @@ fn r5044000_a_root_move_that_spends_the_last_node_leaves_the_beam_its_end_turn()
         d.stats.nodes
     );
     assert!(d.stats.lines > 0, "{:?}", d.stats);
+    assert_eq!(
+        d.stats.stopped_by,
+        StoppedBy::Budget,
+        "the root cut: {:?}",
+        d.stats
+    );
 }
