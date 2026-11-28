@@ -20826,7 +20826,6 @@
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed": true,
         "claimed_at": "2026-11-27T23:57:08Z",
         "from_run": "46073140574",
         "gates": [
@@ -20917,7 +20916,7 @@
         "rounds_used": 0,
         "since": "2026-11-27T23:56:25Z",
         "source": "build",
-        "until": "2026-11-28T00:26:25Z"
+        "until": "2026-11-28T01:16:16Z"
       },
       "pending_request": false,
       "provider": "claude-6",
