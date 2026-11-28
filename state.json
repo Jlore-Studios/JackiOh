@@ -21089,6 +21089,13 @@
     "5230": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-28T01:04:01Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Client-only change in apps/web (Game.tsx, Board.tsx, contract.ts and tests): no engine, AI, migration, cross-crate contract or 40 files, so none of the five hard lines holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
