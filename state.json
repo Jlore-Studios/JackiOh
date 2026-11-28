@@ -46555,9 +46555,9 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": null,
+    "idle_since": "2026-11-28T11:06:04Z",
     "last_area": "server",
-    "last_run": "2026-11-28T11:05:06Z",
+    "last_run": "2026-11-28T11:06:04Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -46576,14 +46576,6 @@
         "last_run": "2026-11-28T11:05:06Z",
         "provider": "claude-4",
         "run_id": "46138188267",
-        "taken_asks": []
-      },
-      "5": {
-        "area": "server",
-        "count": 1,
-        "last_run": "2026-11-28T11:06:32Z",
-        "provider": "claude-3",
-        "run_id": "46138304714",
         "taken_asks": []
       }
     },
