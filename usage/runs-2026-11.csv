@@ -4386,3 +4386,11 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-28T11:34:39Z,46134046189,claude-3,opus,build,5289,hard,interrupted,refusal,78.9,0,0,0,4.0536,1,100,,,98.9,claude-4,fresh,cap,1
 2026-11-28T11:58:52Z,46137127383,claude-8,sonnet+opus,review,5292,medium,approved,,4.6,23,5484,697763,0.6369,85,2,,,120.5,claude-8,none,,1
 2026-11-28T12:18:09Z,46142984853,claude-7,opus,plan,5300,hard,blocked,,8.9,101,48884,4698196,2.8977,0,6,,,5,,fresh,,1
+2026-11-28T12:38:04Z,46144248441,claude-7,opus,suggest,,,suggested,,13.3,42,13297,3591707,16.2357,7,63,,,,,none,,1
+2026-11-28T12:37:42Z,46144166506,claude-4,opus,suggest,,,interrupted,5-hour cap,13.3,0,0,0,,3,71,,,,,none,,1
+2026-11-28T12:37:41Z,46144085454,claude-4,opus,suggest,,,interrupted,5-hour cap,14.5,9,1114,306635,15.3669,0,70,,,,,none,,1
+2026-11-28T12:44:47Z,46145910204,claude-7,opus,suggest,,,interrupted,5-hour cap,0,0,0,0,,70,70,,,,,none,,0
+2026-11-28T12:42:15Z,46144207743,claude-7,opus,suggest,,,interrupted,5-hour cap,17.8,0,0,0,,6,70,,,,,none,,1
+2026-11-28T12:43:48Z,46144123141,claude-8,opus,suggest,,,suggested,,20.5,19,11209,675497,29.4141,2,66,,,,,none,,2
+2026-11-28T12:54:56Z,46146548863,claude-8,opus,plan,5302,medium,planned,,1.4,14,11042,323598,0.3072,67,67,,,0.6,,fresh,,1
+2026-11-28T12:56:45Z,46137159220,claude-8,opus,build,5189,hard,infra,infra,,,,,,,,,,159.7,claude-8,none,,
