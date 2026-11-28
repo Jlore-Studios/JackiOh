@@ -45827,7 +45827,8 @@
       "2026-11-28T01:57:53Z,agy,usage-command,after,46082558759,0,2026-11-28T06:49:18Z,94,2026-12-03T08:58:46Z,allowed,100,100,"
     ],
     "runs": [
-      "2026-11-28T01:55:16Z,46090463664,claude-7,sonnet+opus,build,5227,medium,built,,18.3,21,5371,486530,0.2284,10,14,,,21.8,claude-3,fresh,other,1"
+      "2026-11-28T01:55:16Z,46090463664,claude-7,sonnet+opus,build,5227,medium,built,,18.3,21,5371,486530,0.2284,10,14,,,21.8,claude-3,fresh,other,1",
+      "2026-11-28T01:57:53Z,46082558759,agy,gemini-3.8-flash-high,plan,5164,medium,failed,,150.3,245664,27935,0,,7,0,93,94,171.2,agy,none,,1"
     ]
   },
   "version": 1
