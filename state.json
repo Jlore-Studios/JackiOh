@@ -21064,6 +21064,9 @@
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
+    },
+    "5230": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -44527,6 +44530,13 @@
         "at": "2026-11-28T00:42:51Z",
         "number": 5229,
         "title": "Patch: the AI counts the Burn and Toxic a hit adds on top of its damage, as it already counts a hit that turns into Burn",
+        "verdict": "auto-approved",
+        "why": "approved by itself: no one voted on it"
+      },
+      {
+        "at": "2026-11-28T00:51:54Z",
+        "number": 5230,
+        "title": "Patch: End turn keeps reading a move as left while a card is picked up or an attacker is aimed, so it no longer pulses as if the turn is done and Confirm end turn still asks",
         "verdict": "auto-approved",
         "why": "approved by itself: no one voted on it"
       }
