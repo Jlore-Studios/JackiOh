@@ -60,19 +60,25 @@ function sources(dir: string): string[] {
   });
 }
 
+/** The literals in `path` a player reads, the ones `zh-CN.json` has an entry for, each with its `file:line`. */
 function wordsIn(path: string): { at: string; text: string }[] {
   const text = readFileSync(path, "utf8");
-  const file = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+  // Neither doc comments (the walk never enters one) nor parent pointers (it goes down only, and `getStart` is
+  // handed the file), as `i18n.test.ts` parses, and a literal's line is found only once it is kept: the same
+  // words in less time (#5280's CI timed this file's setup out at 10 s on a loaded runner).
+  const options = { languageVersion: ts.ScriptTarget.Latest, jsDocParsingMode: ts.JSDocParsingMode.ParseNone };
+  const file = ts.createSourceFile(path, text, options, false, path.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const out: { at: string; text: string }[] = [];
   const visit = (node: ts.Node): void => {
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) return;
     if (
-      ts.isStringLiteral(node) ||
-      ts.isNoSubstitutionTemplateLiteral(node) ||
-      ts.isTemplateHead(node) ||
-      ts.isTemplateMiddle(node) ||
-      ts.isTemplateTail(node) ||
-      ts.isJsxText(node)
+      (ts.isStringLiteral(node) ||
+        ts.isNoSubstitutionTemplateLiteral(node) ||
+        ts.isTemplateHead(node) ||
+        ts.isTemplateMiddle(node) ||
+        ts.isTemplateTail(node) ||
+        ts.isJsxText(node)) &&
+      (Object.hasOwn(zhCN, node.text) || Object.hasOwn(zhCN, node.text.trim()))
     ) {
       const line = file.getLineAndCharacterOfPosition(node.getStart(file)).line + 1;
       out.push({ at: `${relative(SRC, path)}:${String(line)}`, text: node.text });
@@ -109,7 +115,7 @@ let cachedTexts: { at: string; text: string }[] | undefined;
 
 /** Parsing every source is the slow part, so the file's tests share one pass. */
 function playerTexts(): { at: string; text: string }[] {
-  cachedTexts ??= sources(SRC).flatMap(wordsIn).filter(({ text }) => Object.hasOwn(zhCN, text) || Object.hasOwn(zhCN, text.trim()));
+  cachedTexts ??= sources(SRC).flatMap(wordsIn);
   return cachedTexts;
 }
 

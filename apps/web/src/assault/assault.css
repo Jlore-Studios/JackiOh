@@ -47,7 +47,6 @@
   padding-block: var(--space-2);
 }
 
-.assault-ladder > li[data-beaten="true"]::marker,
 .assault-upgrades > li[data-new="true"]::marker {
   color: var(--selected);
 }
