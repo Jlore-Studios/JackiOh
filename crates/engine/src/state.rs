@@ -392,6 +392,14 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<BrittleCounter>,
+    /// R5236000, R5236004: the Durability the card's uses have spent on this stay on the field
+    /// (`subsystems::activate::spend_durability`), one counter for all its Activates. Absent until the
+    /// first use, so a game no Durability card is used in stores and hashes as before (D14); R78's reset
+    /// clears it, so a card back from leaving the field has its whole Durability again. Refresh never
+    /// touches it (R5236003).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub durability_spent: Option<i32>,
     /// R2179001: what is left of the card's Temporary X once its first end of turn in a hand has
     /// counted it down (`temporary.rs`); before that the keyword's own number is the count. Kept in
     /// every zone like Brittle's count, though it counts only in a hand; a copy never inherits it (R57).
@@ -3100,6 +3108,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         known_as: None,
         tuning: None,
         brittle: None,
+        durability_spent: None,
         temporary: None,
         enchantments: None,
         berserk: None,

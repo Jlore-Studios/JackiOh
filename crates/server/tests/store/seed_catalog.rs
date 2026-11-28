@@ -7,7 +7,8 @@
 //! into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002) admits each
 //! later tag from the migration that adds it, 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake
 //! and AI (B2.4) from 0015, #3038's Starship (R3038000) from 0083, #3535's nine Stinkyscape+ tags
-//! (R3535002) from 0088 and #4577's nine Infinite Assault tags (R4577001) from 0099 among them. The seed
+//! (R3535002) from 0088, #4577's nine Infinite Assault tags (R4577001) from 0099 and #5235's three Felinors
+//! vs Humans tags (R5235002) from 0102 among them. The seed
 //! runs in one
 //! transaction, so one such row fails the whole catalog. The first half compares the tags with the
 //! migrations' text; the second checks that the database accepts them. Both count the catalog of the
@@ -288,9 +289,9 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0099_infinite_assault_tags.sql",
-            "0099 re-adds the check with #4577's nine Infinite Assault tags (R4577001), after 0088's nine \
-             Stinkyscape+ tags (R3535002)"
+            file, "0102_felinors_vs_humans_tags.sql",
+            "0102 re-adds the check with #5235's three Felinors vs Humans tags (R5235002), after 0099's nine \
+             Infinite Assault tags (R4577001) and 0088's nine Stinkyscape+ tags (R3535002)"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -354,7 +355,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0099_infinite_assault_tags.sql");
+        assert_eq!(file, "0102_felinors_vs_humans_tags.sql");
         for tag in [
             "Wincon",
             "Potion",
@@ -389,6 +390,9 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             "Scraper",
             "Singularity",
             "Commander",
+            "Plagiarized",
+            "Roblox-Tool",
+            "Golem",
         ] {
             assert!(tags.iter().any(|admitted| admitted == tag), "{tag}: {tags:?}");
         }
@@ -454,7 +458,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     #[tokio::test]
     async fn r3535002_the_latest_check_admits_the_stinkyscape_plus_tags() {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0099_infinite_assault_tags.sql");
+        assert_eq!(file, "0102_felinors_vs_humans_tags.sql");
         for tag in [
             "Mindustrial",
             "Mineral",
@@ -479,7 +483,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     #[tokio::test]
     async fn r4577001_the_latest_check_admits_the_infinite_assault_tags() {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0099_infinite_assault_tags.sql");
+        assert_eq!(file, "0102_felinors_vs_humans_tags.sql");
         for tag in [
             "Hallucination",
             "Overclock",
@@ -497,6 +501,33 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
                 "{tag} is one of the engine's tags"
             );
         }
+    }
+
+    /// R5235002: the latest check, 0102's, admits the Felinors vs Humans set's three new tags, right
+    /// after Commander and before Token as the engine's `Tag` union orders them, though `seed-catalog`
+    /// writes none of the held set's cards yet (R5235000) (CLAUDE.md rule 3).
+    #[tokio::test]
+    async fn r5235002_the_latest_check_admits_the_felinors_vs_humans_tags() {
+        let (file, tags) = admitted_tags();
+        assert_eq!(file, "0102_felinors_vs_humans_tags.sql");
+        let commander = tags
+            .iter()
+            .position(|admitted| admitted == "Commander")
+            .expect("the check admits Commander");
+        assert_eq!(
+            tags[commander + 1..].to_vec(),
+            ["Plagiarized", "Roblox-Tool", "Golem", "Token"].map(str::to_owned).to_vec(),
+            "{tags:?}"
+        );
+        for (tag, name) in [
+            (Tag::Plagiarized, "Plagiarized"),
+            (Tag::RobloxTool, "Roblox-Tool"),
+            (Tag::Golem, "Golem"),
+        ] {
+            assert_eq!(tag.as_str(), name);
+            assert!(tags.iter().any(|admitted| admitted == name), "{name}: {tags:?}");
+        }
+        assert!(!set_ships(SetName::FelinorsVsHumans));
     }
 }
 

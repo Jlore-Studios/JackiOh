@@ -183,7 +183,8 @@ pub(crate) fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
         unit.reborn_spent = None;
     }
 
-    let stacks = matches!(keyword.kind(), KeywordKind::Armor | KeywordKind::Lucky);
+    // R5236020: Unlucky sums across its grants as Lucky does.
+    let stacks = crate::tuning::stacks(keyword.kind());
     let already = unit.granted_keywords.iter().any(|k| k.kind() == keyword.kind());
     if stacks || !already {
         unit.granted_keywords.push(keyword.clone());

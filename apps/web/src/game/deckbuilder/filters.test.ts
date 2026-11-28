@@ -246,6 +246,8 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Automa-δ",
       "Automa-Ω",
       "Paperclip",
+      "Plagiarized",
+      "Roblox-Tool",
     ]);
     // Only the ten AI tokens carry "AI", the Prime tokens "Prime", Otherworldly Removal's three
     // tokens "Other-Origins" (R1837000) and the six Resource tokens "Resource" (#2521), and the pool
@@ -888,8 +890,8 @@ describe("the almanac's pool (R630)", () => {
     expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
-  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship, Automa-ζ and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", ...ASSAULT_TAGS, "Token"]);
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship, Automa-ζ, the Assault's, Golem and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", ...ASSAULT_TAGS, "Golem", "Token"]);
     // R1420, R1381: the chips are the tags the cards of the shipped sets carry, and R5131000 the Infinite
     // Assault's; a set being built adds its tags when it ships.
     const carried = new Set(SHOWN.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));

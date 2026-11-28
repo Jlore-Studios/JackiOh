@@ -431,11 +431,11 @@ fn as_set(keywords: &[Keyword]) -> Vec<Keyword> {
         .iter()
         .filter(|keyword| {
             let kind = keyword.kind();
-            // B5 E6: Spell Damage is numbered too, and sums across its sources like Armor.
-            if matches!(
-                kind,
-                KeywordKind::Armor | KeywordKind::Lucky | KeywordKind::SpellDamage
-            ) {
+            // B5 E6: Spell Damage is numbered too, and sums across its sources like Armor; R5236020:
+            // so does Unlucky, and R5236000 a fused card's Durability entries, read as one counter.
+            if crate::tuning::stacks(kind)
+                || matches!(kind, KeywordKind::SpellDamage | KeywordKind::Durability)
+            {
                 return true;
             }
             if seen.contains(&kind) {

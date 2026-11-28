@@ -12060,6 +12060,12 @@ const INFINITE_ASSAULT: &[SpecRow] = &[
     ),
 ];
 
+/// R5235000: the Felinors vs Humans set's rows (docs/felinors-vs-humans-set.md FV1), held while wave 1
+/// builds it (tracker #5220). The set's parts write each row from their catalog fragments as its entries
+/// land: #1 to #115, its 22 sub-numbered tokens and Jilliax Deluxe's 13 modules, and the 82 Plagiarized
+/// reprints, #116 to #197, each tagged Plagiarized alone (R5235001).
+const FELINORS_VS_HUMANS: &[SpecRow] = &[];
+
 const FIXTURES: &[(SetName, &[SpecRow])] = &[
     (SetName::Core, CORE),
     (SetName::Classic, CLASSIC),
@@ -12070,12 +12076,13 @@ const FIXTURES: &[(SetName, &[SpecRow])] = &[
     (SetName::TrainingGrounds, TRAINING_GROUNDS),
     (SetName::StinkyscapePlus, STINKYSCAPE_PLUS),
     (SetName::InfiniteAssault, INFINITE_ASSAULT),
+    (SetName::FelinorsVsHumans, FELINORS_VS_HUMANS),
 ];
 
 /// The only tags any entry may carry: BUILD M4-T1's and B2.4's, and those added since (the mechanics
 /// patch's Plague, patch v0.2.Y's Catalyst, Prime and Acclaimed, #1837's tags R1837000, the Stinkyscape
-/// set's R1857000, #2521's, the Stinkyscape+ set's nine, R3535002, and the Infinite Assault's nine,
-/// R4577001).
+/// set's R1857000, #2521's, the Stinkyscape+ set's nine, R3535002, the Infinite Assault's nine,
+/// R4577001, and the Felinors vs Humans set's three, R5235002).
 const ALLOWED_TAGS: &[&str] = &[
     "Human",
     "Felinor",
@@ -12125,6 +12132,9 @@ const ALLOWED_TAGS: &[&str] = &[
     "Scraper",
     "Singularity",
     "Commander",
+    "Plagiarized",
+    "Roblox-Tool",
+    "Golem",
     "Token",
 ];
 
@@ -12613,6 +12623,15 @@ mod every_infinite_assault_entry_equals_its_fixture_row {
     #[test]
     fn every_infinite_assault_entry_equals_its_fixture_row() {
         assert_eq!(fixture_report(SetName::InfiniteAssault), "");
+    }
+}
+
+mod every_felinors_vs_humans_entry_equals_its_fixture_row {
+    use super::*;
+
+    #[test]
+    fn every_felinors_vs_humans_entry_equals_its_fixture_row() {
+        assert_eq!(fixture_report(SetName::FelinorsVsHumans), "");
     }
 }
 

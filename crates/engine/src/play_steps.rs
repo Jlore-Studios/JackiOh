@@ -2165,6 +2165,9 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             // R783004, R3806000: a card played face-down as a Trap runs no Cry at its play, its text
             // dormant; only a Spell set under Paranoia resolves its text now, and stays set.
             ResolvePart::Script if card.set_as.is_some() => crate::alt_play::resolve_at_set(sink, &card),
+            // R5239006: a permanent whose text plays its Flashback without its Cry runs none on a play
+            // that spent its Flashback (R783013); a Spell's resolution is no Cry and still runs.
+            ResolvePart::Script if flashback_skips_cry(sink.state, run, &card) => {}
             ResolvePart::Script => {
                 // B5 E14, R399: a copier resolves the copied Spell's script, itself as "this".
                 let face = text_face_of(sink.state, &card);
@@ -2187,6 +2190,15 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         }
     }
     resolve_extra_cries(sink, run);
+}
+
+/// R5239006: whether step 5 runs no Cry for this play: it spent the card's Flashback (`PlayRun.flashback`,
+/// fixed at step 1) and the permanent's running face says "Flashback (without its Cry)"
+/// (`StaticFlags.flashback_without_cry`).
+fn flashback_skips_cry(state: &GameState, run: &PlayRun, card: &CardInstance) -> bool {
+    run.flashback == Some(true)
+        && is_permanent(state, card)
+        && crate::scripts::flags_of(state, card).flashback_without_cry == Some(true)
 }
 
 /// Step 5's run of the card's own Cry or spell script, with the play's choices.

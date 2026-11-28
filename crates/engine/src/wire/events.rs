@@ -44,6 +44,8 @@ string_union! {
         Woozy = "tipsy",
         /// R3548002: the game-wide worth of every Warhero Token.
         Warhero = "warhero",
+        /// R5236000: a card's Durability left, after a use spent one (`spend_durability`).
+        Durability = "durability",
     }
 }
 

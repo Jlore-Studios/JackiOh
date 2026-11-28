@@ -97,7 +97,7 @@ declare
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
   -- 0076 and 0079 add no table, 0082 drops custom_cards, which 0037 had added, and 0083, 0084, 0085, 0087, 0088 and
-  -- 0091 add none, nor do 0094, 0095, 0096, 0098, 0099, 0100 and 0101.
+  -- 0091 add none, nor do 0094, 0095, 0096, 0098, 0099, 0100, 0101 and 0102.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
@@ -954,7 +954,8 @@ end $$;
 -- Faction, and 0083 with #3038's Starship (R3038000), and 0087 with #3535's Mindustrial, Mineral,
 -- Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and Paperclip (R3535002), and 0099
 -- with #4577's nine (R4577001), Hallucination, Overclock, Batch, Recursion, Jailbreak, Firewall,
--- Scraper, Singularity and Commander. Each probe row is removed before the next, and each probe
+-- Scraper, Singularity and Commander, and 0102 with #5235's three (R5235002), Plagiarized,
+-- Roblox-Tool and Golem. Each probe row is removed before the next, and each probe
 -- runs in a block of its own, so later checks see only the cards CHECK 10 seeded.
 do $$
 declare
@@ -965,7 +966,8 @@ declare
     'Otherworldly', 'Other-Origins', 'Jelly Bean', 'Drone Core', 'Weapon', 'War Doctrine', 'Swarm',
     'Legacy', 'Resource', 'Faction', 'Starship', 'Mindustrial', 'Mineral', 'Automa-α', 'Automa-β',
     'Automa-γ', 'Automa-δ', 'Automa-Ω', 'Automa-ζ', 'Paperclip', 'Hallucination', 'Overclock',
-    'Batch', 'Recursion', 'Jailbreak', 'Firewall', 'Scraper', 'Singularity', 'Commander', 'Token'];
+    'Batch', 'Recursion', 'Jailbreak', 'Firewall', 'Scraper', 'Singularity', 'Commander',
+    'Plagiarized', 'Roblox-Tool', 'Golem', 'Token'];
   tag      text;
   refused  boolean;
 begin
@@ -981,14 +983,14 @@ begin
     delete from public.cards where id = 'check18-probe';
   end loop;
 
-  -- All forty-nine on one card: `<@` holds for the whole list, not only one tag at a time.
+  -- All fifty-two on one card: `<@` holds for the whole list, not only one tag at a time.
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
                               catalog_version)
     values ('check18-probe', '18', 'Check 18 probe', 'Core', 'Unit', catalog_tags, 'Common', false,
             '1'::jsonb, 'core-1');
   exception when check_violation then
-    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all forty-nine tags';
+    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all fifty-two tags';
   end;
   delete from public.cards where id = 'check18-probe';
 

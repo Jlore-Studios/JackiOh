@@ -259,6 +259,21 @@ pub const CENSUS: &[SetCensus] = &[
             ("Mythic", 12),
         ],
     },
+    // R1420, R5235000: the Felinors vs Humans set (tracker #5220, docs/felinors-vs-humans-set.md FV1),
+    // held while wave 1 builds it: its 197 cards (#1 to #115 of its own and the 82 Plagiarized reprints,
+    // #116 to #197) and 35 tokens (the 22 sub-numbered tokens and Jilliax Deluxe's 13 modules, #112.1 to
+    // #112.13) are written here from the merged catalog, as the set's entries land. It follows
+    // Stinkyscape+ in the catalog order, so its entry comes before the single-player sets'. It counts
+    // toward no total and no tag until it ships.
+    SetCensus {
+        set: "Felinors vs Humans",
+        segment: "felinorsvshumans",
+        cards: 0,
+        shared_cards: &[],
+        card_defined_tokens: &[],
+        shared_tokens: &[],
+        rarities: &[],
+    },
     // R4577000: the Infinite Assault (tracker #4576, docs/infinite-assault.md IA11), a single-player set
     // held while it was built card by card and open since its release (#4597). Its counts are IA11's table: C1 (issue #4577) wrote the Assault
     // Core, #1 to #24, and the tokens #4.1 Drone and #10.1 Drone Escort, and CF (issue #4602) wrote every
@@ -437,6 +452,14 @@ pub fn tag_count(tag: Tag) -> usize {
         | Tag::Scraper
         | Tag::Singularity
         | Tag::Commander => 0,
+        // R5235002: the Felinors vs Humans set's three new tags (docs/felinors-vs-humans-set.md FV1,
+        // FV4). Plagiarized is every reprint's, FvH #116 to #197 (#196 Plagiarized: Singularity beside
+        // Wincon); the tokens the reprints make stay the Infinite Assault's and carry none. Roblox-Tool
+        // is FvH #19 Trowel's and #20 Bomb's; Golem FvH #100.1 Felinor Golem's and #100.2 Human
+        // Golem's (not #16.2 Travertine Golem, which prints no Golem tag).
+        Tag::Plagiarized => felinors_vs_humans(82),
+        Tag::RobloxTool => felinors_vs_humans(2),
+        Tag::Golem => felinors_vs_humans(2),
         // Every token of the sets that ship carries it, so its count is their tokens' sum (R1420).
         Tag::Token => CENSUS
             .iter()
@@ -478,6 +501,15 @@ fn training_grounds(count: usize) -> usize {
 /// R3535000: `count` once the Stinkyscape+ set ships, else 0.
 fn stinkyscape_plus(count: usize) -> usize {
     if set_ships(SetName::StinkyscapePlus) {
+        count
+    } else {
+        0
+    }
+}
+
+/// R5235000: `count` once the Felinors vs Humans set ships, else 0.
+fn felinors_vs_humans(count: usize) -> usize {
+    if set_ships(SetName::FelinorsVsHumans) {
         count
     } else {
         0

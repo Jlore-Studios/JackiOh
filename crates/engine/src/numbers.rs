@@ -28,6 +28,10 @@ pub enum NumberedKey {
     Echo,
     Activate,
     Tribute,
+    /// R5236005: a Durability X, more is better.
+    Durability,
+    /// R5236021: an Unlucky X, less is better, tuned from 0 on a card with a luck roll.
+    Unlucky,
 }
 
 impl NumberedKey {
@@ -41,6 +45,8 @@ impl NumberedKey {
             NumberedKey::Echo => "Echo",
             NumberedKey::Activate => "Activate",
             NumberedKey::Tribute => "Tribute",
+            NumberedKey::Durability => "Durability",
+            NumberedKey::Unlucky => "Unlucky",
         }
     }
 }
@@ -91,11 +97,14 @@ pub struct NumberedKeyword {
     pub printed: Option<i32>,
 }
 
-/// The numbered keywords that print as `Keyword`s, in the order `numbers_on` lists them.
+/// The numbered keywords that print as `Keyword`s, more being better, in the order `numbers_on` lists
+/// them. R5236005: Durability's X is one of them. Unlucky, less being better and tuned from 0, is listed
+/// on its own (`unlucky_entry`).
 const PRINTED_NUMBERED: &[(NumberedKey, KeywordKind)] = &[
     (NumberedKey::Armor, KeywordKind::Armor),
     (NumberedKey::Lucky, KeywordKind::Lucky),
     (NumberedKey::SpellDamage, KeywordKind::SpellDamage),
+    (NumberedKey::Durability, KeywordKind::Durability),
 ];
 
 /// The field's unit row, or a backrow zone a Unit stands in (R1081000): where a card's stats are read
@@ -208,6 +217,9 @@ pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<Numbe
         flags.echo.unwrap_or(0),
         ParamBetter::Up,
     );
+    if let Some(entry) = unlucky_entry(state, card, &keywords, &removed) {
+        out.push(entry);
+    }
     add(
         &mut out,
         NumberedKey::Activate,
@@ -221,6 +233,33 @@ pub fn numbered_keywords_on(state: &GameState, card: &CardInstance) -> Vec<Numbe
         ParamBetter::Down,
     );
     out
+}
+
+/// R5236021: the card's Unlucky as the X row reads it: the printed Unlucky (no Degrade removed it) moved
+/// by its tuning steps from 0 (`tuning::unlucky_of`), listed while it prints one or while the card has a
+/// luck roll for it to act on (`catalog::is_luck_based`), so a Nerf may add Unlucky 1 there, raise it,
+/// and a Buff take it back down. Less is better.
+fn unlucky_entry(
+    state: &GameState,
+    card: &CardInstance,
+    keywords: &[Keyword],
+    removed: &[KeywordKind],
+) -> Option<NumberedKeyword> {
+    let printed = if removed.contains(&KeywordKind::Unlucky) {
+        0
+    } else {
+        crate::tuning::numbered_sum(keywords, KeywordKind::Unlucky).unwrap_or(0)
+    };
+    let def = crate::catalog::def_of(Some(state), &card.def_id);
+    if printed <= 0 && (card.vanilla || !crate::catalog::is_luck_based(def)) {
+        return None;
+    }
+    Some(NumberedKeyword {
+        key: NumberedKey::Unlucky,
+        value: crate::tuning::unlucky_of(card, printed),
+        better: ParamBetter::Down,
+        printed: Some(printed),
+    })
 }
 
 /// B3.2 rule 9, B3.4: the printed N of the card's first numbered Activate ability ("Activate" is 1,
@@ -253,6 +292,8 @@ const NUMBERED_KEYS: &[NumberedKey] = &[
     NumberedKey::Echo,
     NumberedKey::Activate,
     NumberedKey::Tribute,
+    NumberedKey::Durability,
+    NumberedKey::Unlucky,
 ];
 
 /// The inverse of `number_ref_id`, or `None` for a string that names no number.
@@ -325,6 +366,10 @@ pub fn numbers_on(state: &GameState, card: &CardInstance) -> Vec<NumberOnCard> {
         add(&mut out, NumberRef::Health, "Health".to_string(), stats.health);
     }
     for entry in numbered_keywords_on(state, card) {
+        // R5236021: an Unlucky the card has none of is a number only a Nerf's X row may add, not one on it.
+        if entry.key == NumberedKey::Unlucky && entry.value <= 0 {
+            continue;
+        }
         add(
             &mut out,
             NumberRef::Keyword { key: entry.key },

@@ -176,7 +176,8 @@ pub fn converts_to(state: &GameState, source: &CardInstance) -> Option<Afflictio
 /// R3540002, §4.4 step 7: the Burn and the Toxic a hit from `source` adds to its target after it landed,
 /// when the target survived it: a Unit still standing and not killed, a hero with life left. N is the
 /// source's declared number where it declares one (R386), the flag's otherwise; Burn goes on first.
-/// R4783001: "Damage dealt also Burns" adds `dealt`, what the hit dealt at step 5, to that Burn, one gain.
+/// R4783001: "Damage dealt also Burns" adds `dealt`, what the hit dealt at step 5, to that Burn, one gain;
+/// R5239007: "Damage dealt also applies Toxic" adds it to the Toxic the same way.
 pub(crate) fn ride_damage(
     sink: &mut EngineSink<'_>,
     source: &CardInstance,
@@ -192,9 +193,15 @@ pub(crate) fn ride_damage(
     } else {
         rider
     };
-    let toxic = flags
+    let toxic_rider = flags
         .toxic_on_damage
         .map(|n| crate::params::declared_or(sink.state, source, TOXIC_PARAM, n));
+    // R5239007: "Damage dealt also applies Toxic" adds `dealt` to that Toxic, one gain, as Burn's twin.
+    let toxic = if flags.damage_also_toxic == Some(true) {
+        Some(toxic_rider.unwrap_or(0) + dealt)
+    } else {
+        toxic_rider
+    };
     if burn.is_none() && toxic.is_none() {
         return;
     }

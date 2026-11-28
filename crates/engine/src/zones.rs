@@ -1301,6 +1301,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.frozen = None;
     // R3548001: so is the Woozy stamp; a card back after leaving the field is stamped again.
     instance.woozy = None;
+    // R5236004: and so is the Durability its uses spent; a card back after leaving the field is full.
+    instance.durability_spent = None;
     // R1839000: and so is Dormant; a card printing it starts it again as it next enters the field.
     instance.slumber = None;
     // R1852000: and so is a Starship's memory, which its hull starts again as it next enters the field.

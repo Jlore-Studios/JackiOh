@@ -239,6 +239,11 @@ const QUICKDRAW_TAG: Tag = Tag::Quickdraw;
 /// plays together, so it is never a theme.
 const LEGACY_TAG: Tag = Tag::Legacy;
 
+/// R5235002: the Felinors vs Humans set's Plagiarized reprints' tag marks frozen copies of Infinite
+/// Assault cards (R5235001), a provenance tag like Legacy, not a family that plays together, so it is
+/// never a theme.
+const PLAGIARIZED_TAG: Tag = Tag::Plagiarized;
+
 /// By queryCost (X → 0, embiggen → base).
 pub fn cost_bucket(def: &CardDef) -> CostBucket {
     let cost = query_cost(def);
@@ -288,12 +293,12 @@ pub fn curve_targets(size: i32, mana_cap: i32) -> ByBucket<i32> {
 }
 
 /// The tags with at least AI_DECK.minThemeSize cards among `defs`, sorted by name; never Token,
-/// Quickdraw (R817000) or Legacy (R2511001).
+/// Quickdraw (R817000), Legacy (R2511001) or Plagiarized (R5235002).
 fn theme_candidates(defs: &[&CardDef]) -> Vec<String> {
     let mut counts: IndexMap<String, i32> = IndexMap::new();
     for def in defs {
         for tag in &def.tags {
-            if *tag == TOKEN_TAG || *tag == QUICKDRAW_TAG || *tag == LEGACY_TAG {
+            if *tag == TOKEN_TAG || *tag == QUICKDRAW_TAG || *tag == LEGACY_TAG || *tag == PLAGIARIZED_TAG {
                 continue;
             }
             *counts.entry(tag.as_str().to_string()).or_insert(0) += 1;

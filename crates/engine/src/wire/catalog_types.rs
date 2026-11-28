@@ -205,6 +205,10 @@ string_union! {
     /// Batch, Recursion, Jailbreak, Firewall, Scraper and Singularity, and Commander (its boss
     /// cards): family tags no rule reads, declared before their cards for the set's later parts,
     /// which the server admits from migration 0099 (R4577001).
+    /// Issue #5235 adds the Felinors vs Humans set's three: Plagiarized (its 82 reprints of
+    /// Infinite Assault cards, FvH #116 to #197, a provenance tag like Legacy that is never a random
+    /// deck's theme), Roblox-Tool (FvH #19 Trowel and #20 Bomb) and Golem (FvH #100.1 Felinor Golem
+    /// and #100.2 Human Golem), which the server admits from migration 0102 (R5235002).
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -254,6 +258,9 @@ string_union! {
         Scraper = "Scraper",
         Singularity = "Singularity",
         Commander = "Commander",
+        Plagiarized = "Plagiarized",
+        RobloxTool = "Roblox-Tool",
+        Golem = "Golem",
         Token = "Token",
     }
 }
@@ -429,8 +436,9 @@ const HELD_SINGLE_PLAYER_STAGES: &[SetStage] = &[SetStage::HeldSinglePlayer];
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
 /// Meditative+ follows Meditative (issue #1173, R1178000), and the Stinkyscape set follows
 /// Meditative+ (issue #1857, R1857000; shipped by issue #1884), and the Training Grounds set
-/// follows Stinkyscape (issue #2194, R2194000; shipped by issue #2204), and the held Stinkyscape+
-/// set follows Training Grounds (issue #3535, R3535000). The set table's
+/// follows Stinkyscape (issue #2194, R2194000; shipped by issue #2204), and the Stinkyscape+
+/// set follows Training Grounds (issue #3535, R3535000), and the held Felinors vs Humans set
+/// follows Stinkyscape+ (issue #5235, R5235000). The set table's
 /// `Shipped` and `Held` rows, in its order (R3114000).
 pub const CATALOG_SETS: [SetName; count_in(CATALOG_STAGES)] = sets_in(CATALOG_STAGES);
 
@@ -774,6 +782,17 @@ pub enum Keyword {
     Woozy {
         n: i32,
     },
+    /// R5236000: one counter of uses shared by every Activate on the card (`durability_left`); at 0 its
+    /// Activates are refused (R5236001), and a card that is no Unit goes to its graveyard (R5236002).
+    Durability {
+        n: i32,
+    },
+    /// R5236010: a hit that lowers this Unit's Health destroys it, as if every source were Poisonous.
+    Fragile,
+    /// R5236020: each luck roll of the card counts this much less Lucky (`query::lucky_on`).
+    Unlucky {
+        n: i32,
+    },
 }
 
 string_union! {
@@ -843,6 +862,12 @@ string_union! {
         /// R3535002: declared for SP3 E5; the old name reads as it, never written (R5181000).
         #[serde(alias = "Tipsy")]
         Woozy = "Woozy",
+        /// R5236000: the card's lifetime uses of its Activates.
+        Durability = "Durability",
+        /// R5236010: any hit that lowers its Health destroys it.
+        Fragile = "Fragile",
+        /// R5236020: less Lucky on each luck roll (net luck may go below 0).
+        Unlucky = "Unlucky",
     }
 }
 
@@ -906,6 +931,9 @@ impl Keyword {
             Keyword::Frenzy => KeywordKind::Frenzy,
             Keyword::Evasive => KeywordKind::Evasive,
             Keyword::Woozy { .. } => KeywordKind::Woozy,
+            Keyword::Durability { .. } => KeywordKind::Durability,
+            Keyword::Fragile => KeywordKind::Fragile,
+            Keyword::Unlucky { .. } => KeywordKind::Unlucky,
         }
     }
 
@@ -922,6 +950,8 @@ impl Keyword {
             | Keyword::Burn { n }
             | Keyword::Toxic { n }
             | Keyword::Woozy { n }
+            | Keyword::Durability { n }
+            | Keyword::Unlucky { n }
             | Keyword::SpellDamage { n } => Some(n),
             Keyword::Temporary { n } => n,
             _ => None,
@@ -977,6 +1007,9 @@ impl Keyword {
             KeywordKind::Frenzy => Keyword::Frenzy,
             KeywordKind::Evasive => Keyword::Evasive,
             KeywordKind::Woozy => Keyword::Woozy { n },
+            KeywordKind::Durability => Keyword::Durability { n },
+            KeywordKind::Fragile => Keyword::Fragile,
+            KeywordKind::Unlucky => Keyword::Unlucky { n },
         }
     }
 }
@@ -2146,9 +2179,10 @@ mod tests {
         assert_eq!(Tag::AutomaZeta.as_str(), "Automa-ζ");
     }
 
-    // R4577000: the Infinite Assault is the set table's last row, a single-player set held while it
-    // was built and opened to `SinglePlayer` by its release (#4597): an open single-player set, in
-    // neither the catalog order nor the sets that ship, and no set is held for single-player now.
+    // R4577000: the Infinite Assault is the set table's row after Stinkyscape+'s, a single-player set
+    // held while it was built and opened to `SinglePlayer` by its release (#4597): an open
+    // single-player set, in neither the catalog order nor the sets that ship, and no set is held for
+    // single-player now. Rows are only appended, so the held Felinors vs Humans set (R5235000) follows it.
     #[test]
     fn r4577000_infinite_assault_opens_as_a_single_player_set() {
         let row = set_row(SetName::InfiniteAssault);
@@ -2163,7 +2197,10 @@ mod tests {
             }
         );
         assert_eq!(SetName::InfiniteAssault.as_str(), "Infinite Assault");
-        assert_eq!(SetName::ALL.last(), Some(&SetName::InfiniteAssault));
+        assert_eq!(
+            SetName::ALL.iter().position(|set| *set == SetName::InfiniteAssault),
+            Some(SetName::StinkyscapePlus as usize + 1)
+        );
         assert!(HELD_SINGLE_PLAYER_SETS.is_empty());
         assert!(!CATALOG_SETS.contains(&SetName::InfiniteAssault));
         assert!(!SHIPPED_SETS.contains(&SetName::InfiniteAssault));
@@ -2172,7 +2209,7 @@ mod tests {
     }
 
     // R4577001: the Infinite Assault's doctrine tags and Commander read and write their printed
-    // names, between Paperclip and Token.
+    // names, right after Paperclip; Token stays the union's last tag.
     #[test]
     fn r4577001_the_infinite_assault_tags_read_and_write_their_printed_names() {
         let tags = [
@@ -2197,10 +2234,10 @@ mod tests {
             .iter()
             .position(|tag| *tag == Tag::Paperclip)
             .expect("Paperclip is a tag");
-        let after: Vec<Tag> = Tag::ALL[paperclip + 1..].to_vec();
-        let mut expected: Vec<Tag> = tags.iter().map(|(tag, _)| *tag).collect();
-        expected.push(Tag::Token);
+        let after: Vec<Tag> = Tag::ALL[paperclip + 1..paperclip + 1 + tags.len()].to_vec();
+        let expected: Vec<Tag> = tags.iter().map(|(tag, _)| *tag).collect();
         assert_eq!(after, expected);
+        assert_eq!(Tag::ALL.last(), Some(&Tag::Token));
     }
 
     // R3114001: a set's shadow-ban ceiling is its share of its non-token cards, rounded down.

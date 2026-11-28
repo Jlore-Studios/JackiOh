@@ -31,5 +31,9 @@
  * Batch, Recursion, Jailbreak, Firewall, Scraper and Singularity, and Commander (its boss
  * cards): family tags no rule reads, declared before their cards for the set's later parts,
  * which the server admits from migration 0099 (R4577001).
+ * Issue #5235 adds the Felinors vs Humans set's three: Plagiarized (its 82 reprints of
+ * Infinite Assault cards, FvH #116 to #197, a provenance tag like Legacy that is never a random
+ * deck's theme), Roblox-Tool (FvH #19 Trowel and #20 Bomb) and Golem (FvH #100.1 Felinor Golem
+ * and #100.2 Human Golem), which the server admits from migration 0102 (R5235002).
  */
-export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Starship" | "Mindustrial" | "Mineral" | "Automa-α" | "Automa-β" | "Automa-γ" | "Automa-δ" | "Automa-Ω" | "Automa-ζ" | "Paperclip" | "Hallucination" | "Overclock" | "Batch" | "Recursion" | "Jailbreak" | "Firewall" | "Scraper" | "Singularity" | "Commander" | "Token";
+export type Tag = "Human" | "Felinor" | "KY" | "CN" | "Fruit" | "Call to Chaos" | "Quickdraw" | "Jlockeed" | "Book" | "Pancake" | "AI" | "Plague" | "Catalyst" | "Prime" | "Acclaimed" | "Wincon" | "Potion" | "Terminus" | "Quest" | "Otherworldly" | "Other-Origins" | "Jelly Bean" | "Drone Core" | "Weapon" | "War Doctrine" | "Swarm" | "Legacy" | "Resource" | "Faction" | "Starship" | "Mindustrial" | "Mineral" | "Automa-α" | "Automa-β" | "Automa-γ" | "Automa-δ" | "Automa-Ω" | "Automa-ζ" | "Paperclip" | "Hallucination" | "Overclock" | "Batch" | "Recursion" | "Jailbreak" | "Firewall" | "Scraper" | "Singularity" | "Commander" | "Plagiarized" | "Roblox-Tool" | "Golem" | "Token";

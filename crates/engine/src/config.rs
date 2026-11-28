@@ -359,6 +359,15 @@ pub const KY_FFT_DAMAGE: &[i32] = &[0, 0, 2, 3, 5, 7, 9, 11, 13, 16, 18, 20, 22,
 /// this row.
 pub const KY_FFT_MAX_POINTS: i32 = 16;
 
+// The table holds one row for each point count from 0 to the cap.
+const _: () = assert!(KY_FFT_DAMAGE.len() == KY_FFT_MAX_POINTS as usize + 1);
+
+/// FvH #91: `KY_FFT_DAMAGE` at `points`, clamped to 0 and `KY_FFT_MAX_POINTS`, as `fib` clamps its index.
+pub fn ky_fft_damage(points: i32) -> i32 {
+    let clamped = points.clamp(0, KY_FFT_MAX_POINTS);
+    KY_FFT_DAMAGE.get(clamped as usize).copied().unwrap_or(0)
+}
+
 /// R80: a library holds at most this many cards. Whether a library is full is `query::room_in`'s test,
 /// the one every rule reads.
 pub const LIBRARY_CAP: i32 = 60;
@@ -628,17 +637,29 @@ pub const TUNE_HEALTH_FLOOR: i32 = 1;
 /// B3.4 rule 3: the keywords a Degrade never removes, because losing them would help the card. R1220:
 /// Untributable is harmful the same way — losing it would let a Tribute take the card. R2657005: so are
 /// Can't Defend, which took over from the static flag "Cannot be in Defense Position" (§8 #65.1), and
-/// Crater, which a Nerf may add (`TUNE_NERF_HAND_KEYWORDS`).
+/// Crater, which a Nerf may add (`TUNE_NERF_HAND_KEYWORDS`). R5236005, R5236011, R5236021: so are
+/// Durability, whose loss would lift its cap on uses, Fragile and Unlucky.
 pub const TUNE_HARMFUL_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::CantAttack,
     KeywordKind::Brittle,
     KeywordKind::Untributable,
     KeywordKind::CantDefend,
     KeywordKind::Crater,
+    KeywordKind::Durability,
+    KeywordKind::Fragile,
+    KeywordKind::Unlucky,
 ];
 /// R2657005: the harmful keywords a Buff's keyword row may take off a card that has them of its own, in
-/// this order. A Nerf never adds either.
-pub const TUNE_BUFF_REMOVES: &[KeywordKind] = &[KeywordKind::CantAttack, KeywordKind::CantDefend];
+/// this order. A Nerf never adds the first two. R5236011: Fragile, which a Nerf may add to a Unit
+/// (`TUNE_NERF_UNIT_KEYWORDS`).
+pub const TUNE_BUFF_REMOVES: &[KeywordKind] = &[
+    KeywordKind::CantAttack,
+    KeywordKind::CantDefend,
+    KeywordKind::Fragile,
+];
+/// R5236011: the harmful keywords a Nerf's keyword row may add to a Unit that lacks them, where R3888000's
+/// table calls them live, after `TUNE_NERF_HAND_KEYWORDS`. Never in R21's random pool.
+pub const TUNE_NERF_UNIT_KEYWORDS: &[KeywordKind] = &[KeywordKind::Fragile];
 /// R2657005: the keywords a Buff's keyword row may add to a card of any type that lacks them, after the
 /// row's other keywords.
 pub const TUNE_BUFF_ANY_KEYWORDS: &[KeywordKind] = &[KeywordKind::Flashback];
@@ -716,6 +737,15 @@ pub const PARAM_DEFAULT_STEP: ParamDefaultStep = ParamDefaultStep {
 /// names no `min`, an X, a numbered keyword (Activate X, Tribute X, Armor …) and a Brittle count a
 /// Degrade lowers.
 pub const TUNE_MIN_AMOUNT: i32 = 1;
+/// R5236021: the least a tuned Unlucky comes to: a Buff takes an Unlucky 1 off, where every other
+/// numbered keyword floors at `TUNE_MIN_AMOUNT`.
+pub const UNLUCKY_TUNED_FLOOR: i32 = 0;
+/// R5236000: the Durability one use spends (the `activate` action's, or a `run_activation` with
+/// `spend_use`, however many per-turn uses that run takes).
+pub const DURABILITY_PER_USE: i32 = 1;
+/// R5236001: the Durability left at which a card's Activates are refused, and at which a card that is no
+/// Unit leaves the field (R5236002).
+pub const DURABILITY_SPENT_OUT: i32 = 0;
 /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): no tune multiplier — one Buff or Nerf
 /// application moves each row once.
 pub const TUNE_MULTIPLIER_NONE: i32 = 1;
