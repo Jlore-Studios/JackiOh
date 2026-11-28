@@ -46610,7 +46610,8 @@
       "2026-11-28T09:01:21Z,claude-4,stream,call,46126371126,24,2026-11-28T12:00:00Z,,,allowed,70,,"
     ],
     "runs": [
-      "2026-11-28T08:53:53Z,46127077939,claude-6,opus,suggest,,,interrupted,5-hour cap,7.3,0,0,0,,7,50,,,,,none,,1"
+      "2026-11-28T08:53:53Z,46127077939,claude-6,opus,suggest,,,interrupted,5-hour cap,7.3,0,0,0,,7,50,,,,,none,,1",
+      "2026-11-28T09:02:20Z,46126371126,claude-4,opus,plan,5289,hard,planned,,24.5,244,150465,21993806,9.7895,5,24,,,1.1,,fresh,,1"
     ]
   },
   "version": 1
