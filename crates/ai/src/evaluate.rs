@@ -2349,6 +2349,7 @@ fn splashed(state: &GameState, stand: &TauntStand, pool: i32) -> Side {
         indestructible: has_keyword(&stand.view.keywords, KeywordKind::Indestructible),
         first_strike: false,
         poisonous: false,
+        fragile: has_keyword(&stand.view.keywords, KeywordKind::Fragile),
         pierce: false,
         cap: unit_damage_cap(state, &stand.unit),
         exiles: false,

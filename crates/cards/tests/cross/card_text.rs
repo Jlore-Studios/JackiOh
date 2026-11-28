@@ -377,6 +377,7 @@ const EXPECTED_ORDER: &[&str] = &[
     "Woozy",
     "Spell Damage",
     "Lucky",
+    "Unlucky",
     "Indestructible",
     "Immutable",
     "Immune to Spells",
@@ -385,6 +386,8 @@ const EXPECTED_ORDER: &[&str] = &[
     "Can't attack",
     "Can't Defend",
     "Brittle",
+    "Fragile",
+    "Durability",
     "Crater",
     "Animated",
     "Animated on your turn",
@@ -933,7 +936,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         );
         // The faces that quote a label are the two that grant a Death (R1107), Meditative+ #9's
         // Embiggened Cry (#2179), Stinkyscape #26 ZolarKeth's granted Activate (#2657) and Stinkyscape+ #93's
-        // granted line (#3573), on both faces.
+        // granted line (#3573), and the held Felinors vs Humans set's #21 Scandalous Top Hat's granted Death
+        // and #79 Post Human Aesthetist's granted end of turn (R5235000), on both faces.
         let quoting: Vec<String> = swept()
             .iter()
             .filter(|face| {
@@ -949,6 +953,10 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
         assert_eq!(
             sorted(quoting),
             strings(&[
+                "felinorsvshumans-021 base",
+                "felinorsvshumans-021 radiant",
+                "felinorsvshumans-079 base",
+                "felinorsvshumans-079 radiant",
                 "meditative-058 base",
                 "meditative-058 radiant",
                 "meditative-059 base",
@@ -1807,7 +1815,8 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
         // and Core #83, Classic #35 and Meditative+ #9 (#2179). Every face above is held to the label, a
         // held set's too; the list pinned is the shipped sets' (R1857000: the Stinkyscape set's #79,
         // #127, #128, #129 and #154 joined at its release, #1884; the Stinkyscape+ set's #24, #64 to #67,
-        // #138 and #139 at its release, #3573, and #96 since issue #4353, R4353023).
+        // #138 and #139 at its release, #3573, and #96 since issue #4353, R4353023; the Felinors vs Humans
+        // set's #16 at its release, #5222).
         let shipped: Vec<String> = cards
             .into_iter()
             .filter(|id| {
@@ -1827,6 +1836,7 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
                 "core-059",
                 "core-083",
                 "core-084",
+                "felinorsvshumans-016",
                 "meditative-021",
                 "meditative-046",
                 "meditative-081",

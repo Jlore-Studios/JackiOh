@@ -41,7 +41,15 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const POUCH: &str = "meditativeplus-014";
-    const POTIONS: [&str; 3] = ["meditativeplus-011", "meditativeplus-012", "meditativeplus-013"];
+    /// The Potion pool of the sets that ship (R1179003): M+ #11 to #13, the Living Potions, and FvH #85
+    /// and #86 since their set ships (#5222).
+    const POTIONS: [&str; 5] = [
+        "meditativeplus-011",
+        "meditativeplus-012",
+        "meditativeplus-013",
+        "felinorsvshumans-085",
+        "felinorsvshumans-086",
+    ];
     const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     use crate::scenario;
@@ -76,9 +84,9 @@ mod tests {
         }
     }
 
-    /// R3563000: one play is one run, so its picks are different Potions while the pool of three lasts
-    /// (R60's repeats no longer stand for a card an effect generates): two picks are two Potions, and the
-    /// third pick of a Buffed Pouch brings the last one, so all three come once.
+    /// R3563000: one play is one run, so its picks are different Potions while the pool of five lasts
+    /// (R60's repeats no longer stand for a card an effect generates): two picks are two Potions, and a
+    /// Pouch Buffed to five picks brings every one of them once.
     #[test]
     fn r1179003_r3563000_the_picks_are_distinct_until_the_pool_runs_out() {
         crate::register_all();
@@ -94,11 +102,15 @@ mod tests {
                 "p1": { "hand": [POUCH, FILLER] },
                 "p2": { "hand": [FILLER] },
             }));
-            step_param(s.card_mut(POUCH), "cards", 1);
+            for _ in 2..POTIONS.len() {
+                step_param(s.card_mut(POUCH), "cards", 1);
+            }
             s.play(POUCH, json!({}));
             let mut added = added(&s);
             added.sort();
-            assert_eq!(added, POTIONS.map(String::from).to_vec(), "seed {n}");
+            let mut every = POTIONS.map(String::from).to_vec();
+            every.sort();
+            assert_eq!(added, every, "seed {n}");
         }
     }
 
@@ -107,7 +119,8 @@ mod tests {
         crate::register_all();
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): with no preview the Potion pool is the
         // non-token Potion cards of the sets that ship (R1179003), M+ #11 to #13, so the Pouch adds
-        // two of them rather than fizzling.
+        // two of them rather than fizzling; and for the Felinors vs Humans release (#5222), whose #85 and
+        // #86 join them.
         // Read as it is, not as the pool probe (#3117) rotates it: this tests its content and order.
         let pool: Vec<String> = jackioh_engine::testkit::with_pool_shift(0, || {
             crate::query::query(&json_as(json!({ "tags": ["Potion"] })))
@@ -133,7 +146,7 @@ mod tests {
     fn r1179003_never_a_crafted_potion() {
         crate::register_all();
         // A crafted potion (M+ #16's, R1182000) is a transient definition tagged Potion, in no pool:
-        // over the seeds the Pouch adds only M+ #11 to #13, never the one crafted beside it.
+        // over the seeds the Pouch adds only the printed Potions, never the one crafted beside it.
         for k in 0..20 {
             let mut s = scenario(json!({
                 "seed": format!("m+014-crafted:{k}"),

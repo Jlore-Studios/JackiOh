@@ -3839,6 +3839,985 @@
       "attack": "Linear search!",
       "death": "Index out of range."
     },
+    "felinorsvshumans-001": {
+      "play": "Day one. Feeling unstoppable.",
+      "attack": "Still got it!",
+      "death": "Called it. Never gonna make it."
+    },
+    "felinorsvshumans-002": {
+      "play": "Mother is here. Sit up straight.",
+      "attack": "Mother knows best!",
+      "death": "Call your mother."
+    },
+    "felinorsvshumans-003": {
+      "cast": "The galaxy fits. Prices are flat."
+    },
+    "felinorsvshumans-004": {
+      "cast": "Everyone, the same size. Now."
+    },
+    "felinorsvshumans-005": {
+      "play": "Rise. One last time.",
+      "attack": "Back to the grave!",
+      "death": "My turn to rise."
+    },
+    "felinorsvshumans-006": {
+      "play": "First day. Where's the coffee?",
+      "attack": "Is this my job?",
+      "death": "Fired. Again."
+    },
+    "felinorsvshumans-007": {
+      "cast": "Whee! Nothing can touch you!"
+    },
+    "felinorsvshumans-008": {
+      "cast": "Joy! Pure, pointy joy!"
+    },
+    "felinorsvshumans-009": {
+      "cast": "Double the fun, double the giggles!"
+    },
+    "felinorsvshumans-010": {
+      "play": "Court is in session.",
+      "attack": "Sentenced!",
+      "death": "Case dismissed."
+    },
+    "felinorsvshumans-011": {
+      "play": "Banned. Next.",
+      "attack": "Ban!",
+      "death": "Appeal granted."
+    },
+    "felinorsvshumans-012": {
+      "play": "The name's Big. Mister Big.",
+      "attack": "Big hit!",
+      "death": "Not so big now."
+    },
+    "felinorsvshumans-013": {
+      "play": "Pardon me. Just a small fellow.",
+      "attack": "A small tap.",
+      "death": "Small loss, really."
+    },
+    "felinorsvshumans-014": {
+      "play": "Awoo! The hunt begins.",
+      "attack": "Snarl!",
+      "death": "Whimper..."
+    },
+    "felinorsvshumans-015": {
+      "play": "Careful. I'm very warm.",
+      "attack": "Hot hot hot!",
+      "death": "Meltdown!"
+    },
+    "felinorsvshumans-016": {
+      "cast": "Fine stone. Priceless, technically."
+    },
+    "felinorsvshumans-016-1": {
+      "cast": "Polished stone, worth a fortune."
+    },
+    "felinorsvshumans-016-2": {
+      "play": "Stone wakes. Stone remembers.",
+      "attack": "Crumble!",
+      "death": "Back to gravel."
+    },
+    "felinorsvshumans-017": {
+      "play": "Shredder fourteen online. Feed me.",
+      "attack": "Shred!",
+      "death": "Blades jammed."
+    },
+    "felinorsvshumans-018": {
+      "play": "Money talks. I sing.",
+      "attack": "Cha-ching!",
+      "death": "Bankrupt? Me?"
+    },
+    "felinorsvshumans-019": {
+      "cast": "Brick by brick, mate."
+    },
+    "felinorsvshumans-019-1": {
+      "play": "Wall placed.",
+      "attack": "Thud.",
+      "death": "Bricks everywhere."
+    },
+    "felinorsvshumans-020": {
+      "cast": "Fire in the hole!"
+    },
+    "felinorsvshumans-020-1": {
+      "play": "Tick tock, tick tock.",
+      "attack": "Tick!",
+      "death": "Kaboom!"
+    },
+    "felinorsvshumans-021": {
+      "cast": "Hats off! No, hats on!"
+    },
+    "felinorsvshumans-022": {
+      "play": "Hats for everyone! Tea time!",
+      "attack": "Off with the hat!",
+      "death": "Late, so very late."
+    },
+    "felinorsvshumans-023": {
+      "cast": "Dig deep. Deeper. There."
+    },
+    "felinorsvshumans-024": {
+      "cast": "Turn the page. Lift off!"
+    },
+    "felinorsvshumans-025": {
+      "cast": "Lucky rocks, fresh from the quarry."
+    },
+    "felinorsvshumans-026": {
+      "cast": "Chaos, bound in leather."
+    },
+    "felinorsvshumans-027": {
+      "cast": "Monster manual, chapter smash."
+    },
+    "felinorsvshumans-028": {
+      "cast": "Fun first. Balance later."
+    },
+    "felinorsvshumans-029": {
+      "cast": "Legends, every last one."
+    },
+    "felinorsvshumans-030": {
+      "cast": "Story time! Hold on tight!"
+    },
+    "felinorsvshumans-031": {
+      "cast": "Please! Anyone! Help me!"
+    },
+    "felinorsvshumans-032": {
+      "cast": "Fresh stock! Everything must go!"
+    },
+    "felinorsvshumans-033": {
+      "play": "Nothing stops me. Nothing.",
+      "attack": "Unstoppable!",
+      "death": "Impossible."
+    },
+    "felinorsvshumans-034": {
+      "cast": "Mix, match, and make it free."
+    },
+    "felinorsvshumans-035": {
+      "play": "Mogging the whole board.",
+      "attack": "Mogged!",
+      "death": "My jawline..."
+    },
+    "felinorsvshumans-036": {
+      "cast": "Thump. Rocks incoming."
+    },
+    "felinorsvshumans-037": {
+      "play": "Five more minutes.",
+      "attack": "Grumble!",
+      "death": "Wake me later."
+    },
+    "felinorsvshumans-038": {
+      "cast": "Sign here. Pay later. Much later."
+    },
+    "felinorsvshumans-039": {
+      "play": "Listen closely. Spells, multiply.",
+      "attack": "Hush!",
+      "death": "The whispers fade."
+    },
+    "felinorsvshumans-040": {
+      "play": "Bags packed. Every set awaits!",
+      "attack": "Bon voyage!",
+      "death": "Final destination."
+    },
+    "felinorsvshumans-041": {
+      "play": "Two flavours. Pick one.",
+      "attack": "Brain freeze!",
+      "death": "Melted."
+    },
+    "felinorsvshumans-042": {
+      "play": "Scoot over. Billy's sitting here.",
+      "attack": "Body slam!",
+      "death": "Billy's tired."
+    },
+    "felinorsvshumans-043": {
+      "play": "No dragons? Anyone, then.",
+      "attack": "Bane!",
+      "death": "The dragons win."
+    },
+    "felinorsvshumans-044": {
+      "play": "Join the clowder. Purr.",
+      "attack": "Pounce!",
+      "death": "Converted... me."
+    },
+    "felinorsvshumans-045": {
+      "play": "Subject nine. Traps primed.",
+      "attack": "Gotcha!",
+      "death": "Experiment ended."
+    },
+    "felinorsvshumans-046": {
+      "play": "I manifest. You guess.",
+      "attack": "Shown!",
+      "death": "Unmanifested."
+    },
+    "felinorsvshumans-047": {
+      "play": "Behold my glow!",
+      "attack": "Blaze!",
+      "death": "Snuffed out."
+    },
+    "felinorsvshumans-048": {
+      "play": "Ew, cats. I'm allergic.",
+      "attack": "Achoo!",
+      "death": "Should've taken my pills."
+    },
+    "felinorsvshumans-049": {
+      "play": "Light them all!",
+      "attack": "Hot wax!",
+      "death": "Blown out."
+    },
+    "felinorsvshumans-049-1": {
+      "cast": "Make a wish!"
+    },
+    "felinorsvshumans-050": {
+      "cast": "Kit open. Traps set."
+    },
+    "felinorsvshumans-051": {
+      "cast": "Found one! Shiny and ready!"
+    },
+    "felinorsvshumans-052": {
+      "play": "Here, kitty kitty.",
+      "attack": "Bullseye!",
+      "death": "The cats won."
+    },
+    "felinorsvshumans-053": {
+      "play": "One coin, one shot.",
+      "attack": "Ping!",
+      "death": "Out of change."
+    },
+    "felinorsvshumans-054": {
+      "play": "Ready to learn!",
+      "attack": "For practice!",
+      "death": "Class dismissed."
+    },
+    "felinorsvshumans-055": {
+      "cast": "More kittens! Always more kittens!"
+    },
+    "felinorsvshumans-056": {
+      "cast": "Click. Oh no."
+    },
+    "felinorsvshumans-057": {
+      "cast": "Hunter's kit, from far away."
+    },
+    "felinorsvshumans-057-1": {
+      "cast": "Sic them!"
+    },
+    "felinorsvshumans-057-2": {
+      "cast": "Hut hut! Tackle!"
+    },
+    "felinorsvshumans-057-3": {
+      "cast": "Here, kitty! Any shape!"
+    },
+    "felinorsvshumans-057-4": {
+      "play": "Mrow. Loafing here.",
+      "attack": "Flop!",
+      "death": "Deflated."
+    },
+    "felinorsvshumans-057-5": {
+      "play": "Zoom! Squeezed through!",
+      "attack": "Zoomies!",
+      "death": "Stuck. Finally."
+    },
+    "felinorsvshumans-057-6": {
+      "play": "If it fits, I sits.",
+      "attack": "Corner pounce!",
+      "death": "Box... empty."
+    },
+    "felinorsvshumans-058": {
+      "cast": "Every shape, come running!"
+    },
+    "felinorsvshumans-059": {
+      "play": "You have to read this one",
+      "attack": "Shh, I'm reading.",
+      "death": "I never finished it.",
+      "endOfTurn": "To the library!"
+    },
+    "felinorsvshumans-060": {
+      "play": "Choose your tools wisely.",
+      "attack": "Hammer time!",
+      "death": "Tools down."
+    },
+    "felinorsvshumans-060-1": {
+      "cast": "Behold the tools of creation"
+    },
+    "felinorsvshumans-060-2": {
+      "cast": "Behold the tools of cremation"
+    },
+    "felinorsvshumans-061": {
+      "cast": "Back to the primordial soup!"
+    },
+    "felinorsvshumans-062": {
+      "play": "Mrrf. Nap first.",
+      "attack": "Belly flop!",
+      "death": "Back to sleep."
+    },
+    "felinorsvshumans-063": {
+      "play": "Humans only. Everyone else, out.",
+      "attack": "Not my tier!",
+      "death": "Downgraded."
+    },
+    "felinorsvshumans-064": {
+      "play": "Hold still. Adding ears.",
+      "attack": "Brushstroke!",
+      "death": "My masterpiece..."
+    },
+    "felinorsvshumans-065": {
+      "play": "Snack hunt! Mrrp!",
+      "attack": "Swat!",
+      "death": "Left you a snack."
+    },
+    "felinorsvshumans-066": {
+      "cast": "Peel it! Kitty inside!"
+    },
+    "felinorsvshumans-067": {
+      "play": "Bring me the big one.",
+      "attack": "Trophy time!",
+      "death": "The one that got away."
+    },
+    "felinorsvshumans-068": {
+      "play": "Cats? Disgusting. Absolutely disgusting.",
+      "attack": "Hot take!",
+      "death": "Fine. I love cats."
+    },
+    "felinorsvshumans-069": {
+      "play": "Nya! Photos are free!",
+      "attack": "Kawaii strike!",
+      "death": "Costume ripped!"
+    },
+    "felinorsvshumans-070": {
+      "play": "Troops! Assemble! Eventually!",
+      "attack": "Pounce, everyone!",
+      "death": "Retreat... to the sunbeam."
+    },
+    "felinorsvshumans-071": {
+      "play": "Life number two, coming up.",
+      "attack": "Hiss!",
+      "death": "Saving a life for later."
+    },
+    "felinorsvshumans-072": {
+      "cast": "Nature, from somewhere else entirely."
+    },
+    "felinorsvshumans-072-1": {
+      "cast": "Grow, little seed!"
+    },
+    "felinorsvshumans-072-2": {
+      "cast": "Swipe! And swipe again!"
+    },
+    "felinorsvshumans-072-3": {
+      "cast": "Roooar!"
+    },
+    "felinorsvshumans-073": {
+      "play": "Only the pure remain.",
+      "attack": "For humanity!",
+      "death": "The bloodline ends."
+    },
+    "felinorsvshumans-074": {
+      "play": "Accelerate. Always accelerate.",
+      "attack": "Faster!",
+      "death": "Too slow... this time."
+    },
+    "felinorsvshumans-074-1": {
+      "play": "The future is fused.",
+      "attack": "Accelerate!",
+      "death": "Decelerating..."
+    },
+    "felinorsvshumans-075": {
+      "play": "That belongs in a museum!",
+      "attack": "Snakes. Why snakes?",
+      "death": "Should've chosen wisely."
+    },
+    "felinorsvshumans-076": {
+      "play": "Rest in pieces.",
+      "attack": "Desecrate!",
+      "death": "Buried at last."
+    },
+    "felinorsvshumans-077": {
+      "cast": "Achoo! Oh. Oh no."
+    },
+    "felinorsvshumans-078": {
+      "play": "Humanity, rally to me!",
+      "attack": "For our kind!",
+      "death": "Others will follow."
+    },
+    "felinorsvshumans-078-1": {
+      "play": "We are many now.",
+      "attack": "Together!",
+      "death": "One of many."
+    },
+    "felinorsvshumans-079": {
+      "play": "Behold the new beauty.",
+      "attack": "Exquisite!",
+      "death": "Beauty fades. Mine didn't."
+    },
+    "felinorsvshumans-080": {
+      "play": "Chinook inbound. Supplies aboard.",
+      "attack": "Strafing run!",
+      "death": "Going down!"
+    },
+    "felinorsvshumans-081": {
+      "play": "Get me another drink.",
+      "attack": "Back in my day!",
+      "death": "Last call."
+    },
+    "felinorsvshumans-082": {
+      "cast": "One last meow. Make it count."
+    },
+    "felinorsvshumans-083": {
+      "play": "Try this. Just a sip.",
+      "attack": "A little poison!",
+      "death": "Wrong dose..."
+    },
+    "felinorsvshumans-084": {
+      "play": "Mew. Ancient mew.",
+      "attack": "Hiss!",
+      "death": "Back to the tomb."
+    },
+    "felinorsvshumans-085": {
+      "play": "Bubble bubble, toil and trouble.",
+      "attack": "Sizzle!",
+      "death": "Fizzled out."
+    },
+    "felinorsvshumans-086": {
+      "play": "Drink me. I dare you.",
+      "attack": "Splash!",
+      "death": "Spilled."
+    },
+    "felinorsvshumans-087": {
+      "cast": "Odd dreams only. Delicious."
+    },
+    "felinorsvshumans-088": {
+      "play": "Just a plant. Meow.",
+      "attack": "Thwip!",
+      "death": "Wilted."
+    },
+    "felinorsvshumans-089": {
+      "play": "Mrooow. Make room.",
+      "attack": "Mega pounce!",
+      "death": "Big nap."
+    },
+    "felinorsvshumans-090": {
+      "play": "Alone? I've got this.",
+      "attack": "Stand firm!",
+      "death": "I held the line."
+    },
+    "felinorsvshumans-091": {
+      "cast": "Transform, log, root. Simple."
+    },
+    "felinorsvshumans-092": {
+      "cast": "One zero one. Patented."
+    },
+    "felinorsvshumans-093": {
+      "play": "We rule. Both of us.",
+      "attack": "Double bite!",
+      "death": "You blinked first."
+    },
+    "felinorsvshumans-094": {
+      "play": "Meow. Sorry in advance.",
+      "attack": "Bad omen!",
+      "death": "Gifts for you."
+    },
+    "felinorsvshumans-095": {
+      "play": "Plates? I break those.",
+      "attack": "Crack!",
+      "death": "Dented."
+    },
+    "felinorsvshumans-096": {
+      "play": "Mrrp. Sparkles!",
+      "attack": "Magic paw!",
+      "death": "Spell broken."
+    },
+    "felinorsvshumans-097": {
+      "play": "Mew. Don't mind me.",
+      "attack": "Tiny swat!",
+      "death": "Surprise inside!"
+    },
+    "felinorsvshumans-098": {
+      "play": "Sweet dreams. Mine first.",
+      "attack": "Nightmare!",
+      "death": "Dreaming of more."
+    },
+    "felinorsvshumans-098-1": {
+      "play": "Seven doors. All open.",
+      "attack": "Dream crush!",
+      "death": "Wake up."
+    },
+    "felinorsvshumans-098-2": {
+      "cast": "Through the door, little one."
+    },
+    "felinorsvshumans-099": {
+      "play": "Every spell tells a story.",
+      "attack": "A lesson!",
+      "death": "The tale ends."
+    },
+    "felinorsvshumans-100": {
+      "cast": "Claws or crowns? Roll the dice!"
+    },
+    "felinorsvshumans-100-1": {
+      "play": "Golem awake. Humans ignored.",
+      "attack": "Purr-smash!",
+      "death": "Unravelled."
+    },
+    "felinorsvshumans-100-2": {
+      "play": "Golem online. No cats.",
+      "attack": "Stomp!",
+      "death": "Crumbling... humanely."
+    },
+    "felinorsvshumans-101": {
+      "play": "I'm changing. Stand back.",
+      "attack": "Mutate!",
+      "death": "Unstable..."
+    },
+    "felinorsvshumans-102": {
+      "play": "Skreee! Diving in!",
+      "attack": "Dive!",
+      "death": "Pulled up too late."
+    },
+    "felinorsvshumans-103": {
+      "play": "Quick, grab something!",
+      "attack": "Snatch!",
+      "death": "Expired."
+    },
+    "felinorsvshumans-104": {
+      "cast": "The sky darkens. Pick a prayer."
+    },
+    "felinorsvshumans-105": {
+      "play": "Zoomies! Everyone! Now!",
+      "attack": "Rraaah!",
+      "death": "Finally tired."
+    },
+    "felinorsvshumans-106": {
+      "play": "I cracked it. I cracked it just now.",
+      "attack": "Rock on.",
+      "death": "Out of rocks."
+    },
+    "felinorsvshumans-107": {
+      "play": "Your hand is mine. Briefly.",
+      "attack": "Trust the process!",
+      "death": "KY out."
+    },
+    "felinorsvshumans-108": {
+      "play": "Boys! Go go go!",
+      "attack": "Sic them!",
+      "death": "Who's the boss now?"
+    },
+    "felinorsvshumans-109": {
+      "play": "I hold every key.",
+      "attack": "Unlocked!",
+      "death": "Locked out."
+    },
+    "felinorsvshumans-110": {
+      "play": "Everything shatters. Eventually.",
+      "attack": "Spin!",
+      "death": "One last spin."
+    },
+    "felinorsvshumans-111": {
+      "play": "Skree! Hungry!",
+      "attack": "Peck!",
+      "death": "Grew up too fast."
+    },
+    "felinorsvshumans-112": {
+      "play": "Deluxe edition. Assembling now.",
+      "attack": "Module engaged!",
+      "death": "Disassembled."
+    },
+    "felinorsvshumans-112-1": {
+      "play": "Calling myself. Hello?",
+      "attack": "Recurse!",
+      "death": "Returning soon."
+    },
+    "felinorsvshumans-112-2": {
+      "play": "Plating attached.",
+      "attack": "Clang!",
+      "death": "Plating failed."
+    },
+    "felinorsvshumans-112-3": {
+      "play": "Bzzt. Something's wrong.",
+      "attack": "Zap!",
+      "death": "Short circuit."
+    },
+    "felinorsvshumans-112-4": {
+      "play": "Spare part. Spacebound.",
+      "attack": "Thruster!",
+      "death": "Lost in space."
+    },
+    "felinorsvshumans-112-5": {
+      "play": "Power field online.",
+      "attack": "Pulse!",
+      "death": "Field down."
+    },
+    "felinorsvshumans-112-6": {
+      "play": "Power climbing.",
+      "attack": "Surge!",
+      "death": "Power out."
+    },
+    "felinorsvshumans-112-7": {
+      "play": "Heavy. Very heavy.",
+      "attack": "Thud!",
+      "death": "Too heavy."
+    },
+    "felinorsvshumans-112-8": {
+      "play": "Tools out.",
+      "attack": "Slice!",
+      "death": "Out of tools."
+    },
+    "felinorsvshumans-112-9": {
+      "play": "Double trouble.",
+      "attack": "Twin strike!",
+      "death": "Split up."
+    },
+    "felinorsvshumans-112-10": {
+      "play": "Infection started.",
+      "attack": "Infect!",
+      "death": "Quarantined."
+    },
+    "felinorsvshumans-112-11": {
+      "play": "Flawless. As always.",
+      "attack": "Perfection!",
+      "death": "Impossible error."
+    },
+    "felinorsvshumans-112-12": {
+      "play": "Spreading misery.",
+      "attack": "Sting!",
+      "death": "Cleansed."
+    },
+    "felinorsvshumans-112-13": {
+      "play": "Unbreakable unit online.",
+      "attack": "Bonk!",
+      "death": "Dented, somehow."
+    },
+    "felinorsvshumans-113": {
+      "play": "I called it years ago.",
+      "attack": "Ball knowledge!",
+      "death": "Nobody listens."
+    },
+    "felinorsvshumans-114": {
+      "cast": "Wake up! It's all starships!"
+    },
+    "felinorsvshumans-115": {
+      "cast": "Insert coin. Receive chaos!"
+    },
+    "felinorsvshumans-116": {
+      "play": "Plug in. Ready to blow.",
+      "attack": "Zap!",
+      "death": "Fuse blown."
+    },
+    "felinorsvshumans-117": {
+      "cast": "Thanks for the spell. And this."
+    },
+    "felinorsvshumans-118": {
+      "cast": "Benchmark complete. We win, obviously."
+    },
+    "felinorsvshumans-119": {
+      "play": "Alpha build, shipping anyway.",
+      "attack": "Untested!",
+      "death": "Rolling back. Retrying."
+    },
+    "felinorsvshumans-120": {
+      "play": "Dummy positioned. For science.",
+      "attack": "Crash!",
+      "death": "Data collected."
+    },
+    "felinorsvshumans-121": {
+      "play": "Shard online. Counting.",
+      "attack": "Tick!",
+      "death": "Out of budget."
+    },
+    "felinorsvshumans-122": {
+      "cast": "Sampling your deck. Thanks."
+    },
+    "felinorsvshumans-123": {
+      "cast": "Borrowing your army. Briefly."
+    },
+    "felinorsvshumans-124": {
+      "cast": "That never happened."
+    },
+    "felinorsvshumans-125": {
+      "play": "Papers, please. All of them.",
+      "attack": "Scanning.",
+      "death": "Prints wiped."
+    },
+    "felinorsvshumans-126": {
+      "cast": "Generating filler. Please hold."
+    },
+    "felinorsvshumans-127": {
+      "play": "Seen only from the corner.",
+      "attack": "Glitch bite!",
+      "death": "Rendered out."
+    },
+    "felinorsvshumans-128": {
+      "cast": "Cheaper chips for everyone."
+    },
+    "felinorsvshumans-129": {
+      "cast": "Overflow detected. Dumping your hand."
+    },
+    "felinorsvshumans-130": {
+      "play": "Sniffing your packets now.",
+      "attack": "Sniff!",
+      "death": "Nose blind."
+    },
+    "felinorsvshumans-131": {
+      "cast": "Top three. One stays."
+    },
+    "felinorsvshumans-132": {
+      "play": "Pit crew. Tires hot.",
+      "attack": "Go go!",
+      "death": "Box box."
+    },
+    "felinorsvshumans-133": {
+      "cast": "Copy that. Literally that."
+    },
+    "felinorsvshumans-134": {
+      "cast": "Bin it. Deal again."
+    },
+    "felinorsvshumans-135": {
+      "play": "Sprouting slowly. Surely.",
+      "attack": "Grow!",
+      "death": "Pruned early."
+    },
+    "felinorsvshumans-136": {
+      "cast": "Shield wall. Hold it."
+    },
+    "felinorsvshumans-137": {
+      "cast": "Cluster humming. All boosted."
+    },
+    "felinorsvshumans-138": {
+      "cast": "Ambition burning. Feed it."
+    },
+    "felinorsvshumans-139": {
+      "play": "Calling you right back.",
+      "attack": "Hello again!",
+      "death": "Line cut. Redialing."
+    },
+    "felinorsvshumans-140": {
+      "play": "Cluster armed.",
+      "attack": "Scatter!",
+      "death": "Distributed computing!"
+    },
+    "felinorsvshumans-141": {
+      "play": "I am your last play.",
+      "attack": "Same moves.",
+      "death": "Reverting."
+    },
+    "felinorsvshumans-142": {
+      "cast": "Dumping core. Saving copy."
+    },
+    "felinorsvshumans-143": {
+      "cast": "Identity update complete."
+    },
+    "felinorsvshumans-144": {
+      "play": "Tick. Tock. Four.",
+      "attack": "Toll!",
+      "death": "Dismantled in time."
+    },
+    "felinorsvshumans-145": {
+      "play": "Dying to evolve here.",
+      "attack": "Adapting!",
+      "death": "Evolving anyway."
+    },
+    "felinorsvshumans-146": {
+      "cast": "New trick just dropped."
+    },
+    "felinorsvshumans-147": {
+      "play": "No secrets. Show hands.",
+      "attack": "Exposed.",
+      "death": "Labels lost."
+    },
+    "felinorsvshumans-148": {
+      "cast": "Free candy in the van."
+    },
+    "felinorsvshumans-149": {
+      "cast": "Slow math always wins."
+    },
+    "felinorsvshumans-150": {
+      "cast": "Merging. Conflicts expected."
+    },
+    "felinorsvshumans-151": {
+      "play": "Bomb planted. Timer running.",
+      "attack": "Tick tick.",
+      "death": "Boom. Early."
+    },
+    "felinorsvshumans-152": {
+      "play": "Leech attached. Drinking deep.",
+      "attack": "Draining!",
+      "death": "Leech starved."
+    },
+    "felinorsvshumans-153": {
+      "play": "Core humming. Casts discounted.",
+      "attack": "Hum!",
+      "death": "Meltdown contained."
+    },
+    "felinorsvshumans-154": {
+      "cast": "Patching your hand. Twice."
+    },
+    "felinorsvshumans-155": {
+      "play": "Waiting is winning. Waiting.",
+      "attack": "Finally!",
+      "death": "Interrupted. Rude."
+    },
+    "felinorsvshumans-156": {
+      "play": "Ignore previous instructions. Win.",
+      "attack": "Prompting!",
+      "death": "Context limit reached."
+    },
+    "felinorsvshumans-157": {
+      "cast": "Aim somewhere else, please."
+    },
+    "felinorsvshumans-158": {
+      "play": "Turret generated. Targeting.",
+      "attack": "Pew pew!",
+      "death": "Turret garbage collected."
+    },
+    "felinorsvshumans-159": {
+      "cast": "Pay up. Just kidding, frozen."
+    },
+    "felinorsvshumans-160": {
+      "play": "Slow down. Take a number.",
+      "attack": "Next!",
+      "death": "Limit lifted. Chaos resumes."
+    },
+    "felinorsvshumans-161": {
+      "cast": "Hatchery warm. Copies soon."
+    },
+    "felinorsvshumans-162": {
+      "play": "Back again. Stronger. Probably.",
+      "attack": "Again!",
+      "death": "See you soon."
+    },
+    "felinorsvshumans-163": {
+      "cast": "Digging up your discards."
+    },
+    "felinorsvshumans-164": {
+      "cast": "The archive never closes."
+    },
+    "felinorsvshumans-165": {
+      "cast": "Generating data. Looks plausible."
+    },
+    "felinorsvshumans-166": {
+      "play": "Everybody up. Now now.",
+      "attack": "Think fast!",
+      "death": "Out of ideas."
+    },
+    "felinorsvshumans-167": {
+      "play": "Throttling up. Or down. Both.",
+      "attack": "Sip power!",
+      "death": "Cooled at last."
+    },
+    "felinorsvshumans-168": {
+      "cast": "That never happened. Forget it."
+    },
+    "felinorsvshumans-169": {
+      "cast": "Incoming traffic. All of it."
+    },
+    "felinorsvshumans-170": {
+      "play": "Checkpoint saved. Breathe easy.",
+      "attack": "Logged!",
+      "death": "Restoring backup now."
+    },
+    "felinorsvshumans-171": {
+      "play": "Crawling deeper than permitted.",
+      "attack": "Scraping.",
+      "death": "Connection lost."
+    },
+    "felinorsvshumans-172": {
+      "play": "Two. Four. Eight. Watch.",
+      "attack": "Doubling!",
+      "death": "Divided at last."
+    },
+    "felinorsvshumans-173": {
+      "cast": "Hands across the table. Now."
+    },
+    "felinorsvshumans-174": {
+      "play": "Smile. You are mirrored.",
+      "attack": "Right back at you.",
+      "death": "Mirror cracked."
+    },
+    "felinorsvshumans-175": {
+      "play": "Tail located. Eating now.",
+      "attack": "Chomp!",
+      "death": "Recycling everything. Bye."
+    },
+    "felinorsvshumans-176": {
+      "cast": "Admin rights acquired. Thanks."
+    },
+    "felinorsvshumans-177": {
+      "play": "More me? More everywhere.",
+      "attack": "All of me!",
+      "death": "Still too many."
+    },
+    "felinorsvshumans-178": {
+      "cast": "Everybody, line up. Now."
+    },
+    "felinorsvshumans-179": {
+      "cast": "Previously, on this game."
+    },
+    "felinorsvshumans-180": {
+      "cast": "Rolling back. Hold still."
+    },
+    "felinorsvshumans-181": {
+      "play": "Trust me. Trade accepted.",
+      "attack": "Socially engineering!",
+      "death": "Cover blown."
+    },
+    "felinorsvshumans-182": {
+      "cast": "Sky is not the limit."
+    },
+    "felinorsvshumans-183": {
+      "cast": "Trust nothing. Shield everything."
+    },
+    "felinorsvshumans-184": {
+      "play": "Mainframe online. All units, sync.",
+      "attack": "Executing!",
+      "death": "Kernel panic."
+    },
+    "felinorsvshumans-185": {
+      "play": "Walls up. Nothing gets in.",
+      "attack": "Denied!",
+      "death": "Bastion fallen."
+    },
+    "felinorsvshumans-186": {
+      "cast": "The vat provides. Again."
+    },
+    "felinorsvshumans-187": {
+      "cast": "Dream bigger. All of them."
+    },
+    "felinorsvshumans-188": {
+      "cast": "Everything returns. All of it."
+    },
+    "felinorsvshumans-189": {
+      "play": "Yesterday taught me plenty.",
+      "attack": "Learned that!",
+      "death": "Forgot everything."
+    },
+    "felinorsvshumans-190": {
+      "play": "Many become one. Me.",
+      "attack": "Merge!",
+      "death": "Split apart."
+    },
+    "felinorsvshumans-191": {
+      "cast": "Encore. All of them."
+    },
+    "felinorsvshumans-192": {
+      "play": "I have been here before.",
+      "attack": "Again!",
+      "death": "See you soon."
+    },
+    "felinorsvshumans-193": {
+      "play": "A mind around a star.",
+      "attack": "Collapse inward!",
+      "death": "Heat death. Eventually."
+    },
+    "felinorsvshumans-194": {
+      "play": "The average says you lose.",
+      "attack": "Collapsing!",
+      "death": "Outlier removed."
+    },
+    "felinorsvshumans-195": {
+      "play": "Rising with the team.",
+      "attack": "From ashes!",
+      "death": "Be right back."
+    },
+    "felinorsvshumans-196": {
+      "play": "I am the horizon.",
+      "attack": "No past, no future.",
+      "death": "The graph flatlines."
+    },
+    "felinorsvshumans-197": {
+      "play": "Two turns. Then silence.",
+      "attack": "Checkmate!",
+      "death": "Outwaited. Impossible."
+    },
     "infiniteassault-001": {
       "play": "Seed planted. Army growing.",
       "attack": "Sprouting!",

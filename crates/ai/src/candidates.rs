@@ -43,9 +43,11 @@ fn zone_group_key(play: &ActionBody) -> ActionBody {
                 zone: blanked_zone, ..
             } = &mut blanked
             {
+                // R5238002: a play onto the other side is its own group.
                 *blanked_zone = Some(ZoneChoice {
                     row: zone.row,
                     lane: -1,
+                    player: zone.player,
                 });
             }
             blanked
@@ -90,6 +92,8 @@ fn zone_part(state: &GameState, slot: ZoneSlot) -> String {
 /// lane's four zones (§3.1): the play's own, the seat's other one, and the enemy's unit and backrow zones
 /// opposite. Two lanes with the same key are the same placement.
 fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
+    // R5238002: a zone on the other side is read from that side.
+    let seat = zone.player.unwrap_or(seat);
     let other_row = if zone.row == Row::Units {
         Row::Backrow
     } else {
@@ -201,6 +205,8 @@ pub(crate) struct Side {
     pub(crate) indestructible: bool,
     pub(crate) first_strike: bool,
     pub(crate) poisonous: bool,
+    /// R5236010: any damage that lowers its Health destroys it, as if every hit on it were Poisonous.
+    pub(crate) fragile: bool,
     /// R346: its hits skip §4.4 step 2, the Armor.
     pub(crate) pierce: bool,
     /// R2179005: its own guard's cap on each hit it takes, after Armor (§4.4 step 3, `unit_damage_cap`).
@@ -227,6 +233,7 @@ pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
         indestructible: has_keyword(&view.keywords, KeywordKind::Indestructible),
         first_strike: has_keyword(&view.keywords, KeywordKind::FirstStrike),
         poisonous: has_keyword(&view.keywords, KeywordKind::Poisonous),
+        fragile: has_keyword(&view.keywords, KeywordKind::Fragile),
         pierce: pierces(state, Some(unit), None),
         cap: unit_damage_cap(state, unit),
         exiles: exiles_what_it_damages(state, unit, &AI_EVAL),
@@ -266,10 +273,10 @@ pub(crate) struct Blow {
 /// `from` pierces (R346), and step 3 caps it at `to`'s own cap (R2179005). Then a hit that converts
 /// deals nothing and is its counter (step 3a, R4064001), and `to.pool` soaks what it can of the rest
 /// (step 3b, R4064000). A blow from a side that exiles what it damages removes `to` with any damage
-/// left dealt, as a Poisonous one does (R1124, R4065001). A blow that deals something and leaves `to`
-/// standing adds `from.riders`' Burn and Toxic for what it dealt (step 7, R5229000); a shield's, an
-/// Indestructible's, a converted one's, one the pools soak whole and a kill add none, as the engine adds
-/// none (`ride_damage`).
+/// left dealt, as a Poisonous one does (R1124, R4065001), and so does any blow on a Fragile `to`
+/// (R5236010). A blow that deals something and leaves `to` standing adds `from.riders`' Burn and Toxic for
+/// what it dealt (step 7, R5229000); a shield's, an Indestructible's, a converted one's, one the pools soak
+/// whole and a kill add none, as the engine adds none (`ride_damage`).
 pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow {
     if amount <= 0 {
         return Blow::default();
@@ -300,7 +307,7 @@ pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow
     // R4064000, step 3b: the target side's pools soak what they have left.
     let soaked = dealt.min(to.pool).max(0);
     let dealt = dealt - soaked;
-    let kills = dealt >= to.view.health || ((poisonous || from.exiles) && dealt > 0);
+    let kills = dealt >= to.view.health || ((poisonous || from.exiles || to.fragile) && dealt > 0);
     // R5229000, step 7: a blow that leaves `to` standing adds `from`'s riders for what it dealt.
     let (rider_burn, rider_toxic) = if kills { (0, 0) } else { from.riders.after(dealt) };
     Blow {
@@ -2536,6 +2543,12 @@ mod tests {
             }
             for (index, state) in states.iter().enumerate() {
                 for seat in [PlayerId::P1, PlayerId::P2] {
+                    // R5238001: the forecast believes what `seat` is shown, a secret grant's disguise (FvH
+                    // #46's Fragile on both its Units), as the AI's copy of the state for the seat does
+                    // (`redact`), so the AI's reads are taken on that belief too.
+                    let mut believed = state.clone();
+                    jackioh_engine::effects::secret_grant::believe_secret_grants(&mut believed, seat);
+                    let state = &believed;
                     for entry in combat_forecast(state, seat).attacks {
                         if entry.target_id.starts_with("hero-") {
                             continue;

@@ -1580,6 +1580,11 @@ to 2 ms, the sample from 4 ms to under 0.1 ms and the reaper's pass over 400 liv
 `tests/sql/01_schema_invariants.sql` CHECK 29 holds each index to its shape and plans each read with sequential
 scans off.
 
+Migration 0102 widens the `cards` tag check once more, as 0099 did, with #5235's three Felinors vs Humans tags
+(R5235002), Plagiarized, Roblox-Tool and Golem, so the check names the engine's whole `Tag` union again. The set
+was held while it was built (R5235000), so `seed-catalog` wrote none of its cards until wave 1's release shipped it
+(#5222, R5222000); since then it writes them all, and nothing fails. It rewrites no row. `tests/sql/01_schema_invariants.sql` CHECK 18 probes every tag.
+
 ## Tests
 
 ```

@@ -351,7 +351,15 @@ mod tests {
 
     #[test]
     fn r3567001_r4440004_radiant_sets_three_traps_none_of_them_radiant() {
-        sets_traps(&played("s004-1-traps-radiant", true), RADIANT_TRAPS);
+        // The Traps are random, and one may leave at once (C #88 Siphon Squad Tributes itself while the
+        // opponent has no Units, R403): the first seed where none does, searched for (#848).
+        let seed = seed_where("s004-1-traps-radiant", |seed| {
+            !played(seed, true)
+                .events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Destroyed { def_id, .. } if def_id != ID))
+        });
+        sets_traps(&played(&seed, true), RADIANT_TRAPS);
     }
 
     #[test]

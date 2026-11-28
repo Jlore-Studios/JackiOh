@@ -25,6 +25,7 @@ import { TERM_HOVER_DELAY_MS } from "../cards/constants.ts";
 import { isFullArtCard } from "../cards/fullArt.ts";
 import { defaultLookOf, isFullBleed } from "../cards/versions.ts";
 import { KEYWORD_VISUALS } from "../cards/keywordVisuals.ts";
+import { wearsCatEars } from "../cards/CatEars.tsx";
 import { INSPECT_LOC } from "../cards/inspect/testids.ts";
 import Board from "./Board.tsx";
 import Card, * as CardModule from "./Card.tsx";
@@ -745,6 +746,37 @@ describe("B18: Card picks its form from its props", () => {
 /* B19 */
 
 describe("B19: what a face-up root adds", () => {
+  it("R5264500 a Felinor tag the view gives a card its definition does not print wears cat ears, on the board and in a hand", () => {
+    const base = fullBoardView();
+    const gary = yourUnit(base, 1);
+    const curvature = must(handOf(base)[3], "Professor Curvature");
+    const tagsOf = (defId: string) => must(CATALOG[defId], defId).tags;
+    expect(tagsOf(gary.defId)).not.toContain("Felinor");
+    expect(tagsOf(curvature.defId)).not.toContain("Felinor");
+    const view: PlayerView = {
+      ...base,
+      you: {
+        ...base.you,
+        units: base.you.units.map((u, i) => (i === 0 && u !== null ? { ...u, tags: [...tagsOf(u.defId), "Felinor"] } : u)),
+        hand: handOf(base).map((c, i) => (i === 3 ? { ...c, tags: [...tagsOf(c.defId), "Felinor"] } : c)),
+      },
+    };
+    renderBoard(view);
+    const ears = inside(cardRoot(gary.instanceId), ".cf-cat-ears");
+    expect(ears.getAttribute("aria-hidden")).toBe("true");
+    expect(ears.getAttribute("data-granted-tag")).toBe("Felinor");
+    expect(ears.querySelectorAll("path").length).toBeGreaterThan(0);
+    expect(ears.textContent).toBe("");
+    expect(handRoot(curvature.instanceId).querySelector(".cf-cat-ears")).not.toBeNull();
+    // No other card wears them: none has a granted tag.
+    expect(document.querySelectorAll(".cf-cat-ears")).toHaveLength(2);
+    // A Felinor the definition prints is no grant, and with no definition to read there are none.
+    expect(wearsCatEars(["Felinor"], ["Felinor"])).toBe(false);
+    expect(wearsCatEars(undefined, ["Human"])).toBe(false);
+    expect(wearsCatEars(["Human", "Felinor"], undefined)).toBe(false);
+    expect(wearsCatEars(["Human", "Felinor"], ["Human"])).toBe(true);
+  });
+
   it("B19 cf-host and cf-host--<form> on every face-up root", () => {
     const base = fullBoardView();
     const view: PlayerView = { ...base, you: { ...base.you, resolving: [card({ defId: "core-017" })] } };

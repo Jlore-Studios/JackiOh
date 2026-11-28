@@ -226,13 +226,15 @@ mod tests {
                     sets.insert(def_of(Some(s.state()), &text(&event, "defId")).set.to_string());
                 }
             }
-            // Every shipped set (Meditative+ #1187, Stinkyscape #1884, Training Grounds #2204, Stinkyscape+ #3573).
+            // Every shipped set (Meditative+ #1187, Stinkyscape #1884, Training Grounds #2204, Stinkyscape+ #3573,
+            // Felinors vs Humans #5222).
             assert_eq!(
                 sets.into_iter().collect::<Vec<_>>(),
                 vec![
                     "Classic",
                     "Classic+",
                     "Core",
+                    "Felinors vs Humans",
                     "Meditative",
                     "Meditative+",
                     "Stinkyscape",

@@ -130,13 +130,14 @@ mod tests {
                 .collect();
             sets.sort();
             // Meditative+ (#1187) by M+ #1, #24, #26; Stinkyscape (#1884); Training Grounds (#2204) by
-            // #37, #38, #39, #40; Stinkyscape+ (#3573).
+            // #37, #38, #39, #40; Stinkyscape+ (#3573); Felinors vs Humans (#5222).
             assert_eq!(
                 sets,
                 vec![
                     "Classic".to_string(),
                     "Classic+".to_string(),
                     "Core".to_string(),
+                    "Felinors vs Humans".to_string(),
                     "Meditative".to_string(),
                     "Meditative+".to_string(),
                     "Stinkyscape".to_string(),

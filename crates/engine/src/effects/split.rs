@@ -20,13 +20,15 @@ fn standing(state: &GameState, unit: &CardInstance) -> bool {
         && unit.marked_exiled != Some(true)
 }
 
-/// `damageSplit`'s `among`: every enemy (the hero included), or the enemy Units only.
+/// `damageSplit`'s `among`: every enemy (the hero included), the enemy Units only, or (R5239003, FvH
+/// #104) every Unit standing on either side and no hero.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[serde(rename_all = "camelCase")]
 pub enum SplitAmong {
     Enemies,
     EnemyUnits,
+    Units,
 }
 
 /// `damageSplit`'s arguments: `among` defaults to "enemies", `perHit` to 1.
@@ -98,12 +100,19 @@ pub fn damage_random_enemies(args: DamageRandomEnemiesArgs) -> Effect {
 /// B5 E37: `amount` damage dealt as hits of `per_hit` (an Upgrade may make Classic+ #3's 2), each its
 /// own §4.4 instance on an enemy drawn from the match rng among those still `standing` as that hit is
 /// dealt, since the state check does not run between one effect's hits (R59); the hero is left out for
-/// "an enemy Unit". A Spell's hits pass Spell-immune units by and take Spell Damage (E6).
+/// "an enemy Unit". A Spell's hits pass Spell-immune units by and take Spell Damage (E6). R5239003:
+/// `units` draws each hit among the standing Units of both sides, R68's walk order, and never a hero;
+/// with none standing the rest of the damage is lost.
 pub fn damage_split(args: DamageSplitArgs) -> Effect {
     Effect::new("damageSplit", move |ctx| {
         let per_hit = args.per_hit.unwrap_or(1).max(1);
         let enemy = opponent_of(ctx.controller);
-        let scope: BoardScope = json_as(json!({ "side": "enemy" }));
+        let both_sides = args.among == Some(SplitAmong::Units);
+        let scope: BoardScope = if both_sides {
+            json_as(json!({ "side": "any" }))
+        } else {
+            json_as(json!({ "side": "enemy" }))
+        };
         let mut left = args.amount.max(0);
         while left > 0 {
             if ctx.state.result.is_some() {
@@ -119,7 +128,7 @@ pub fn damage_split(args: DamageSplitArgs) -> Effect {
                     pool.push(DamageTarget::Unit { instance });
                 }
             }
-            if args.among != Some(SplitAmong::EnemyUnits) {
+            if args.among.is_none() || args.among == Some(SplitAmong::Enemies) {
                 pool.push(DamageTarget::Hero { player: enemy });
             }
             let Some(target) = ctx.sink.rng.pick(&pool).cloned() else {

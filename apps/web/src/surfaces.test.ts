@@ -243,7 +243,8 @@ const PILL_RULES: string[] = [
   "cards/inspect/inspect.css: .inspect-face-column .shortcut-hint",
   "cards/inspect/inspect.css: .inspect-list-badge",
   "cards/inspect/list-play.css: .inspect-list-play",
-  'cards/keywords.css: .cf .kw-fx[data-keyword-fx="Lucky"]::after',
+  // R5264500: Unlucky's X and Durability's uses left share Lucky's badge.
+  'cards/keywords.css: .cf .kw-fx[data-keyword-fx="Lucky"]::after, .cf .kw-fx[data-keyword-fx="Unlucky"]::after, .cf .kw-fx[data-keyword-fx="Durability"]::after',
   "cards/tallies.css: .tally-badge",
   "collection/collection.css: .tavern.app-shell .collection-card__new",
   "daily/daily.css: .daily-badge",

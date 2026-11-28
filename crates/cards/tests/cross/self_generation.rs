@@ -83,6 +83,10 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
         "infiniteassault-207",
         "Recursive Self-Improvement shuffles a copy of this into your deck (rule 4, R4593004)",
     ),
+    (
+        "felinorsvshumans-044",
+        "Felinor Converter transforms an ally into, or summons, a copy of this (rule 4: copies are not generation)",
+    ),
 ];
 
 const SEEDS: &[&str] = &["self-gen-a", "self-gen-b", "self-gen-c", "self-gen-d"];

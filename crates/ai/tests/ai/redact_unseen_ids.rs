@@ -23,20 +23,32 @@ const SEED: &str = "audit-fuzz:smoothie:9";
 /// The seat that decides: the Smoothie is the other seat's.
 const SEAT: PlayerId = PlayerId::P2;
 
-/// A deck of `handicap`'s size dealt from every card (no shadow ban, no gated set), as a player's
-/// random deck is.
-fn deck(seed: &str, seat: PlayerId, handicap: &Handicap, lean: Option<SetName>) -> Vec<String> {
+/// A deck of `handicap`'s size dealt from every card (no shadow ban, no gated set but `gated`), as a
+/// player's random deck is.
+fn deck_gated(
+    seed: &str,
+    seat: PlayerId,
+    handicap: &Handicap,
+    lean: Option<SetName>,
+    gated: Vec<SetName>,
+) -> Vec<String> {
     build_ai_deck(
         &mut Rng::new(&format!("{seed}:deck:{}", seat.as_str()), 0),
         handicap.deck_size,
         &AiDeckOptions {
             mana_cap: Some(handicap.mana_cap),
             banned: Some(Vec::new()),
-            gated_sets: Some(Vec::new()),
+            gated_sets: Some(gated),
             lean_set: lean,
             ..AiDeckOptions::default()
         },
     )
+}
+
+/// A deck of `handicap`'s size dealt from every card (no shadow ban, no gated set), as a player's
+/// random deck is.
+fn deck(seed: &str, seat: PlayerId, handicap: &Handicap, lean: Option<SetName>) -> Vec<String> {
+    deck_gated(seed, seat, handicap, lean, Vec::new())
 }
 
 fn ids_of(cards: &[CardInstance]) -> Vec<String> {
@@ -71,9 +83,12 @@ fn to_p2s_first_turn(start: &GameState) -> GameState {
 fn two_worlds() -> (GameState, GameState) {
     jackioh_cards::register_all();
     let easy = AI_DIFFICULTY.easy;
+    // The scene was dealt before the Felinors vs Humans release (#5222, R5222000) re-dealt it, and a gate
+    // deals what the draw dealt before it (R1390).
+    let gated = || vec![SetName::FelinorsVsHumans];
     let decks = (
-        deck(SEED, PlayerId::P1, &easy, None),
-        deck(SEED, PlayerId::P2, &easy, None),
+        deck_gated(SEED, PlayerId::P1, &easy, None, gated()),
+        deck_gated(SEED, PlayerId::P2, &easy, None, gated()),
     );
     assert!(
         !decks.0.iter().chain(decks.1.iter()).any(|id| id == SMOOTHIE),

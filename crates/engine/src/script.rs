@@ -510,6 +510,10 @@ pub struct StaticFlags {
     /// face: "Summon this for your opponent").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summon_for_opponent: Option<bool>,
+    /// R5238002: its play may name an open zone of the opponent's side of its row (`ZoneChoice.player`),
+    /// where it lands in the opponent's control, as well as its own side's (FvH #42's "either side").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plays_on_either_side: Option<bool>,
     /// Anti-oneshot Armor: caps each hit on this player's hero at ANTI_ONESHOT_CAP (§4.4 step 3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anti_oneshot: Option<bool>,
@@ -582,6 +586,22 @@ pub struct StaticFlags {
     /// can neither pick it nor reach it through scopes; combat bonuses against defender tags do not apply.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub immune_to_tribal_hate: Option<bool>,
+    /// R5237009 (FvH #88 Cattail, "a Felinor only when beneficial"): the card's tags that harmful effects
+    /// pass it by on: a harmful filter whose `tags` name one of these can neither pick it nor reach it
+    /// (`restrictions::tribal_hate_cannot_reach`), in every zone; helpful effects, counts and pools still
+    /// read the tag.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub harm_ignores_tags: Option<Vec<Tag>>,
+    /// R5237010 (FvH #100.1 "Immune to Humans", #100.2 "Immune to Felinors"): while this card acts on the
+    /// field, no card whose tags (`query::tags_of`) hold this one affects it, targets it or damages it
+    /// (`restrictions::tag_cannot_reach`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub immune_to_tag: Option<Tag>,
+    /// R5237011, R5237012 (FvH #92): "Aura: every card's Attack, Health and own cost counts as its
+    /// number of binary digits" while this card acts on the field (`numbers::log2_utility`), on every
+    /// card (`All`) or only where it helps its controller (`Helpful`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub log2_utility: Option<Log2Utility>,
     /// B5 E35: "This can't go Berserk" (Classic+ #19.5's Radiant face).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub never_berserk: Option<bool>,
@@ -839,6 +859,16 @@ pub struct StaticFlags {
     /// (`afflictions::ride_damage`). Only ever `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub damage_also_burns: Option<bool>,
+    /// R5239007 (FvH #112.12 Debuff Module's Radiant face): "Damage dealt also applies Toxic": each hit
+    /// this card deals lands as damage, and then, if its target survived it, adds Toxic equal to what the
+    /// hit dealt, beside `toxic_on_damage`'s N (`afflictions::ride_damage`). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub damage_also_toxic: Option<bool>,
+    /// R5239006 (FvH #112.1 Recursion Module's base face): "Flashback (without its Cry)": a play of this
+    /// card that spends its Flashback runs no Cry (§10.5 step 5); any other play runs it. Only ever
+    /// `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flashback_without_cry: Option<bool>,
     // Stinkyscape+ E6 (issue #3550)
     /// R3550001: "Can attack N times per turn": how many attacks the unit may declare a turn, read
     /// through the card's declared number `attacks` where it declares one.
@@ -876,6 +906,22 @@ pub struct StaticFlags {
     /// casts resolves N more times, read through the card's declared number `spellEcho` (R386).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spell_echo_aura: Option<SpellEchoAura>,
+    // Felinors vs Humans E1 (issue #5236)
+    /// R5236030: Endless Evolve, an Evolve that may happen any number of times: the card evolves again
+    /// each time its condition is met (`evolution::can_evolve`), one evolution each with the evolution
+    /// multiplier as ever (R3536003). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub endless_evolve: Option<bool>,
+}
+
+string_union! {
+    /// R5237011, R5237012: `StaticFlags.log2_utility`'s reach. `All`: every card's Attack, max Health and
+    /// own cost (never X) is its bit length. `Helpful`: only its controller's costs and the enemy's Attack
+    /// and Health. Two do not stack: a number is transformed once however many act.
+    pub enum Log2Utility {
+        All = "all",
+        Helpful = "helpful",
+    }
 }
 
 /// R1849004 (Stinkyscape #5 Masochism Unmasked): "Redirect all damage you take on your turn to your
@@ -1287,6 +1333,10 @@ pub struct Script {
     /// R3542000 (S+ #87 Frontier Flora): a stat line this card's own text gives it while this holds
     /// ("3X/3X stats for each Plague Counter": while it carries one), read by `layers::has_stat_line`.
     pub stat_line_when: Option<HasHook>,
+    /// R5237004 (FvH #37 Old Grum, "stays summoning-sick until it has come back by Reborn"): while this
+    /// holds the Unit is summoning sick whatever turn it entered (`combat::is_sick`), so it cannot
+    /// declare an attack unless Rush or Charge lifts the sickness, as on its first turn.
+    pub stays_sick: Option<HasHook>,
     /// R1849008 (Stinkyscape #14 Arm of the Jempire): "When one of your Units is attacked". Run for each
     /// card acting on the defender's side once a declared attack on one of its Units has come through
     /// §4.2 step 4's trap window, before its combat, in R68's order; never for an attack on the hero or a

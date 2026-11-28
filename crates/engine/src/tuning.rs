@@ -13,7 +13,7 @@
 
 use indexmap::IndexMap;
 
-use crate::config::TUNE_MIN_AMOUNT;
+use crate::config::{TUNE_MIN_AMOUNT, UNLUCKY_TUNED_FLOOR};
 use crate::state::CardInstance;
 use crate::wire::{Keyword, KeywordKind, Tuning};
 
@@ -24,13 +24,43 @@ pub const TUNED_FLOOR: i32 = TUNE_MIN_AMOUNT;
 pub const X_KEY: &str = "X";
 
 /// B3.4 rule 3: the numbered keywords that are `Keyword`s, which the layers tune (`tuned_keywords`).
-/// Brittle is also a count once started (`brittle.rs`); Spell Damage is E6's.
+/// Brittle is also a count once started (`brittle.rs`); Spell Damage is E6's; R5236005 Durability's X
+/// and R5236021 Unlucky's, which alone is tuned from 0 (`unlucky_of`).
 pub const LAYERED_NUMBERED_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::Armor,
     KeywordKind::Lucky,
     KeywordKind::Brittle,
     KeywordKind::SpellDamage,
+    KeywordKind::Durability,
+    KeywordKind::Unlucky,
 ];
+
+/// R5236020, R5236021: the kinds whose entries sum across their sources rather than count once (§6.1,
+/// §10.4): Armor and Lucky, and Unlucky, which a Lucky offsets.
+pub fn sums_across_sources(kind: KeywordKind) -> bool {
+    matches!(
+        kind,
+        KeywordKind::Armor | KeywordKind::Lucky | KeywordKind::Unlucky
+    )
+}
+
+/// R5236021: a card's Unlucky now: what it prints (or KY's Constant set) moved by its tuning steps, where
+/// a Nerf's step adds one to a card printing none and a Buff's takes one off, never below
+/// `UNLUCKY_TUNED_FLOOR` (0: no Unlucky).
+pub fn unlucky_of(instance: &CardInstance, printed: i32) -> i32 {
+    let key = KeywordKind::Unlucky.as_str();
+    let tuning = instance.tuning.as_ref();
+    let set = tuning
+        .and_then(|t| t.set.as_ref())
+        .and_then(|set| set.get(key))
+        .copied();
+    let step = tuning
+        .and_then(|t| t.x.as_ref())
+        .and_then(|x| x.get(key))
+        .copied()
+        .unwrap_or(0);
+    UNLUCKY_TUNED_FLOOR.max(set.unwrap_or(printed) + step)
+}
 
 /// B3.4, R386: the value a card's numbered keyword or X has now: its printed value (or the value KY's
 /// Constant set, `tuning.set`) moved by its tuning steps for `key`, never below `TUNED_FLOOR`. A number
@@ -91,6 +121,18 @@ pub fn tuned_keywords(keywords: &[Keyword], instance: &CardInstance) -> Vec<Keyw
         if set.is_none() && step == 0 {
             continue;
         }
+        // R5236021: Unlucky is tuned from 0 — a Nerf's step gives a card printing none Unlucky 1 — and
+        // a Buff's step that brings it to 0 takes it off.
+        if kind == KeywordKind::Unlucky {
+            let value = unlucky_of(instance, numbered_sum(&out, kind).unwrap_or(0));
+            let first = out.iter().position(|keyword| keyword.kind() == kind);
+            out.retain(|keyword| keyword.kind() != kind);
+            if value > 0 {
+                let at = first.unwrap_or(out.len()).min(out.len());
+                out.insert(at, Keyword::Unlucky { n: value });
+            }
+            continue;
+        }
         let Some(printed) = numbered_sum(&out, kind) else {
             continue;
         };
@@ -108,8 +150,7 @@ pub fn tuned_keywords(keywords: &[Keyword], instance: &CardInstance) -> Vec<Keyw
     }
 
     for keyword in tuning.add_keywords.iter().flatten() {
-        let stacks = matches!(keyword.kind(), KeywordKind::Armor | KeywordKind::Lucky);
-        if stacks || !out.iter().any(|held| held.kind() == keyword.kind()) {
+        if sums_across_sources(keyword.kind()) || !out.iter().any(|held| held.kind() == keyword.kind()) {
             out.push(keyword.clone());
         }
     }
@@ -256,13 +297,13 @@ pub fn sum_tunings(tunings: &[Option<Tuning>]) -> Option<Tuning> {
         out.attack = Some(out.attack.unwrap_or(0) + tuning.attack.unwrap_or(0));
         out.health = Some(out.health.unwrap_or(0) + tuning.health.unwrap_or(0));
         for keyword in tuning.add_keywords.iter().flatten() {
-            let stacks = matches!(keyword.kind(), KeywordKind::Armor | KeywordKind::Lucky);
+            let stacking = sums_across_sources(keyword.kind());
             let held = out
                 .add_keywords
                 .iter()
                 .flatten()
                 .any(|held| held.kind() == keyword.kind());
-            if stacks || !held {
+            if stacking || !held {
                 out.add_keywords
                     .get_or_insert_with(Vec::new)
                     .push(keyword.clone());

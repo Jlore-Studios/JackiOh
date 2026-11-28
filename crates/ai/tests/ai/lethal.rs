@@ -167,6 +167,7 @@ mod the_lethal_solvers_walks {
                 zone: Some(ZoneChoice {
                     row: Row::Units,
                     lane: 4,
+                    player: None,
                 }),
                 x: None,
                 embiggen: None,

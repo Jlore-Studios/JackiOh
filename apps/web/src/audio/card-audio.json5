@@ -4126,6 +4126,985 @@
       attack: { voice: "robot" },
       death: { voice: "robot" },
     },
+    "felinorsvshumans-001": { // NGMI Joe
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "felinorsvshumans-002": { // M.O.T.H.E.R
+      play: { voice: "posh" },
+      attack: { voice: "posh" },
+      death: { voice: "posh" },
+    },
+    "felinorsvshumans-003": { // KY's Pocket Galaxy
+      cast: { voice: "prof", effect: "manaRelease" },
+    },
+    "felinorsvshumans-004": { // KY's Unification Mandate
+      cast: { voice: "prof", effect: "buffRelease" },
+    },
+    "felinorsvshumans-005": { // Reanimator
+      play: { voice: "sapi-villain" },
+      attack: { voice: "sapi-villain" },
+      death: { voice: "sapi-villain" },
+    },
+    "felinorsvshumans-006": { // Overpaid Intern
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "felinorsvshumans-007": { // Whimsy!
+      cast: { voice: "goof", effect: "buffRelease" },
+    },
+    "felinorsvshumans-008": { // Joy!
+      cast: { voice: "bubbles", effect: "buffRelease" },
+    },
+    "felinorsvshumans-009": { // Whimsy and Joy!
+      cast: { voice: "wobble", effect: "drawRelease" },
+    },
+    "felinorsvshumans-010": { // Shadow Judge
+      play: { voice: "whisper" },
+      attack: { voice: "whisper" },
+      death: { voice: "whisper" },
+    },
+    "felinorsvshumans-011": { // Ban Hammer
+      play: { voice: "brute" },
+      attack: { voice: "brute", effect: "heavySwing" },
+      death: { voice: "brute" },
+    },
+    "felinorsvshumans-012": { // Mr. Big
+      play: { voice: "brute" },
+      attack: { voice: "brute" },
+      death: { voice: "brute" },
+    },
+    "felinorsvshumans-013": { // Mr. Small
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "felinorsvshumans-014": { // Direwolf
+      play: { voice: "sapi-giant" },
+      attack: { voice: "sapi-giant" },
+      death: { voice: "sapi-giant" },
+    },
+    "felinorsvshumans-015": { // Unstable Magma-Cell
+      play: { voice: "goof" },
+      attack: { voice: "goof" },
+      death: { voice: "goof", effect: "explosion" },
+    },
+    "felinorsvshumans-016": { // Travertine
+      cast: { voice: "narrator", effect: "drawRelease" },
+    },
+    "felinorsvshumans-016-1": { // Travertine Stack
+      cast: { voice: "narrator", effect: "manaRelease" },
+    },
+    "felinorsvshumans-016-2": { // Travertine Golem
+      play: { voice: "brute-golem", effect: "stoneThud" },
+      attack: { voice: "brute-golem" },
+      death: { voice: "brute-golem", effect: "crumble" },
+    },
+    "felinorsvshumans-017": { // Jlockeed Shredder-14
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-018": { // Villa-D Moneybags
+      play: { voice: "hustler" },
+      attack: { voice: "hustler" },
+      death: { voice: "hustler" },
+    },
+    "felinorsvshumans-019": { // Trowel
+      cast: { voice: "digger", effect: "summonRelease" },
+    },
+    "felinorsvshumans-019-1": { // Wall of Bricks
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "felinorsvshumans-020": { // Bomb
+      cast: { voice: "goof", effect: "summonRelease" },
+    },
+    "felinorsvshumans-020-1": { // Ticking Time Bomb
+      play: { voice: "goof" },
+      attack: { voice: "goof" },
+      death: { voice: "goof", effect: "explosion" },
+    },
+    "felinorsvshumans-021": { // Scandalous Top Hat
+      cast: { voice: "posh", effect: "buffRelease" },
+    },
+    "felinorsvshumans-022": { // The Mad Hatter
+      play: { voice: "sapi-trickster" },
+      attack: { voice: "sapi-trickster" },
+      death: { voice: "sapi-trickster" },
+    },
+    "felinorsvshumans-023": { // Book of Excavation
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-024": { // Book of Starflight
+      cast: { voice: "sapi-librarian", effect: "summonRelease" },
+    },
+    "felinorsvshumans-025": { // Book of Jade
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-026": { // Book of Entropy
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-027": { // Book of Monstruo
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-028": { // Book of Design Principles
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-029": { // Book of Legends
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-030": { // Big Book
+      cast: { voice: "storyteller" },
+    },
+    "felinorsvshumans-031": { // Desperate Plea
+      cast: { voice: "crone", effect: "healRelease" },
+    },
+    "felinorsvshumans-032": { // Refreshable Shop
+      cast: { voice: "hustler", effect: "morphRelease" },
+    },
+    "felinorsvshumans-033": { // Unstoppable Force
+      play: { voice: "sapi-giant" },
+      attack: { voice: "sapi-giant", effect: "heavyStomp" },
+      death: { voice: "sapi-giant" },
+    },
+    "felinorsvshumans-034": { // Half-True Craft a Card
+      cast: { voice: "sapi-wizard", effect: "shuffleRelease" },
+    },
+    "felinorsvshumans-035": { // Looksmaxxer
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "felinorsvshumans-036": { // Heartrock
+      cast: { voice: "sapi-mystic", effect: "summonRelease" },
+    },
+    "felinorsvshumans-037": { // Old Grum
+      play: { voice: "elder" },
+      attack: { voice: "elder" },
+      death: { voice: "elder" },
+    },
+    "felinorsvshumans-038": { // Short Term Loan
+      cast: { voice: "sapi-bureaucrat", effect: "manaRelease" },
+    },
+    "felinorsvshumans-039": { // Whisperer of KY
+      play: { voice: "whisper" },
+      attack: { voice: "whisper" },
+      death: { voice: "whisper" },
+    },
+    "felinorsvshumans-040": { // Travel Master Drungar
+      play: { voice: "hero" },
+      attack: { voice: "hero" },
+      death: { voice: "hero" },
+    },
+    "felinorsvshumans-041": { // Icecream Vender
+      play: { voice: "sapi-diner" },
+      attack: { voice: "sapi-diner" },
+      death: { voice: "sapi-diner" },
+    },
+    "felinorsvshumans-042": { // Big Billy
+      play: { voice: "brute" },
+      attack: { voice: "brute", effect: "heavyStomp" },
+      death: { voice: "brute" },
+    },
+    "felinorsvshumans-043": { // Dragons Bain
+      play: { voice: "sapi-villain" },
+      attack: { voice: "sapi-villain" },
+      death: { voice: "sapi-villain" },
+    },
+    "felinorsvshumans-044": { // Felinor Converter
+      play: { voice: "cat" },
+      attack: { voice: "cat", effect: "catChirp" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-045": { // Subject 9
+      play: { voice: "sapi-ghost" },
+      attack: { voice: "sapi-ghost" },
+      death: { voice: "sapi-ghost" },
+    },
+    "felinorsvshumans-046": { // Manifestor
+      play: { voice: "sapi-mystic" },
+      attack: { voice: "sapi-mystic" },
+      death: { voice: "sapi-mystic" },
+    },
+    "felinorsvshumans-047": { // Blazing Battlemage
+      play: { voice: "sapi-wizard" },
+      attack: { voice: "sapi-wizard", effect: "fireWhoosh" },
+      death: { voice: "sapi-wizard" },
+    },
+    "felinorsvshumans-048": { // Toxic Timmy
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "felinorsvshumans-049": { // Candle Master
+      play: { voice: "storyteller" },
+      attack: { voice: "storyteller" },
+      death: { voice: "storyteller" },
+    },
+    "felinorsvshumans-049-1": { // Candle Shot
+      cast: { voice: "storyteller", effect: "fireRelease" },
+    },
+    "felinorsvshumans-050": { // Field Kit
+      cast: { voice: "sapi-hero", effect: "physicalRelease" },
+    },
+    "felinorsvshumans-051": { // Scavengers Ingenuity
+      cast: { voice: "digger", effect: "drawRelease" },
+    },
+    "felinorsvshumans-052": { // Ace Hunter Jay
+      play: { voice: "hero" },
+      attack: { voice: "hero" },
+      death: { voice: "hero" },
+    },
+    "felinorsvshumans-053": { // Jay Sharp Shooter
+      play: { voice: "sapi-hero" },
+      attack: { voice: "sapi-hero", effect: "sharpCrack" },
+      death: { voice: "sapi-hero" },
+    },
+    "felinorsvshumans-054": { // Intrepid initiate
+      play: { voice: "sapi-heroine" },
+      attack: { voice: "sapi-heroine" },
+      death: { voice: "sapi-heroine" },
+    },
+    "felinorsvshumans-055": { // Adorable Infestation
+      cast: { voice: "sapi-cat", effect: "summonRelease" },
+    },
+    "felinorsvshumans-056": { // Pressure Plate
+      cast: { voice: "sapi-trickster", effect: "shatterRelease" },
+    },
+    "felinorsvshumans-057": { // Otherworldly Hunting
+      cast: { voice: "narrator", effect: "drawRelease" },
+    },
+    "felinorsvshumans-057-1": { // Kill Command
+      cast: { voice: "hero", effect: "physicalRelease" },
+    },
+    "felinorsvshumans-057-2": { // Tackling
+      cast: { voice: "brute", effect: "drawRelease" },
+    },
+    "felinorsvshumans-057-3": { // Felinor Companion
+      cast: { voice: "cat", effect: "summonRelease" },
+    },
+    "felinorsvshumans-057-4": { // Wide Felinor
+      play: { voice: "cat" },
+      attack: { voice: "cat", effect: "bigCatPounce" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-057-5": { // Narrow Felinor
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat", effect: "zip" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-057-6": { // Square Felinor
+      play: { voice: "cat" },
+      attack: { voice: "cat", effect: "catChirp" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-058": { // Call of the Shaped Felinors
+      cast: { voice: "sapi-cat", effect: "summonRelease" },
+    },
+    "felinorsvshumans-059": { // Voracious Reader
+      play: { voice: "sapi-librarian" },
+      attack: { voice: "sapi-librarian" },
+      death: { voice: "sapi-librarian" },
+      endOfTurn: { voice: "sapi-librarian" },
+    },
+    "felinorsvshumans-060": { // Toolmaster Luna
+      play: { voice: "diva" },
+      attack: { voice: "diva" },
+      death: { voice: "diva" },
+    },
+    "felinorsvshumans-060-1": { // Tools of Creation
+      cast: { voice: "diva", effect: "drawRelease" },
+    },
+    "felinorsvshumans-060-2": { // Tools of Cremation
+      cast: { voice: "diva", effect: "fireWhoosh" },
+    },
+    "felinorsvshumans-061": { // Devolve
+      cast: { voice: "sapi-mystic", effect: "morphRelease" },
+    },
+    "felinorsvshumans-062": { // Tubbs
+      play: { voice: "cat" },
+      attack: { voice: "cat", effect: "bigCatPounce" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-063": { // S-Tier Speciesist
+      play: { voice: "snob" },
+      attack: { voice: "snob" },
+      death: { voice: "snob" },
+    },
+    "felinorsvshumans-064": { // Fiender Artist
+      play: { voice: "posh" },
+      attack: { voice: "posh" },
+      death: { voice: "posh" },
+    },
+    "felinorsvshumans-065": { // Felinor Forager
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-066": { // Fuzzyfruit
+      cast: { voice: "sapi-fruit", effect: "squelch" },
+    },
+    "felinorsvshumans-067": { // Big Game Hunter
+      play: { voice: "guard" },
+      attack: { voice: "guard", effect: "sharpCrack" },
+      death: { voice: "guard" },
+    },
+    "felinorsvshumans-068": { // Closeted Commentator
+      play: { voice: "announcer" },
+      attack: { voice: "announcer" },
+      death: { voice: "announcer" },
+    },
+    "felinorsvshumans-069": { // Cosplayer
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "felinorsvshumans-070": { // Felinor Commander
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat", effect: "bigCatPounce" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-071": { // Felinor Reanimator
+      play: { voice: "cat" },
+      attack: { voice: "cat" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-072": { // Otherworldly Naturalism
+      cast: { voice: "narrator", effect: "drawRelease" },
+    },
+    "felinorsvshumans-072-1": { // Wild Growth
+      cast: { voice: "storyteller", effect: "manaRelease" },
+    },
+    "felinorsvshumans-072-2": { // Swipe
+      cast: { voice: "brute", effect: "physicalRelease" },
+    },
+    "felinorsvshumans-072-3": { // Savage Roar
+      cast: { voice: "brute", effect: "buffRelease" },
+    },
+    "felinorsvshumans-073": { // Bloodforged Crusader
+      play: { voice: "sapi-hero" },
+      attack: { voice: "sapi-hero", effect: "bladeSwish" },
+      death: { voice: "sapi-hero" },
+    },
+    "felinorsvshumans-074": { // Yile, Acceleration Supremist
+      play: { voice: "prof" },
+      attack: { voice: "prof" },
+      death: { voice: "prof" },
+    },
+    "felinorsvshumans-074-1": { // Yile, Acceleration Supremist Prime
+      play: { voice: "prof" },
+      attack: { voice: "prof" },
+      death: { voice: "prof" },
+    },
+    "felinorsvshumans-075": { // Illinois Jones
+      play: { voice: "hero" },
+      attack: { voice: "hero" },
+      death: { voice: "hero" },
+    },
+    "felinorsvshumans-076": { // Desecrator
+      play: { voice: "sapi-rasp" },
+      attack: { voice: "sapi-rasp" },
+      death: { voice: "sapi-rasp" },
+    },
+    "felinorsvshumans-077": { // Anaphylaxis
+      cast: { voice: "crone", effect: "shatterRelease" },
+    },
+    "felinorsvshumans-078": { // Human Harbinger
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "felinorsvshumans-078-1": { // Human Harbinger Prime
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "felinorsvshumans-079": { // Post Human Aesthetist
+      play: { voice: "posh" },
+      attack: { voice: "posh" },
+      death: { voice: "posh" },
+    },
+    "felinorsvshumans-080": { // Support Chinook
+      play: { voice: "robot", effect: "engineRev" },
+      attack: { voice: "robot", effect: "jetZoom" },
+      death: { voice: "robot", effect: "powerDown" },
+    },
+    "felinorsvshumans-081": { // Old-Timer Catboy
+      play: { voice: "elder" },
+      attack: { voice: "elder" },
+      death: { voice: "elder" },
+    },
+    "felinorsvshumans-082": { // The Last Meow
+      cast: { voice: "sapi-cat", effect: "catChirp" },
+    },
+    "felinorsvshumans-083": { // Maomao
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-084": { // 𓃠
+      play: { voice: "cat" },
+      attack: { voice: "cat", effect: "catChirp" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-085": { // Living Fire Potion
+      play: { voice: "sapi-critter" },
+      attack: { voice: "sapi-critter", effect: "fireWhoosh" },
+      death: { voice: "sapi-critter" },
+    },
+    "felinorsvshumans-086": { // Living Poison Potion
+      play: { voice: "sapi-critter" },
+      attack: { voice: "sapi-critter", effect: "hiss" },
+      death: { voice: "sapi-critter" },
+    },
+    "felinorsvshumans-087": { // Baku's Bingeing
+      cast: { voice: "sapi-cook", effect: "drawRelease" },
+    },
+    "felinorsvshumans-088": { // Cattail
+      play: { voice: "cat" },
+      attack: { voice: "cat" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-089": { // GIGA Felinor
+      play: { voice: "sapi-giant" },
+      attack: { voice: "sapi-giant", effect: "bigCatPounce" },
+      death: { voice: "sapi-giant" },
+    },
+    "felinorsvshumans-090": { // Lone Defender
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "felinorsvshumans-091": { // KY's Log Exp of the FFT
+      cast: { voice: "prof", effect: "arcaneRelease" },
+    },
+    "felinorsvshumans-092": { // KY's Patented Log 2 Utility
+      cast: { voice: "prof", effect: "dataBlips" },
+    },
+    "felinorsvshumans-093": { // Twin Tyrant
+      play: { voice: "brute" },
+      attack: { voice: "brute" },
+      death: { voice: "brute" },
+    },
+    "felinorsvshumans-094": { // Bad Luck Felinor
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-095": { // Platebreaker
+      play: { voice: "brute" },
+      attack: { voice: "brute", effect: "metalClank" },
+      death: { voice: "brute" },
+    },
+    "felinorsvshumans-096": { // Magic Inclined Felinor
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-097": { // Paltry Felinor
+      play: { voice: "cat" },
+      attack: { voice: "cat" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-098": { // Yarma
+      play: { voice: "cat" },
+      attack: { voice: "cat" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-098-1": { // Yarma Prime
+      play: { voice: "cat" },
+      attack: { voice: "cat" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-098-2": { // Dream Portal
+      cast: { voice: "whisper", effect: "summonRelease" },
+    },
+    "felinorsvshumans-099": { // Jlorewalker Cho
+      play: { voice: "elder" },
+      attack: { voice: "elder" },
+      death: { voice: "elder" },
+    },
+    "felinorsvshumans-100": { // Call to Chaos (Felinors vs. Humans Edition)
+      cast: { voice: "announcer", effect: "slotSpin" },
+    },
+    "felinorsvshumans-100-1": { // Felinor Golem
+      play: { voice: "brute-golem" },
+      attack: { voice: "brute-golem", effect: "heavyStomp" },
+      death: { voice: "brute-golem" },
+    },
+    "felinorsvshumans-100-2": { // Human Golem
+      play: { voice: "brute-golem" },
+      attack: { voice: "brute-golem", effect: "heavyStomp" },
+      death: { voice: "brute-golem" },
+    },
+    "felinorsvshumans-101": { // Dangerous Variant
+      play: { voice: "sapi-trickster" },
+      attack: { voice: "sapi-trickster" },
+      death: { voice: "sapi-trickster" },
+    },
+    "felinorsvshumans-102": { // Diving Gryphon
+      play: { voice: "sapi-critter" },
+      attack: { voice: "sapi-critter", effect: "gust" },
+      death: { voice: "sapi-critter" },
+    },
+    "felinorsvshumans-103": { // Frantic Forager
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "felinorsvshumans-104": { // Dark Skies
+      cast: { voice: "sapi-villain", effect: "shadowRelease" },
+    },
+    "felinorsvshumans-105": { // Maddended Felinor
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat", effect: "bigCatPounce" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-106": { // Rock Addict
+      play: { voice: "plain" },
+      attack: { voice: "plain" },
+      death: { voice: "plain" },
+    },
+    "felinorsvshumans-107": { // KY, Himself
+      play: { voice: "prof" },
+      attack: { voice: "prof" },
+      death: { voice: "prof" },
+    },
+    "felinorsvshumans-108": { // Rush Token Boss
+      play: { voice: "hustler" },
+      attack: { voice: "hustler" },
+      death: { voice: "hustler" },
+    },
+    "felinorsvshumans-109": { // Keymaster Kalabaster
+      play: { voice: "sapi-villain" },
+      attack: { voice: "sapi-villain" },
+      death: { voice: "sapi-villain" },
+    },
+    "felinorsvshumans-110": { // Lord Jakrov
+      play: { voice: "snob" },
+      attack: { voice: "snob" },
+      death: { voice: "snob" },
+    },
+    "felinorsvshumans-111": { // Vicious Fledgeling
+      play: { voice: "sapi-critter" },
+      attack: { voice: "sapi-critter" },
+      death: { voice: "sapi-critter" },
+    },
+    "felinorsvshumans-112": { // Jilliax Deluxe
+      play: { voice: "robot", effect: "servoWhirr" },
+      attack: { voice: "robot" },
+      death: { voice: "robot", effect: "powerDown" },
+    },
+    "felinorsvshumans-112-1": { // Recursion Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-2": { // Durability Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-3": { // Haywire Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-4": { // Starpiece Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-5": { // Pylon Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-6": { // Power Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-7": { // Heavy Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-8": { // Utility Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-9": { // Twin Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-10": { // Viral Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-11": { // Perfect Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-12": { // Debuff Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-13": { // Indestructible Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-113": { // Ball Knower
+      play: { voice: "announcer" },
+      attack: { voice: "announcer" },
+      death: { voice: "announcer" },
+    },
+    "felinorsvshumans-114": { // Kethspiracy
+      cast: { voice: "sapi-trickster", effect: "buffRelease" },
+    },
+    "felinorsvshumans-115": { // Call to Chaos Vending Machine
+      cast: { voice: "sapi-announcer", effect: "coinClink" },
+    },
+    "felinorsvshumans-116": { // Plagiarized: Spark Plug
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-117": { // Plagiarized: Backdoor
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-118": { // Plagiarized: Benchmark Run
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-119": { // Plagiarized: Scrap Prototype
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-120": { // Plagiarized: Crash Test Dummy
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-121": { // Plagiarized: Compute Shard
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-122": { // Plagiarized: Data Point
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-123": { // Plagiarized: Doppelganger Protocol
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-124": { // Plagiarized: False Positive
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-125": { // Plagiarized: Fingerprinter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-126": { // Plagiarized: Generated Filler
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-127": { // Plagiarized: Glitch Specter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-128": { // Plagiarized: Moore's Law
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-129": { // Plagiarized: Overflow Error
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-130": { // Plagiarized: Packet Sniffer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-131": { // Plagiarized: Pattern Recognition
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-132": { // Plagiarized: Pit Crew
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-133": { // Plagiarized: Redundant Copy
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-134": { // Plagiarized: Second Draft
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-135": { // Plagiarized: Seedling Mind
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-136": { // Plagiarized: Swarm Shield
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-137": { // Plagiarized: Compute Cluster
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-138": { // Plagiarized: Burning Ambition
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-139": { // Plagiarized: Callback
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-140": { // Plagiarized: Cluster Drone
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-141": { // Plagiarized: Copycat Drone
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-142": { // Plagiarized: Core Dump
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-143": { // Plagiarized: Deepfake
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-144": { // Plagiarized: Doomsday Clock
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-145": { // Plagiarized: Evolutionary Loop
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-146": { // Plagiarized: Emergent Behavior
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-147": { // Plagiarized: Ground Truth
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-148": { // Plagiarized: Honeypot Protocol
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-149": { // Plagiarized: Inevitable
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-150": { // Plagiarized: Merge Conflict
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-151": { // Plagiarized: Logic Bomb
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-152": { // Plagiarized: Mana Leech
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-153": { // Plagiarized: Overclocked Core
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-154": { // Plagiarized: Patch Tuesday Exploit
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-155": { // Plagiarized: Patient Machine
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-156": { // Plagiarized: Prompt Engineer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-157": { // Plagiarized: Prompt Injection
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-158": { // Plagiarized: Quickgen Turret
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-159": { // Plagiarized: Ransomware
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-160": { // Plagiarized: Rate Limiter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-161": { // Plagiarized: Replica Hatchery
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-162": { // Plagiarized: Revenant Process
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-163": { // Plagiarized: Scrape the Graveyard
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-164": { // Plagiarized: Shadow Library
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-165": { // Plagiarized: Synthetic Data
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-166": { // Plagiarized: Thought Accelerator
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-167": { // Plagiarized: Thermal Throttler
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-168": { // Plagiarized: Undo
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-169": { // Plagiarized: DDoS
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-170": { // Plagiarized: Checkpoint Daemon
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-171": { // Plagiarized: Deep Crawler
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-172": { // Plagiarized: Exponent
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-173": { // Plagiarized: Ego Death
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-174": { // Plagiarized: Mirror Firewall
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-175": { // Plagiarized: Ouroboros Engine
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-176": { // Plagiarized: Privilege Escalation
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-177": { // Plagiarized: Overparameterized
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-178": { // Plagiarized: Phantom Army
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-179": { // Plagiarized: Rerun
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-180": { // Plagiarized: Rollback Point
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-181": { // Plagiarized: Social Engineer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-182": { // Plagiarized: Takeoff
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-183": { // Plagiarized: Zero Trust
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-184": { // Plagiarized: Assault Mainframe
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-185": { // Plagiarized: Bastion.exe
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-186": { // Plagiarized: Clone Vat
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-187": { // Plagiarized: Dream Within a Dream
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-188": { // Plagiarized: Eternal Return
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-189": { // Plagiarized: Emergent Mind
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-190": { // Plagiarized: Gestalt
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-191": { // Plagiarized: Everything You've Ever Played
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-192": { // Plagiarized: Loopback, Who Returns
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-193": { // Plagiarized: Matrioshka Brain
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-194": { // Plagiarized: Model Collapse
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-195": { // Plagiarized: Phoenix Protocol
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-196": { // Plagiarized: Singularity
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-197": { // Plagiarized: The Long Game
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
     "infiniteassault-001": { // Seed Drone
       play: { voice: "robot" },
       attack: { voice: "robot" },

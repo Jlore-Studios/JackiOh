@@ -11,7 +11,7 @@ use indexmap::IndexMap;
 use serde_json::{Value, json};
 
 use crate::script::{EffectContext, Hook, hook};
-use crate::state::{CardInstance, GameState};
+use crate::state::{CardInstance, GameState, Grant, GrantOn};
 
 /// The `data` key a granted Death runs under: the grant's JSON, so `grant_param` reads its numbers.
 pub const GRANT_DATA_KEY: &str = "__grant";
@@ -32,7 +32,39 @@ pub fn grant_hook(state: &GameState, def_id: &str, radiant: bool, key: &str) -> 
 /// caller's data is restored afterwards, so an own Death beside grants reads its own data.
 pub fn death_hook_of(state: &GameState, snapshot: &CardInstance) -> Option<Hook> {
     let own = crate::scripts::script_of(state, snapshot).death.clone();
-    let grants: Vec<crate::state::Grant> = snapshot.grants.clone().unwrap_or_default();
+    with_grants(own, grants_on(snapshot, GrantOn::Death))
+}
+
+/// R5237006: the grants a card holds that run `on` (absent `Grant.on` is a Death), in the order granted.
+fn grants_on(card: &CardInstance, on: GrantOn) -> Vec<Grant> {
+    card.grants
+        .iter()
+        .flatten()
+        .filter(|grant| grant.on.unwrap_or(GrantOn::Death) == on)
+        .cloned()
+        .collect()
+}
+
+/// R5237006: whether a card holds a granted End of turn ability (FvH #79), which makes a field card an
+/// end-of-turn holder (`triggers::trigger_holders_with_hook`).
+pub fn has_end_of_turn_grant(card: &CardInstance) -> bool {
+    card.grants
+        .iter()
+        .flatten()
+        .any(|grant| grant.on == Some(GrantOn::EndOfTurn))
+}
+
+/// R5237006 (FvH #79 Post Human Aesthetist): the End of turn hook a card runs at its controller's end
+/// of turn: its own End of turn, then each granted End of turn in the order granted, each with its JSON
+/// under `GRANT_DATA_KEY`, as `death_hook_of` builds a Death. Built from the card alone, so a resume
+/// rebuilds the same list. `None` with neither.
+pub fn end_of_turn_hook_of(state: &GameState, card: &CardInstance) -> Option<Hook> {
+    let own = crate::scripts::script_of(state, card).end_of_turn.clone();
+    with_grants(own, grants_on(card, GrantOn::EndOfTurn))
+}
+
+/// ME-GRANT, R5237006: `own`, then each of `grants`' hooks, staged as `death_hook_of` stages a Death.
+fn with_grants(own: Option<Hook>, grants: Vec<Grant>) -> Option<Hook> {
     if grants.is_empty() {
         return own;
     }

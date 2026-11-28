@@ -667,7 +667,8 @@ function draw() {
  *     then the tags the art has no family for (Jlockeed, Acclaimed), else its type;
  *   - its set lends a glint of its own into the cadence (Core a harp, Classic a dulcimer, Classic+ a
  *     celesta, Meditative a kalimba, Meditative+ a music box, Stinkyscape a crystal, Training Grounds
- *     a xylophone, Stinkyscape+ a glockenspiel, the Infinite Assault a digital bell), and a Mythic
+ *     a xylophone, Stinkyscape+ a glockenspiel, the Infinite Assault a digital bell, Felinors vs
+ *     Humans a vibraphone), and a Mythic
  *     adds a prismatic shimmer over a soft choir.
  * The melody is the JackiOh motif (MOTIF_CELL's contour, varied) and an answer that cadences on the
  * tonic: two bars of 4/4 or three of 3/4, whose music runs INTRO_SPAN_S.
@@ -736,7 +737,7 @@ const TUTTI_CH = { brass: 11, choir: 12, tremolo: 13, hit: 14, trombone: 15 };
 /** Where in INTRO_SPAN_S a derived intro's tempo lands, by its family's feel. */
 const INTRO_FEELS = { slow: [4.2, 4.95], mid: [3.7, 4.6], fast: [3.2, 4.1] };
 const INTRO_TONICS = Object.keys(TONIC);
-const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Infinite Assault"];
+const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Infinite Assault", "Felinors vs Humans"];
 /**
  * The set's glint into the cadence (a set not listed here takes Classic+'s). The Meditative set's is a
  * kalimba, a plucked run that rings like the set's East-Asian colors (compose.mjs's GM table names no
@@ -745,11 +746,13 @@ const INTRO_SETS = ["Core", "Classic", "Classic+", "Meditative", "Meditative+", 
  * Grounds set's is a xylophone, wood struck like the yard's practice swords (R2202001); the
  * Stinkyscape+ set's is a glockenspiel, a bright steel chime over the Stinkyscape set's crystal (R3572000);
  * the single-player Infinite Assault set's is the synth "brightness", a glassy digital bell for the cards a
- * machine writes (R4596000).
+ * machine writes (R4596000); the Felinors vs Humans set's is a vibraphone, a cool struck bar that purrs on
+ * its motor (R5222001).
  */
 const INTRO_SET_GLINT = {
   Core: GM.harp, Classic: GM.dulcimer, "Classic+": GM.celesta, Meditative: GM.kalimba, "Meditative+": GM.musicBox, Stinkyscape: GM.crystal,
   "Training Grounds": GM.xylophone, "Stinkyscape+": GM.glock, "Infinite Assault": GM.brightness,
+  "Felinors vs Humans": GM.vibes,
 };
 
 /**
@@ -2058,6 +2061,70 @@ const INTRO_CARDS = [
   { card: "stinkyscapeplus-t-terminus-starship-farthest-shore", name: "Farthest Shore", set: "Stinkyscape+", type: "Unit", tags: ["Starship", "Token"], rarity: "Legendary" },
   { card: "stinkyscapeplus-t-terminus-starship-nightfall-covenant", name: "Nightfall Covenant", set: "Stinkyscape+", type: "Unit", tags: ["Starship", "Token"], rarity: "Legendary" },
   { card: "stinkyscapeplus-t-terminus-starship-vacuum-psalm", name: "Vacuum Psalm", set: "Stinkyscape+", type: "Unit", tags: ["Starship", "Token"], rarity: "Legendary" },
+  // ---- Felinors vs Humans (R5222001): derived, owed by the release that ships the set (R1420) ----
+  { card: "felinorsvshumans-002", name: "M.O.T.H.E.R", set: "Felinors vs Humans", type: "Unit", tags: ["Human"], rarity: "Legendary" },
+  { card: "felinorsvshumans-003", name: "KY's Pocket Galaxy", set: "Felinors vs Humans", type: "Spell", tags: ["KY"], rarity: "Legendary" },
+  { card: "felinorsvshumans-004", name: "KY's Unification Mandate", set: "Felinors vs Humans", type: "Spell", tags: ["KY"], rarity: "Legendary" },
+  { card: "felinorsvshumans-016", name: "Travertine", set: "Felinors vs Humans", type: "Spell", tags: [], rarity: "Legendary" },
+  { card: "felinorsvshumans-016-1", name: "Travertine Stack", set: "Felinors vs Humans", type: "Spell", tags: ["Token"], rarity: "Legendary" },
+  { card: "felinorsvshumans-016-2", name: "Travertine Golem", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Legendary" },
+  { card: "felinorsvshumans-031", name: "Desperate Plea", set: "Felinors vs Humans", type: "Spell", tags: [], rarity: "Legendary" },
+  { card: "felinorsvshumans-034", name: "Half-True Craft a Card", set: "Felinors vs Humans", type: "Spell", tags: [], rarity: "Mythic" },
+  { card: "felinorsvshumans-037", name: "Old Grum", set: "Felinors vs Humans", type: "Unit", tags: [], rarity: "Legendary" },
+  { card: "felinorsvshumans-039", name: "Whisperer of KY", set: "Felinors vs Humans", type: "Unit", tags: ["KY"], rarity: "Legendary" },
+  { card: "felinorsvshumans-040", name: "Travel Master Drungar", set: "Felinors vs Humans", type: "Unit", tags: ["Human"], rarity: "Legendary" },
+  { card: "felinorsvshumans-046", name: "Manifestor", set: "Felinors vs Humans", type: "Unit", tags: [], rarity: "Legendary" },
+  { card: "felinorsvshumans-050", name: "Field Kit", set: "Felinors vs Humans", type: "Field Spell", tags: [], rarity: "Legendary" },
+  { card: "felinorsvshumans-060", name: "Toolmaster Luna", set: "Felinors vs Humans", type: "Unit", tags: ["Human"], rarity: "Legendary" },
+  { card: "felinorsvshumans-060-1", name: "Tools of Creation", set: "Felinors vs Humans", type: "Field Spell", tags: ["Token"], rarity: "Legendary" },
+  { card: "felinorsvshumans-060-2", name: "Tools of Cremation", set: "Felinors vs Humans", type: "Field Spell", tags: ["Token"], rarity: "Legendary" },
+  { card: "felinorsvshumans-070", name: "Felinor Commander", set: "Felinors vs Humans", type: "Unit", tags: ["Felinor"], rarity: "Legendary" },
+  { card: "felinorsvshumans-073", name: "Bloodforged Crusader", set: "Felinors vs Humans", type: "Unit", tags: ["Human", "Quickdraw"], rarity: "Mythic" },
+  { card: "felinorsvshumans-074", name: "Yile, Acceleration Supremist", set: "Felinors vs Humans", type: "Unit", tags: ["Human", "Catalyst", "Acclaimed"], rarity: "Mythic" },
+  { card: "felinorsvshumans-074-1", name: "Yile, Acceleration Supremist Prime", set: "Felinors vs Humans", type: "Unit", tags: ["Human", "Prime", "Acclaimed", "Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-075", name: "Illinois Jones", set: "Felinors vs Humans", type: "Unit", tags: ["Human"], rarity: "Legendary" },
+  { card: "felinorsvshumans-078", name: "Human Harbinger", set: "Felinors vs Humans", type: "Unit", tags: ["Human", "Catalyst"], rarity: "Legendary" },
+  { card: "felinorsvshumans-078-1", name: "Human Harbinger Prime", set: "Felinors vs Humans", type: "Unit", tags: ["Human", "Prime", "Token"], rarity: "Legendary" },
+  { card: "felinorsvshumans-079", name: "Post Human Aesthetist", set: "Felinors vs Humans", type: "Unit", tags: ["Human"], rarity: "Mythic" },
+  { card: "felinorsvshumans-082", name: "The Last Meow", set: "Felinors vs Humans", type: "Spell", tags: ["Terminus"], rarity: "Mythic" },
+  { card: "felinorsvshumans-091", name: "KY's Log Exp of the FFT", set: "Felinors vs Humans", type: "Spell", tags: ["KY"], rarity: "Legendary" },
+  { card: "felinorsvshumans-092", name: "KY's Patented Log 2 Utility", set: "Felinors vs Humans", type: "Field Spell", tags: ["KY"], rarity: "Mythic" },
+  { card: "felinorsvshumans-098", name: "Yarma", set: "Felinors vs Humans", type: "Unit", tags: ["Felinor", "Catalyst"], rarity: "Legendary" },
+  { card: "felinorsvshumans-098-1", name: "Yarma Prime", set: "Felinors vs Humans", type: "Unit", tags: ["Felinor", "Prime", "Token"], rarity: "Legendary" },
+  { card: "felinorsvshumans-098-2", name: "Dream Portal", set: "Felinors vs Humans", type: "Spell", tags: ["Token"], rarity: "Legendary" },
+  { card: "felinorsvshumans-099", name: "Jlorewalker Cho", set: "Felinors vs Humans", type: "Unit", tags: [], rarity: "Legendary" },
+  { card: "felinorsvshumans-100", name: "Call to Chaos (Felinors vs. Humans Edition)", set: "Felinors vs Humans", type: "Spell", tags: ["Call to Chaos"], rarity: "Legendary" },
+  { card: "felinorsvshumans-100-1", name: "Felinor Golem", set: "Felinors vs Humans", type: "Unit", tags: ["Felinor", "Golem", "Token"], rarity: "Legendary" },
+  { card: "felinorsvshumans-100-2", name: "Human Golem", set: "Felinors vs Humans", type: "Unit", tags: ["Human", "Golem", "Token"], rarity: "Legendary" },
+  { card: "felinorsvshumans-107", name: "KY, Himself", set: "Felinors vs Humans", type: "Unit", tags: ["Human", "KY", "Acclaimed"], rarity: "Mythic" },
+  { card: "felinorsvshumans-109", name: "Keymaster Kalabaster", set: "Felinors vs Humans", type: "Unit", tags: ["Human"], rarity: "Legendary" },
+  { card: "felinorsvshumans-110", name: "Lord Jakrov", set: "Felinors vs Humans", type: "Unit", tags: ["Human"], rarity: "Legendary" },
+  { card: "felinorsvshumans-112", name: "Jilliax Deluxe", set: "Felinors vs Humans", type: "Unit", tags: [], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-1", name: "Recursion Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-2", name: "Durability Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-3", name: "Haywire Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-4", name: "Starpiece Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-5", name: "Pylon Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-6", name: "Power Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-7", name: "Heavy Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-8", name: "Utility Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-9", name: "Twin Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-10", name: "Viral Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-11", name: "Perfect Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-12", name: "Debuff Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-112-13", name: "Indestructible Module", set: "Felinors vs Humans", type: "Unit", tags: ["Token"], rarity: "Mythic" },
+  { card: "felinorsvshumans-114", name: "Kethspiracy", set: "Felinors vs Humans", type: "Spell", tags: [], rarity: "Legendary" },
+  { card: "felinorsvshumans-115", name: "Call to Chaos Vending Machine", set: "Felinors vs Humans", type: "Field Spell", tags: [], rarity: "Legendary" },
+  { card: "felinorsvshumans-147", name: "Plagiarized: Ground Truth", set: "Felinors vs Humans", type: "Unit", tags: ["Plagiarized"], rarity: "Legendary" },
+  { card: "felinorsvshumans-167", name: "Plagiarized: Thermal Throttler", set: "Felinors vs Humans", type: "Unit", tags: ["Plagiarized"], rarity: "Legendary" },
+  { card: "felinorsvshumans-173", name: "Plagiarized: Ego Death", set: "Felinors vs Humans", type: "Spell", tags: ["Plagiarized"], rarity: "Mythic" },
+  { card: "felinorsvshumans-185", name: "Plagiarized: Bastion.exe", set: "Felinors vs Humans", type: "Unit", tags: ["Plagiarized"], rarity: "Legendary" },
+  { card: "felinorsvshumans-188", name: "Plagiarized: Eternal Return", set: "Felinors vs Humans", type: "Spell", tags: ["Plagiarized"], rarity: "Mythic" },
+  { card: "felinorsvshumans-189", name: "Plagiarized: Emergent Mind", set: "Felinors vs Humans", type: "Unit", tags: ["Plagiarized"], rarity: "Legendary" },
+  { card: "felinorsvshumans-191", name: "Plagiarized: Everything You've Ever Played", set: "Felinors vs Humans", type: "Spell", tags: ["Plagiarized"], rarity: "Legendary" },
+  { card: "felinorsvshumans-192", name: "Plagiarized: Loopback, Who Returns", set: "Felinors vs Humans", type: "Unit", tags: ["Plagiarized"], rarity: "Legendary" },
+  { card: "felinorsvshumans-194", name: "Plagiarized: Model Collapse", set: "Felinors vs Humans", type: "Unit", tags: ["Plagiarized"], rarity: "Mythic" },
+  { card: "felinorsvshumans-196", name: "Plagiarized: Singularity", set: "Felinors vs Humans", type: "Unit", tags: ["Plagiarized", "Wincon"], rarity: "Mythic" },
   // ---- Infinite Assault (R4596000): every card carries AI, so each takes the ai family ----
   { card: "infiniteassault-023", name: "The Generator", set: "Infinite Assault", type: "Unit", tags: ["AI"], rarity: "Legendary" },
   { card: "infiniteassault-024", name: "Mass Deployment", set: "Infinite Assault", type: "Spell", tags: ["AI"], rarity: "Legendary" },

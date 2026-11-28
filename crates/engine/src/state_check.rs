@@ -1267,6 +1267,15 @@ pub fn state_check(sink: &mut EngineSink<'_>) {
             if crate::effects::radiant::radiate_world(sink) {
                 continue;
             }
+            // R5236002: the settled board: a card that is no Unit with its Durability spent goes to its
+            // owner's graveyard by a plain move, after the activation that spent it has resolved, and the
+            // check starts over on the board it left.
+            if crate::subsystems::activate::send_spent_out_to_graveyard(sink) {
+                if sink.state.result.is_some() || sink.state.pending.is_some() {
+                    return;
+                }
+                continue;
+            }
             // R3536001, R3536002: the settled board: standing "Evolves when" conditions and cards
             // marked to enter evolved evolve now, queuing their Evolve texts behind the check.
             crate::evolution::evolve_standing(sink);

@@ -41,7 +41,16 @@ import {
 } from "../setPieces.ts";
 import type { FxCue, FxMemory, FxRollCue, FxSetPieceCue } from "../types.ts";
 import { TERMINUS_TUNING } from "./build.ts";
-import { BIG_CRUNCH, DICE_OF_DOOM, EVENT_HORIZON, LAST_WORD, OLIVIAN_EXPANSE, STINKYSCAPE_PLUS_TERMINUS_IDS, TERMINUS_IDS } from "./ids.ts";
+import {
+  BIG_CRUNCH,
+  DICE_OF_DOOM,
+  EVENT_HORIZON,
+  FELINORS_VS_HUMANS_TERMINUS_IDS,
+  LAST_WORD,
+  OLIVIAN_EXPANSE,
+  STINKYSCAPE_PLUS_TERMINUS_IDS,
+  TERMINUS_IDS,
+} from "./ids.ts";
 import { TERMINUS_PLANNERS, planTerminus, planTerminusStill } from "./index.ts";
 
 const claimOf: SetPieceClaimer = (entry) => wipeClaim(entry) ?? signatureClaim(entry);
@@ -339,9 +348,9 @@ describe("R3338000 the Terminus set pieces", () => {
     expect(pieceOf(last?.cues ?? [])).toBeUndefined();
   });
 
-  it("R3338000 TERMINUS_IDS, then Stinkyscape+'s, are the catalog's Terminus cards, in its order", () => {
+  it("R3338000 TERMINUS_IDS, then Stinkyscape+'s and Felinors vs Humans', are the catalog's Terminus cards, in its order", () => {
     const tagged = Object.keys(CATALOG).filter((id) => CATALOG[id]?.tags.includes("Terminus") === true);
-    expect(tagged).toEqual([...TERMINUS_IDS, ...STINKYSCAPE_PLUS_TERMINUS_IDS]);
+    expect(tagged).toEqual([...TERMINUS_IDS, ...STINKYSCAPE_PLUS_TERMINUS_IDS, ...FELINORS_VS_HUMANS_TERMINUS_IDS]);
     expect(SET_PIECE_KEYS).toEqual(expect.arrayContaining([...TERMINUS_KEYS]));
   });
 });

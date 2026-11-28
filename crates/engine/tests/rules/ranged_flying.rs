@@ -404,6 +404,7 @@ mod r1081000_flying_backrow {
         ZoneChoice {
             row: Row::Units,
             lane,
+            player: None,
         }
     }
 
@@ -411,6 +412,7 @@ mod r1081000_flying_backrow {
         ZoneChoice {
             row: Row::Backrow,
             lane,
+            player: None,
         }
     }
 

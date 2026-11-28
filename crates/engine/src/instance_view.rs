@@ -90,12 +90,24 @@ fn same_keywords(a: &[Keyword], b: &[Keyword]) -> bool {
 /// tuning leaves them and the ones it was granted in the hand or the deck (`layers::card_keywords`) —
 /// set only where they differ from its running face's printed keywords, which the client reads off
 /// the definition. `None` otherwise.
+/// R5236031: a Durability shows the count it has left.
 pub fn hand_keywords_view(state: &GameState, card: &CardInstance) -> Option<Vec<Keyword>> {
-    let now: Vec<Keyword> = crate::layers::card_keywords(state, card);
+    let now: Vec<Keyword> =
+        crate::subsystems::activate::with_durability_left(&crate::layers::card_keywords(state, card), card);
     let face = crate::faces::running_face(state, card);
     if same_keywords(&now, &face.keywords) {
         None
     } else {
         Some(now)
     }
+}
+
+/// R5236031: a face-up backrow card's keywords where it has Durability — read as `hand_keywords_view`
+/// reads them, the Durability written as the count it has left — used or not, since the count left is
+/// the card's own and no definition prints it. `None` for a card without the keyword, whose keywords
+/// the client reads off the definition.
+pub fn durability_keywords_view(state: &GameState, card: &CardInstance) -> Option<Vec<Keyword>> {
+    let now = crate::layers::card_keywords(state, card);
+    crate::tuning::numbered_sum(&now, crate::wire::KeywordKind::Durability)?;
+    Some(crate::subsystems::activate::with_durability_left(&now, card))
 }

@@ -18,7 +18,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::combat::FROZEN_REFUSAL;
-use crate::config::{ACTIVATE_BASE_COOLDOWN, ACTIVATE_COOLDOWN_TURNS, ACTIVATE_UNLIMITED_CAP};
+use crate::config::{
+    ACTIVATE_BASE_COOLDOWN, ACTIVATE_COOLDOWN_TURNS, ACTIVATE_UNLIMITED_CAP, DURABILITY_PER_USE,
+    DURABILITY_SPENT_OUT,
+};
 use crate::effects::move_::discard_random_cards;
 use crate::layers::unit_view;
 use crate::mana::{mana_event, push_mana_spent};
@@ -42,8 +45,8 @@ use crate::targeting::why_targeting_discards_unpayable;
 use crate::targeting_point::pay_targeting_discards;
 use crate::tuning::tuned_count;
 use crate::wire::{
-    ActionBody, ActivationSource, ActivationView, GameEvent, ManaSpentFor, Phase, PlayerId, Row, Selection,
-    ZoneName,
+    ActionBody, ActivationSource, ActivationView, CardType, CounterKind, GameEvent, Keyword, KeywordKind,
+    ManaSpentFor, Phase, PlayerId, Row, Selection, ZoneName,
 };
 use crate::work::{paused, push_work};
 use crate::zones::{active_units_of, acts_on_field, slot_of};
@@ -367,6 +370,122 @@ pub fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
     }
 }
 
+// Durability (R5236000 to R5236006)
+
+/// R5236000, R5236005: the card's Durability X, one counter (a fused card's first Durability entry, as
+/// `layers::card_keywords` keeps one of a kind), printed as tuning leaves it or granted, never lent by an
+/// aura; `None` without the keyword.
+fn durability_of(state: &GameState, card: &CardInstance) -> Option<i32> {
+    crate::tuning::numbered_sum(
+        &crate::layers::card_keywords(state, card),
+        KeywordKind::Durability,
+    )
+}
+
+/// R5236000: the Durability the card has left: its Durability X (a Buff's or a Nerf's steps included,
+/// R5236005) less what its uses on this stay spent (`CardInstance.durability_spent`, R5236004), never
+/// below 0; `None` without the keyword.
+pub fn durability_left(state: &GameState, card: &CardInstance) -> Option<i32> {
+    let n = durability_of(state, card)?;
+    Some((n - card.durability_spent.unwrap_or(0)).max(DURABILITY_SPENT_OUT))
+}
+
+/// R5236000: one use's Durability spent on the card, once per real use: the `activate` action's (a
+/// countered one included, R5236003) and a `run_activation` with `spend_use`'s, never the engine's
+/// Cloaked Reveal or a Starship's launch. Reported as `counterChanged` with the Durability left. A card
+/// without the keyword, or with none left, spends nothing.
+pub fn spend_durability(sink: &mut EngineSink<'_>, card_id: &str) {
+    let Some(card) = find_instance(sink.state, card_id) else {
+        return;
+    };
+    let Some(left) = durability_left(sink.state, card) else {
+        return;
+    };
+    if left <= DURABILITY_SPENT_OUT {
+        return;
+    }
+    let spent = card.durability_spent.unwrap_or(0) + DURABILITY_PER_USE;
+    if let Some(live) = find_instance_mut(sink.state, card_id) {
+        live.durability_spent = Some(spent);
+    }
+    sink.events.push(GameEvent::CounterChanged {
+        instance_id: card_id.to_string(),
+        counter: CounterKind::Durability,
+        value: (left - DURABILITY_PER_USE).max(DURABILITY_SPENT_OUT),
+        placed: None,
+    });
+}
+
+/// R5236000: the engine's own abilities, which no Durability counts: a Cloaked card's Reveal (R783006)
+/// and a Dormant Starship's launch (R1852003).
+fn is_engine_ability(card: &CardInstance, decl: &ActivationDecl) -> bool {
+    decl.id == crate::alt_play::CLOAKED_REVEAL || crate::starship::is_launch(card, &decl.id)
+}
+
+/// R5236031: `keywords` with the card's Durability entries written as one, its
+/// count left (as a Brittle count in force shows, B3.3 rule 6), so the instance view says how many uses
+/// remain. Unchanged for a card without the keyword.
+pub fn with_durability_left(keywords: &[Keyword], card: &CardInstance) -> Vec<Keyword> {
+    let Some(n) = crate::tuning::numbered_sum(keywords, KeywordKind::Durability) else {
+        return keywords.to_vec();
+    };
+    let left = (n - card.durability_spent.unwrap_or(0)).max(DURABILITY_SPENT_OUT);
+    let mut written = false;
+    keywords
+        .iter()
+        .filter_map(|keyword| {
+            if keyword.kind() != KeywordKind::Durability {
+                return Some(keyword.clone());
+            }
+            if written {
+                return None;
+            }
+            written = true;
+            Some(Keyword::Durability { n: left })
+        })
+        .collect()
+}
+
+/// R5236002: the settled state check's Durability step. Every card on the field that is no Unit (a
+/// Field Spell, a face-up Trap or Field Trap) whose Durability is spent goes to its owner's graveyard by
+/// `send_to_graveyard`'s plain move (R3044000): no `destroyed`, no Death, and Indestructible does not
+/// hold it. A Unit at 0 stays, with no Activate it may use (R5236001). Nothing moves while a prompt is
+/// open, and a card a paused sequence on `state.work` names (an owed activation, R113, or the parked
+/// tail of its ability's list) waits until it has run, so the last activation resolves with the card on
+/// the field. True when a card left the field, so the check starts over.
+pub fn send_spent_out_to_graveyard(sink: &mut EngineSink<'_>) -> bool {
+    if sink.state.pending.is_some() {
+        return false;
+    }
+    let spent: Vec<CardInstance> = crate::state_check::permanents_in_play(sink.state)
+        .into_iter()
+        .filter(|card| card.zone.z() == ZoneName::Field)
+        .filter(|card| crate::faces::card_type_of(sink.state, card) != CardType::Unit)
+        .filter(|card| durability_left(sink.state, card).is_some_and(|left| left <= DURABILITY_SPENT_OUT))
+        .filter(|card| {
+            !sink
+                .state
+                .work
+                .iter()
+                .any(|item| item.resume.instance_id.as_deref() == Some(card.id.as_str()))
+        })
+        .collect();
+    let mut left_the_field = false;
+    for card in &spent {
+        let mut moving = card.clone();
+        let moved = crate::zones::move_to_zone(
+            sink.state,
+            &mut moving,
+            crate::zones::OffFieldZone::Graveyard,
+            Default::default(),
+        );
+        let landed = find_instance(sink.state, &moving.id).cloned().unwrap_or(moving);
+        left_the_field |= landed.zone.z() != ZoneName::Field;
+        crate::zones::report_graveyard_landing(sink, &landed, moved);
+    }
+    left_the_field
+}
+
 /// R1841000: the ability "has an extra turn cooldown".
 fn has_cooldown(decl: &ActivationDecl) -> bool {
     cooldown_sits_out(decl) > 0
@@ -515,6 +634,9 @@ fn plural(count: i32, one: &str) -> String {
     }
 }
 
+/// R5236001: the refusal of an Activate whose card has no Durability left (FV2's words).
+pub const DURABILITY_REFUSAL: &str = "No Durability left";
+
 /// The turn, the uses, the text's own condition and the costs: why the ability cannot be used now.
 fn why_ability_unusable(
     state: &GameState,
@@ -547,6 +669,13 @@ fn why_ability_unusable(
     // ZolarKeth's) still does, as R20 lets an effect's attack happen to a Frozen Unit.
     if card.frozen.is_some() {
         return Err(FROZEN_REFUSAL.into());
+    }
+    // R5236001: a card whose Durability is spent uses none of its Activates; the engine's own abilities
+    // count none (R5236000).
+    if !is_engine_ability(card, decl)
+        && durability_left(state, card).is_some_and(|left| left <= DURABILITY_SPENT_OUT)
+    {
+        return Err(DURABILITY_REFUSAL.into());
     }
 
     let allowed = uses_allowed(card, decl);
@@ -1203,6 +1332,11 @@ pub fn activate_ability(
         def_id: card.def_id.clone(),
         ability: decl.id.clone(),
     });
+    // R5236000: the use spends 1 Durability before anything can pause or counter it (R5236003); a
+    // Starship's launch is the engine's and spends none.
+    if !crate::starship::is_launch(&card, &decl.id) {
+        spend_durability(sink, &card.id);
+    }
     pay_costs(
         sink,
         &mut run,
@@ -1288,6 +1422,12 @@ pub fn activation_views_for(
                     reason,
                     printed_on,
                     cooldown_turns_left: cooldown_turns_left(state, card, &decl),
+                    // R5236001: the card's Durability left, which every Activate of it shares.
+                    durability_left: if is_engine_ability(card, &decl) {
+                        None
+                    } else {
+                        durability_left(state, card)
+                    },
                 }
             })
             .collect(),

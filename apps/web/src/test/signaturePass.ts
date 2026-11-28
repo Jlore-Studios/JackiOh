@@ -115,7 +115,7 @@ export function describeRun(run: readonly PlannedEntry[]): string {
 }
 
 /** R202: a card id of any set; no cue may carry one. */
-export const CARD_ID = /(core|classic|meditative|stinkyscape|traininggrounds|infiniteassault)[a-z]*-\d/;
+export const CARD_ID = /(core|classic|meditative|stinkyscape|traininggrounds|infiniteassault|felinorsvshumans)[a-z]*-\d/;
 
 /** R202: no cue of `cues` names a card or reaches into a hand but through its pile. */
 export function expectNoCard(cues: readonly FxCue[], where: string): void {

@@ -82,10 +82,10 @@ const PEAK_DB = -1.5;
  * set's), at the same encoding as every track, and the stations' auditioned tracks raised it again
  * from 28 MiB (three to seven in-game tracks a station, with room left for later sets' intros), and
  * R2722000 from 42 MiB for the intros' fanfares (a riser, a Mythic's own motif and an ending make
- * them about half as long again), and R3572000 from 49 MiB for the Stinkyscape+ set's 59, and R4596000
- * from 51 MiB for the Infinite Assault set's 44.
+ * them about half as long again), and R3572000 from 49 MiB for the Stinkyscape+ set's 59, R4596000 from
+ * 51 MiB for the Infinite Assault set's 44, and R5222001 from 54 MiB for the Felinors vs Humans set's 63.
  */
-const BUDGET_BYTES = 54 * 1024 * 1024;
+const BUDGET_BYTES = 60 * 1024 * 1024;
 const BLOCK_BYTES = 4096;
 const FILE_MODE = 0o644;
 const USAGE = "usage: node scripts/gen-music.mjs [--check] [--force] [--only <id>] [--root <webDir>] [--candidates]";

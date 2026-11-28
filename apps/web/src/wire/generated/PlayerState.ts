@@ -79,8 +79,8 @@ gameLog?: GameLog,
 /**
  * R4589000: what this player's plays and deaths leave for the Recursion cards to read back
  * (`recursion_log.rs`): every face-up play this game and every Unit that died under them.
- * Absent until the game holds an Infinite Assault card, so a game without one hashes as it did
- * before this field existed (D14).
+ * Absent until the game holds an Infinite Assault card (or, R5237013, a Plagiarized one), so a game
+ * without one hashes as it did before this field existed (D14).
  */
 recursion?: RecursionLog, 
 /**
@@ -148,6 +148,21 @@ manaCrystals?: number,
  * did before this field existed (D3).
  */
 stolenManaCrystals?: number, 
+/**
+ * R5237003 (FvH #18 Villa-D Moneybags): how far effects have raised this player's mana cap for the
+ * rest of the game (`effects::mana::raise_mana_cap`), added to the seat's `Handicap.mana_cap`
+ * wherever the cap is read (`mana::mana_cap_of`). Absent (never 0 stored) while none has, so a game
+ * without one hashes as it did before this field existed (D14).
+ */
+manaCapBonus?: number, 
+/**
+ * R5237002 (FvH #16.2 Travertine Golem): the mana this player left unspent at the end of their last
+ * turn (their last Float, R1563000), set at their cleanup beside `turnLog.unspentAtEnd` and never
+ * reset, so it holds through their next turn (`query::float_last_turn`). Absent before their first
+ * turn ends, and in a game holding no Felinors vs Humans card (`recursion_log::fvh_kept`), so no
+ * other game's hash moves (D14).
+ */
+lastFloat?: number, 
 /**
  * R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
  * starting their turn again. Absent (never 0 stored) while none is owed, so a game without one

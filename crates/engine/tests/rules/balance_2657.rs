@@ -261,15 +261,22 @@ mod r2657005_the_buffs_and_the_nerfs_keywords {
             let id = s.card(plain().id.as_str()).id.clone();
             tune(&mut s, &id, TuneDirection::Degrade);
             let kinds = kinds_of(&s, &id);
-            assert!(kinds.iter().all(|kind| *kind == KeywordKind::Crater), "{kinds:?}");
+            // R5236011: a Nerf may also give a Unit Fragile, in a hand or on the field.
+            assert!(
+                kinds
+                    .iter()
+                    .all(|kind| matches!(kind, KeywordKind::Crater | KeywordKind::Fragile)),
+                "{kinds:?}"
+            );
             cratered |= kinds.contains(&KeywordKind::Crater);
 
             let mut s = board(&format!("r2657005-field-{n}"), json!({ "field": [plain().id] }));
             let id = s.unit_at(P1, 1).id;
             tune(&mut s, &id, TuneDirection::Degrade);
+            let kinds = kinds_of(&s, &id);
             assert!(
-                kinds_of(&s, &id).is_empty(),
-                "no keyword a Nerf adds on the field"
+                kinds.iter().all(|kind| *kind == KeywordKind::Fragile),
+                "no keyword a Nerf adds on the field but R5236011's Fragile: {kinds:?}"
             );
 
             let mut s = board(&format!("r2657005-spell-{n}"), json!({ "hand": [quiet().id] }));

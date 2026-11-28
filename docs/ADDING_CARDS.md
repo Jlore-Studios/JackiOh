@@ -34,7 +34,7 @@ before yours, so a pending-claimed card needs no edit there (R646). What stays h
 `src/census.rs`, each set's counts, rarities, tokens and tag counts written once and never computed from `catalog.json` (#108, #2581).
 BUILD's must-pass tables take no row for a new card; its own tests are the record (CLAUDE.md rule 6).
 
-**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; and the Stinkyscape+ set while tracker #3533 built it, until its release, issue #3573, R3535000; the single-player Infinite Assault set is held now, while tracker #4576 builds it, on a stage of its own, `HeldSinglePlayer`, R4577000) differs in five places, the Training Grounds paths below standing for any held set's (the Infinite Assault's foundation, issue #4602, wrote every entry, row and a stub script for #25–#240: each card part replaced its stubs with the scripts and their tests, and corrected its own rows where its build decided otherwise, under `docs/infinite-assault.md` IA11):
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; and the Stinkyscape+ set while tracker #3533 built it, until its release, issue #3573, R3535000; the single-player Infinite Assault set was held, while tracker #4576 built it, on a stage of its own, `HeldSinglePlayer`, R4577000, until its release, #4597; and the Felinors vs Humans set while tracker #5220 built it, until wave 1's release, issue #5222, R5222000) differs in five places, the Training Grounds paths below standing for any held set's (the Infinite Assault's foundation, issue #4602, wrote every entry, row and a stub script for #25–#240: each card part replaced its stubs with the scripts and their tests, and corrected its own rows where its build decided otherwise, under `docs/infinite-assault.md` IA11):
 - Its script goes in `src/scripts/training_grounds/` (id `traininggrounds-NNN`, a token's `traininggrounds-NNN-k`; Stinkyscape's
   had entries outside the numbers too, `stinkyscape-t-<name>`). The foundation (issue #2194) wrote a stub for every entry there,
   `STUB (#2194):` in its header (the snapshots #41–#60 are part 2's, #2195, which adds their entries and scripts): a card
@@ -75,7 +75,8 @@ reads: `SetName`, the catalog order, the sets that ship, the deck codes' set off
   and `-` taken out), the abbreviation ruling notes write before a `#` (`TG #12`), and its shadow-ban share, `(part, whole)`, or
   `None` while the ban takes none of its cards. Never move or remove a row: its place is the set's in the catalog order (R1420)
   and in the deck codes (R1410).
-- Add its census entry (`crates/cards/src/census.rs`) after the last one, and its scripts folder, `src/scripts/<segment with _
+- Add its census entry (`crates/cards/src/census.rs`) after the last set the catalog orders and before the single-player
+  sets' (the census lists the catalog order, then the single-player sets with cards), and its scripts folder, `src/scripts/<segment with _
   between its words>/`, with its first card.
 - Run the workspace tests, which regenerate `apps/web/src/wire/generated/SetName.ts` (and `engineConfig.ts` when the set ships);
   commit the diff.

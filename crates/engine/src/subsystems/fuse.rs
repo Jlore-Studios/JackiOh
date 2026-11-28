@@ -1090,6 +1090,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 tribute_enemies: flags(|f| f.tribute_enemies),
                 enemy_tribute_hands_over: flags(|f| f.enemy_tribute_hands_over),
                 summon_for_opponent: flags(|f| f.summon_for_opponent),
+                // R5238002.
+                plays_on_either_side: flags(|f| f.plays_on_either_side),
                 anti_oneshot: flags(|f| f.anti_oneshot),
                 hero_armor: summed_count(defined.iter().map(|f| f.hero_armor)),
                 counts_plays: flags(|f| f.counts_plays),
@@ -1112,6 +1114,22 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 // R4591002: with several attack-count limits, the lowest holds.
                 opponent_attack_limit: least_number(defined.iter().map(|f| f.opponent_attack_limit)),
                 immune_to_tribal_hate: flags(|f| f.immune_to_tribal_hate),
+                // R5237009: every ingredient's tags that harm passes by, in ingredient order.
+                harm_ignores_tags: {
+                    let ignored: Vec<Tag> = defined
+                        .iter()
+                        .filter_map(|f| f.harm_ignores_tags.clone())
+                        .flatten()
+                        .collect();
+                    if ignored.is_empty() { None } else { Some(ignored) }
+                },
+                // R5237010: the first ingredient's immunity, as the first Dormant is kept.
+                immune_to_tag: defined.iter().find_map(|f| f.immune_to_tag),
+                // R5237011: `All` over `Helpful`, the wider reach holding.
+                log2_utility: defined
+                    .iter()
+                    .filter_map(|f| f.log2_utility)
+                    .min_by_key(|mode| *mode != crate::script::Log2Utility::All),
                 never_berserk: flags(|f| f.never_berserk),
                 heal_to_damage: flags(|f| f.heal_to_damage),
                 random_targets: flags(|f| f.random_targets),
@@ -1174,6 +1192,10 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 damage_is_toxic: flags(|f| f.damage_is_toxic),
                 // R4783001: a flag, so a fusion of two such cards adds the hit's Burn once.
                 damage_also_burns: flags(|f| f.damage_also_burns),
+                // R5239007: a flag, as `damage_also_burns` is, so the Toxic is added once.
+                damage_also_toxic: flags(|f| f.damage_also_toxic),
+                // R5239006: a fusion with such an ingredient plays its Flashback without its Cry.
+                flashback_without_cry: flags(|f| f.flashback_without_cry),
                 infinite_mana: flags(|f| f.infinite_mana),
                 // Stinkyscape+ E8 (issue #3558).
                 starts_at_bottom: flags(|f| f.starts_at_bottom),
@@ -1188,6 +1210,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 graveyard_price: numbers(|f| f.graveyard_price),
                 ignores_taunt: flags(|f| f.ignores_taunt),
                 spell_echo_aura: summed_spell_echo_aura(defined.iter().map(|f| f.spell_echo_aura)),
+                // R5236030: a fusion an Endless Evolve card is in evolves endlessly too.
+                endless_evolve: flags(|f| f.endless_evolve),
             })
         }
     }
@@ -1316,6 +1340,18 @@ fn combine_objects(records: &[Script]) -> Script {
         evolves_when: None,
         evolve_extra: None,
         stat_line_when: None,
+        // R5237004: a fusion stays summoning-sick while any ingredient's text keeps it so.
+        stays_sick: {
+            let holds: Vec<crate::script::HasHook> =
+                records.iter().filter_map(|s| s.stays_sick.clone()).collect();
+            if holds.is_empty() {
+                None
+            } else {
+                Some(read_hook(move |args: HookArgs<'_>| {
+                    holds.iter().any(|hold| hold(args))
+                }))
+            }
+        },
         // R1487000, R767000: a fusion's text works face-down when any ingredient's did.
         live_face_down: records.iter().any(|s| s.live_face_down),
         // R1850002, R1850005: every ingredient's exile auras, and the first keyword count printed.

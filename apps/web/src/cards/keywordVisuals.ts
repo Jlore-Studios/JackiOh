@@ -408,6 +408,31 @@ export const KEYWORD_VISUALS: Readonly<Record<KeywordKind, KeywordVisual>> = {
     numbered: false,
     onField: false,
   },
+  // R5264500: the Felinors vs Humans kinds (R5236031), each drawn on the field, where it acts.
+  Durability: {
+    layer: "glyph",
+    priority: 45,
+    shape: "a hammer crossed with a spanner, with the uses left",
+    motion: { keyframes: "kw-durability-wear", when: "always" },
+    numbered: true,
+    onField: true,
+  },
+  Fragile: {
+    layer: "veil",
+    priority: 46,
+    shape: "a pane of glass over the portrait, crazed in a star of cracks round its middle",
+    motion: { keyframes: "kw-fragile-glint", when: "always" },
+    numbered: false,
+    onField: true,
+  },
+  Unlucky: {
+    layer: "glyph",
+    priority: 47,
+    shape: "a wilted three-leaf clover under a dark cloud, with its number",
+    motion: { keyframes: "kw-unlucky-droop", when: "always" },
+    numbered: true,
+    onField: true,
+  },
 };
 
 /** One treatment a unit gets. */
@@ -560,4 +585,8 @@ export const KEYWORD_CALLOUT_ICONS: Readonly<Partial<Record<KeywordKind, Keyword
   // R3572000: Frenzy's three claw slashes and Evasive's arrow slipping round a ring.
   Frenzy: { d: "M22 10 L46 90 M44 10 L68 90 M66 10 L90 90", line: true },
   Evasive: { d: "M66 14 A38 38 0 1 0 66 86 M40 50 H92 M80 38 L92 50 L80 62", line: true },
+  // R5264500: Durability's crossed tools, Fragile's star of cracks and Unlucky's three drooping leaves.
+  Durability: { d: "M18 82 L62 38 M54 22 L78 46 L70 54 L46 30 Z M82 82 L44 44 M30 20 A12 12 0 1 0 20 30", line: true },
+  Fragile: { d: "M50 50 L50 6 M50 50 L88 30 M50 50 L86 78 M50 50 L44 94 M50 50 L10 72 M50 50 L14 22", line: true },
+  Unlucky: { d: "M39 22 a11 11 0 1 0 0.1 0 M20 46 a11 11 0 1 0 0.1 0 M58 46 a11 11 0 1 0 0.1 0 M50 58 L50 94" },
 };

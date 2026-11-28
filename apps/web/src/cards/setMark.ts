@@ -2,8 +2,9 @@
 // orb, Classic a columned temple (Classic+ with a plus), Meditative an ensō with a red seal (Meditative+
 // with a plus, R2718000), Stinkyscape a green planet with stink lines (R1883000; Stinkyscape+ the same
 // with a plus, R3572000), Training Grounds a straw target over two crossed practice swords (R2202000),
-// the held Infinite Assault set a red infinity loop on a dark hexagonal chip (R4577009);
-// any other set (the reserved Boss sets, one this client does not know yet) a plain diamond, so every
+// the held Infinite Assault set a red infinity loop on a dark hexagonal chip (R4577009), the held
+// Felinors vs Humans set a roundel split down a lightning seam, a Felinor's head on its orange half and
+// a Human's on its blue (R5235000); any other set (the reserved Boss sets, one this client does not know yet) a plain diamond, so every
 // card shows one.
 //
 // Presentation only: the set is public catalog data (§5.1) and no rule reads the mark (CLAUDE.md
@@ -26,6 +27,7 @@ export type SetMarkKind =
   | "stinkyscape-plus"
   | "training-grounds"
   | "infinite-assault"
+  | "felinors-vs-humans"
   | "unknown";
 
 /** A set mark that is a set's own, not the fallback diamond: the sets that have a watermark (R2718000). */
@@ -75,6 +77,10 @@ const CHIP = "#2b3038";
 const CHIP_INK = "#0c0e12";
 const CHIP_TRACE = "#5ad1ff";
 const ASSAULT_RED = "#ff4a3a";
+const FELINOR_ORANGE = "#f2a33a";
+const HUMAN_BLUE = "#5b8fd6";
+const VERSUS_INK = "#1a1420";
+const VERSUS_SEAM = "#fff3d6";
 
 /** A wooden practice sword from the hilt at (x1, y1) to the tip at (x2, y2), outlined. */
 function woodenSword(x1: number, y1: number, x2: number, y2: number): string {
@@ -133,6 +139,14 @@ const GLYPHS: Readonly<Record<SetMarkKind, string>> = {
     `<path d='M12 1.6L21 6.8V17.2L12 22.4L3 17.2V6.8Z' fill='${CHIP}' stroke='${CHIP_INK}' stroke-width='1.4' stroke-linejoin='round'/>` +
     `<path d='M12 4.6L18.4 8.3V15.7L12 19.4L5.6 15.7V8.3Z' fill='none' stroke='${CHIP_TRACE}' stroke-width='0.8' stroke-linejoin='round'/>` +
     `<path d='M12 12C10.4 9.6 6.4 9.6 6.4 12C6.4 14.4 10.4 14.4 12 12C13.6 9.6 17.6 9.6 17.6 12C17.6 14.4 13.6 14.4 12 12Z' fill='none' stroke='${ASSAULT_RED}' stroke-width='1.8' stroke-linecap='round'/>`,
+  "felinors-vs-humans":
+    `<path d='M12 1.6A10.4 10.4 0 0 0 12 22.4Z' fill='${FELINOR_ORANGE}' stroke='${VERSUS_INK}' stroke-width='1.2' stroke-linejoin='round'/>` +
+    `<path d='M12 1.6A10.4 10.4 0 0 1 12 22.4Z' fill='${HUMAN_BLUE}' stroke='${VERSUS_INK}' stroke-width='1.2' stroke-linejoin='round'/>` +
+    `<path d='M4.6 12L4.8 7.6L7.6 10.6Z M10.2 12L10 7.6L7.2 10.6Z' fill='${VERSUS_INK}' stroke='${VERSUS_INK}' stroke-width='0.6' stroke-linejoin='round'/>` +
+    `<circle cx='7.4' cy='13.4' r='3.2' fill='${VERSUS_INK}'/>` +
+    `<circle cx='16.6' cy='9.6' r='2.4' fill='${VERSUS_INK}'/>` +
+    `<path d='M13.4 18.2Q13.4 13.4 16.6 13.4Q19.8 13.4 19.8 18.2Z' fill='${VERSUS_INK}'/>` +
+    `<path d='M12.9 2.4L11.2 9.8L13 10.6L11.1 21.6' fill='none' stroke='${VERSUS_SEAM}' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/>`,
   unknown: `<path d='M12 1.6L22.4 12L12 22.4L1.6 12Z' fill='#bba8dc' stroke='#1d1530' stroke-width='1.6' stroke-linejoin='round'/><path d='M12 7.4L16.6 12L12 16.6L7.4 12Z' fill='#1d1530'/>`,
 };
 
@@ -151,6 +165,7 @@ const SRC: Readonly<Record<SetMarkKind, string>> = {
   "stinkyscape-plus": glyphUri(GLYPHS["stinkyscape-plus"]),
   "training-grounds": glyphUri(GLYPHS["training-grounds"]),
   "infinite-assault": glyphUri(GLYPHS["infinite-assault"]),
+  "felinors-vs-humans": glyphUri(GLYPHS["felinors-vs-humans"]),
   unknown: glyphUri(GLYPHS.unknown),
 };
 
@@ -164,6 +179,7 @@ const KINDS: Readonly<Record<string, WatermarkKind>> = {
   "Stinkyscape+": "stinkyscape-plus",
   "Training Grounds": "training-grounds",
   "Infinite Assault": "infinite-assault",
+  "Felinors vs Humans": "felinors-vs-humans",
 };
 
 /** The mark a card of `set` wears, the diamond for a set with no glyph. */
@@ -204,6 +220,7 @@ const WATERMARKS: Readonly<Record<WatermarkKind, Watermark>> = {
   "stinkyscape-plus": watermark("stinkyscape-plus"),
   "training-grounds": watermark("training-grounds"),
   "infinite-assault": watermark("infinite-assault"),
+  "felinors-vs-humans": watermark("felinors-vs-humans"),
 };
 
 /** R2718000: the watermark behind a card of `set`'s rules text; none for no set or a set with no symbol. */

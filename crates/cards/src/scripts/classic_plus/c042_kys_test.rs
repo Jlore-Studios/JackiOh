@@ -412,19 +412,23 @@ mod tests {
         }
 
         /// The 2-cost KY cards are Conjure KY, Core #82 KY's Trial (since #3136), C+ #62, M+ #20, M+ #25 KY's
-        /// Intuition (since #3138) and Stinkyscape #25 (#1884): the seeds show the whole pool rather than one pick.
+        /// Intuition (since #3138), Stinkyscape #25 (#1884) and Felinors vs Humans #92 (#5222): the seeds show
+        /// the whole pool rather than one pick.
         #[test]
         fn r420_easy_a_random_2_cost_ky_card_conjure_ky_among_them() {
-            const TWO_COST_KY: [&str; 6] = [
+            const TWO_COST_KY: [&str; 7] = [
                 CONJURE_KY,
                 "core-082",
                 "classicplus-062",
                 "meditativeplus-020",
                 "meditativeplus-025",
                 "stinkyscape-025",
+                "felinorsvshumans-092",
             ];
             let mut seen: BTreeSet<String> = BTreeSet::new();
-            for n in 0..16 {
+            // Seven cards since the Felinors vs Humans release (#5222): 40 seeds miss one about one time in
+            // 70.
+            for n in 0..40 {
                 let mut s = rolled("Easy", "ky", false, &[FILLER], &format!("two{n}-"));
                 take(&mut s, "Easy", true);
                 let cards = gained(&s);

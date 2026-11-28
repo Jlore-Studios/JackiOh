@@ -46,6 +46,7 @@ import {
 import { cx } from "../cards/CardFace.tsx";
 import { gemDrainOf } from "../cards/gemDrain.ts";
 import CardMarks from "../cards/CardMarks.tsx";
+import { CatEars, wearsCatEars } from "../cards/CatEars.tsx";
 import Tallies from "../cards/Tallies.tsx";
 import { OwnCopy } from "../cards/fullArt.ts";
 import { BRITTLE_LAST_COUNT, TEMPORARY_LAST_COUNT } from "../cards/keywordVisuals.ts";
@@ -276,6 +277,8 @@ function Card(props: CardProps): ReactElement {
   // client renders (CLAUDE.md rule 7), and the catalog only fills in what the view leaves out.
   // #3633: one object while its parts are, so the face (memoized, CardFace.tsx) is not drawn again.
   const face: FaceModel = useMemo(() => (props.type === undefined ? model : { ...model, type: props.type }), [model, props.type]);
+  // R5264500: a Felinor tag the view gives a card its definition does not print wears cat ears (FvH #64, #68, #79).
+  const catEars = wearsCatEars(shown?.tags, info.def?.tags);
 
   // Hooks run on every render, backs included. A back in the backrow (R370) opens what the view
   // says of it; any other back opens nothing. A full face sits in a row, so its preview rises over
@@ -550,6 +553,7 @@ function Card(props: CardProps): ReactElement {
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the
           face has `pointer-events: none`. */}
+      {catEars && <CatEars seed={card.instanceId} />}
       <CardMarks marks={marks} instanceId={card.instanceId} bareAura={brittleLast ? BRITTLE_LAST_COLOR : temporaryLast ? TEMPORARY_LAST_COLOR : undefined} />
       {/* R2321000: the counts cards on the field keep on the unit (Level Up!'s attacks). */}
       <Tallies tallies={tallies} instanceId={card.instanceId} />

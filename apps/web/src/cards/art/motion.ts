@@ -436,6 +436,72 @@ const RARE_CARDS: readonly (readonly [string, Archetype, ParticleKind])[] = [
   ["infiniteassault-240", "trap", "note"], // Unpatched
   ["infiniteassault-023", "unit", "ember"], // The Generator
   ["infiniteassault-024", "spell", "bubble"], // Mass Deployment
+  // R5264000: the held Felinors vs Humans set's Legendaries and Mythics, and its tokens printed either, in card order,
+  // after every earlier entry so none of theirs moves: a Felinor's particles are hearts, KY's bubbles, a reprint's its
+  // original's kind.
+  ["felinorsvshumans-002", "unit", "ember"], // M.O.T.H.E.R
+  ["felinorsvshumans-003", "spell", "bubble"], // KY's Pocket Galaxy
+  ["felinorsvshumans-004", "spell", "bubble"], // KY's Unification Mandate
+  ["felinorsvshumans-016", "spell", "bubble"], // Travertine
+  ["felinorsvshumans-016-1", "spell", "bubble"], // Travertine Stack
+  ["felinorsvshumans-016-2", "unit", "ember"], // Travertine Golem
+  ["felinorsvshumans-031", "spell", "bubble"], // Desperate Plea
+  ["felinorsvshumans-034", "spell", "bubble"], // Half-True Craft a Card
+  ["felinorsvshumans-037", "unit", "ember"], // Old Grum
+  ["felinorsvshumans-039", "unit", "bubble"], // Whisperer of KY
+  ["felinorsvshumans-040", "unit", "ember"], // Travel Master Drungar
+  ["felinorsvshumans-046", "unit", "ember"], // Manifestor
+  ["felinorsvshumans-050", "field", "drop"], // Field Kit
+  ["felinorsvshumans-060", "unit", "ember"], // Toolmaster Luna
+  ["felinorsvshumans-060-1", "field", "drop"], // Tools of Creation
+  ["felinorsvshumans-060-2", "field", "ember"], // Tools of Cremation
+  ["felinorsvshumans-070", "unit", "heart"], // Felinor Commander
+  ["felinorsvshumans-073", "unit", "ember"], // Bloodforged Crusader
+  ["felinorsvshumans-074", "unit", "ember"], // Yile, Acceleration Supremist
+  ["felinorsvshumans-074-1", "unit", "ember"], // Yile, Acceleration Supremist Prime
+  ["felinorsvshumans-075", "unit", "ember"], // Illinois Jones
+  ["felinorsvshumans-078", "unit", "ember"], // Human Harbinger
+  ["felinorsvshumans-078-1", "unit", "ember"], // Human Harbinger Prime
+  ["felinorsvshumans-079", "unit", "ember"], // Post Human Aesthetist
+  ["felinorsvshumans-082", "spell", "heart"], // The Last Meow
+  ["felinorsvshumans-091", "spell", "bubble"], // KY's Log Exp of the FFT
+  ["felinorsvshumans-092", "field", "bubble"], // KY's Patented Log 2 Utility
+  ["felinorsvshumans-098", "unit", "heart"], // Yarma
+  ["felinorsvshumans-098-1", "unit", "heart"], // Yarma Prime
+  ["felinorsvshumans-098-2", "spell", "bubble"], // Dream Portal
+  ["felinorsvshumans-099", "unit", "ember"], // Jlorewalker Cho
+  ["felinorsvshumans-100", "spell", "ember"], // Call to Chaos (Felinors vs. Humans Edition)
+  ["felinorsvshumans-100-1", "unit", "heart"], // Felinor Golem
+  ["felinorsvshumans-100-2", "unit", "ember"], // Human Golem
+  ["felinorsvshumans-107", "unit", "bubble"], // KY, Himself
+  ["felinorsvshumans-109", "unit", "ember"], // Keymaster Kalabaster
+  ["felinorsvshumans-110", "unit", "ember"], // Lord Jakrov
+  ["felinorsvshumans-112", "unit", "ember"], // Jilliax Deluxe
+  ["felinorsvshumans-112-1", "unit", "ember"], // Recursion Module
+  ["felinorsvshumans-112-2", "unit", "ember"], // Durability Module
+  ["felinorsvshumans-112-3", "unit", "ember"], // Haywire Module
+  ["felinorsvshumans-112-4", "unit", "ember"], // Starpiece Module
+  ["felinorsvshumans-112-5", "unit", "ember"], // Pylon Module
+  ["felinorsvshumans-112-6", "unit", "ember"], // Power Module
+  ["felinorsvshumans-112-7", "unit", "ember"], // Heavy Module
+  ["felinorsvshumans-112-8", "unit", "ember"], // Utility Module
+  ["felinorsvshumans-112-9", "unit", "ember"], // Twin Module
+  ["felinorsvshumans-112-10", "unit", "ember"], // Viral Module
+  ["felinorsvshumans-112-11", "unit", "ember"], // Perfect Module
+  ["felinorsvshumans-112-12", "unit", "ember"], // Debuff Module
+  ["felinorsvshumans-112-13", "unit", "ember"], // Indestructible Module
+  ["felinorsvshumans-114", "spell", "bubble"], // Kethspiracy
+  ["felinorsvshumans-115", "field", "ember"], // Call to Chaos Vending Machine
+  ["felinorsvshumans-147", "unit", "ember"], // Plagiarized: Ground Truth
+  ["felinorsvshumans-167", "unit", "ember"], // Plagiarized: Thermal Throttler
+  ["felinorsvshumans-173", "spell", "bubble"], // Plagiarized: Ego Death
+  ["felinorsvshumans-185", "unit", "ember"], // Plagiarized: Bastion.exe
+  ["felinorsvshumans-188", "spell", "bubble"], // Plagiarized: Eternal Return
+  ["felinorsvshumans-189", "unit", "ember"], // Plagiarized: Emergent Mind
+  ["felinorsvshumans-191", "spell", "bubble"], // Plagiarized: Everything You've Ever Played
+  ["felinorsvshumans-192", "unit", "ember"], // Plagiarized: Loopback, Who Returns
+  ["felinorsvshumans-194", "unit", "ember"], // Plagiarized: Model Collapse
+  ["felinorsvshumans-196", "unit", "ember"], // Plagiarized: Singularity
 ];
 
 const RARE_ART_MOTION: Readonly<Record<string, ArtMotion>> = Object.fromEntries(

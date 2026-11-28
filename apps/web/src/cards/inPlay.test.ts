@@ -92,6 +92,8 @@ describe("Call to Chaos in play", () => {
       "stinkyscape-151",
       "traininggrounds-039",
       "stinkyscapeplus-142",
+      // Felinors vs Humans' #100 (#5222).
+      "felinorsvshumans-100",
     ]);
     expect(CATALOG["core-095"]?.tags).toContain(CONCEALED_TAG);
   });

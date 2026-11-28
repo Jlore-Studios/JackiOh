@@ -186,9 +186,11 @@ export const FAN_SAMPLE_MAX_DRAWS = 32;
 
 /**
  * #4511: the face-call bound the fan keeps for a returning player's deal from the shipped pool
- * (landingFan.test.ts pins it): a few crossings per rarity, not every shipped card's two faces.
+ * (landingFan.test.ts pins it): a few crossings per rarity, not every shipped card's two faces. 64 until
+ * the Felinors vs Humans release (#5222), whose long faces the sampler draws and rejects more often (65 on
+ * one of the test's seeds), where every shipped card's two faces are about 2,000.
  */
-export const LANDING_DEAL_FACE_BUDGET = 64;
+export const LANDING_DEAL_FACE_BUDGET = 80;
 
 /**
  * #4511: one rarity's card by rejection sampling: draw uniformly from `cards`, skip the cards that

@@ -708,8 +708,8 @@ mod r1370_a_deck_that_leans_on_a_set {
     fn r1370_without_a_lean_set_these_seeds_deal_the_decks_they_always_did_and_take_no_extra_rng_draw() {
         register_cards();
         // Dealt by the deck builder before R1370, with the cursor its rng stopped at, and before Meditative
-        // and each set after it (#1187, #1884, #2204) was in any pool, so the literals gate them (R1390: a
-        // gate deals what the draw dealt before). A patch that moves the builder's curve or picks re-deals
+        // and each set after it (#1187, #1884, #2204, #3573, #5222) was in any pool, so the literals gate
+        // them (R1390: a gate deals what the draw dealt before). A patch that moves the builder's curve or picks re-deals
         // the pins, their seeds stopping at the same cursors (#831, #1149, #1194, #1704, #2179, #2657; #1151
         // the themed pin only, #2521 the human and themed pins, #3042 the hard, human and themed pins, #3139 and
         // #3138 the human, easy and hard pins: Living Bomb costs (2), Snom Bunny Mind Control (5) and a dozen
@@ -728,7 +728,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:human",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"] }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Felinors vs Humans"] }),
                 21,
                 &[
                     "classicplus-007",
@@ -756,7 +756,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:easy",
                 20,
-                json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"] }),
+                json!({ "manaCap": 4, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Felinors vs Humans"] }),
                 21,
                 &[
                     "core-091",
@@ -784,7 +784,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:hard",
                 30,
-                json!({ "manaCap": 7, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"] }),
+                json!({ "manaCap": 7, "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Felinors vs Humans"] }),
                 31,
                 &[
                     "classicplus-006",
@@ -822,7 +822,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r1370-pin:themed",
                 20,
-                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"], "theme": "Human" }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Felinors vs Humans"], "theme": "Human" }),
                 20,
                 &[
                     "classic-013",
@@ -850,7 +850,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             (
                 "r4784000-pin:book:6",
                 25,
-                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"], "theme": "Book" }),
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Felinors vs Humans"], "theme": "Book" }),
                 25,
                 &[
                     "core-043",
@@ -1251,10 +1251,14 @@ mod r1390_the_ai_decks_soft_gate {
     const FORCED_MEDITATIVE: &str = "meditative-002";
 
     /// A gate the tests of the gate's mechanics deal under: Meditative, which the AI's decks were
-    /// dealt under from #551 until #732 lifted it, and Stinkyscape+, which `AI_DECK_GATED_SETS` held from
-    /// its release (#3573) until fullsend 2 (#3574), so a lean on the first lands on the newest set that is
-    /// in neither.
-    const GATE: &[SetName] = &[SetName::Meditative, SetName::StinkyscapePlus];
+    /// dealt under from #551 until #732 lifted it, Stinkyscape+, which `AI_DECK_GATED_SETS` held from
+    /// its release (#3573) until fullsend 2 (#3574), and Felinors vs Humans, which it holds from its
+    /// release (#5222, R5222000), so a lean on the first lands on the newest set that is in none.
+    const GATE: &[SetName] = &[
+        SetName::Meditative,
+        SetName::StinkyscapePlus,
+        SetName::FelinorsVsHumans,
+    ];
 
     fn gated_in(deck: &[String]) -> Vec<&String> {
         deck.iter()
@@ -1343,8 +1347,8 @@ mod r1390_the_ai_decks_soft_gate {
         register_cards();
         let gate = GATE;
         // The newest set that ships, which this gate leaves, is Training Grounds (#2204; Stinkyscape #1884
-        // and Meditative+ #1187 before it; Stinkyscape+ #3573 is gated), so a lean on gated Meditative
-        // lands on it, not on Classic+.
+        // and Meditative+ #1187 before it; Stinkyscape+ #3573 and Felinors vs Humans #5222 are gated), so
+        // a lean on gated Meditative lands on it, not on Classic+.
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), gate),
             Some(SetName::TrainingGrounds)
@@ -1366,7 +1370,8 @@ mod r1390_the_ai_decks_soft_gate {
                     SetName::Meditative,
                     SetName::Stinkyscape,
                     SetName::TrainingGrounds,
-                    SetName::StinkyscapePlus
+                    SetName::StinkyscapePlus,
+                    SetName::FelinorsVsHumans
                 ]
             ),
             Some(SetName::MeditativePlus)
@@ -1380,7 +1385,8 @@ mod r1390_the_ai_decks_soft_gate {
                     SetName::MeditativePlus,
                     SetName::Stinkyscape,
                     SetName::TrainingGrounds,
-                    SetName::StinkyscapePlus
+                    SetName::StinkyscapePlus,
+                    SetName::FelinorsVsHumans
                 ]
             ),
             Some(SetName::Classic)
@@ -1485,9 +1491,9 @@ mod r1390_the_ai_decks_soft_gate {
     fn r1390_the_gate_is_lifted_and_the_ai_decks_are_dealt_meditative_cards() {
         register_cards();
         // Issue #732 measured the AI on the Meditative set and took it off the list (R1390): the AI's
-        // own decks are dealt from it. The list is empty since fullsend 2 (#3574, R3574000) lifted the
-        // Stinkyscape+ set's gate.
-        assert_eq!(AI_DECK_GATED_SETS, &[] as &[SetName]);
+        // own decks are dealt from it. Fullsend 2 (#3574, R3574000) lifted the Stinkyscape+ set's gate,
+        // and the list holds the Felinors vs Humans set alone since its release (#5222, R5222000).
+        assert!(!AI_DECK_GATED_SETS.contains(&SetName::Meditative));
         assert_eq!(
             ungated_lean(Some(SetName::Meditative), AI_DECK_GATED_SETS),
             Some(SetName::Meditative)
@@ -1579,6 +1585,57 @@ mod r1390_the_ai_decks_soft_gate {
                 &mut create_rng(&seed, 0),
                 DECK_SIZE,
                 &options(json!({ "leanSet": "Stinkyscape+" })),
+            );
+            assert!(
+                of_set(&leaning, SetName::StinkyscapePlus) >= lean_floor(DECK_SIZE),
+                "{seed}: {leaning:?}"
+            );
+        }
+    }
+
+    /// R5222000: wave 1's release ships the Felinors vs Humans set gated (#5222), as the Stinkyscape+
+    /// set's release did (#3573): `AI_DECK_GATED_SETS` holds it alone, so the AI's own decks are dealt
+    /// none of it at any tier and a lean on it leans on Stinkyscape+, the newest set the gate leaves,
+    /// while a player's random deck from the same stream holds its cards, until wave 2's sweep (#5223)
+    /// measures the AI on it and lifts the gate.
+    #[test]
+    fn r5222000_r1390_the_gate_holds_felinors_vs_humans_alone_until_wave_2() {
+        register_cards();
+        assert!(SHIPPED_SETS.contains(&SetName::FelinorsVsHumans));
+        assert_eq!(AI_DECK_GATED_SETS, &[SetName::FelinorsVsHumans]);
+        assert_eq!(
+            ungated_lean(Some(SetName::FelinorsVsHumans), AI_DECK_GATED_SETS),
+            Some(SetName::StinkyscapePlus)
+        );
+        let mut player_dealt = 0;
+        for (tier, size, base) in ai_rules() {
+            for n in 1..=GATE_SEEDS {
+                let seed = format!("r5222000:{tier}:{n}");
+                let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &options(base.clone()));
+                assert_eq!(deck.len(), size as usize, "{seed}");
+                assert_eq!(of_set(&deck, SetName::FelinorsVsHumans), 0, "{seed}: {deck:?}");
+                let mut player = base.clone();
+                player["gatedSets"] = json!([]);
+                player["banned"] = json!([]);
+                let dealt = build_ai_deck(&mut create_rng(&seed, 0), size, &options(player));
+                player_dealt += of_set(&dealt, SetName::FelinorsVsHumans);
+            }
+        }
+        assert!(
+            player_dealt > 0,
+            "no player's random deck held a Felinors vs Humans card"
+        );
+        for n in 1..=GATE_SEEDS {
+            let seed = format!("r5222000:lean:{n}");
+            let leaning = build_ai_deck(
+                &mut create_rng(&seed, 0),
+                DECK_SIZE,
+                &options(json!({ "leanSet": "Felinors vs Humans" })),
+            );
+            assert_eq!(
+                of_set(&leaning, SetName::FelinorsVsHumans),
+                0,
+                "{seed}: {leaning:?}"
             );
             assert!(
                 of_set(&leaning, SetName::StinkyscapePlus) >= lean_floor(DECK_SIZE),
@@ -1874,6 +1931,66 @@ mod r817000_a_random_deck_holds_at_most_two_quickdraw_cards {
             // The theme's chance and one draw per card, and no draw to pick a theme.
             assert_eq!(rng.cursor(), DECK_SIZE as u32 + 1, "seed {n}");
         }
+    }
+
+    /// R5235002: Plagiarized marks the Felinors vs Humans set's frozen copies of Infinite Assault cards, a
+    /// provenance tag as Legacy is, so it is never a theme either: with the held set previewed, a pool whose one
+    /// theme-sized tag it is rolls none (a Plagiarized-themed deck would be a bag of reprints).
+    #[test]
+    fn r5235002_plagiarized_is_never_a_theme_so_a_pool_whose_one_theme_sized_tag_it_is_rolls_none() {
+        register_cards();
+        // R1420's preview opens the held set on this thread exactly as shipping it does.
+        let _preview = jackioh_engine::testkit::preview_every_set();
+        let plagiarized: Vec<String> = query(&CatalogQueryArgs::default())
+            .into_iter()
+            .filter(|def| def.tags.contains(&Tag::Plagiarized))
+            .map(|def| def.id.clone())
+            .collect();
+        assert_eq!(plagiarized.len(), 82);
+        let mut untagged: Vec<String> = query(&CatalogQueryArgs::default())
+            .into_iter()
+            .filter(|def| def.tags.is_empty())
+            .map(|def| def.id.clone())
+            .collect();
+        untagged.sort();
+        let kept: IndexSet<String> = plagiarized
+            .into_iter()
+            .chain(untagged.into_iter().take(DECK_SIZE as usize))
+            .collect();
+        // PREMISE: Plagiarized is the pool's one tag with `minThemeSize` cards, so a rolled theme would be it.
+        let mut counts: IndexMap<String, usize> = IndexMap::new();
+        for id in &kept {
+            for tag in &def_of(None, id).tags {
+                *counts.entry(tag.as_str().to_string()).or_insert(0) += 1;
+            }
+        }
+        let theme_sized: Vec<String> = counts
+            .into_iter()
+            .filter(|(_, count)| *count >= AI_DECK.min_theme_size as usize)
+            .map(|(tag, _)| tag)
+            .collect();
+        assert_eq!(theme_sized, [Tag::Plagiarized.as_str()]);
+        let banned: Vec<String> = ai_pool().into_iter().filter(|id| !kept.contains(id)).collect();
+        let opts = options(json!({ "banned": banned, "gatedSets": [] }));
+        let mut most = 0;
+        for n in 1..=SEEDS {
+            let mut rng = create_rng(&format!("r5235002:theme:{n}"), 0);
+            let deck = build_ai_deck(&mut rng, DECK_SIZE, &opts);
+            assert_eq!(deck.len(), DECK_SIZE as usize, "seed {n}");
+            // The theme's chance and one draw per card, and no draw to pick a theme.
+            assert_eq!(rng.cursor(), DECK_SIZE as u32 + 1, "seed {n}");
+            let held = defs_of(&deck)
+                .iter()
+                .filter(|def| def.tags.contains(&Tag::Plagiarized))
+                .count();
+            most = most.max(held);
+        }
+        // The preview dealt the reprints, a theme's worth in a deck, so the deals measured the tag.
+        assert!(
+            most >= AI_DECK.min_theme_size as usize,
+            "no deck held {} Plagiarized cards (at most {most})",
+            AI_DECK.min_theme_size
+        );
     }
 
     #[test]

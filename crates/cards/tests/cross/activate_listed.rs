@@ -61,7 +61,7 @@ const CLONE_MACHINE: &str = "core-033"; // Unstable Clone Machine
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 105] = [
+const ACTIVATE_CARDS: [&str; 117] = [
     HEROIC_POWER,
     TWINSPELL,
     UNBIASED_IMMIGRATION,
@@ -167,6 +167,19 @@ const ACTIVATE_CARDS: [&str; 105] = [
     "stinkyscapeplus-148",
     "stinkyscapeplus-157",
     "stinkyscapeplus-160",
+    // The Felinors vs Humans set's, from its release (#5222, R5222000).
+    "felinorsvshumans-019",
+    "felinorsvshumans-020",
+    "felinorsvshumans-020-1",
+    "felinorsvshumans-032",
+    "felinorsvshumans-041",
+    "felinorsvshumans-049-1",
+    "felinorsvshumans-050",
+    "felinorsvshumans-053",
+    "felinorsvshumans-080",
+    "felinorsvshumans-085",
+    "felinorsvshumans-086",
+    "felinorsvshumans-115",
 ];
 
 const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2. A spare that keeps R82's auto-end away.
@@ -3014,4 +3027,199 @@ mod stinkyscape {
             uses_left(&s, &id, 1);
         });
     }
+}
+
+/// The Felinors vs Humans set's Activate cards, from its release (#5222, R5222000): each Activate is found
+/// in `legal_actions`, shown usable on its controller's view and sent through `reduce` as listed, on both
+/// faces, and does what its text says (each card's own file tests the rest of it).
+mod fvh_activates {
+    use super::*;
+    use jackioh_engine::afflictions::{hero_burn_of, toxic_on};
+
+    const TROWEL: &str = "felinorsvshumans-019";
+    const WALL_OF_BRICKS: &str = "felinorsvshumans-019-1";
+    const BOMB: &str = "felinorsvshumans-020";
+    const TICKING_TIME_BOMB: &str = "felinorsvshumans-020-1";
+    const REFRESHABLE_SHOP: &str = "felinorsvshumans-032";
+    const ICECREAM_VENDER: &str = "felinorsvshumans-041";
+    const CANDLE_SHOT: &str = "felinorsvshumans-049-1";
+    const FIELD_KIT: &str = "felinorsvshumans-050";
+    const JAY_SHARP_SHOOTER: &str = "felinorsvshumans-053";
+    const SUPPORT_CHINOOK: &str = "felinorsvshumans-080";
+    const LIVING_FIRE_POTION: &str = "felinorsvshumans-085";
+    const LIVING_POISON_POTION: &str = "felinorsvshumans-086";
+    const VENDING_MACHINE: &str = "felinorsvshumans-115";
+    /// The hero health every scene starts at.
+    const HERO: i32 = 30;
+
+    macro_rules! fvh_both_faces {
+        ($name:ident, $check:expr) => {
+            mod $name {
+                use super::*;
+
+                #[test]
+                fn r384_base_through_the_listed_activate() {
+                    ($check)(false);
+                }
+
+                #[test]
+                fn r384_radiant_through_the_listed_activate() {
+                    ($check)(true);
+                }
+            }
+        };
+    }
+
+    /// `def`'s printed `key` on the face asked for.
+    fn printed(def: &str, key: &str, radiant: bool) -> i32 {
+        let param = jackioh_cards::CATALOG[def]
+            .params
+            .iter()
+            .flatten()
+            .find(|param| param.key == key)
+            .unwrap_or_else(|| panic!("{def} declares {key}"));
+        if radiant { param.radiant } else { param.base }
+    }
+
+    /// `def` on p1's side (a Unit on the field, anything else in the backrow), p2 holding the Menace.
+    fn armed(def: &str, radiant: bool) -> Scenario {
+        let zone = if jackioh_cards::CATALOG[def].type_ == CardType::Unit {
+            "field"
+        } else {
+            "backrow"
+        };
+        let mut p1 = json!({ "hand": [STOCKPILE, FILLER], "library": [X, X, X, X], "mana": 5 });
+        p1[zone] = json!([on(def, radiant)]);
+        scenario(json!({
+            "p1": p1,
+            "p2": { "field": [MENACE], "hand": [FILLER], "library": [X, X] },
+        }))
+    }
+
+    fn at(target: Selection) -> impl Fn(&ActionBody) -> bool {
+        move |action: &ActionBody| targets_of(action) == vec![target.clone()]
+    }
+
+    fn summoned(s: &Scenario, def: &str) -> Vec<CardInstance> {
+        units(s, P1)
+            .into_iter()
+            .filter(|unit| unit.def_id == def)
+            .collect()
+    }
+
+    fvh_both_faces!(fvh_n19_trowel, |radiant: bool| {
+        let mut s = armed(TROWEL, radiant);
+        activate_listed(&mut s, TROWEL, any);
+        let walls = summoned(&s, WALL_OF_BRICKS);
+        assert_eq!(walls.len(), 1, "a Wall of Bricks");
+        assert_eq!(walls[0].radiant, radiant);
+    });
+
+    fvh_both_faces!(fvh_n20_bomb, |radiant: bool| {
+        let mut s = armed(BOMB, radiant);
+        activate_listed(&mut s, BOMB, any);
+        let bombs = summoned(&s, TICKING_TIME_BOMB);
+        assert_eq!(bombs.len(), 1, "a Ticking Time Bomb");
+        assert_eq!(bombs[0].radiant, radiant);
+    });
+
+    fvh_both_faces!(fvh_n20_1_ticking_time_bomb, |radiant: bool| {
+        let mut s = armed(TICKING_TIME_BOMB, radiant);
+        let damage = printed(TICKING_TIME_BOMB, "damage", radiant);
+        activate_listed(&mut s, TICKING_TIME_BOMB, any);
+        assert!(summoned(&s, TICKING_TIME_BOMB).is_empty(), "it Tributed itself");
+        assert_eq!(health(&s, P2), HERO - damage, "its Death hits the enemy hero");
+        let own = if radiant { HERO } else { HERO - damage };
+        assert_eq!(health(&s, P1), own, "the base face's Death hits both heroes");
+    });
+
+    fvh_both_faces!(fvh_n32_refreshable_shop, |radiant: bool| {
+        let mut s = armed(REFRESHABLE_SHOP, radiant);
+        let before: Vec<String> = s.hand(P1).into_iter().map(|card| card.id).collect();
+        activate_listed(&mut s, REFRESHABLE_SHOP, any);
+        let after = s.hand(P1);
+        assert_eq!(after.len(), before.len(), "each card is replaced");
+        assert!(after.iter().all(|card| !before.contains(&card.id)), "{after:?}");
+        let shining = after.iter().filter(|card| card.radiant).count();
+        assert_eq!(shining, if radiant { after.len() } else { 1 });
+    });
+
+    fvh_both_faces!(fvh_n41_icecream_vender, |radiant: bool| {
+        let mut s = armed(ICECREAM_VENDER, radiant);
+        let menace = s.card(MENACE).id.clone();
+        let target = instance(&menace);
+        activate_listed(&mut s, ICECREAM_VENDER, move |action| {
+            targets_of(action) == vec![target.clone()]
+                && modes_of(action) == vec!["Freeze a Unit".to_string()]
+        });
+        assert!(s.card(MENACE).frozen.is_some(), "the Menace is Frozen");
+    });
+
+    fvh_both_faces!(fvh_n49_1_candle_shot, |radiant: bool| {
+        let mut s = armed(CANDLE_SHOT, radiant);
+        activate_listed(&mut s, CANDLE_SHOT, at(hero(P2)));
+        assert_eq!(health(&s, P2), HERO - printed(CANDLE_SHOT, "damage", radiant));
+    });
+
+    fvh_both_faces!(fvh_n50_field_kit, |radiant: bool| {
+        let mut s = armed(FIELD_KIT, radiant);
+        let held = |s: &Scenario| s.state().players[P1].backrow.iter().flatten().count();
+        let backrow = held(&s);
+        activate_listed(&mut s, FIELD_KIT, at(hero(P2)));
+        assert_eq!(health(&s, P2), HERO - printed(FIELD_KIT, "damage", radiant));
+        assert_eq!(held(&s), backrow + 1, "a Trap is summoned");
+    });
+
+    fvh_both_faces!(fvh_n53_jay_sharp_shooter, |radiant: bool| {
+        let mut s = armed(JAY_SHARP_SHOOTER, radiant);
+        let mana = s.state().players.p1.mana.current;
+        activate_listed(&mut s, JAY_SHARP_SHOOTER, at(hero(P2)));
+        assert_eq!(
+            health(&s, P2),
+            HERO - printed(JAY_SHARP_SHOOTER, "damage", radiant)
+        );
+        assert_eq!(s.state().players.p1.mana.current, mana - 1, "it pays (1)");
+    });
+
+    fvh_both_faces!(fvh_n80_support_chinook, |radiant: bool| {
+        let mut s = armed(SUPPORT_CHINOOK, radiant);
+        let hand = s.hand(P1).len();
+        activate_listed(&mut s, SUPPORT_CHINOOK, |action| {
+            ability_of(action).as_deref() == Some("resupply")
+        });
+        let draw = usize::try_from(printed(SUPPORT_CHINOOK, "draw", radiant)).expect("a count");
+        assert_eq!(s.hand(P1).len(), hand + draw);
+    });
+
+    fvh_both_faces!(fvh_n85_living_fire_potion, |radiant: bool| {
+        let mut s = armed(LIVING_FIRE_POTION, radiant);
+        let id = s.card(LIVING_FIRE_POTION).id.clone();
+        activate_listed(&mut s, LIVING_FIRE_POTION, any);
+        assert_eq!(
+            hero_burn_of(s.state(), P2),
+            printed(LIVING_FIRE_POTION, "burn", radiant)
+        );
+        s.expect_in_zone(id.as_str(), if radiant { "field" } else { "graveyard" });
+    });
+
+    fvh_both_faces!(fvh_n86_living_poison_potion, |radiant: bool| {
+        let mut s = armed(LIVING_POISON_POTION, radiant);
+        let id = s.card(LIVING_POISON_POTION).id.clone();
+        activate_listed(&mut s, LIVING_POISON_POTION, any);
+        assert_eq!(
+            toxic_on(s.card(MENACE)),
+            printed(LIVING_POISON_POTION, "toxic", radiant)
+        );
+        s.expect_in_zone(id.as_str(), if radiant { "field" } else { "graveyard" });
+    });
+
+    fvh_both_faces!(fvh_n115_call_to_chaos_vending_machine, |radiant: bool| {
+        let mut s = armed(VENDING_MACHINE, radiant);
+        let events = activate_listed(&mut s, VENDING_MACHINE, any);
+        let cast = events.iter().any(|event| {
+            matches!(event, GameEvent::CardPlayed { def_id, .. }
+                if jackioh_cards::CATALOG[def_id.as_str()].tags.contains(&Tag::CallToChaos))
+        });
+        assert!(cast, "a Call to Chaos is cast");
+    });
 }

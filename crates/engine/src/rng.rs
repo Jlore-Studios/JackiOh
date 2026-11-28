@@ -95,18 +95,32 @@ impl Rng {
     }
 
     /// Lucky X (§6.1): roll X extra times and keep the best per `better`. `roll` is handed the
-    /// generator, so a roll that draws needs no second borrow of it.
-    pub fn lucky<T>(&mut self, x: i32, mut roll: impl FnMut(&mut Rng) -> T, better: impl Fn(T, T) -> T) -> T {
-        let mut best = roll(self);
-        for _ in 0..x.max(0) {
+    /// generator, so a roll that draws needs no second borrow of it. R5236020: a net luck below 0
+    /// (Unlucky X past the card's Lucky) rolls |X| extra times and keeps the worst: of each pair, the
+    /// one `better` did not keep. With X 0 it is the one draw `roll` takes.
+    pub fn lucky<T: Clone + PartialEq>(
+        &mut self,
+        x: i32,
+        mut roll: impl FnMut(&mut Rng) -> T,
+        better: impl Fn(T, T) -> T,
+    ) -> T {
+        let mut kept = roll(self);
+        for _ in 0..x.unsigned_abs() {
             let next = roll(self);
-            best = better(best, next);
+            kept = if x > 0 {
+                better(kept, next)
+            } else if better(kept.clone(), next.clone()) == kept {
+                next
+            } else {
+                kept
+            };
         }
-        best
+        kept
     }
 
     /// R1440: a coin flip is a luck-based roll whose better side is heads (§6.1), so Lucky X flips X
     /// more coins and keeps heads if any lands heads. With no Lucky it is the one draw `coin` takes.
+    /// R5236020: below 0 it flips |X| more and keeps tails if any lands tails.
     pub fn lucky_coin(&mut self, x: i32) -> bool {
         self.lucky(x, |rng| rng.coin(), |a, b| a || b)
     }
@@ -200,16 +214,22 @@ mod tests {
         assert_eq!(best, 92);
     }
 
-    /// R1440: with no Lucky (or a negative one) the flip is the one draw `coin` takes, at any cursor.
+    /// R1440: with no Lucky the flip is the one draw `coin` takes, at any cursor. R5236020: a net luck
+    /// below 0 is no longer read as none (Unlucky X): at -1 it flips twice and keeps tails if either
+    /// lands tails.
     #[test]
     fn r1440_lucky_coin_with_no_lucky_is_one_draw_exactly_as_coin() {
         for cursor in 0..10 {
             let mut plain = Rng::new("golden", cursor);
-            for x in [0, -1] {
-                let mut lucky = Rng::new("golden", cursor);
-                assert_eq!(lucky.lucky_coin(x), plain.clone().coin());
-                assert_eq!(lucky.cursor(), cursor + 1);
-            }
+            let mut lucky = Rng::new("golden", cursor);
+            assert_eq!(lucky.lucky_coin(0), plain.clone().coin());
+            assert_eq!(lucky.cursor(), cursor + 1);
+            let mut pair = plain.clone();
+            let first = pair.coin();
+            let both_heads = first && pair.coin();
+            let mut unlucky = Rng::new("golden", cursor);
+            assert_eq!(unlucky.lucky_coin(-1), both_heads);
+            assert_eq!(unlucky.cursor(), cursor + 2);
             plain.coin();
             assert_eq!(plain.cursor(), cursor + 1);
         }

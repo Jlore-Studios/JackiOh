@@ -10,7 +10,7 @@ use crate::own_library::hide_from_owner;
 use crate::script::Effect;
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::tuning::copy_tuning;
-use crate::wire::{AttackHealth, Zone};
+use crate::wire::{AttackHealth, Enchantment, Zone};
 
 use super::targets::{PlayerSpec, player_of};
 
@@ -73,6 +73,11 @@ pub struct ShuffleIntoArgs {
     /// each fresh card's `cost_mod`, as `addToHand`'s `costMod` is. Absent is its printed price.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_mod: Option<i32>,
+    /// R5238004: put on each fresh card after R57's riders (a copy's own enchantments kept beside them),
+    /// so it rides the card from the library (`CastOnDraw` casts it as it is drawn, R58), as
+    /// `shuffleRandomFromCatalog`'s do. Absent is none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enchantments: Option<Vec<Enchantment>>,
 }
 
 /// Shuffle fresh copies of a definition into a library. A copy a full library refuses is judged by
@@ -87,6 +92,10 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
             }
             let source = source_of(ctx.state, args.copy_of.as_deref()).cloned();
             carry_from(&mut card, source.as_ref());
+            // R5238004: after `carry_from`, which writes a copy's enchantments whole.
+            for enchantment in args.enchantments.iter().flatten() {
+                crate::enchantments::add_enchantment(&mut card, enchantment);
+            }
             if let Some(buff) = args.buff {
                 card.buffs.attack += buff.attack;
                 card.buffs.health += buff.health;

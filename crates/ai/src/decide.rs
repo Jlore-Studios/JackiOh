@@ -1277,6 +1277,7 @@ mod tests {
             zone: Some(ZoneChoice {
                 row: Row::Units,
                 lane,
+                player: None,
             }),
             x: None,
             embiggen: None,

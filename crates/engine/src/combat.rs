@@ -262,7 +262,25 @@ pub fn exertion_unspent_in(auras: &AuraTable<'_>, unit: &CardInstance, kind: Exe
 /// controller changed (R171, `enter_new_side`) and a card a Stack pile uncovers (R1829000,
 /// `zones::remove_from_field`) alike, so this is the one comparison.
 pub fn is_sick(state: &GameState, unit: &CardInstance) -> bool {
-    unit.summoned_turn == Some(state.turn)
+    unit.summoned_turn == Some(state.turn) || stays_sick(state, unit)
+}
+
+/// R5237004: a Unit whose own text keeps it summoning sick while its hook holds (`Script.stays_sick`,
+/// FvH #37 Old Grum's "until it has come back by Reborn"), on the field. A Vanilla has no text.
+fn stays_sick(state: &GameState, unit: &CardInstance) -> bool {
+    if !matches!(unit.zone, crate::wire::Zone::Field { .. }) {
+        return false;
+    }
+    crate::scripts::script_of(state, unit)
+        .stays_sick
+        .as_ref()
+        .is_some_and(|holds| {
+            holds(crate::script::HookArgs {
+                state,
+                self_: unit,
+                radiant: unit.radiant,
+            })
+        })
 }
 
 /// §4.1, §6.1: summoning sick with neither Rush nor Charge — §4.2 step 1's sickness refusal, and
@@ -1488,8 +1506,9 @@ pub fn force_attack(sink: &mut EngineSink<'_>, attacker: &CardInstance, target: 
 }
 
 /// `force_attack`, with `allies` set for R1848005's melee, whose compulsion reaches the attacker's own
-/// side too ("allies can attack each other"): the one change to R173 a melee makes.
-fn force_attack_with(
+/// side too ("allies can attack each other"): the one change to R173 a melee makes. R5238012: and for a
+/// `forced_attack` that names an ally (`ForcedAttackArgs.allies`).
+pub(crate) fn force_attack_with(
     sink: &mut EngineSink<'_>,
     attacker: &CardInstance,
     target: &AttackTarget,

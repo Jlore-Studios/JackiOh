@@ -487,6 +487,10 @@ pub struct PlayOptions {
     /// The row `zone` names when it is not the def's own: a Unit topping a carrier (C+ #33, R446).
     #[serde(default)]
     pub row: Option<Row>,
+    /// R5238002: whose side `zone` is on (`"p1"`/`"p2"`), for a card that plays on either side; omitted
+    /// is the player's own.
+    #[serde(default)]
+    pub player: Option<PlayerId>,
     #[serde(default)]
     pub x: Option<i32>,
     #[serde(default)]
@@ -1647,7 +1651,11 @@ impl Scenario {
                     row.as_str()
                 );
             }
-            zone = Some(ZoneChoice { row, lane });
+            zone = Some(ZoneChoice {
+                row,
+                lane,
+                player: opts.player,
+            });
         }
 
         let tributes: Option<Vec<String>> = opts.tributes.as_ref().map(|refs| {

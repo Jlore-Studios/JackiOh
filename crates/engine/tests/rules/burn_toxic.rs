@@ -776,6 +776,7 @@ mod r5229000_the_rider_read {
             burn,
             burn_dealt,
             toxic,
+            toxic_dealt: false,
         };
         assert_eq!(
             read,

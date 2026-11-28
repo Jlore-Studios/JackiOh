@@ -1296,6 +1296,7 @@ mod r5117000_a_spells_crush_passes_a_unit_immune_to_spells_by {
                 player: PlayerSpec::Enemy,
                 row: None,
                 lane,
+                beneath_only: None,
             };
             (crush(args).apply)(&mut ctx);
         }

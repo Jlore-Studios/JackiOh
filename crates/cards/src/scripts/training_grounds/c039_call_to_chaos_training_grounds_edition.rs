@@ -66,8 +66,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     /// The Call to Chaos pool of the sets that ship (R380, R1420, R2200004), this edition among them,
-    /// Stinkyscape+'s #142 last since its release (#3573).
-    const SHIPPED_EDITIONS: [&str; 7] = [
+    /// Stinkyscape+'s #142 since its release (#3573) and Felinors vs Humans' #100 last since its own (#5222).
+    const SHIPPED_EDITIONS: [&str; 8] = [
         "core-095",
         "classicplus-073",
         "meditative-095",
@@ -75,6 +75,7 @@ mod tests {
         "stinkyscape-151",
         ID,
         "stinkyscapeplus-142",
+        "felinorsvshumans-100",
     ];
     const RUSH_TOKEN: &str = "core-t-rush";
     const DESIGN: &str = "traininggrounds-040";

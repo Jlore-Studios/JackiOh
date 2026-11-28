@@ -40,19 +40,19 @@ use crate::config::{
     MANA_CEILING, TUNE_ATTACK_FLOOR, TUNE_BUFF_ANY_KEYWORDS, TUNE_BUFF_HAND_KEYWORDS, TUNE_BUFF_HAND_REMOVES,
     TUNE_BUFF_REMOVES, TUNE_COST_CAP, TUNE_COST_FLOOR, TUNE_COST_STEP, TUNE_DAMAGE_KEYWORDS,
     TUNE_FIELD_SPELL_KEYWORDS, TUNE_HARMFUL_KEYWORDS, TUNE_HEALTH_FLOOR, TUNE_MULTIPLIER_NONE,
-    TUNE_NERF_HAND_KEYWORDS, TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL, TUNE_X_STEP,
+    TUNE_NERF_HAND_KEYWORDS, TUNE_NERF_UNIT_KEYWORDS, TUNE_PLAGUE_STEP, TUNE_STAT_TOTAL, TUNE_X_STEP,
 };
 use crate::layers::{card_keywords, printed_keywords_of, stats_with_buffs, unclamped_attack, unit_view};
 use crate::mana::is_x_cost;
 use crate::numbers::{
-    NumberRef, current_stats, number_key, number_on, number_ref_id, numbered_keywords_on, numbers_on,
-    own_cost, parse_number_ref,
+    NumberRef, NumberedKey, current_stats, number_key, number_on, number_ref_id, numbered_keywords_on,
+    numbers_on, own_cost, parse_number_ref,
 };
 use crate::params::{set_param, step_param, steppable_params_in};
 use crate::prompts::{OpenPromptArgs, open_prompt, resume_self};
 use crate::script::{Effect, EffectContext};
 use crate::state::{BrittleCounter, CardInstance, GameState, PromptOption, find_instance, find_instance_mut};
-use crate::tuning::{TUNED_FLOOR, X_KEY, add_step, tidy_tuning, tuned_count, tuning_of, x_of};
+use crate::tuning::{TUNED_FLOOR, X_KEY, add_step, tidy_tuning, tuned_count, tuning_of, unlucky_of, x_of};
 use crate::wire::{
     CardType, GameEvent, Keyword, KeywordKind, PromptKind, Selection, TuningChange, ZoneName, has_keyword,
 };
@@ -330,8 +330,9 @@ fn lacking(held: &[Keyword], kinds: &[KeywordKind]) -> Vec<Keyword> {
 }
 
 /// R2657005: the harmful keywords a Nerf may add — Crater, to a Unit, a Field Spell, a Trap or a Field
-/// Trap that lacks it (`TUNE_NERF_HAND_KEYWORDS`), where it is live (R3888000, `keyword_row`). Never
-/// Can't attack or Can't Defend, and nothing to a Vanilla card, whose text is gone.
+/// Trap that lacks it (`TUNE_NERF_HAND_KEYWORDS`), where it is live (R3888000, `keyword_row`); R5236011:
+/// then Fragile, to a Unit that lacks it (`TUNE_NERF_UNIT_KEYWORDS`). Never Can't attack or Can't
+/// Defend, and nothing to a Vanilla card, whose text is gone. A Nerf adds Unlucky on the X row (R5236021).
 fn nerf_candidates(state: &GameState, card: &CardInstance) -> Vec<Keyword> {
     if card.vanilla {
         return Vec::new();
@@ -343,7 +344,12 @@ fn nerf_candidates(state: &GameState, card: &CardInstance) -> Vec<Keyword> {
     ) {
         return Vec::new();
     }
-    lacking(&keywords_now(state, card), TUNE_NERF_HAND_KEYWORDS)
+    let held = keywords_now(state, card);
+    let mut add = lacking(&held, TUNE_NERF_HAND_KEYWORDS);
+    if card_type == CardType::Unit {
+        add.extend(lacking(&held, TUNE_NERF_UNIT_KEYWORDS));
+    }
+    add
 }
 
 /// R2727000: the keywords a Buff may add to a Unit, a Spell or a Field Spell that lacks them of its own
@@ -560,7 +566,13 @@ fn x_items(
                 });
             }
             Some(printed) => {
-                let after = tuned_count(&with_x_step(card, &key, delta), &key, printed);
+                // R5236021: Unlucky steps from 0, so a Nerf adds Unlucky 1 and a Buff takes the last off.
+                let stepped = with_x_step(card, &key, delta);
+                let after = if entry.key == NumberedKey::Unlucky {
+                    unlucky_of(&stepped, printed)
+                } else {
+                    tuned_count(&stepped, &key, printed)
+                };
                 if after == entry.value {
                     continue;
                 }

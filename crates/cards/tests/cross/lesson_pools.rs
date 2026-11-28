@@ -26,6 +26,8 @@ const NAMES_A_HELD_CARD: &[&str] = &[
     "stinkyscapeplus-120", // Crawler: "add a Toxopid to your hand" (S+ #121, Legendary).
     "stinkyscapeplus-136", // Crawler Assembly Line: "Summon a Crawler", whose Death adds a Toxopid.
     "stinkyscapeplus-137", // The Perfect Pair: "Add an Automa-δ and its paired Automa-Ω card", Quad and Oct among them (R3565004).
+    // The Felinors vs Humans release (#5222): the cards of the set that name a held card.
+    "felinorsvshumans-028", // Book of Design Principles: "Add Goetzmann Game Designs to your hand" (TG #40, Mythic).
 ];
 /// A held card the text of another card names, so it reaches a game wherever that other card stands, not
 /// only as it is played: Toxopid (S+ #121) comes with each Crawler (#120), which any Mindustrial pool

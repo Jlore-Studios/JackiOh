@@ -1281,6 +1281,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.taunt_suppressed_turn = None;
     // R4587000: a this-turn buff is a status of the stay on the field, gone with R78's reset.
     instance.turn_buff = None;
+    // R5237001: and so is a grant for N turns.
+    instance.timed_buffs = None;
     instance.face_up = None;
     instance.revealed = None;
     instance.last_damaged_by = None;
@@ -1301,6 +1303,10 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.frozen = None;
     // R3548001: so is the Woozy stamp; a card back after leaving the field is stamped again.
     instance.woozy = None;
+    // R5238001: and a secret grant's disguise, with the granted keyword it hid.
+    instance.shown_to_opponent = None;
+    // R5236004: and so is the Durability its uses spent; a card back after leaving the field is full.
+    instance.durability_spent = None;
     // R1839000: and so is Dormant; a card printing it starts it again as it next enters the field.
     instance.slumber = None;
     // R1852000: and so is a Starship's memory, which its hull starts again as it next enters the field.

@@ -135,7 +135,10 @@ mod tests {
 
         #[test]
         fn r1828002_shuffles_3_random_non_token_ky_cards_into_your_deck() {
-            let (mut s, added) = shuffled("notebook-base", false, 0);
+            // A card shuffled in may leave the deck by its own effect (M #87 Tatches the Totem summons itself),
+            // so the deck holds all three only on a seed where none does, searched for (#848).
+            let seed = seed_where("notebook-base", |seed| shuffled(seed, false, 0).1.len() == 3);
+            let (mut s, added) = shuffled(&seed, false, 0);
             assert_eq!(added.len(), 3);
             for card in &added {
                 assert!(ky_pool().contains(&card.def_id), "{} is no non-token KY card", card.def_id);
@@ -213,7 +216,9 @@ mod tests {
 
         #[test]
         fn r1828002_shuffles_3_random_radiant_ky_cards_into_your_deck() {
-            let (s, added) = shuffled("notebook-radiant", true, 0);
+            // As the base face's: a seed where no card shuffled in leaves the deck.
+            let seed = seed_where("notebook-radiant", |seed| shuffled(seed, true, 0).1.len() == 3);
+            let (s, added) = shuffled(&seed, true, 0);
             assert_eq!(added.len(), 3);
             for card in &added {
                 assert!(ky_pool().contains(&card.def_id), "{} is no non-token KY card", card.def_id);
@@ -299,6 +304,13 @@ mod tests {
                     "meditativeplus-020".to_string(),
                     "meditativeplus-025".to_string(),
                     "stinkyscape-025".to_string(),
+                    // The Felinors vs Humans release (#5222): §8.14 #3, #4, #39, #91, #92 and #107.
+                    "felinorsvshumans-003".to_string(),
+                    "felinorsvshumans-004".to_string(),
+                    "felinorsvshumans-039".to_string(),
+                    "felinorsvshumans-091".to_string(),
+                    "felinorsvshumans-092".to_string(),
+                    "felinorsvshumans-107".to_string(),
                 ]
             );
             assert!(!ids_of_defs(crate::query::query(&json_as(json!({ "tags": ["KY"] })))).contains(&"core-051-1".to_string()));

@@ -9,9 +9,16 @@ use crate::state::{CardInstance, find_instance_mut};
 use crate::wire::{GameEvent, PlayerId};
 
 /// R3536000: whether `card` can evolve now: it has not evolved yet and its text prints an Evolve
-/// hook. A Vanilla card's script is empty, so it never evolves.
+/// hook. A Vanilla card's script is empty, so it never evolves. R5236030: a card with Endless Evolve
+/// (`StaticFlags.endless_evolve`) evolves however often it has before.
 pub fn can_evolve(state: &crate::state::GameState, card: &CardInstance) -> bool {
-    card.evolved != Some(true) && crate::scripts::script_of(state, card).evolve.is_some()
+    let script = crate::scripts::script_of(state, card);
+    script.evolve.is_some() && (card.evolved != Some(true) || evolves_endlessly(state, card))
+}
+
+/// R5236030: whether the card's text has Endless Evolve.
+pub fn evolves_endlessly(state: &crate::state::GameState, card: &CardInstance) -> bool {
+    crate::scripts::flags_of(state, card).endless_evolve == Some(true)
 }
 
 /// R3536000, R3536003, R3536004, R3536005: mark `card` evolved, count it for its controller and
@@ -84,7 +91,10 @@ pub fn evolve_standing(sink: &mut EngineSink<'_>) {
         if marked && let Some(live) = find_instance_mut(sink.state, &card.id) {
             live.enters_evolved = None;
         }
+        // R5236030: a standing condition is met once while it holds, so an Endless Evolve card it holds
+        // for evolves by it once a stay, as any card does; its own trigger's `evolve` evolves it again.
         let holds = !marked
+            && card.evolved != Some(true)
             && can_evolve(sink.state, &card)
             && crate::scripts::script_of(sink.state, &card)
                 .evolves_when

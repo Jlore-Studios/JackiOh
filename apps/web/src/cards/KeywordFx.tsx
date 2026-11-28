@@ -542,6 +542,53 @@ const DRAW: Readonly<Record<Exclude<KeywordKind, "Divine Shield" | "Armor">, () 
       </Part>
     </>
   ),
+
+  // R5264500: the Felinors vs Humans kinds. Durability's crossed tools wear as its uses run out, its count on the
+  // disc's corner as Lucky's is; Fragile crazes the portrait like a pane of glass, its glint crossing the cracks;
+  // Unlucky is Lucky's clover gone wrong, three leaves wilting under a dark cloud, its count on the corner.
+  Durability: () => (
+    <Part className="kw-glyph-art kw-tools" anim fit="contain">
+      <path d="M20 84 L60 44" stroke="#0b0d12" strokeWidth="13" strokeLinecap="round" />
+      <path d="M20 84 L60 44" stroke="#b07a46" strokeWidth="8" strokeLinecap="round" />
+      <path d="M48 20 L80 52 L70 62 L38 30 Z" fill="#aeb9cf" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+      <path d="M80 84 L46 50" stroke="#0b0d12" strokeWidth="11" strokeLinecap="round" />
+      <path d="M80 84 L46 50" stroke="#d8dfeb" strokeWidth="6" strokeLinecap="round" />
+      <path d="M38 22 A14 14 0 1 0 22 38 L30 36 L36 30 Z" fill="#d8dfeb" stroke="#0b0d12" strokeWidth="3.5" strokeLinejoin="round" />
+    </Part>
+  ),
+
+  Fragile: () => (
+    <>
+      <Part className="kw-pane">
+        <rect x="0" y="0" width="100" height="100" fill="#dff4ff" fillOpacity="0.14" />
+        <Inked d="M50 46 L48 4 M50 46 L90 26 M50 46 L84 80 M50 46 L42 96 M50 46 L8 70 M50 46 L14 18" ink="#f2fbff" width={1.4} />
+        <Inked d="M34 32 L46 22 L62 28 L68 44 L60 60 L44 64 L32 54 Z" ink="#f2fbff" width={1.1} />
+      </Part>
+      <Part className="kw-pane-glint" anim>
+        <path d="M14 96 L46 4 L56 4 L24 96 Z" fill="#ffffff" fillOpacity="0.32" />
+      </Part>
+    </>
+  ),
+
+  Unlucky: () => (
+    <>
+      <Part className="kw-glyph-art" fit="contain">
+        <path d="M50 54 C50 70 44 82 30 90" fill="none" stroke="#0b0d12" strokeWidth="7" strokeLinecap="round" />
+        <path d="M50 54 C50 70 44 82 30 90" fill="none" stroke="#5b5a3a" strokeWidth="3.5" strokeLinecap="round" />
+        {[
+          [50, 42],
+          [34, 58],
+          [66, 58],
+        ].map(([x = 0, y = 0]) => (
+          <circle key={`${x}-${y}`} cx={x} cy={y} r="14" fill="#6f7a4a" stroke="#0b0d12" strokeWidth="3" />
+        ))}
+        <circle cx="50" cy="54" r="5" fill="#3f4630" />
+      </Part>
+      <Part className="kw-cloud" anim fit="contain">
+        <path d="M22 26 A12 12 0 0 1 40 14 A14 14 0 0 1 66 16 A11 11 0 0 1 80 30 H22 Z" fill="#3a3550" stroke="#0b0d12" strokeWidth="2.5" strokeLinejoin="round" />
+      </Part>
+    </>
+  ),
 };
 
 function isDrawnHere(kind: KeywordKind): kind is Exclude<KeywordKind, "Divine Shield" | "Armor"> {

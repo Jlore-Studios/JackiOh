@@ -247,6 +247,8 @@ mod b3_4_the_menu_row_by_row_r386 {
                 json!({}),
             );
             live_mut(&mut state, &unit.id).damage = 1;
+            // R5236011: a Nerf may add Fragile to a Unit that lacks it; this one has it already.
+            live_mut(&mut state, &unit.id).tuning = tuning(json!({ "addKeywords": [{ "kind": "Fragile" }] }));
             // (4) already: the stats are the only row, so each application is one draw, the split.
             assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
             let before = unit_view(&state, &live(&state, &unit.id));
@@ -335,7 +337,9 @@ mod b3_4_the_menu_row_by_row_r386 {
                 card.position = Some(Position::Def);
                 card.cost_mod = TUNE_COST_CAP - 1; // no cost row
                 card.damage = 1;
-                card.tuning = tuning(json!({ "attack": -2 })); // 0/1: no stats row either
+                // 0/1: no stats row either. R5236011: a Nerf may add Fragile to a Unit that lacks it;
+                // this one has it already, harmful, so the Nerf never takes it off either.
+                card.tuning = tuning(json!({ "attack": -2, "addKeywords": [{ "kind": "Fragile" }] }));
             }
             assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["keyword"]));
             let change = changes(&once(&mut state, &unit.id, TuneDirection::Degrade))
@@ -1733,21 +1737,27 @@ mod r1160_tune_multiplier {
                     saw_cost = true;
                 }
                 TuningChange::Stats { .. } => {}
-                // R2657005: a Nerf may give a Unit in a hand Crater, the one keyword it adds, so a
-                // doubled add stops at one.
+                // R2657005: a Nerf may give a Unit in a hand Crater, and R5236011 Fragile, the two
+                // keywords it adds, so a doubled add moves both.
                 TuningChange::Keyword {
                     keyword,
                     added: true,
                     also,
                 } => {
-                    assert_eq!(keyword.kind(), KeywordKind::Crater);
-                    assert!(also.as_ref().is_none_or(|also| also.is_empty()));
+                    let adds = [KeywordKind::Crater, KeywordKind::Fragile];
+                    assert!(adds.contains(&keyword.kind()), "{keyword:?}");
+                    let also = also.as_ref().expect("a doubled add moves two keywords");
+                    assert_eq!(also.len(), 1);
+                    assert!(adds.contains(&also[0].kind()), "{also:?}");
+                    assert_ne!(also[0].kind(), keyword.kind());
                     let added = live(&state, &card.id)
                         .tuning
                         .clone()
                         .and_then(|tuning| tuning.add_keywords)
                         .unwrap_or_default();
-                    assert!(added.iter().any(|kept| kept.kind() == KeywordKind::Crater));
+                    for kind in adds {
+                        assert!(added.iter().any(|kept| kept.kind() == kind));
+                    }
                 }
                 TuningChange::Keyword { keyword, also, .. } => {
                     let also = also.as_ref().expect("a doubled remove takes two keywords");
@@ -2049,7 +2059,11 @@ mod r1748000_in_play {
             rows(&state, &unit.id, TuneDirection::Upgrade),
             json!(["stats", "keyword"])
         );
-        assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
+        // R5236011: a Nerf may add Fragile to a Unit, on the field too.
+        assert_eq!(
+            rows(&state, &unit.id, TuneDirection::Degrade),
+            json!(["stats", "keyword"])
+        );
         for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
             for _ in 0..10 {
                 once(&mut state, &unit.id, direction);
@@ -2096,7 +2110,11 @@ mod r2261000_tribute_in_play {
             rows(&state, &unit.id, TuneDirection::Upgrade),
             json!(["stats", "keyword"])
         );
-        assert_eq!(rows(&state, &unit.id, TuneDirection::Degrade), json!(["stats"]));
+        // R5236011: a Nerf may add Fragile to a Unit, on the field too.
+        assert_eq!(
+            rows(&state, &unit.id, TuneDirection::Degrade),
+            json!(["stats", "keyword"])
+        );
         for direction in [TuneDirection::Upgrade, TuneDirection::Degrade] {
             for _ in 0..10 {
                 once(&mut state, &unit.id, direction);

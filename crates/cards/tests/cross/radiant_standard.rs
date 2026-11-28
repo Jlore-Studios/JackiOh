@@ -21,10 +21,46 @@ fn entries() -> Vec<&'static CardDef> {
 const STAT_FACTOR: i32 = 2;
 
 /// R275's named exceptions to the stat half, by id, with the reason.
-const STAT_EXCEPTIONS: &[(&str, &str)] = &[(
-    "stinkyscape-083",
-    "R4285006: S #83 Halo's Radiant 6/1 on its 3/1 base, the designer's printed numbers (Stinkyscape+ Balance Changes IV)",
-)];
+const STAT_EXCEPTIONS: &[(&str, &str)] = &[
+    (
+        "stinkyscape-083",
+        "R4285006: S #83 Halo's Radiant 6/1 on its 3/1 base, the designer's printed numbers (Stinkyscape+ Balance Changes IV)",
+    ),
+    (
+        "felinorsvshumans-010",
+        "R5263000: FvH #10 Shadow Judge's Radiant 6/4 on its 4/3, the designer's numbers; its Cry reaches the permanents beside",
+    ),
+    (
+        "felinorsvshumans-016-2",
+        "R5263000: FvH #16.2 Travertine Golem's 0/5 on both faces, the designer's numbers; its Radiant Float counts three times",
+    ),
+    (
+        "felinorsvshumans-054",
+        "R5263000: FvH #54 Intrepid initiate's Radiant 2/6 on its 2/3, the designer's numbers; it gains after every Spell",
+    ),
+    (
+        "felinorsvshumans-074",
+        "R5263000: FvH #74 Yile, Acceleration Supremist's 2/6 on both faces, the designer's numbers; its Cry and Death are Radiant",
+    ),
+    (
+        "felinorsvshumans-107",
+        "R5263000: FvH #107 KY, Himself's Radiant 2/3 on its 1/3, the designer's numbers; the cards it swaps in cost less",
+    ),
+    (
+        "felinorsvshumans-112",
+        "R5263000, R5262001: FvH #112 Jilliax Deluxe's 0/1 body on both faces, so it lives to its Cry; its Radiant Modules carry the face",
+    ),
+];
+
+/// R5263000: the Felinors vs Humans Units R275's stat half names as exceptions.
+const FELINORS_VS_HUMANS_EXCEPTIONS: [&str; 6] = [
+    "felinorsvshumans-010",
+    "felinorsvshumans-016-2",
+    "felinorsvshumans-054",
+    "felinorsvshumans-074",
+    "felinorsvshumans-107",
+    "felinorsvshumans-112",
+];
 
 /// `docs/radiant-audit.md`, the card-by-card record of R275's effect half.
 const AUDIT: &str = include_str!("../../../../docs/radiant-audit.md");
@@ -154,7 +190,46 @@ mod r275_the_radiant_power_standard_spec_5_2 {
         }
         assert_eq!(
             STAT_EXCEPTIONS.iter().map(|(id, _)| *id).collect::<Vec<_>>(),
-            vec!["stinkyscape-083"]
+            [vec!["stinkyscape-083"], FELINORS_VS_HUMANS_EXCEPTIONS.to_vec()].concat()
+        );
+    }
+
+    /// R5263000: the six Felinors vs Humans Units below the stat half keep their printed stats: five are
+    /// the designer's numbers, whose Radiant face's text carries the rest, and #112 Jilliax Deluxe's 0/1
+    /// body (R5262001) takes its Radiant face's power from its Radiant Modules.
+    #[test]
+    fn r5263000_the_six_felinors_vs_humans_exceptions_keep_their_printed_stats_and_their_radiant_text_differs()
+     {
+        let printed: Vec<(&str, [Option<i32>; 4])> = FELINORS_VS_HUMANS_EXCEPTIONS
+            .iter()
+            .map(|id| {
+                let card = CATALOG.get(*id).expect("a Felinors vs Humans exception");
+                assert!(is_exception(id), "{id}");
+                assert_eq!(card.type_, CardType::Unit, "{id}");
+                assert_ne!(
+                    fill_params(card, FaceKind::Radiant, None),
+                    fill_params(card, FaceKind::Base, None),
+                    "{id}: its Radiant face's text carries the rest"
+                );
+                let stats = [
+                    card.base.attack,
+                    card.base.health,
+                    card.radiant.attack,
+                    card.radiant.health,
+                ];
+                (*id, stats)
+            })
+            .collect();
+        assert_eq!(
+            printed,
+            vec![
+                ("felinorsvshumans-010", [Some(4), Some(3), Some(6), Some(4)]),
+                ("felinorsvshumans-016-2", [Some(0), Some(5), Some(0), Some(5)]),
+                ("felinorsvshumans-054", [Some(2), Some(3), Some(2), Some(6)]),
+                ("felinorsvshumans-074", [Some(2), Some(6), Some(2), Some(6)]),
+                ("felinorsvshumans-107", [Some(1), Some(3), Some(2), Some(3)]),
+                ("felinorsvshumans-112", [Some(0), Some(1), Some(0), Some(1)]),
+            ]
         );
     }
 
@@ -174,7 +249,8 @@ mod r275_the_radiant_power_standard_spec_5_2 {
         assert!(!is_exception(&card.id));
     }
 
-    /// R4285006: Halo doubles its attack and keeps its health, 3/1 → 6/1, the one exception.
+    /// R4285006: Halo doubles its attack and keeps its health, 3/1 → 6/1, the one exception of the sets
+    /// that ship (the held Felinors vs Humans set's are R5263000's).
     #[test]
     fn r4285006_halo_is_the_named_exception_a_6_1_on_a_3_1() {
         let card = CATALOG.get("stinkyscape-083").expect("Halo");
@@ -299,6 +375,29 @@ mod r276_every_card_has_a_radiant_face_spec_5_2 {
             .map(|card| format!("{} {}", card.id, card.name))
             .collect();
         assert_eq!(unchanged, Vec::<String>::new());
+    }
+
+    /// R5263001: the designer gave FvH #47 Blazing Battlemage a blank Radiant face and #66 Fuzzyfruit two
+    /// alike, so the Battlemage's Radiant face prints its base Cry, which finds it Radiant already and does
+    /// nothing, and Fuzzyfruit's Radiant face gives +2/+2 for the base face's +1/+1.
+    #[test]
+    fn r5263001_battlemage_s_radiant_face_prints_its_cry_and_fuzzyfruit_s_radiant_face_gives_2_2() {
+        let battlemage = CATALOG.get("felinorsvshumans-047").expect("Blazing Battlemage");
+        assert_eq!(battlemage.radiant.text, battlemage.base.text);
+        assert_eq!(battlemage.radiant.text, "Cry: Make this Radiant.");
+        assert_eq!(
+            (battlemage.radiant.attack, battlemage.radiant.health),
+            (Some(3), Some(3))
+        );
+        let fuzzyfruit = CATALOG.get("felinorsvshumans-066").expect("Fuzzyfruit");
+        assert_eq!(
+            fill_params(fuzzyfruit, FaceKind::Base, None),
+            "Summon a random (1) Cost Felinor and give it +1/+1."
+        );
+        assert_eq!(
+            fill_params(fuzzyfruit, FaceKind::Radiant, None),
+            "Summon a random (1) Cost Felinor and give it +2/+2."
+        );
     }
 
     #[test]

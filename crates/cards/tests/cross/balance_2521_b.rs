@@ -870,6 +870,7 @@ fn memory_leak_into_lane_2(radiant: bool) -> Scenario {
     let zone = ZoneChoice {
         row: Row::Backrow,
         lane: 2,
+        player: None,
     };
     assert!(
         !is_locked(s.state(), slot(P1, Row::Backrow, 2)),

@@ -174,6 +174,7 @@ pub(crate) fn open_backrow_zones(state: &GameState, player: PlayerId) -> Vec<Zon
         .map(|slot| ZoneChoice {
             row: slot.row,
             lane: slot.lane,
+            player: None,
         })
         .collect()
 }

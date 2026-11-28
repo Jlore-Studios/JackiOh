@@ -257,7 +257,7 @@ describe("audio constants", () => {
     expect(MUSIC_LOW_HEALTH_FRACTION).toBe(0.25);
     expect(MUSIC_DECODED_MAX).toBe(3);
     expect(MUSIC_BYTES_MAX).toBe(8);
-    expect(MUSIC_BUDGET_BYTES).toBe(54 * 1024 * 1024); // R4596000: 51 MiB until the Infinite Assault intros (R3572000: 49 until the Stinkyscape+ ones)
+    expect(MUSIC_BUDGET_BYTES).toBe(60 * 1024 * 1024); // R5222001: 54 MiB until the Felinors vs Humans intros (R4596000: 51 until the Infinite Assault ones, R3572000: 49 until the Stinkyscape+ ones)
   });
 
   it("pins the v0.2.X polish stings, pans and ducks", () => {

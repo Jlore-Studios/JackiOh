@@ -119,7 +119,11 @@ mod tests {
                 assert!(kinds.contains(&json!("Can't attack")));
                 assert!(cost_now(s.state(), s.card(&mrow.id)) <= 4);
                 for event in degrades(s.events()) {
-                    assert_ne!(event["change"]["kind"], json!("keyword"));
+                    // R5236011: the one keyword a Nerf may move on it is an added Fragile.
+                    if event["change"]["kind"] == json!("keyword") {
+                        assert_eq!(event["change"]["keyword"], json!({ "kind": "Fragile" }));
+                        assert_eq!(event["change"]["added"], json!(true));
+                    }
                     if event["change"]["kind"] == json!("stats") {
                         assert_eq!(event["change"]["health"], json!(0));
                         assert!(event["change"]["attack"].as_i64().unwrap_or(i64::MIN) >= -1);

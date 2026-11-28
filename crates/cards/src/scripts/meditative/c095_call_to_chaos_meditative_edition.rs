@@ -72,8 +72,8 @@ mod tests {
     const PLUS_CHAOS: &str = "classicplus-073";
     /// The Call to Chaos pool of the sets that ship, in catalog order (R1240, R1420): #95, C+ #73, this
     /// card, Stinkyscape's #150 and #151 (#1884), Training Grounds' #39 (#2204, R2200004) and Stinkyscape+'s
-    /// #142 (#3573).
-    const EDITIONS: [&str; 7] = [
+    /// #142 (#3573) and Felinors vs Humans' #100 (#5222).
+    const EDITIONS: [&str; 8] = [
         CORE_CHAOS,
         PLUS_CHAOS,
         ID,
@@ -81,11 +81,12 @@ mod tests {
         "stinkyscape-151",
         "traininggrounds-039",
         "stinkyscapeplus-142",
+        "felinorsvshumans-100",
     ];
     /// The Prime tokens of the sets that ship (R1421): C+ #38.1, C+ #46.1, M #45.1, M #49.1 (#831), M #91.1,
-    /// M+ #16.1 Jazakus Prime (#1187), Stinkyscape's #147.1 IN33DH3 Prime (#1884) and Stinkyscape+'s #4.1
-    /// Profe Yates Prime (issue #4440, R4440004).
-    const PRIME_TOKENS: [&str; 8] = [
+    /// M+ #16.1 Jazakus Prime (#1187), Stinkyscape's #147.1 IN33DH3 Prime (#1884), Stinkyscape+'s #4.1
+    /// Profe Yates Prime (issue #4440, R4440004) and Felinors vs Humans' #74.1, #78.1 and #98.1 (#5222).
+    const PRIME_TOKENS: [&str; 11] = [
         "classicplus-038-1",
         "classicplus-046-1",
         "meditative-045-1",
@@ -94,6 +95,9 @@ mod tests {
         "meditativeplus-016-1",
         "stinkyscape-147-1",
         "stinkyscapeplus-004-1",
+        "felinorsvshumans-074-1",
+        "felinorsvshumans-078-1",
+        "felinorsvshumans-098-1",
     ];
     const JADE_BEAUTY: &str = "meditative-039-5";
     const GOLEM: &str = "meditative-095-1";

@@ -762,6 +762,9 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // R1845000: no seat reads a hidden Nerf, the card's own owner included, and the seat's own hand is
     // never a placeholder, so every card forgets them.
     jackioh_engine::state::forget_hidden_nerfs(&mut next);
+    // R5238001: and believes what it is shown of a secret grant: the disguise's keywords on each card the
+    // seat does not control that wears one, with no mark left of which card is real.
+    jackioh_engine::effects::secret_grant::believe_secret_grants(&mut next, seat);
 
     // Step 4: erase the true order of the piles the seat cannot see into.
     next.players[opp].hand.sort_by(by_instance_id);

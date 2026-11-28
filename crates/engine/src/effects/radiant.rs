@@ -393,7 +393,8 @@ pub fn radiant_chance(args: RadiantChanceArgs) -> Effect {
         let zones: Vec<RadiantZone> = args.zone.as_slice().to_vec();
         // R987: the controller's Luck rolls extra times beside the card's own Lucky.
         let luck = crate::query::luck_of(&*ctx.sink.state, ctx.controller);
-        let lucky = (args.lucky.unwrap_or(0) + luck).max(0);
+        // R5236020: the net luck, which an Unlucky may take below 0 (the worst roll kept).
+        let lucky = args.lucky.unwrap_or(0) + luck;
         let chance = args.chance;
 
         // The pool is a snapshot taken before any roll, so every card gets exactly its own rolls.

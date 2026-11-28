@@ -17,9 +17,14 @@ use crate::wire::{CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PL
 /// modifiers apply on top of the capped value as for a human. R1854003: moved crystals count in the cap;
 /// R4331001: stolen crystals count on top of it. R5148000: never above `MANA_CEILING`.
 pub fn max_mana_for(side: &PlayerState) -> i32 {
-    let handicap = handicap_of(side);
-    let base = mana_crystal_count(side).min(handicap.mana_cap);
+    let base = mana_crystal_count(side).min(mana_cap_of(side));
     held_mana(base + stolen_mana_crystals_of(side) + side.mana.perm_mod)
+}
+
+/// §2.3, R181, R5237003: the player's mana cap: their seat's `Handicap.mana_cap`, raised by what effects
+/// have raised it for the rest of the game (`PlayerState.mana_cap_bonus`, FvH #18).
+pub fn mana_cap_of(side: &PlayerState) -> i32 {
+    handicap_of(side).mana_cap + side.mana_cap_bonus.unwrap_or(0)
 }
 
 /// §2.3, R5148000: a mana amount as a player may hold it, current or maximum, temporary mana included:
@@ -72,7 +77,7 @@ pub fn move_mana_crystals(
     let side = &mut state.players[thief];
     let gained = match gain {
         CrystalGain::PastTheCap => lost,
-        CrystalGain::ToTheCap => lost.min((handicap_of(side).mana_cap - mana_crystal_count(side)).max(0)),
+        CrystalGain::ToTheCap => lost.min((mana_cap_of(side) - mana_crystal_count(side)).max(0)),
     };
     if gained > 0 {
         let held = side.mana.max;
@@ -103,7 +108,7 @@ pub fn move_some_mana_crystals(
     victim: PlayerId,
     count: i32,
 ) -> (i32, i32) {
-    let cap = handicap_of(&state.players[victim]).mana_cap;
+    let cap = mana_cap_of(&state.players[victim]);
     let side = &mut state.players[victim];
     let held = mana_crystal_count(side).min(cap).max(0);
     let own = count.clamp(0, held);
@@ -349,6 +354,8 @@ pub fn modifier_is_live(state: &GameState, modifier: &PlayerModifier) -> bool {
             | ModifierKind::HeroImmune
             | ModifierKind::UnitsImmune
             | ModifierKind::UnitsAttack { .. }
+            // R5237007: a stat lend holds from the moment it is made until its expiry, as the Attack one.
+            | ModifierKind::UnitsStats { .. }
     ) {
         return true;
     }
@@ -562,6 +569,11 @@ fn priced(state: &GameState, instance: &CardInstance, options: CostOptions, flas
     let mut cost = override_.unwrap_or_else(|| printed_cost(state, instance))
         + instance.cost_mod
         + crate::hand_order::hand_aura_cost_delta(state, instance);
+    // R5237011, R5237012: under "log 2 utility" (FvH #92) the card's own cost counts as its bit length,
+    // before its player's discounts and price rules; an X cost (returned above) never does.
+    if crate::numbers::log2_utility_reaches_cost(state, instance) {
+        cost = crate::numbers::log2_utility(cost);
+    }
     // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
     // graveyard, while a permission lets its player play it from there (E11, R454).
     let for_play = options.as_play == Some(true)

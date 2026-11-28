@@ -691,6 +691,8 @@ fn conceal_from(base: &mut GameState, viewer: PlayerId) {
     base.board_history = history;
     // R1845000: no seat reads a hidden Nerf, the viewer's own hand's included, so the dry run lands none.
     crate::state::forget_hidden_nerfs(base);
+    // R5238001: and the dry run believes a secret grant's disguise as the viewer is shown it.
+    crate::effects::secret_grant::believe_secret_grants(base, viewer);
 }
 
 /// R1714000: the records the viewer may not read go too, as the AI's `redact` drops them (R185): the

@@ -1137,6 +1137,14 @@ pub struct DiscoverFromCatalogArgs {
     /// R247: what each option is, the card or its number. Default `card`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub offer: Option<DiscoverOffer>,
+    /// R5239005 (FvH #112): which of the pool's cards are offered. Default `random`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub order: Option<DiscoverOrder>,
+    /// R5239008 (FvH #113): this many of the options are past versions (`past: only` of the same
+    /// query), the rest the query's current cards, shuffled together and offered by place
+    /// (`OFFER_OPTION_PREFIX`), so no option names its card's id; `discovered_card` reads the pick.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub past_options: Option<i32>,
 }
 
 impl std::fmt::Debug for DiscoverFromCatalogArgs {
@@ -1149,8 +1157,94 @@ impl std::fmt::Debug for DiscoverFromCatalogArgs {
             .field("prompt", &self.prompt)
             .field("data", &self.data)
             .field("offer", &self.offer)
+            .field("order", &self.order)
+            .field("past_options", &self.past_options)
             .finish()
     }
+}
+
+/// R5239005: which of a Discover's pool are offered. `random`, the default, is a uniform draw;
+/// `dearest` offers the pool's dearest cards by printed cost (`query_cost`, R65), dearest first, a tie
+/// at the cut drawn by the match rng.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub enum DiscoverOrder {
+    #[default]
+    Random,
+    Dearest,
+}
+
+/// R5239008: a place-keyed Discover option's string is this and its place in the offer (`offer-0`).
+pub const OFFER_OPTION_PREFIX: &str = "offer-";
+
+/// R5239008: the resume data key holding the cards behind a place-keyed Discover's places, in order.
+pub const DISCOVER_OFFERS_KEY: &str = "discoverOffers";
+
+/// R5239008: the catalog id (a past id included) behind a Discover's pick: the card behind a
+/// place-keyed or a code option (R1183005), else the option itself when it names a definition; `None`
+/// when nothing was picked or the pick names no card (a §5 number, R247).
+pub fn discovered_card(ctx: &EffectContext<'_>) -> Option<String> {
+    let picked = chosen_options(ctx).into_iter().next()?;
+    if let Some(place) = picked.strip_prefix(OFFER_OPTION_PREFIX) {
+        let at: usize = place.parse().ok()?;
+        return ctx
+            .data
+            .get(DISCOVER_OFFERS_KEY)?
+            .as_array()?
+            .get(at)?
+            .as_str()
+            .map(str::to_string);
+    }
+    if picked.starts_with(CODE_OPTION_PREFIX) {
+        return discovered_code_card(ctx);
+    }
+    crate::catalog::find_def(Some(&*ctx.state), &picked).map(|def| def.id.clone())
+}
+
+/// R5239008: `count` options of which `past` come from the query's past versions, drawn inside `apply`:
+/// the past ones first (fewer when fewer exist), the rest from its current cards, then the whole offer
+/// shuffled by the match rng. The pools leave out the generating card (R387).
+fn past_mixed_offer(
+    ctx: &mut EffectContext<'_>,
+    asked: &CatalogQueryArgs,
+    generating: Option<&str>,
+    count: usize,
+    past: usize,
+) -> Vec<&'static crate::wire::CardDef> {
+    let past_query = CatalogQueryArgs {
+        past: Some(crate::catalog::PastPool::Only),
+        ..asked.clone()
+    };
+    let current_query = CatalogQueryArgs {
+        past: None,
+        ..asked.clone()
+    };
+    let past_pool = query(&excluding_def_id(Some(&*ctx.state), &past_query, generating));
+    let current_pool = query(&excluding_def_id(Some(&*ctx.state), &current_query, generating));
+    let mut offer: Vec<&'static crate::wire::CardDef> = ctx
+        .rng
+        .shuffle(&past_pool)
+        .into_iter()
+        .take(past.min(count))
+        .collect();
+    let rest = count.saturating_sub(offer.len());
+    offer.extend(ctx.rng.shuffle(&current_pool).into_iter().take(rest));
+    ctx.rng.shuffle(&offer)
+}
+
+/// R5239005: the pool shuffled by the match rng, then, for `dearest`, ordered by printed cost, dearest
+/// first: the sort is stable, so the shuffle breaks every tie, the one at the cut included.
+fn in_offer_order(
+    ctx: &mut EffectContext<'_>,
+    pool: &[&'static crate::wire::CardDef],
+    order: Option<DiscoverOrder>,
+) -> Vec<&'static crate::wire::CardDef> {
+    let mut shuffled = ctx.rng.shuffle(pool);
+    if order == Some(DiscoverOrder::Dearest) {
+        shuffled.sort_by_key(|def| std::cmp::Reverse(crate::catalog::query_cost(def)));
+    }
+    shuffled
 }
 
 /// §6.3 Discover: choose 1 of 3 definitions (or their numbers, R247), drawn without replacement and
@@ -1169,6 +1263,48 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             .as_ref()
             .map(|card| card.def_id.clone())
             .or_else(|| ctx.def_id.clone());
+        // R5239008: an offer holding past versions is keyed by place, the cards behind it in the data.
+        if let Some(past) = args.past_options.filter(|past| *past > 0) {
+            let count = args.count.unwrap_or(DISCOVER_OPTIONS).max(0) as usize;
+            let offered = past_mixed_offer(ctx, &asked, generating.as_deref(), count, past as usize);
+            if offered.is_empty() {
+                return;
+            }
+            let mut data = args.data.clone().unwrap_or_default();
+            data.insert(
+                DISCOVER_OFFERS_KEY.to_string(),
+                Value::Array(offered.iter().map(|def| Value::from(def.id.clone())).collect()),
+            );
+            let options: Vec<PromptOption> = offered
+                .iter()
+                .enumerate()
+                .map(|(at, def)| {
+                    let option = format!("{OFFER_OPTION_PREFIX}{at}");
+                    PromptOption {
+                        key: format!("mode:{option}"),
+                        label: def.name.clone(),
+                        selection: Selection::Mode { option },
+                        cost: None,
+                        radiant: None,
+                    }
+                })
+                .collect();
+            let player = ctx.controller;
+            let resume = resume_self(ctx, &args.step, data);
+            open_prompt(
+                ctx,
+                ask(
+                    player,
+                    PromptKind::Discover,
+                    args.prompt
+                        .clone()
+                        .unwrap_or_else(|| "Discover a card".to_string()),
+                    options,
+                    resume,
+                ),
+            );
+            return;
+        }
         let mut pool = query(&excluding_def_id(
             Some(&*ctx.state),
             &asked,
@@ -1186,9 +1322,8 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
         // shuffle drawn as it always was. Only a carried catalog of v0.5.5 to v0.5.7 pairs two cards
         // (`pair_key`), so a replay of those games offers what it did; the build's pairs none.
         let mut shown_pairs: Vec<&'static str> = Vec::new();
-        let shuffled: Vec<_> = ctx
-            .rng
-            .shuffle(&pool)
+        // R5239005: `dearest` orders the same shuffle by printed cost, so the draw is the one it was.
+        let shuffled: Vec<_> = in_offer_order(ctx, &pool, args.order)
             .into_iter()
             .filter(|def| {
                 let key = crate::catalog::pair_key(def);
@@ -1260,6 +1395,104 @@ pub fn discover_from_catalog(args: DiscoverFromCatalogArgs) -> Effect {
             ),
         );
     })
+}
+
+/// R5239004: where a keyword Discover's resume data keeps the keywords it offered, in the offer's order.
+pub const DISCOVERED_KEYWORDS_KEY: &str = "discoveredKeywords";
+
+/// R5239004: `discover_keyword`'s arguments. `pool` defaults to R21's combat keyword pool, `count` to
+/// `DISCOVER_OPTIONS`; `lacking_on` names the card whose keywords are left out of the offer.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoverKeywordArgs {
+    pub step: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pool: Option<Vec<crate::wire::Keyword>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lacking_on: Option<super::targets::TargetSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: StepData,
+}
+
+/// R5239004 (FvH #111 Vicious Fledgeling): Discover a keyword. `count` different keywords of the pool,
+/// one a kind, none the `lacking_on` card has now (read through the layers, §10.4) and no Taunt for an
+/// Indestructible one (R347), drawn by the match rng inside `apply`, never as the hook builds the
+/// effect, since a hook is rebuilt each time a paused list resumes (`prompts::run_resume`). Each option
+/// is the keyword's name (`chosen_options`; `discovered_keyword` turns it back into the keyword), the
+/// offered keywords riding the resume data. Nothing is offered when the pool leaves none, or when
+/// `lacking_on` names no Unit.
+pub fn discover_keyword(args: DiscoverKeywordArgs) -> Effect {
+    Effect::new("discoverKeyword", move |ctx| {
+        let held: Vec<crate::wire::Keyword> = match &args.lacking_on {
+            None => Vec::new(),
+            Some(spec) => match super::targets::resolve_target(ctx, spec) {
+                Some(crate::damage::DamageTarget::Unit { instance }) => {
+                    let live = crate::state::find_instance(ctx.state, &instance.id)
+                        .cloned()
+                        .unwrap_or(instance);
+                    crate::layers::unit_view(ctx.state, &live).keywords
+                }
+                _ => return,
+            },
+        };
+        let indestructible = crate::wire::has_keyword(&held, crate::wire::KeywordKind::Indestructible);
+        let pool = args
+            .pool
+            .clone()
+            .unwrap_or_else(super::buff::random_pool_keywords);
+        let mut candidates: Vec<crate::wire::Keyword> = Vec::new();
+        for keyword in pool {
+            let kind = keyword.kind();
+            if crate::wire::has_keyword(&held, kind)
+                || (indestructible && kind == crate::wire::KeywordKind::Taunt)
+                || candidates.iter().any(|offered| offered.kind() == kind)
+            {
+                continue;
+            }
+            candidates.push(keyword);
+        }
+        let count = args.count.unwrap_or(DISCOVER_OPTIONS).max(0) as usize;
+        let offered: Vec<crate::wire::Keyword> =
+            ctx.rng.shuffle(&candidates).into_iter().take(count).collect();
+        if offered.is_empty() {
+            return;
+        }
+        let mut data = args.data.clone().unwrap_or_default();
+        data.insert(
+            DISCOVERED_KEYWORDS_KEY.to_string(),
+            serde_json::to_value(&offered).unwrap_or_default(),
+        );
+        let options: Vec<PromptOption> = offered
+            .iter()
+            .map(|keyword| mode_option(keyword.kind().as_str(), keyword.kind().as_str()))
+            .collect();
+        let player = ctx.controller;
+        let resume = resume_self(ctx, &args.step, data);
+        open_prompt(
+            ctx,
+            ask(
+                player,
+                PromptKind::Discover,
+                "Discover a keyword".to_string(),
+                options,
+                resume,
+            ),
+        );
+    })
+}
+
+/// R5239004: the keyword a keyword Discover's pick names, as the offer held it (its number with it);
+/// `None` when nothing was picked or the pick is no keyword it offered.
+pub fn discovered_keyword(ctx: &EffectContext<'_>) -> Option<crate::wire::Keyword> {
+    let picked = chosen_options(ctx).into_iter().next()?;
+    let offered: Vec<crate::wire::Keyword> =
+        serde_json::from_value(ctx.data.get(DISCOVERED_KEYWORDS_KEY)?.clone()).ok()?;
+    offered
+        .into_iter()
+        .find(|keyword| keyword.kind().as_str() == picked)
 }
 
 /// Which library cards a `discover_from_library` may reveal. It is not a `CatalogQueryArgs`: the pool

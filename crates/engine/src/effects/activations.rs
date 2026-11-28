@@ -7,13 +7,14 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
+use crate::config::DURABILITY_SPENT_OUT;
 use crate::effects::targets::{TargetSpec, instance_by_id_or_spec};
 use crate::prompts::{HookInstance, HookResumableOptions, run_hook_resumable};
 use crate::script::{ActivationDecl, ActivationUses, Effect, activation_hook, hook};
 use crate::state::find_instance_mut;
 use crate::subsystems::activate::{
     ACTIVATION_DATA_KEY, ACTIVATIONS_MEMORY_KEY, ActivationPaid, abilities_of, ability_uses_this_turn,
-    is_acting_on_field, mark_use, uses_allowed,
+    durability_left, is_acting_on_field, mark_use, spend_durability, uses_allowed,
 };
 use crate::zones::{StandingAt, acting_on, acts_on_field};
 
@@ -75,7 +76,8 @@ fn drop_uses(ctx: &mut crate::script::EffectContext<'_>, id: &str) {
 /// R3548003: "Refresh" for Activates — give back this turn's uses of every Activate on the
 /// controller's permanents, Refresh abilities excepted: each card used this turn keeps only its
 /// Refresh abilities' counts, and its `count` becomes their sum, so every other ability is offered
-/// again whole. `cooldowns` are untouched, and no event is emitted, as `refreshPower` does.
+/// again whole. `cooldowns` are untouched, and no event is emitted, as `refreshPower` does. R5236003:
+/// nor is a card's spent Durability (`CardInstance.durability_spent`), which no Refresh gives back.
 pub fn refresh_activates() -> Effect {
     Effect::new("refreshActivates", move |ctx| {
         let turn = ctx.sink.state.turn;
@@ -190,9 +192,16 @@ pub fn run_activation(args: ActivationOfArgs) -> Effect {
             if ability_uses_this_turn(ctx.state, &card, &decl.id) > 0 {
                 return;
             }
+            // R5236001: a card whose Durability is spent has no use to spend.
+            if durability_left(ctx.state, &card).is_some_and(|left| left <= DURABILITY_SPENT_OUT) {
+                return;
+            }
             for _ in 0..uses_allowed(&card, &decl) {
                 mark_use(ctx.state, &card.id, &decl.id);
             }
+            // R5236000: the run is one use of the card, so it spends exactly 1 Durability, however many
+            // of the turn's uses it took.
+            spend_durability(&mut ctx.sink, &card.id);
         }
         let controller = ctx.controller;
         let paid = ActivationPaid {

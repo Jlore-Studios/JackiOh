@@ -152,8 +152,8 @@ mod tests {
     /// #25, #30, #67, #87 (all tribes), #93, #94 and #102 (whose card the catalog does not hold yet),
     /// Stinkyscape's #87 Siva 1 (#1884), and Training Grounds' (#2204) #17, #22, #23, #33 and the
     /// snapshots #44 (of Core #12) and #51 (of Core #43), which a Discover never offers beside their Core
-    /// card (R2204001), and Stinkyscape+'s #4 Profe Yates (#3573).
-    const FELINOR_UNITS: [&str; 20] = [
+    /// card (R2204001), Stinkyscape+'s #4 Profe Yates (#3573) and Felinors vs Humans' sixteen (#5222).
+    const FELINOR_UNITS: [&str; 36] = [
         "core-012",
         "core-043",
         "core-086",
@@ -174,10 +174,33 @@ mod tests {
         "traininggrounds-044",
         "traininggrounds-051",
         "stinkyscapeplus-004",
+        "felinorsvshumans-044",
+        "felinorsvshumans-062",
+        "felinorsvshumans-065",
+        "felinorsvshumans-069",
+        "felinorsvshumans-070",
+        "felinorsvshumans-071",
+        "felinorsvshumans-081",
+        "felinorsvshumans-083",
+        "felinorsvshumans-084",
+        "felinorsvshumans-088",
+        "felinorsvshumans-089",
+        "felinorsvshumans-094",
+        "felinorsvshumans-096",
+        "felinorsvshumans-097",
+        "felinorsvshumans-098",
+        "felinorsvshumans-105",
     ];
-    /// The three of `FELINOR_UNITS` that cost (4), which the faces' "(2) or less" and "(3) or less" leave out.
+    /// The five of `FELINOR_UNITS` that cost (4), which the faces' "(2) or less" and "(3) or less" leave out:
+    /// FvH #70 Felinor Commander and #89 GIGA Felinor among them since their set ships (#5222).
     /// Stinkyscape+ #4 Profe Yates cost (4) too until issue #4440 made it (2).
-    const COSTING_4: [&str; 3] = ["core-043", "meditative-094", "traininggrounds-051"];
+    const COSTING_4: [&str; 5] = [
+        "core-043",
+        "meditative-094",
+        "traininggrounds-051",
+        "felinorsvshumans-070",
+        "felinorsvshumans-089",
+    ];
     /// #11 Tempo Timmy: a non-Felinor on the enemy side, which #43 Big Felinor's Cry would destroy.
     const TIMMY: &str = "core-011";
     const FILLER: &str = "core-005";

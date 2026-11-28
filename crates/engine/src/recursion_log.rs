@@ -8,7 +8,8 @@
 //! (R4577002) and the player-turn it died on.
 //!
 //! It is kept only while the game holds an Infinite Assault card (`kept`): either side's log is
-//! already `Some`, or `every_instance` holds a card whose definition is of the set. Games of
+//! already `Some`, or `every_instance` holds a card whose definition is of the set or (R5237013)
+//! carries a tag of `RECURSION_LOG_TAGS`, Felinors vs Humans' Plagiarized reprints. Games of
 //! shipped sets never hold one, so no recorded game's hash moves (D14, R768). It is not gated on
 //! `set_is_open`, which is never true for a single-player set, so the log would stay off in the
 //! real Assault. Only public facts are logged, so no view redacts it. It is the one game history
@@ -76,13 +77,33 @@ pub struct RecursionLog {
 
 /// R4589000: whether the game keeps the log: once either side's is `Some`, or the game holds an
 /// Infinite Assault card anywhere (hands, libraries and piles included, D14's hashes among them).
+/// R5237013: or a card tagged with one of `RECURSION_LOG_TAGS` (Plagiarized), which no shipped set's
+/// card carries, so no recorded game's hash moves.
 pub fn kept(state: &GameState) -> bool {
     if state.players.p1.recursion.is_some() || state.players.p2.recursion.is_some() {
         return true;
     }
+    // R5237013: or a card whose definition carries one of `RECURSION_LOG_TAGS` (the Plagiarized reprints,
+    // FV4), so a reprint of a Recursion card reads the log back in a game with no Assault card.
+    crate::state::every_instance(state).any(|card| {
+        crate::catalog::find_def(Some(state), &card.def_id).is_some_and(|def| {
+            def.set == SetName::InfiniteAssault
+                || def
+                    .tags
+                    .iter()
+                    .any(|tag| crate::config::RECURSION_LOG_TAGS.contains(tag))
+        })
+    })
+}
+
+/// R5237002, R5237005: whether the game keeps the records only Felinors vs Humans cards read
+/// (`PlayerState.last_float`, `cardPlayed.fromHand`): it holds a card of `FVH_KEPT_SET` anywhere, either
+/// side's, in any zone (hands, libraries and piles included), as `kept` scans. No recorded game holds
+/// one, so no other game's hash moves (D14, R768).
+pub fn fvh_kept(state: &GameState) -> bool {
     crate::state::every_instance(state).any(|card| {
         crate::catalog::find_def(Some(state), &card.def_id)
-            .is_some_and(|def| def.set == SetName::InfiniteAssault)
+            .is_some_and(|def| def.set == crate::config::FVH_KEPT_SET)
     })
 }
 

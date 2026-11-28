@@ -1866,6 +1866,7 @@ mod r454_plague_paid_plays_and_every_listed_action_over_the_socket {
                 zone: Some(ZoneChoice {
                     row: Row::Units,
                     lane: 2,
+                    player: None,
                 }),
                 x: Some(3),
                 embiggen: Some(true),

@@ -567,6 +567,7 @@ pub fn legal_equip_zones_for(
         .map(|slot| ZoneChoice {
             row: slot.row,
             lane: slot.lane,
+            player: None,
         })
         .collect()
 }
@@ -598,6 +599,7 @@ pub fn legal_zones_for(
             .map(|slot| ZoneChoice {
                 row: slot.row,
                 lane: slot.lane,
+                player: None,
             })
             .collect();
     }
@@ -636,8 +638,70 @@ pub fn legal_zones_for(
         .map(|slot| ZoneChoice {
             row: slot.row,
             lane: slot.lane,
+            player: None,
         })
         .collect()
+}
+
+/// R5238002: whether `card`'s play may name a zone of the other side (`StaticFlags.plays_on_either_side`,
+/// FvH #42), read off its face in hand; a face-down set never does.
+pub fn plays_on_either_side(state: &GameState, card: &CardInstance) -> bool {
+    card.set_as.is_none() && crate::scripts::flags_of(state, card).plays_on_either_side == Some(true)
+}
+
+/// R5238002: the other side's zones a card that plays on either side may name, in lane order, each with
+/// `player` set to that side: every open zone of its row there, or for a Stack card every zone there that
+/// takes a Stack play, by the predicates its own side's zones are read by. None for a GIGA permanent,
+/// and none for any other card. `legal_actions` lists them after the own side's; `refuse_other_side` and
+/// play_steps' landing read the same list and the zone's side.
+pub fn other_side_zones_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<ZoneChoice> {
+    if !plays_on_either_side(state, card) || !needs_zone(state, card) || crate::giga::enters_giga(state, card)
+    {
+        return Vec::new();
+    }
+    let side = crate::wire::opponent_of(player);
+    let stack = plays_on_stack(state, card);
+    crate::zones::slots_of(side, row_for_card(state, card))
+        .into_iter()
+        .filter(|slot| {
+            if stack {
+                accepts_stack(state, slot)
+            } else {
+                crate::zones::is_open(state, *slot)
+            }
+        })
+        .map(|slot| ZoneChoice {
+            row: slot.row,
+            lane: slot.lane,
+            player: Some(side),
+        })
+        .collect()
+}
+
+/// R5238002: the refusal for a play naming a zone of the other side: only a card that plays on either
+/// side, as a plain play (no Equip, no face-down set), into a zone `other_side_zones_for` lists.
+fn refuse_other_side(
+    state: &GameState,
+    player: PlayerId,
+    card: &CardInstance,
+    action: &PlayAction,
+) -> Result<(), EngineError> {
+    let name = name_of(state, &card.def_id);
+    if !plays_on_either_side(state, card) {
+        return refuse(format!("{name} is played on your own side"));
+    }
+    if action.face_down.is_some() || action.equip == Some(true) {
+        return refuse(format!("{name} goes onto the other side only as a plain play"));
+    }
+    let stamped = stamped_with_embiggen(state, card, action.embiggen);
+    let named = action.zone.as_ref();
+    if !other_side_zones_for(state, player, &stamped)
+        .iter()
+        .any(|zone| Some(zone) == named)
+    {
+        return refuse("that zone on the other side is not open".to_string());
+    }
+    Ok(())
 }
 
 /// R653, R23: a carrier that fuses its Unit in (Classic+ #33 Ivory Tower) takes no Unit while Immutable.
@@ -2260,6 +2324,8 @@ fn why_unplayable(
             default_zone_for(state, player, &cheapest.probe, tributes).is_none()
                 && legal_zones_for(state, player, &cheapest.probe, tributes).is_empty()
                 && legal_equip_zones_for(state, player, &cheapest.probe, tributes).is_empty()
+                // R5238002: a card that plays on either side may still go to the other side.
+                && other_side_zones_for(state, player, &cheapest.probe).is_empty()
         });
         if nowhere {
             // R3546002: refused at the price's own size, as the zones above are read, so an
@@ -2300,6 +2366,17 @@ fn why_unplayable(
             .map(|slot| ZoneChoice {
                 row: slot.row,
                 lane: slot.lane,
+                player: None,
+            })
+            // R5238002: with its own side full, a card that plays on either side probes the other's.
+            .or_else(|| {
+                other_side_zones_for(
+                    state,
+                    player,
+                    &stamped_for_play(state, card, cheapest.x, cheapest.embiggen),
+                )
+                .into_iter()
+                .next()
             })
         } else {
             None
@@ -2518,6 +2595,12 @@ pub fn priced_play_actions(
                     legal_equip_zones_for(state, player, &probe, tributes)
                         .into_iter()
                         .map(|zone| (Some(zone), Some(true))),
+                );
+                // R5238002: then the other side's zones, for a card that plays on either side.
+                paired.extend(
+                    other_side_zones_for(state, player, &probe)
+                        .into_iter()
+                        .map(|zone| (Some(zone), None)),
                 );
                 paired
             } else {
@@ -3063,6 +3146,22 @@ pub fn why_choices_refused(
     card: &CardInstance,
     action: &PlayAction,
 ) -> Result<(), EngineError> {
+    // R5238002: a zone that names the player's own side reads as one that names no side; one on the other
+    // side is refused here unless the card plays on either side, as a plain play into a zone listed there.
+    let own_side;
+    let action = if action.zone.is_some_and(|zone| zone.player == Some(player)) {
+        own_side = PlayAction {
+            zone: action.zone.map(|zone| ZoneChoice { player: None, ..zone }),
+            ..action.clone()
+        };
+        &own_side
+    } else {
+        action
+    };
+    let other_side = action.zone.is_some_and(|zone| zone.player.is_some());
+    if other_side {
+        refuse_other_side(state, player, card, action)?;
+    }
     if action.face_down.is_some() {
         return why_face_down_refused(state, player, card, action);
     }
@@ -3072,7 +3171,7 @@ pub fn why_choices_refused(
     let stamped = stamped_with_embiggen(state, card, action.embiggen);
     if action.equip == Some(true) {
         refuse_equip(state, player, &stamped, action.zone.as_ref(), tributes)?;
-    } else {
+    } else if !other_side {
         // R3546002: read off the embiggen-stamped card, as the listing does.
         refuse_zone(state, player, &stamped, action.zone.as_ref(), tributes)?;
     }

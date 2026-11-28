@@ -209,8 +209,9 @@ mod tests {
     /// Grounds release (#2204): its Jelly Beans #27 Hopeful Jelly Bean and #50 Glowy Jelly Bean (the
     /// snapshot of Core #26) join it; and for the Stinkyscape+ release (#3573): its Acclaimed Units #4
     /// Profe Yates, #5 Dingleberry Droat and #61 Jayaad and its Jelly Bean #69 Exotic Jellybean (not its
-    /// token #69.1 Sweet Essence).
-    const POOL: [&str; 22] = [
+    /// token #69.1 Sweet Essence); and for the Felinors vs Humans release (#5222): its Acclaimed Units #74
+    /// Yile, Acceleration Supremist and #107 KY, Himself (not #74.1, a token).
+    const POOL: [&str; 24] = [
         "core-026",
         "core-027",
         "core-028",
@@ -233,6 +234,8 @@ mod tests {
         "stinkyscapeplus-005",
         "stinkyscapeplus-061",
         "stinkyscapeplus-069",
+        "felinorsvshumans-074",
+        "felinorsvshumans-107",
     ];
 
     /// Each turn ends when the
@@ -287,8 +290,8 @@ mod tests {
     fn r1873001_its_cry_discovers_an_acclaimed_unit_or_a_jelly_bean_into_your_hand() {
         let mut seen: IndexSet<String> = IndexSet::new();
         // Re-pinned for the Stinkyscape release (#1884): the pool is sixteen, so more seeds see it all; and
-        // for the Stinkyscape+ release (#3573): twenty-two, so 120 seeds leave one unseen about once in
-        // two million runs.
+        // for the Stinkyscape+ release (#3573): twenty-two; and for the Felinors vs Humans release (#5222):
+        // twenty-four, so 120 seeds leave one unseen about once in four million runs.
         for seed in 0..120 {
             let mut s = holding(false, &format!("heist-{seed}"), &[]);
             s.play(ID, json!({ "zone": 1 }));

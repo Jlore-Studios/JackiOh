@@ -272,6 +272,22 @@ pub fn summoned_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
     out
 }
 
+/// R5239000 (FvH #64, #74.1): the cards this run has put into a hand, each once, in the order they
+/// arrived: every `addedToHand` of this script's own events (`events_from`, R136), whoever's hand it
+/// is, a card it drew included (a draw lands through `draw::add_to_hand`). A card a full hand burned
+/// never arrived (R4) and is not listed. A run split by a prompt reads from the step it resumed in.
+pub fn added_to_hand_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for event in ctx.events.iter().skip(ctx.events_from) {
+        if let GameEvent::AddedToHand { instance_id, .. } = event
+            && !out.contains(instance_id)
+        {
+            out.push(instance_id.clone());
+        }
+    }
+    out
+}
+
 /// What a continuation of this run carries of it.
 fn run_marks(ctx: &EffectContext<'_>) -> RunMarks {
     let summoned = summoned_so_far(ctx);
@@ -1061,7 +1077,20 @@ fn run_resume_now(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOpt
         }
     };
 
-    let Some(hook) = hook_for(&face_of(sink.state, &resume.def_id, resume.radiant), resume) else {
+    // R5237006: a card holding a granted End of turn runs its own End of turn and then each grant's, one
+    // list, rebuilt the same on a resume as a granted Death is (`grants::end_of_turn_hook_of`).
+    let granted = match instance.as_ref() {
+        Some(card)
+            if resume.hook == crate::resolve::HookName::EndOfTurn.as_str()
+                && crate::grants::has_end_of_turn_grant(card) =>
+        {
+            crate::grants::end_of_turn_hook_of(sink.state, card)
+        }
+        _ => None,
+    };
+    let Some(hook) =
+        granted.or_else(|| hook_for(&face_of(sink.state, &resume.def_id, resume.radiant), resume))
+    else {
         return true;
     };
 

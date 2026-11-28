@@ -46,6 +46,8 @@ const SET_DIRS: Readonly<Record<string, string>> = {
   "Training Grounds": "traininggrounds",
   "Stinkyscape+": "stinkyscapeplus",
   "Infinite Assault": "infiniteassault",
+  // R5264000: the held Felinors vs Humans set's, its tokens printed Mythic among them.
+  "Felinors vs Humans": "felinorsvshumans",
 };
 
 const FACES = [false, true] as const;

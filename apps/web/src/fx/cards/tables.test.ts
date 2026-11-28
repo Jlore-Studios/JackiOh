@@ -614,7 +614,32 @@ describe("R2784000 the per-set effects tables", () => {
     }
   });
 
-  it("R2787000 R2794000 R3405001 the twelve example Field Spells across the sets wear their auras", () => {
+  it("R5264500 the Felinors vs Humans table draws shared motifs only, and each Plagiarized reprint takes its Infinite Assault original's entry but a signature's", () => {
+    const fvh = [...FX_CARD_TABLE].filter(([defId]) => CATALOG[defId]?.set === "Felinors vs Humans");
+    expect(fvh).toHaveLength(232);
+    for (const [defId, entry] of fvh) {
+      expect(entry.kind === "none" || entry.kind === "hooks", defId).toBe(true);
+      if (entry.kind === "hooks") expect([entry.entrance, entry.takeover, entry.signature], defId).toEqual([undefined, undefined, undefined]);
+    }
+    const original = new Map(Object.keys(CATALOG).filter((id) => CATALOG[id]?.set === "Infinite Assault").map((id) => [CATALOG[id]?.name, id]));
+    const reprints = fvh.filter(([defId]) => CATALOG[defId]?.name.startsWith("Plagiarized: ") === true);
+    expect(reprints).toHaveLength(82);
+    const signatures: string[] = [];
+    for (const [defId, entry] of reprints) {
+      const source = original.get(CATALOG[defId]?.name.slice("Plagiarized: ".length));
+      if (source === undefined) throw new Error(`${defId} names no Infinite Assault card`);
+      const theirs = FX_CARD_TABLE.get(source);
+      if (isSignature(theirs)) signatures.push(defId);
+      else expect(entry, `${defId} as ${source}`).toEqual(theirs);
+    }
+    // Ego Death, Bastion.exe, Eternal Return, Loopback and Model Collapse: their originals' recipes and boots are theirs alone.
+    expect(signatures).toEqual(["felinorsvshumans-173", "felinorsvshumans-185", "felinorsvshumans-188", "felinorsvshumans-192", "felinorsvshumans-194"]);
+    // Felinor Converter wears the Felinors' own look, and Voracious Reader's End of turn draws its cards.
+    expect(FX_CARD_TABLE.get("felinorsvshumans-044")).toEqual({ kind: "hooks", hooks: { cry: { motif: "transmute", palette: "Beast/felinor" } } });
+    expect(FX_CARD_TABLE.get("felinorsvshumans-059")).toEqual({ kind: "hooks", hooks: { trigger: { motif: "flight", palette: "Nerd/ink" } } });
+  });
+
+  it("R2787000 R2794000 R3405001 R5264500 the thirteen example Field Spells across the sets wear their auras", () => {
   const examples = {
     "core-014": { look: "storm", scope: "side" },
     "core-046": { look: "void", scope: "board" },
@@ -631,8 +656,10 @@ describe("R2784000 the per-set effects tables", () => {
     "stinkyscapeplus-040": { look: "bloom", scope: "zone" },
     // The held Infinite Assault set's Drone Foundry (#4577), its file's example.
     "infiniteassault-015": { look: "steam", palette: "Tech/rocket", scope: "zone" },
+    // R5264500: the held Felinors vs Humans set's Heartrock, its asteroid field's drift.
+    "felinorsvshumans-036": { look: "drift", scope: "zone" },
   };
-  expect(Object.keys(examples)).toHaveLength(12);
+  expect(Object.keys(examples)).toHaveLength(13);
   // R2794000: Classic's pass gave its two examples their play's motifs beside the aura.
   const hooksOf: Readonly<Record<string, object>> = {
     "classic-042": { cast: { motif: "tally" }, activate: { motif: "tally" } },

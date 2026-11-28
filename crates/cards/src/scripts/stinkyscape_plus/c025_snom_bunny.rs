@@ -31,7 +31,8 @@ fn snom_bunny(slash_aware: bool) -> Script {
             let n = enemies.len() as i32;
             let lucky =
                 ctx.self_.as_ref().map_or(0, |me| lucky_on(state, me)) + luck_of(state, ctx.controller);
-            let index = if lucky > 0 {
+            // R5236020: a net luck below 0 rolls again too, keeping the worst.
+            let index = if lucky != 0 {
                 ctx.rng.lucky(
                     lucky,
                     |rng| rng.int(n),

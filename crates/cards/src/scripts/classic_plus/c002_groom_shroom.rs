@@ -122,7 +122,26 @@ mod tests {
         "traininggrounds-044",
         "traininggrounds-051",
         "stinkyscapeplus-004",
+        // The Felinors vs Humans set's, since its release (#5222, R5222000).
+        "felinorsvshumans-044",
+        "felinorsvshumans-062",
+        "felinorsvshumans-065",
+        "felinorsvshumans-069",
+        "felinorsvshumans-070",
+        "felinorsvshumans-071",
+        "felinorsvshumans-081",
+        "felinorsvshumans-083",
+        "felinorsvshumans-084",
+        "felinorsvshumans-088",
+        GIGA_FELINOR,
+        "felinorsvshumans-094",
+        "felinorsvshumans-096",
+        "felinorsvshumans-097",
+        "felinorsvshumans-098",
+        "felinorsvshumans-105",
     ];
+    /// FvH #89 GIGA Felinor, which stands in two zones (R3546001).
+    const GIGA_FELINOR: &str = "felinorsvshumans-089";
 
     use crate::merged;
 
@@ -219,7 +238,12 @@ mod tests {
                 let attacker = s.unit(P2, 1).unwrap();
                 s.attack(&attacker, "hero");
                 let defs: Vec<String> = summoned_ids(&s).iter().map(|id| s.card(id).def_id.clone()).collect();
-                assert_eq!(defs.len(), 5);
+                // A GIGA Felinor fills two of the five zones, or, drawn for a zone with no room beside it,
+                // none (R3546001), so a run that draws it summons one fewer.
+                assert!((4..=5).contains(&defs.len()), "seed {seed}: {defs:?}");
+                if defs.iter().any(|id| id == GIGA_FELINOR) {
+                    assert_eq!(defs.len(), 4, "seed {seed}: {defs:?}");
+                }
                 // R1: no Cry ran — Big Felinor's would destroy the attacker, Felinor Fuser's would open a
                 // Discover, Felinor Flagbearer's would give armor.
                 assert_eq!(s.count("destroyed"), 0);

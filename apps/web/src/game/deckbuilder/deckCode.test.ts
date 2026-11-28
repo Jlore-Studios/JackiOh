@@ -894,3 +894,69 @@ describe("R1410 the Stinkyscape+ set's numbers: 7000 + n (the release, issue #35
     expect(decoded.dropped.unknown).toEqual([7001, 7166]);
   });
 });
+
+describe("R1410 R5222000 the Felinors vs Humans set's numbers: 8000 + n (the release, issue #5222)", () => {
+  function setDef(id: string, set: CardDef["set"], index: string): CardDef {
+    return { ...unitDef(id, index, false), set };
+  }
+  const PLUS_166 = "stinkyscapeplus-166";
+  const FVH_1 = "felinorsvshumans-001";
+  const FVH_100 = "felinorsvshumans-100";
+  const FVH_197 = "felinorsvshumans-197";
+  const FVH_TOKEN = "felinorsvshumans-112-13";
+  const nineSets: CatalogSnapshot = {
+    version: catalog.version,
+    cards: {
+      ...catalog.cards,
+      [PLUS_166]: setDef(PLUS_166, "Stinkyscape+", "166"),
+      [FVH_1]: setDef(FVH_1, "Felinors vs Humans", "1"),
+      [FVH_100]: setDef(FVH_100, "Felinors vs Humans", "100"),
+      [FVH_197]: setDef(FVH_197, "Felinors vs Humans", "197"),
+      [FVH_TOKEN]: {
+        ...setDef(FVH_TOKEN, "Felinors vs Humans", "112.13"),
+        token: true,
+        tags: ["Token"],
+        rarity: "Token",
+      },
+    },
+  };
+  const withoutSet: CatalogSnapshot = {
+    version: catalog.version,
+    cards: Object.fromEntries(Object.entries(nineSets.cards).filter(([, def]) => def.set !== "Felinors vs Humans")),
+  };
+
+  it("R1410 numbers a Felinors vs Humans card 8000 + n, after Stinkyscape+'s 7000, and moves no other set's offset", () => {
+    expect(CATALOG_NUMBER_SET_OFFSETS).toMatchObject({
+      Core: 0,
+      Classic: 1000,
+      "Classic+": 2000,
+      Meditative: 3000,
+      "Meditative+": 4000,
+      Stinkyscape: 5000,
+      "Training Grounds": 6000,
+      "Stinkyscape+": 7000,
+      "Felinors vs Humans": 8000,
+    });
+    expect(catalogNumberOf({ set: "Felinors vs Humans", index: "1" })).toBe(8001);
+    expect(catalogNumberOf({ set: "Felinors vs Humans", index: "197" })).toBe(8197);
+    expect(catalogNumberOf({ set: "Felinors vs Humans", index: "112.13" })).toBeUndefined();
+    expect(catalogNumberOf({ set: "Stinkyscape+", index: "166" })).toBe(7166);
+  });
+
+  it("R1410 writes the Felinors vs Humans cards as 8000 + n, LEB128, and reads each back to its own set", () => {
+    const cards = [fixtureCardId(1), PLUS_166, FVH_1, FVH_100, FVH_197];
+    const code = encodeDeckCode("Nine sets", [...cards, FVH_TOKEN], nineSets);
+    const bytes = bodyBytes(code);
+    const nameLength = bytes[0] ?? 0;
+    // [count 5] [1] [7166] [8001] [8100] [8197]; the token has no number.
+    expect(bytes.slice(1 + nameLength, bytes.length - 2)).toEqual([5, 1, ...varint(7166), ...varint(8001), ...varint(8100), ...varint(8197)]);
+    expect(expectOk(decodeDeckCode(code, nineSets, null)).cards).toEqual(cards);
+  });
+
+  it("R1410 a catalog that does not hold the set (one from before the release, R1420) drops its numbers as unknown", () => {
+    const code = encodeDeckCode("Too soon", [fixtureCardId(1), FVH_1, PLUS_166, FVH_197], nineSets);
+    const decoded = expectOk(decodeDeckCode(code, withoutSet, null));
+    expect(decoded.cards).toEqual([fixtureCardId(1), PLUS_166]);
+    expect(decoded.dropped.unknown).toEqual([8001, 8197]);
+  });
+});

@@ -8,6 +8,7 @@
 // joined it at the set's release (#3596), owed their set's signature pass. The Infinite Assault's two joined
 // it with the set's first part (#4577), owed theirs. The foundation (#4602) added the set's other
 // forty-two, owed theirs too. R4596000: the set's look and sound (#4596) took its twenty Commanders and Mythics off.
+// R5264500: the held Felinors vs Humans set's sixty-three joined it with its effects table (#5264), owed theirs.
 
 import { describe, expect, it } from "vitest";
 
@@ -42,6 +43,23 @@ const SIGNATURE_PENDING: readonly string[] = [
   "stinkyscapeplus-t-terminus-starship-red-giant-requiem", "stinkyscapeplus-t-terminus-starship-cold-exodus",
   "stinkyscapeplus-t-terminus-starship-omega-drift", "stinkyscapeplus-t-terminus-starship-farthest-shore",
   "stinkyscapeplus-t-terminus-starship-nightfall-covenant", "stinkyscapeplus-t-terminus-starship-vacuum-psalm",
+  // Felinors vs Humans (R5264500: its look's first part, owed the set's signature pass)
+  "felinorsvshumans-002", "felinorsvshumans-003", "felinorsvshumans-004", "felinorsvshumans-016",
+  "felinorsvshumans-016-1", "felinorsvshumans-016-2", "felinorsvshumans-031", "felinorsvshumans-034",
+  "felinorsvshumans-037", "felinorsvshumans-039", "felinorsvshumans-040", "felinorsvshumans-046",
+  "felinorsvshumans-050", "felinorsvshumans-060", "felinorsvshumans-060-1", "felinorsvshumans-060-2",
+  "felinorsvshumans-070", "felinorsvshumans-073", "felinorsvshumans-074", "felinorsvshumans-074-1",
+  "felinorsvshumans-075", "felinorsvshumans-078", "felinorsvshumans-078-1", "felinorsvshumans-079",
+  "felinorsvshumans-082", "felinorsvshumans-091", "felinorsvshumans-092", "felinorsvshumans-098",
+  "felinorsvshumans-098-1", "felinorsvshumans-098-2", "felinorsvshumans-099", "felinorsvshumans-100",
+  "felinorsvshumans-100-1", "felinorsvshumans-100-2", "felinorsvshumans-107", "felinorsvshumans-109",
+  "felinorsvshumans-110", "felinorsvshumans-112", "felinorsvshumans-112-1", "felinorsvshumans-112-2",
+  "felinorsvshumans-112-3", "felinorsvshumans-112-4", "felinorsvshumans-112-5", "felinorsvshumans-112-6",
+  "felinorsvshumans-112-7", "felinorsvshumans-112-8", "felinorsvshumans-112-9", "felinorsvshumans-112-10",
+  "felinorsvshumans-112-11", "felinorsvshumans-112-12", "felinorsvshumans-112-13", "felinorsvshumans-114",
+  "felinorsvshumans-115", "felinorsvshumans-147", "felinorsvshumans-167", "felinorsvshumans-173",
+  "felinorsvshumans-185", "felinorsvshumans-188", "felinorsvshumans-189", "felinorsvshumans-191",
+  "felinorsvshumans-192", "felinorsvshumans-194", "felinorsvshumans-196",
   // Infinite Assault
   "infiniteassault-023", "infiniteassault-024", "infiniteassault-046", "infiniteassault-047", "infiniteassault-070", "infiniteassault-071",
   "infiniteassault-094", "infiniteassault-095", "infiniteassault-118", "infiniteassault-119", "infiniteassault-142", "infiniteassault-143",

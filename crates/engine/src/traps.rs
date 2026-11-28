@@ -399,8 +399,8 @@ fn chance_admits(sink: &mut EngineSink<'_>, trap: &CardInstance, controller: Pla
     };
     let percent = crate::params::declared_or(sink.state, trap, "chance", printed).clamp(0, PERCENT);
     let chance = f64::from(percent) / f64::from(PERCENT);
-    let lucky =
-        (crate::query::lucky_on(sink.state, trap) + crate::query::luck_of(sink.state, controller)).max(0);
+    // R5236020: the net luck, which an Unlucky may take below 0 (the worst roll kept).
+    let lucky = crate::query::lucky_on(sink.state, trap) + crate::query::luck_of(sink.state, controller);
     if lucky == 0 {
         sink.rng.chance(chance)
     } else {

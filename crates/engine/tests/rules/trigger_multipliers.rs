@@ -74,6 +74,7 @@ fn grant_hit(s: &mut Scenario, unit: &CardInstance) {
         grant: format!("{GIVER}#hit"),
         radiant: false,
         params: IndexMap::new(),
+        on: None,
     }]);
 }
 

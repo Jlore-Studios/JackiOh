@@ -186,26 +186,52 @@ const R119_LIBRARY: [&str; 6] = [MR_VANILLA; 6];
 /// The seed is arbitrary: `quickstriker_cursor` finds the cursor where #95 rolls what the test needs.
 const R119_SEED: &str = "r9-c2c-0";
 
-/// A cursor at which #95's one roll is "summon 5 random Field Spells or Traps" and a Quickstriker is
-/// among the five picks: the roll is one draw over the ten, each pick one draw over the backrow pool
-/// (`summonRandom`, R60), in that order.
+/// The scene before #95's play: Tempo Timmy on the board and Twinspell's Echo waiting for the next Spell.
+fn quickstriker_scene() -> Scenario {
+    let mut s = scenario(json!({
+        "seed": R119_SEED,
+        "p1": { "hand": [TEMPO_TIMMY, TWINSPELL, CALL_TO_CHAOS], "mana": 10, "library": R119_LIBRARY },
+        "p2": { "hand": [STOCKPILE], "field": [MIDRANGE_MENACE], "library": R119_LIBRARY },
+    }));
+    s.play(TEMPO_TIMMY, json!({ "zone": 1 }));
+    s.play(TWINSPELL, json!({}));
+    s.activate(TWINSPELL, json!({}));
+    s
+}
+
+/// #95 played at `cursor` on `s`, every prompt it opens answered with its first option.
+fn call_played(s: &mut Scenario, cursor: u32) {
+    s.state_mut().rng_cursor = cursor;
+    s.play(CALL_TO_CHAOS, json!({}));
+    while let Some(pending) = s.state().pending.as_ref() {
+        let Some(first) = pending.options.first() else {
+            break;
+        };
+        let key = first.key.clone();
+        s.answer(json!(key));
+    }
+}
+
+/// A cursor at which #95's first resolution rolls "summon 5 random Field Spells or Traps" and a
+/// Quickstriker is among the five it summons. The play is built and read at each cursor (#848): the
+/// picks are unique draws over the backrow pool of every set (R380, R3563000), so no model of the rng
+/// stands in for them.
 fn quickstriker_cursor() -> u32 {
-    let pool = catalog::query(&json_as(json!({ "type": ["Field Spell", "Trap", "Field Trap"] })));
     let backrow = subsystems::CHAOS_EFFECTS
         .iter()
-        .position(|effect| effect.name == "backrow");
+        .find(|effect| effect.name == "backrow")
+        .map(|effect| effect.label.to_string());
     cursor_where(R119_SEED, |cursor| {
-        let mut rng = Rng::new(R119_SEED, cursor);
-        if Some(rng.int(subsystems::CHAOS_EFFECTS.len() as i32) as usize) != backrow {
-            return false;
-        }
-        let picks: Vec<Option<String>> = (0..5)
-            .map(|_| {
-                pool.get(rng.int(pool.len() as i32) as usize)
-                    .map(|def| def.id.clone())
-            })
-            .collect();
-        picks.contains(&Some(QUICKSTRIKER.to_string()))
+        let mut s = quickstriker_scene();
+        let call = s.card(CALL_TO_CHAOS).id.clone();
+        call_played(&mut s, cursor);
+        let first_roll = s.events().iter().find_map(|event| match event {
+            GameEvent::ChaosRolled {
+                instance_id, effects, ..
+            } if *instance_id == call => effects.first().cloned(),
+            _ => None,
+        });
+        first_roll == backrow && !quickstrikers_of(&s, P1).is_empty()
     })
 }
 
@@ -272,28 +298,13 @@ mod r119_10_5_step_6_an_echo_repeats_granted_combo_parts_do_not_answer_what_its_
      {
         // The roll is pinned (R423 left the base face's one roll as it was): the play's first rng draw is
         // #95's roll, and the five picks of "summon 5 random Field Spells or Traps" follow it, from the
-        // pool of every set (R380). `quickstriker_cursor` finds a cursor at which the roll is that effect
-        // and a Quickstriker is among the five, so the fixture holds whatever else the pools hold.
-        let mut s = scenario(json!({
-            "seed": R119_SEED,
-            "p1": { "hand": [TEMPO_TIMMY, TWINSPELL, CALL_TO_CHAOS], "mana": 10, "library": R119_LIBRARY },
-            "p2": { "hand": [STOCKPILE], "field": [MIDRANGE_MENACE], "library": R119_LIBRARY },
-        }));
-        s.play(TEMPO_TIMMY, json!({ "zone": 1 }));
-        s.play(TWINSPELL, json!({}));
-        s.activate(TWINSPELL, json!({}));
+        // pool of every set (R380). `quickstriker_cursor` finds a cursor at which the first resolution rolls
+        // that effect and a Quickstriker is among the five, so the fixture holds whatever the pools hold.
+        let mut s = quickstriker_scene();
         assert!(quickstrikers_of(&s, P1).is_empty());
         let call = s.card(CALL_TO_CHAOS).clone();
 
-        s.state_mut().rng_cursor = quickstriker_cursor();
-        s.play(CALL_TO_CHAOS, json!({}));
-        while let Some(pending) = s.state().pending.as_ref() {
-            let Some(first) = pending.options.first() else {
-                break;
-            };
-            let key = first.key.clone();
-            s.answer(json!(key));
-        }
+        call_played(&mut s, quickstriker_cursor());
 
         let graveyard: Vec<String> = s
             .pile(P1, "graveyard")

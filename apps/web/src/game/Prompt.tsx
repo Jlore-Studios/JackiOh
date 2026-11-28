@@ -645,7 +645,11 @@ function pickerForNeed(need: PlayNeed, interaction: Interaction, view: PlayerVie
         title: t("Choose a zone"),
         items: zonesInBoardOrder(need.zones).map((zone) => ({
           key: zoneKey(zone),
-          label: zoneLabel(zone.row, zone.lane),
+          // R5238002: a zone of the other side (FvH #42) is named as the enemy's, as a declared zone pick is.
+          label:
+            zone.player === undefined
+              ? zoneLabel(zone.row, zone.lane)
+              : selectionLabel(view, { pick: "zone", player: zone.player, row: zone.row, lane: zone.lane }),
           group: rowName(zone.row),
         })),
         submit: (keys) => {

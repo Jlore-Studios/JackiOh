@@ -47,6 +47,9 @@ function keywordOf(kind: KeywordKind): Keyword {
     case "Burn":
     case "Toxic":
     case "Woozy":
+    case "Durability":
+    case "Unlucky":
+      // R5264500: Durability's uses left and Unlucky's number sit on Lucky's corner badge too.
       return { kind, n: 2 };
     default:
       return { kind } as Keyword;

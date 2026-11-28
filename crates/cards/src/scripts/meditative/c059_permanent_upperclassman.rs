@@ -378,14 +378,22 @@ mod tests {
         fn the_radiant_face_summons_radiant_and_fuses_radiant() {
             crate::register_all();
             use jackioh_engine::prelude::keywords_of;
-            // The first seed whose summon can die: Core #66 The Rock is Indestructible (#1884).
+            // The first seed whose summon can die and run the Death it gained: Core #66 The Rock is
+            // Indestructible (#1884), and S+ #157 Phantom Shipyard is Dormant until launched, its text asleep.
+            let scene = |n: usize| {
+                let mut s = casting(&format!("upperclassman-radiant-{n}"), true);
+                s.play(UPPERCLASSMAN, json!({ "zone": 1 }));
+                let summoned = s.unit("p1", 2).expect("the summoned Unit");
+                (s, summoned)
+            };
+            let dies = |n: usize| {
+                let (mut s, summoned) = scene(n);
+                kill(&mut s, &summoned);
+                fused(&s).len() == 1
+            };
             let (mut s, summoned) = (0..20)
-                .map(|n| {
-                    let mut s = casting(&format!("upperclassman-radiant-{n}"), true);
-                    s.play(UPPERCLASSMAN, json!({ "zone": 1 }));
-                    let summoned = s.unit("p1", 2).expect("the summoned Unit");
-                    (s, summoned)
-                })
+                .filter(|n| dies(*n))
+                .map(scene)
                 .find(|(s, summoned)| {
                     !keywords_of(s.state(), summoned)
                         .iter()

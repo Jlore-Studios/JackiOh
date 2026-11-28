@@ -435,7 +435,12 @@ fn parse_zone(value: &Value) -> Option<ZoneChoice> {
     let record = (value).as_object()?;
     let row = is_row(record.get("row"))?;
     let lane = non_negative_int(record.get("lane"))?;
-    Some(ZoneChoice { row, lane })
+    // R5238002: the side the zone is on, absent (or null) for the player's own.
+    let player = match record.get("player") {
+        None | Some(Value::Null) => None,
+        Some(side) => Some(is_player_id(Some(side))?),
+    };
+    Some(ZoneChoice { row, lane, player })
 }
 
 fn parse_plague(value: &Value) -> Option<PlagueSpend> {
@@ -1076,7 +1081,8 @@ mod tests {
                 instance_id: "c1".into(),
                 zone: Some(ZoneChoice {
                     row: Row::Units,
-                    lane: 1
+                    lane: 1,
+                    player: None,
                 }),
                 x: Some(2),
                 embiggen: Some(false),

@@ -463,6 +463,12 @@ pub struct ActivationView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub printed_on: Option<ActivationSource>,
+    /// R5236001: the Durability the card has left, one counter every Activate of it shares
+    /// (`subsystems::activate::durability_left`); `Some(0)` once spent, when the ability is refused.
+    /// Absent for a card without Durability and for the engine's own abilities (R5236000).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub durability_left: Option<i32>,
 }
 
 /// R3291000: the card whose text prints an Activate ability of a fused card, as `fuse.rs` composed it:

@@ -416,6 +416,7 @@ fn grant_book_death(state: &mut GameState, player: PlayerId) {
             grant: BOOK_DEATH.to_string(),
             radiant: false,
             params: Default::default(),
+            on: None,
         }]);
     }
 }

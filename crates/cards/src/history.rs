@@ -1631,7 +1631,23 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "fragment:immutable-keeps-last-hurrah-s-flashback-off-a-card-in-the",
         c037_last_hurrah::script_kept_5226,
     ),
+    // #5222 (R5236006): Twinspell before its base face printed Durability 1, which sent the base face to
+    // the graveyard after every use (R4779000: keyed by the release's pending fragment).
+    (
+        c079_twinspell::ID,
+        "fragment:felinors-vs-humans-the-release-the-set-ships",
+        twinspell_before_durability,
+    ),
 ];
+
+/// R767000, R5236006: Core #79 Twinspell's scripts before its base face printed Durability 1 (#5222),
+/// built here rather than in its file so that its script's code lines (R1846000) stay as they were.
+fn twinspell_before_durability() -> CardScripts {
+    CardScripts {
+        base: c079_twinspell::twinspell(false, false),
+        radiant: c079_twinspell::twinspell(true, false),
+    }
+}
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under or the
 /// `FRAGMENT_KEY` of the fragment that ships its change (R4779000), and the `fn` that builds the

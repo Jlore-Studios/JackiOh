@@ -701,7 +701,11 @@ mod r391_r3546000_tribute_a_giga {
     fn refusal(s: &Scenario, id: &str, row: Row, lane: i32, tributes: &[&str]) -> Option<String> {
         let body = ActionBody::Play {
             instance_id: id.to_string(),
-            zone: Some(ZoneChoice { row, lane }),
+            zone: Some(ZoneChoice {
+                row,
+                lane,
+                player: None,
+            }),
             x: None,
             embiggen: None,
             equip: None,

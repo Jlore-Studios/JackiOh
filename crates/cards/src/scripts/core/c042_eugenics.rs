@@ -46,7 +46,7 @@ fn selective_breeding(radiant: bool, declared: bool, evolves: bool) -> Script {
             };
             let lucky = ctx.live_self().map_or(0, given_lucky_on);
             let mut chance_args = json!({ "zone": "library", "chance": chance });
-            if lucky > 0 {
+            if lucky != 0 {
                 chance_args["lucky"] = json!(lucky);
             }
             let mut effects = vec![

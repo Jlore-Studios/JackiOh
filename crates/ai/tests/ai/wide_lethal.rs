@@ -13,7 +13,8 @@
 //!
 //! Its worlds sample the hidden cards from the catalog's pools, so a card joining one deals other worlds
 //! (R380, #3117): the R4788000 tests search its stream for a cursor that meets their premise
-//! (`premise_cursor`).
+//! (`premise_cursor`), and an audit position on whose own worlds the walk no longer proves a lethal takes
+//! the first cursor whose worlds it does (`lethal_cursor`).
 
 use jackioh_ai::{
     AI_BUDGET, AI_SEARCH, AiOptions, DecisionReason, DeterminizeOptions, NodeCounter, Prices, SearchBudget,
@@ -33,6 +34,10 @@ const AUDIT_HVE_8_T12: &str = include_str!("../fixtures/pinned-audit-hve-8-t12.j
 /// Turn 21 of `audit:hard-vs-easy:12`, p1 to move: nine actions, the middle ones raising the gap before a
 /// prompt's answer drops it to 0.
 const AUDIT_HVE_12_T21: &str = include_str!("../fixtures/pinned-audit-hve-12-t21.json");
+
+/// The nodes that settle whether the walk proves a lethal on a position's worlds, well past the room the
+/// audit test gives, so the premise it searches on does not depend on that room.
+const LETHAL_EXISTS_ROOM: usize = 2000;
 
 /// The pinned position: the true state, the deciding seat and its stream.
 struct Pinned {
@@ -87,6 +92,20 @@ fn scaled_allowance(fat: usize) -> usize {
 /// R4788000's premise on the pinned wide position: the first cursor of its stream whose worlds the solver
 /// proves lethal within the caller's allowance (`AI_BUDGET.lethal_nodes`), past the `scaled` one, and not
 /// within it. Searched (#848), not the audit's own cursor, which pinned where the pools' rolls land.
+/// The position's own cursor when its worlds hold a lethal the walk proves in `LETHAL_EXISTS_ROOM` nodes,
+/// else the first cursor of its stream whose worlds do (#848).
+fn lethal_cursor(at: &Pinned, prices: &Prices) -> u32 {
+    let holds = |cursor: u32| {
+        let counter = create_node_counter(LETHAL_EXISTS_ROOM, None);
+        find_lethal(&worlds(at, cursor), at.seat, &counter, LETHAL_EXISTS_ROOM, prices).is_some()
+    };
+    if holds(at.rng_cursor) {
+        at.rng_cursor
+    } else {
+        cursor_where(&at.rng_seed, holds)
+    }
+}
+
 fn premise_cursor(at: &Pinned, scaled: usize, prices: &Prices) -> u32 {
     cursor_where(&at.rng_seed, |cursor| {
         let worlds = worlds(at, cursor);
@@ -229,7 +248,8 @@ fn r4788000_a_walk_that_never_reads_as_lethal_stops_at_its_allowance() {
 /// attack on the Taunt and below a dead play, and proved hard-vs-easy 12's turn 21 in 192, which it still
 /// does. Each is pinned as the audit dealt it, on its fixture's own cursor, so its worlds read the pools as
 /// they are, not as the pool probe (#3117) rotates them: a rotation deals other hidden cards and moves the
-/// walk's cost. A card joining a pool can move one the same way, and it is measured again.
+/// walk's cost. A card joining a pool can move one the same way, and it is measured again; one on whose own
+/// worlds the walk then proves no lethal is dealt the first worlds it does (`lethal_cursor`).
 #[test]
 fn r5119000_the_audits_long_lethals_are_proved_within_the_lethal_allowance() {
     with_pool_shift(0, the_audits_long_lethals_within_the_allowance);
@@ -243,8 +263,13 @@ fn the_audits_long_lethals_within_the_allowance() {
         ("audit:hard-vs-easy:12 turn 21", AUDIT_HVE_12_T21),
     ] {
         let at = pinned(text);
-        let worlds = worlds(&at, at.rng_cursor);
         let prices = decision_prices_at(&at.state, at.seat);
+        // The worlds sample the hidden cards from the pools, so a set joining them can deal the audit's
+        // cursor worlds in which the line does not win (mirror 26's since #5222: FvH #159 Plagiarized:
+        // Ransomware sampled into p1's backrow Freezes the Unit the line plays, and a Frozen card cannot
+        // Activate, R2246000): those take the first cursor whose worlds hold a lethal, settled at
+        // `LETHAL_EXISTS_ROOM`, not at the room this asserts.
+        let worlds = worlds(&at, lethal_cursor(&at, &prices));
         let counter = create_node_counter(room, None);
         let proved = find_lethal(&worlds, at.seat, &counter, room, &prices);
         assert!(

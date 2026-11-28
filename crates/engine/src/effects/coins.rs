@@ -39,7 +39,8 @@ fn kept_first(faces: Vec<i32>, wanted: impl Fn(i32) -> bool) -> RollResult {
 }
 
 /// R1440, R2652001: one coin at Lucky `lucky`, exactly the draws `Rng::lucky_coin` takes (1 + X, heads
-/// kept if any lands heads), with every face it drew.
+/// kept if any lands heads), with every face it drew. R5236020: at a net luck below 0, 1 + |X| draws,
+/// tails kept if any lands tails.
 pub fn flip_coin(ctx: &mut EffectContext<'_>, lucky: i32) -> RollResult {
     let mut faces = Vec::new();
     ctx.rng.lucky(
@@ -51,12 +52,16 @@ pub fn flip_coin(ctx: &mut EffectContext<'_>, lucky: i32) -> RollResult {
         },
         |a, b| a || b,
     );
+    if lucky < 0 {
+        return kept_first(faces, |face| face != ROLL_HEADS);
+    }
     kept_first(faces, |face| face == ROLL_HEADS)
 }
 
 /// §6.1, R2652001: one die of 1 to `sides` at Lucky `lucky`, each roll one `Rng::int(sides)` draw
 /// (1 + X of them), with every face it drew; `wanted` is the face the card's better rule keeps (Dice of
-/// Doom's 67), the first face drawn kept when none is.
+/// Doom's 67), the first face drawn kept when none is. R5236020: at a net luck below 0 the first face
+/// `wanted` does not hold for is kept, the worst.
 pub fn roll_die(
     ctx: &mut EffectContext<'_>,
     sides: i32,
@@ -73,6 +78,9 @@ pub fn roll_die(
         },
         |best, _| best,
     );
+    if lucky < 0 {
+        return kept_first(faces, |face| !wanted(face));
+    }
     kept_first(faces, wanted)
 }
 

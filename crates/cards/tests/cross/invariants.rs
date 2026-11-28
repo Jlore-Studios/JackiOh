@@ -1444,6 +1444,7 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
         let left_out = ZoneChoice {
             row: Row::Units,
             lane,
+            player: None,
         };
         let legal = without_matching(&g, |body| {
             is_play_of(body, &card.id)
@@ -1479,6 +1480,7 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
         let into_lane_2 = ZoneChoice {
             row: Row::Backrow,
             lane: 2,
+            player: None,
         };
         let play = g
             .plays_of(&crater)
@@ -3474,14 +3476,22 @@ mod i21_every_spell_passes_a_unit_immune_to_spells_by {
             .collect()
     }
 
-    /// p1's main phase with `spell` in hand on `radiant`'s face at full mana; on each side a 1/4 in lane 1,
-    /// the immune stand-in in lane 2 and a 9/4 in lane 3 (p2's first two Radiant), and plain stand-ins to
-    /// draw. No card on it has text but the Spell.
+    /// The Spells played only at a lowered price, each with the price the sweep plays it at: FvH #16.1
+    /// Travertine Stack costs (9999) until a card lowers it, as FvH #3 sets it to (2) (§8.14, FV2 #16).
+    const LOWERED_PRICES: &[(&str, i32)] = &[("felinorsvshumans-016-1", 2)];
+
+    /// p1's main phase with `spell` in hand on `radiant`'s face at full mana (at its `LOWERED_PRICES` price
+    /// if it has one); on each side a 1/4 in lane 1, the immune stand-in in lane 2 and a 9/4 in lane 3 (p2's
+    /// first two Radiant), and plain stand-ins to draw. No card on it has text but the Spell.
     fn board(spell: &str, radiant: bool) -> Scenario {
         let library = json!([PLAIN, PLAIN, PLAIN, PLAIN, PLAIN, PLAIN]);
+        let mut held = json!({ "def": spell, "radiant": radiant });
+        if let Some((_, price)) = LOWERED_PRICES.iter().find(|(id, _)| *id == spell) {
+            held["costOverride"] = json!(price);
+        }
         let mut s = scenario(json!({
             "p1": {
-                "hand": [{ "def": spell, "radiant": radiant }],
+                "hand": [held],
                 "mana": 10,
                 "field": [
                     { "def": "stand-in (1) 1/4", "lane": 1 },
@@ -4256,5 +4266,50 @@ mod r4599004_an_exile_aura_arriving_in_the_step_is_the_board_s {
         let found = i21_of(false);
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].contains(CALL_TO_CHAOS), "{}", found[0]);
+    }
+}
+
+// R5262000, R3546002 (I16): FvH #100's "make enemy Units and Field Spells in their hand, deck and graveyard
+// GIGA" grants GIGA to a graveyard card, the size it takes as it next enters the field. R78's reset takes
+// every grant a card held on the field as it leaves, so a GIGA a graveyard card holds was granted there, and
+// I16 keeps it (the fuzz's changed-card Radiant wave found it, `--from 4 --cards core-090 --radiant`, #5222);
+// any other keyword a graveyard card holds is still field state left behind. A graveyard card exiled keeps
+// it, R215 resetting only a card that reaches a pile from a hand or a library (S #4.1 Farewell's sweep of
+// both graveyards, the fuzz gate's seed 82).
+mod r5262000_i16_a_giga_granted_in_a_graveyard {
+    use super::*;
+
+    /// p2's `pile` Vanilla holding `granted`, and what the monitor finds of it.
+    fn found_in(pile: &str, granted: &[&str]) -> Vec<String> {
+        let mut p2 = json!({});
+        p2[pile] = json!([VANILLA]);
+        let mut g = scenario(json!({ "p2": p2 }));
+        let id = g.pile(PlayerId::P2, pile)[0].id.clone();
+        find_instance_mut(g.state_mut(), &id)
+            .expect("the graveyard card")
+            .granted_keywords = granted
+            .iter()
+            .map(|kind| json_as::<Keyword>(json!({ "kind": kind })))
+            .collect();
+        let mut monitor = create_invariant_monitor(g.state());
+        monitor.after(&[], g.state())
+    }
+
+    #[test]
+    fn r5262000_i16_keeps_a_giga_granted_in_a_graveyard_and_carried_on_to_an_exile_pile() {
+        for pile in ["graveyard", "exile"] {
+            assert_eq!(found_in(pile, &["GIGA"]), no_violations(), "{pile}");
+        }
+    }
+
+    #[test]
+    fn r5262000_i16_still_finds_any_other_keyword_on_a_graveyard_or_exiled_card() {
+        for pile in ["graveyard", "exile"] {
+            for granted in [&["Taunt"][..], &["GIGA", "Taunt"][..]] {
+                let found = found_in(pile, granted);
+                assert_eq!(found.len(), 1, "{pile} {granted:?}: {found:?}");
+                assert!(found[0].contains("I16 field state off the field"), "{}", found[0]);
+            }
+        }
     }
 }

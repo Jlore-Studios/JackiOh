@@ -225,12 +225,18 @@ mod r387_exclude_def_id_a_random_pool_never_offers_the_card_that_generated_it_5_
         // The (1) Cost KY cards but #31: Meditative #45 Knowledge Breaker (§8.8) is a (1) KY card too
         // since the set ships (R1420). Meditative #87 Tatches the Totem costs (0) and M+ #25 KY's
         // Intuition (§8.9) costs (2) since #3138; C+ #62 KY's Papaya costs (2) since #1704, and Core #82
-        // KY's Trial since #3136.
+        // KY's Trial since #3136. FvH #107 KY, Himself is one since its set ships (#5222).
         assert_eq!(
             ids_of_defs(query(&q(
                 json!({ "cost": 1, "tags": ["KY"], "excludeDefId": "core-031" })
             ))),
-            strings(&["core-051", "classicplus-041", "classicplus-042", "meditative-045",])
+            strings(&[
+                "core-051",
+                "classicplus-041",
+                "classicplus-042",
+                "meditative-045",
+                "felinorsvshumans-107",
+            ])
         );
     }
 
@@ -334,6 +340,13 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
         "meditativeplus-020",
         "meditativeplus-025",
         "stinkyscape-025",
+        // The Felinors vs Humans release (#5222): #3, #4, #39, #91, #92 and #107.
+        "felinorsvshumans-003",
+        "felinorsvshumans-004",
+        "felinorsvshumans-039",
+        "felinorsvshumans-091",
+        "felinorsvshumans-092",
+        "felinorsvshumans-107",
     ];
 
     #[test]
@@ -375,6 +388,12 @@ mod the_ky_pool_57_conjure_ky_core_31_51_82_classic_plus_41_42_62_meditative_34_
                 "KY's Competition",
                 "KY's Intuition",
                 "KY's Tricknology",
+                "KY's Pocket Galaxy",
+                "KY's Unification Mandate",
+                "Whisperer of KY",
+                "KY's Log Exp of the FFT",
+                "KY's Patented Log 2 Utility",
+                "KY, Himself",
             ])
         );
         assert!(card_def_by_index(SetName::Core, "51.1").tags.contains(&Tag::Ky)); // it really is in the tag …
@@ -445,6 +464,17 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
         // The Stinkyscape+ release (#3573): #31 Soul Read, a Trap, and #43 Segment, a Field Trap.
         "stinkyscapeplus-031",
         "stinkyscapeplus-043",
+        // The Felinors vs Humans release (#5222): its Traps #56, #117, #124, #129, #133, #136, #148 and
+        // #159, and its Field Trap #142.
+        "felinorsvshumans-056",
+        "felinorsvshumans-117",
+        "felinorsvshumans-124",
+        "felinorsvshumans-129",
+        "felinorsvshumans-133",
+        "felinorsvshumans-136",
+        "felinorsvshumans-142",
+        "felinorsvshumans-148",
+        "felinorsvshumans-159",
     ];
 
     fn trap_query() -> Vec<&'static CardDef> {
@@ -490,6 +520,14 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "traininggrounds-024",
                 // The Stinkyscape+ release (#3573): #31 Soul Read costs (1).
                 "stinkyscapeplus-031",
+                // The Felinors vs Humans release (#5222): #56, #117, #124, #129, #133, #136 and #142.
+                "felinorsvshumans-056",
+                "felinorsvshumans-117",
+                "felinorsvshumans-124",
+                "felinorsvshumans-129",
+                "felinorsvshumans-133",
+                "felinorsvshumans-136",
+                "felinorsvshumans-142",
             ])
         );
     }
@@ -516,6 +554,7 @@ mod the_trap_pool_67_zoomerbin_oomen_s_radiant_face_every_set_s_traps_and_field_
                 "stinkyscape-131",
                 "traininggrounds-024",
                 "stinkyscapeplus-043",
+                "felinorsvshumans-142",
             ])
         );
         assert_eq!(
@@ -546,8 +585,8 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
     // R35: "Pool: the Legendary-rarity cards except #83", which reaches every set. It holds Meditative's
     // sixteen (§8.8: #7, #11, #26, #40, #42, #45, #47, #51, #63, #65, #75, #79, #80, #86, #87, #95), M+ #24
     // (§8.9, #1187), Stinkyscape's 28 (§8.10, #1884; the Dormant Starship, which only a rule makes, stays
-    // out: R1857001), the Training Grounds' #37, #38 and #39 (#2204), S #137 and #176 (#2521) and the Stinkyscape+ set's 28
-    // (§8.12, #3573).
+    // out: R1857001), the Training Grounds' #37, #38 and #39 (#2204), S #137 and #176 (#2521), the Stinkyscape+ set's 28
+    // (§8.12, #3573) and the Felinors vs Humans set's 28 (§8.14, #5222).
     const R35_POOL: &[&str] = &[
         "core-052",
         "core-085",
@@ -657,6 +696,35 @@ mod r35_the_transmogulate_pool_83_every_non_token_legendary_but_83_b2_6 {
         "stinkyscapeplus-148",
         "stinkyscapeplus-157",
         "stinkyscapeplus-160",
+        // The Felinors vs Humans set's 28 (§8.14, #5222).
+        "felinorsvshumans-002",
+        "felinorsvshumans-003",
+        "felinorsvshumans-004",
+        "felinorsvshumans-016",
+        "felinorsvshumans-031",
+        "felinorsvshumans-037",
+        "felinorsvshumans-039",
+        "felinorsvshumans-040",
+        "felinorsvshumans-046",
+        "felinorsvshumans-050",
+        "felinorsvshumans-060",
+        "felinorsvshumans-070",
+        "felinorsvshumans-075",
+        "felinorsvshumans-078",
+        "felinorsvshumans-091",
+        "felinorsvshumans-098",
+        "felinorsvshumans-099",
+        "felinorsvshumans-100",
+        "felinorsvshumans-109",
+        "felinorsvshumans-110",
+        "felinorsvshumans-114",
+        "felinorsvshumans-115",
+        "felinorsvshumans-147",
+        "felinorsvshumans-167",
+        "felinorsvshumans-185",
+        "felinorsvshumans-189",
+        "felinorsvshumans-191",
+        "felinorsvshumans-192",
     ];
 
     #[test]
@@ -717,8 +785,9 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
         register();
         // The X-cost cards of the sets that ship: Core #24 Efficiency Dividend and #74 Adaptive UI, Classic
         // #87 Plague Chalice, Classic+ #40 Appropriations and #69 Buff Billy, Meditative #43 CN Jade Market
-        // (§8.8) and Stinkyscape #99 No-No Words (#1884); #98 Heroic Power costs (0) since R752, Meditative
-        // #37 CN in a Bottle (1) since R1149001.
+        // (§8.8) and Stinkyscape #99 No-No Words (#1884), and Felinors vs Humans #91 KY's Log Exp of the FFT
+        // and #112 Jilliax Deluxe (#5222); #98 Heroic Power costs (0) since R752, Meditative #37 CN in a
+        // Bottle (1) since R1149001.
         let x_cards = strings(&[
             "core-024",
             "core-074",
@@ -727,6 +796,8 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
             "classicplus-069",
             "meditative-043",
             "stinkyscape-099",
+            "felinorsvshumans-091",
+            "felinorsvshumans-112",
         ]);
         assert_eq!(
             ids_of_defs(
@@ -811,8 +882,9 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
         let units = query(&q(json!({ "type": "Unit" })));
         // Re-pinned for v0.3.15 (Meditative+ ships, #1187): its Units follow Meditative's, so the set
         // ranks name it after Meditative rather than ranking every set after Classic+ alike. Re-pinned
-        // for the Training Grounds release (#2204): its Units follow Stinkyscape's (`CATALOG_SETS`), and for the
-        // Stinkyscape+ release (#3573) the set's Units follow Training Grounds'.
+        // for the Training Grounds release (#2204): its Units follow Stinkyscape's (`CATALOG_SETS`), for the
+        // Stinkyscape+ release (#3573) the set's Units follow Training Grounds', and for the Felinors vs
+        // Humans release (#5222) the set's follow Stinkyscape+'s.
         let set_rank = |set: SetName| -> f64 {
             match set {
                 SetName::Core => 0.0,
@@ -822,7 +894,8 @@ mod s9_3_r60_pool_order_is_deterministic_so_a_seeded_pick_replays {
                 SetName::MeditativePlus => 4.0,
                 SetName::Stinkyscape => 5.0,
                 SetName::TrainingGrounds => 6.0,
-                _ => 7.0,
+                SetName::StinkyscapePlus => 7.0,
+                _ => 8.0,
             }
         };
         let keys: Vec<(f64, f64)> = units
@@ -1040,6 +1113,8 @@ mod r1444_the_luck_based_pool_meditative_101_gachaholic {
             "stinkyscapeplus-025",
             "stinkyscapeplus-055",
         ]));
+        // Re-pinned for the Felinors vs Humans release (#5222): its #93.
+        pool.extend(landed(&["felinorsvshumans-093"]));
         assert_eq!(ids_of_defs(query(&luck_based())), pool);
         let expected: Vec<String> = ids_of_defs(
             CATALOG
@@ -1136,6 +1211,19 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         "stinkyscapeplus-060",
         "stinkyscapeplus-115",
     ];
+    /// The Felinors vs Humans release (#5222): its printed 1/1 Units, #112.1 Recursion Module among them
+    /// after its card, in the catalog order.
+    const FELINORS_VS_HUMANS_ONE_ONES: &[&str] = &[
+        "felinorsvshumans-011",
+        "felinorsvshumans-035",
+        "felinorsvshumans-047",
+        "felinorsvshumans-076",
+        "felinorsvshumans-084",
+        "felinorsvshumans-097",
+        "felinorsvshumans-101",
+        "felinorsvshumans-112-1",
+        "felinorsvshumans-113",
+    ];
 
     #[test]
     fn r1080_the_one_one_pool_is_every_printed_1_1_unit_tokens_included() {
@@ -1145,6 +1233,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         expected.extend(landed(&[CATBOY_MAID]));
         expected.extend(strings(STINKYSCAPE_ONE_ONES));
         expected.extend(strings(STINKYSCAPE_PLUS_ONE_ONES));
+        expected.extend(strings(FELINORS_VS_HUMANS_ONE_ONES));
         assert_eq!(
             ids_of_defs(query(&q(json!({
                 "type": "Unit",
@@ -1165,6 +1254,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         expected.extend(landed(&[CATBOY_MAID]));
         expected.extend(strings(STINKYSCAPE_ONE_ONES));
         expected.extend(strings(STINKYSCAPE_PLUS_ONE_ONES));
+        expected.extend(strings(FELINORS_VS_HUMANS_ONE_ONES));
         let ones = query(&q(json!({
             "type": "Unit",
             "stats": { "attack": 1, "health": 1 },

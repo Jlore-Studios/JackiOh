@@ -118,6 +118,20 @@ pub struct Grant {
     pub radiant: bool,
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     pub params: IndexMap<String, i32>,
+    /// R5237006 (FvH #79 Post Human Aesthetist): when the granted ability runs. Absent is a Death, as
+    /// every grant was before, so a game without an End of turn grant hashes as it did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub on: Option<GrantOn>,
+}
+
+string_union! {
+    /// R5237006: `Grant.on`, the moment a granted ability runs: as the card dies (§4.5 step 3), or at
+    /// its controller's end of turn, as its own End of turn would (§6.2, R62).
+    pub enum GrantOn {
+        Death = "death",
+        EndOfTurn = "endOfTurn",
+    }
 }
 
 /// R1839000, R1839001: a Dormant card's status (SPEC §6.1 Dormant, `CardInstance.slumber`): on the
@@ -253,6 +267,24 @@ pub struct TurnBuff {
     pub keywords: Vec<Keyword>,
 }
 
+/// R5237001 (FvH #7 Whimsy!, #8 Joy!): "+N Attack and <keywords> for a turn / for two turns": holds while
+/// `player` (the caster) has started fewer than `until_turns_started` turns (`PlayerState.turns_started`),
+/// so it ends as the caster's `turns`-th turn from the grant starts (layers.rs, beside `TurnBuff`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TimedBuff {
+    pub player: PlayerId,
+    pub until_turns_started: i32,
+    pub attack: i32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub keywords: Vec<Keyword>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "ts",
@@ -329,6 +361,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub turn_buff: Option<TurnBuff>,
+    /// R5237001: "+N Attack and <keywords> for N turns" (`effects::turn_buff::grant_for_turns`), each
+    /// held until its caster has started its turns; read in the layers beside `turn_buff`, cleared by
+    /// R78's reset. Absent on every other card (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub timed_buffs: Option<Vec<TimedBuff>>,
     /// A backrow card whose identity is public, e.g. a Field Trap that has fired (R33).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -392,6 +430,14 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub brittle: Option<BrittleCounter>,
+    /// R5236000, R5236004: the Durability the card's uses have spent on this stay on the field
+    /// (`subsystems::activate::spend_durability`), one counter for all its Activates. Absent until the
+    /// first use, so a game no Durability card is used in stores and hashes as before (D14); R78's reset
+    /// clears it, so a card back from leaving the field has its whole Durability again. Refresh never
+    /// touches it (R5236003).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub durability_spent: Option<i32>,
     /// R2179001: what is left of the card's Temporary X once its first end of turn in a hand has
     /// counted it down (`temporary.rs`); before that the keyword's own number is the count. Kept in
     /// every zone like Brittle's count, though it counts only in a hand; a copy never inherits it (R57).
@@ -503,6 +549,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hidden_nerfs: Option<i32>,
+    /// R5238001: a secret grant's disguise (`effects::secret_grant`): keywords the seat that does not
+    /// control the card is shown on it besides its own, on the true target and each decoy alike, so that
+    /// seat cannot tell which holds the keyword. Taken off by R78's reset as the card leaves the field.
+    /// Absent on every other card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub shown_to_opponent: Option<Vec<Keyword>>,
     /// R3536000: has evolved, so it evolves no more; R78's reset takes it off; only `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
@@ -800,6 +853,19 @@ pub enum ModifierKind {
         resume: Resume,
         label: String,
     },
+    /// R5237000 (FvH #4 KY's Unification Mandate): "for the rest of the game, whenever you summon a
+    /// Unit, …" — after each card of this player's that later enters one of their zones (a permanent's
+    /// resolved play, or a summon no play made), `resume` re-enters the card's step with the card's id
+    /// in its data, as `LaneWatch` answers but in any lane; with `unitsOnly`, a Unit's only. Expiry
+    /// `never`; several stack, each its own record. `label` is its badge (R169).
+    SummonWatch {
+        resume: Resume,
+        label: String,
+        /// Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        units_only: Option<bool>,
+    },
     /// MD-C21, R1021: Meditative #48 Tranquility — this player's hero is immune to damage: every
     /// damage instance to it is 0 (a cap of 0 `damage::hero_damage_cap` reads at §4.4 step 3).
     /// Expiry is R757's Armor Up expiry, so it is gone as this player's next turn begins.
@@ -900,6 +966,35 @@ pub enum ModifierKind {
         amount: i32,
         /// R4594002: set when a Spell made it (`restrictions::effect_is_from_spell`), so it passes a Unit
         /// Immune to Spells by (§6.1, R4453000). Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        from_spell: Option<bool>,
+    },
+    /// R5237007 (FvH #73 Bloodforged Crusader, "for the rest of the game your Humans have +2/+2"): every
+    /// Unit this player controls on the field whose tags (`query::tags_of`) hold one of `tags` — every
+    /// Unit, absent — has `attack` more Attack and `health` more max Health, those that arrive later too
+    /// (`layers::stats_lent_by_player`), gated as R1859007's lend. Live from the moment it is made until
+    /// its expiry, as `UnitsAttack` is.
+    UnitsStats {
+        attack: i32,
+        health: i32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        tags: Option<Vec<crate::wire::Tag>>,
+        /// Set when a Spell made it, so it passes a Unit Immune to Spells by (R4508000). Only ever
+        /// `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        from_spell: Option<bool>,
+    },
+    /// R5237008 (FvH #95, Radiant face, "for the rest of the game your cards have <keyword>"): every
+    /// card this player controls on the field (any row) or resolving has `keyword`
+    /// (`layers::lent_to_cards`), those that arrive later too, but a Vanilla, Dormant or buried one.
+    /// Expiry `never`; it outlasts the card that gave it.
+    CardsHaveKeyword {
+        keyword: Keyword,
+        /// Set when a Spell made it, so it passes a card Immune to Spells by (R4508000). Only ever
+        /// `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         from_spell: Option<bool>,
@@ -1596,8 +1691,8 @@ pub struct PlayerState {
     pub game_log: Option<GameLog>,
     /// R4589000: what this player's plays and deaths leave for the Recursion cards to read back
     /// (`recursion_log.rs`): every face-up play this game and every Unit that died under them.
-    /// Absent until the game holds an Infinite Assault card, so a game without one hashes as it did
-    /// before this field existed (D14).
+    /// Absent until the game holds an Infinite Assault card (or, R5237013, a Plagiarized one), so a game
+    /// without one hashes as it did before this field existed (D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub recursion: Option<RecursionLog>,
@@ -1668,6 +1763,21 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub stolen_mana_crystals: Option<i32>,
+    /// R5237003 (FvH #18 Villa-D Moneybags): how far effects have raised this player's mana cap for the
+    /// rest of the game (`effects::mana::raise_mana_cap`), added to the seat's `Handicap.mana_cap`
+    /// wherever the cap is read (`mana::mana_cap_of`). Absent (never 0 stored) while none has, so a game
+    /// without one hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub mana_cap_bonus: Option<i32>,
+    /// R5237002 (FvH #16.2 Travertine Golem): the mana this player left unspent at the end of their last
+    /// turn (their last Float, R1563000), set at their cleanup beside `turnLog.unspentAtEnd` and never
+    /// reset, so it holds through their next turn (`query::float_last_turn`). Absent before their first
+    /// turn ends, and in a game holding no Felinors vs Humans card (`recursion_log::fvh_kept`), so no
+    /// other game's hash moves (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub last_float: Option<i32>,
     /// R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
     /// starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
     /// hashes as it did before this field existed.
@@ -2532,6 +2642,8 @@ pub fn create_player_state() -> PlayerState {
         lost_refresh_through: None,
         mana_crystals: None,
         stolen_mana_crystals: None,
+        mana_cap_bonus: None,
+        last_float: None,
         extra_turns: None,
         rift_extra_turn: None,
         won_by_effect: None,
@@ -3089,6 +3201,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         return_to_hand_at_end_of_turn: None,
         taunt_suppressed_turn: None,
         turn_buff: None,
+        timed_buffs: None,
         face_up: None,
         revealed: None,
         last_damaged_by: None,
@@ -3100,6 +3213,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         known_as: None,
         tuning: None,
         brittle: None,
+        durability_spent: None,
         temporary: None,
         enchantments: None,
         berserk: None,
@@ -3119,6 +3233,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         grants: None,
         fixed_x: None,
         hidden_nerfs: None,
+        shown_to_opponent: None,
         evolved: None,
         enters_evolved: None,
         giga: None,

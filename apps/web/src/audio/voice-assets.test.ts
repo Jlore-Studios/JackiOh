@@ -317,7 +317,7 @@ function runCheck(extraArgs: readonly string[] = []): CheckRun {
 }
 
 /** A problem line starts with the key it is about (Surface: "each starting with the key"). */
-const KEY_AT_START = /^((?:core|classic|classicplus|meditative|meditativeplus|stinkyscape|stinkyscapeplus|traininggrounds|boss)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:(?:play|attack|death|cast|startOfTurn|endOfTurn|whenever|activate|hurt|hit)[0-9]*|trigger[0-9]+))(?![a-z0-9])/;
+const KEY_AT_START = /^((?:core|classic|classicplus|meditative|meditativeplus|stinkyscape|stinkyscapeplus|traininggrounds|felinorsvshumans|boss)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:(?:play|attack|death|cast|startOfTurn|endOfTurn|whenever|activate|hurt|hit)[0-9]*|trigger[0-9]+))(?![a-z0-9])/;
 
 function reportedKeys(run: CheckRun): string[] {
   const keys = new Set<string>();

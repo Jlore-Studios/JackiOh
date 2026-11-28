@@ -242,6 +242,23 @@ describe("#2107 the type scale", () => {
       "--font-signature-marker",
     ]);
   });
+
+  it("R5264500 the display and text stacks reach a face for the Egyptian Hieroglyphs block, for its code points alone (FvH #84 𓃠)", () => {
+    const fonts = read("fonts.css").replace(/\/\*[\s\S]*?\*\//g, " ");
+    const face = [...fonts.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((match) => match[1] ?? "").find((body) => body.includes('"Hieroglyphs Fallback"'));
+    expect(face).toBeDefined();
+    expect(face).toMatch(/unicode-range:\s*U\+13000-1345F;/);
+    expect(face).toContain('local("Noto Sans Egyptian Hieroglyphs")');
+    expect(face).toContain('local("Segoe UI Historic")');
+    const name = "𓃠".codePointAt(0) ?? 0;
+    expect(name >= 0x13000 && name <= 0x1345f).toBe(true);
+    for (const token of ["--font-display", "--font-text"]) {
+      const stack = new RegExp(`${token}:\\s*([^;]+);`).exec(fonts)?.[1] ?? "";
+      const families = stack.split(",").map((family) => family.trim());
+      // After the web face's metric-matched fallback, so Latin text measures as before.
+      expect(families.indexOf('"Hieroglyphs Fallback"'), token).toBe(2);
+    }
+  });
 });
 
 describe("#2107 no one-off sizes or faces", () => {

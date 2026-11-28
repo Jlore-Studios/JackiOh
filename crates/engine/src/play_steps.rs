@@ -407,6 +407,11 @@ pub struct PlayRun {
     /// R3920001: a cast from the deck (`deck_cast.rs`), a cast and no play as a cast on draw is.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from_deck: Option<bool>,
+    /// R5237005: where in its player's hand the card was as the announce took it out (`HandPlace`), for
+    /// step 4's `cardPlayed.fromHand`. Absent for any play not from a hand (a cast, a graveyard play), and
+    /// in a game holding no Felinors vs Humans card (`recursion_log::fvh_kept`, D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from_hand: Option<crate::wire::HandPlace>,
     /// R1086: the host an Equip play fuses into at step 7 (ME-EQUIP), read at step 1 (D14).
     /// R4834000: cleared at step 4 when the card is handed to the opponent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -493,6 +498,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         replaced: None,
         drawn_as: None,
         from_deck: None,
+        from_hand: None,
         copied: None,
         extra_cries: None,
         aim_at: None,
@@ -711,8 +717,10 @@ pub fn validate_play(
     if is_permanent(state, &card) && crate::play_choices::needs_zone(state, &card) {
         zone = match &action.zone {
             None => default_zone_for(state, player, &card, &tributes),
+            // R5238002: on the side the zone names (step 1 accepted another side only for a card that
+            // plays on either side), where the placement gives that side control (`zones::place_on_field`).
             Some(named) => Some(ZoneSlot {
-                player,
+                player: named.player.unwrap_or(player),
                 row: named.row,
                 lane: named.lane,
             }),
@@ -1438,6 +1446,15 @@ fn announce_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         {
             return;
         }
+        // R5237005: a play from a hand notes the card's place there before the announce takes it out,
+        // only in a game holding a Felinors vs Humans card (`fvh_kept`), so no other game's hash moves.
+        if run.cast != Some(true)
+            && run.replaced != Some(true)
+            && run.source.is_none()
+            && crate::recursion_log::fvh_kept(sink.state)
+        {
+            run.from_hand = crate::query::hand_place_of(sink.state, run.player, &run.instance_id);
+        }
         if !announce_play(sink, run) {
             run.lost = Some(true);
             return;
@@ -1512,6 +1529,8 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
         arrived_during: arrivals.clone(),
         exits_from: Some(exits_from),
         on_draw: cast_on_draw(run).then_some(true),
+        // R5237005: the card's place in its player's hand as it left it, for a play from a hand.
+        from_hand: run.from_hand,
     });
     // R2250001: a Resource played pays its player its Credits; a cast is no play of theirs.
     if run.cast != Some(true) {
@@ -2165,6 +2184,9 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
             // R783004, R3806000: a card played face-down as a Trap runs no Cry at its play, its text
             // dormant; only a Spell set under Paranoia resolves its text now, and stays set.
             ResolvePart::Script if card.set_as.is_some() => crate::alt_play::resolve_at_set(sink, &card),
+            // R5239006: a permanent whose text plays its Flashback without its Cry runs none on a play
+            // that spent its Flashback (R783013); a Spell's resolution is no Cry (R822) and still runs.
+            ResolvePart::Script if flashback_skips_cry(sink.state, run, &card) => {}
             ResolvePart::Script => {
                 // B5 E14, R399: a copier resolves the copied Spell's script, itself as "this".
                 let face = text_face_of(sink.state, &card);
@@ -2187,6 +2209,15 @@ fn resolve_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         }
     }
     resolve_extra_cries(sink, run);
+}
+
+/// R5239006: whether step 5 runs no Cry for this play: it spent the card's Flashback (`PlayRun.flashback`,
+/// fixed at step 1) and the permanent's running face says "Flashback (without its Cry)"
+/// (`StaticFlags.flashback_without_cry`). A Spell's resolution is no Cry (R822), so a Spell still resolves.
+fn flashback_skips_cry(state: &GameState, run: &PlayRun, card: &CardInstance) -> bool {
+    run.flashback == Some(true)
+        && is_permanent(state, card)
+        && crate::scripts::flags_of(state, card).flashback_without_cry == Some(true)
 }
 
 /// Step 5's run of the card's own Cry or spell script, with the play's choices.

@@ -129,16 +129,31 @@ export type ClickResult = { interaction: Interaction; action?: ActionBody; notic
 
 // Keys. Presentation-only identity for a choice, so a picker can round-trip it through the DOM.
 
+/**
+ * R5238002: a zone of the other side (a card that plays on either side, FvH #42) carries its player, so its key
+ * is never its lane's on the player's own side; an own-side zone names no player and keeps its key.
+ */
 export function zoneKey(zone: ZoneChoice): string {
-  return `${zone.row}:${zone.lane}`;
+  return zone.player === undefined ? `${zone.row}:${zone.lane}` : `${zone.row}:${zone.lane}:${zone.player}`;
 }
 
 export function parseZoneKey(key: string): ZoneChoice | null {
-  const [row, lane] = key.split(":");
+  const [row, lane, player, rest] = key.split(":");
   if (row !== "units" && row !== "backrow") return null;
   const n = Number(lane);
-  if (lane === undefined || lane === "" || !Number.isInteger(n)) return null;
-  return { row, lane: n };
+  if (lane === undefined || lane === "" || !Number.isInteger(n) || rest !== undefined) return null;
+  if (player === undefined) return { row, lane: n };
+  return player === "p1" || player === "p2" ? { row, lane: n, player } : null;
+}
+
+/** R5238002: the side a zone choice names, as the board draws it: its player's, else the viewer's own. */
+function zoneSide(view: PlayerView, zone: ZoneChoice): Side {
+  return zone.player === undefined ? "you" : sideOf(view, zone.player);
+}
+
+/** R5238002: the zone choice a click on `side`'s zone names: an own-side zone names no player. */
+function zoneOn(view: PlayerView, side: Side, row: Row, lane: number): ZoneChoice {
+  return side === "you" ? { row, lane } : { row, lane, player: playerOf(view, side) };
 }
 
 export function selectionKey(selection: Selection): string {
@@ -780,7 +795,8 @@ export function highlightFor(
     for (const candidate of remaining) {
       const fixed = fieldsOf(candidate);
       if (fixed.zone !== undefined) {
-        const zone = testid.zone("you", fixed.zone.row, fixed.zone.lane);
+        // R5238002: a zone of the other side lights there.
+        const zone = testid.zone(zoneSide(view, fixed.zone), fixed.zone.row, fixed.zone.lane);
         legalIds.add(zone);
         glow.add(zone);
       }
@@ -800,7 +816,7 @@ export function highlightFor(
     for (const id of laneZonesOf(needLaneOptions(outstandingNeed(interaction)) ?? [])) legalIds.add(id);
     for (const id of sources) glow.delete(id);
     const picked = interaction.picked;
-    if (picked.zone !== undefined) selected.add(testid.zone("you", picked.zone.row, picked.zone.lane));
+    if (picked.zone !== undefined) selected.add(testid.zone(zoneSide(view, picked.zone), picked.zone.row, picked.zone.lane));
     for (const id of picked.tributes ?? []) selected.add(testid.card(id));
     for (const selection of picked.targets ?? []) {
       const where = selectionTestid(view, selection);
@@ -1003,8 +1019,9 @@ export function onClickTarget(
 
     case "zone": {
       if (!isBuilding(interaction)) return { interaction };
-      const zone: ZoneChoice = { row: target.row, lane: target.lane };
-      if (target.side === "you" && someCandidateFixesZone(interaction, zone)) {
+      // R5238002: a zone of the other side is a play's zone too, for a card the engine lists it for (FvH #42).
+      const zone = zoneOn(view, target.side, target.row, target.lane);
+      if (someCandidateFixesZone(interaction, zone)) {
         const next = narrowedBy(interaction, { zone });
         return next === null ? { interaction } : settle(next);
       }

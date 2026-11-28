@@ -122,6 +122,10 @@ pub const BUSTED_CODE_LINES: usize = 100;
 /// Shockwave447's pool). `crates/cards/build.rs` reads this line to compile the list in.
 pub const COMPLICATED_CODE_LINES: usize = 60;
 
+/// R5239009 (FvH #114 Kethspiracy): a card is simple when its script has at most this many code lines,
+/// counted as `COMPLICATED_CODE_LINES` counts them (`catalog::is_simple`).
+pub const SIMPLE_CODE_LINES: usize = 10;
+
 /// R1183003 (Meditative+ #18 Cognitive Offloading): the most actions the autopilot takes in one turn,
 /// a prompt's answer counted as one. Past it, the rest of the turn is a timeout's (R79): its open
 /// prompts answered by the random policy, then the turn ended. A turn rarely takes a third of it; the
@@ -345,6 +349,23 @@ pub const FIB: &[i32] = &[0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
 pub fn fib(index: i32) -> i32 {
     let clamped = index.clamp(0, FIB.len() as i32 - 1);
     FIB.get(clamped as usize).copied().unwrap_or(0)
+}
+
+/// FvH #91 KY's Log Exp of the FFT (issue #5239): its damage at N points, ⌊N·√(log₂ N)⌋ for N = 0 to
+/// `KY_FFT_MAX_POINTS`, worked out offline so no float runs in a game (FV2 #91); N = 1 is 0, as log₂ 1 is.
+pub const KY_FFT_DAMAGE: &[i32] = &[0, 0, 2, 3, 5, 7, 9, 11, 13, 16, 18, 20, 22, 25, 27, 29, 32];
+
+/// FvH #91: the most points `KY_FFT_DAMAGE` is read at; a larger X (or a Radiant face's padded one) reads
+/// this row.
+pub const KY_FFT_MAX_POINTS: i32 = 16;
+
+// The table holds one row for each point count from 0 to the cap.
+const _: () = assert!(KY_FFT_DAMAGE.len() == KY_FFT_MAX_POINTS as usize + 1);
+
+/// FvH #91: `KY_FFT_DAMAGE` at `points`, clamped to 0 and `KY_FFT_MAX_POINTS`, as `fib` clamps its index.
+pub fn ky_fft_damage(points: i32) -> i32 {
+    let clamped = points.clamp(0, KY_FFT_MAX_POINTS);
+    KY_FFT_DAMAGE.get(clamped as usize).copied().unwrap_or(0)
 }
 
 /// R80: a library holds at most this many cards. Whether a library is full is `query::room_in`'s test,
@@ -616,17 +637,29 @@ pub const TUNE_HEALTH_FLOOR: i32 = 1;
 /// B3.4 rule 3: the keywords a Degrade never removes, because losing them would help the card. R1220:
 /// Untributable is harmful the same way — losing it would let a Tribute take the card. R2657005: so are
 /// Can't Defend, which took over from the static flag "Cannot be in Defense Position" (§8 #65.1), and
-/// Crater, which a Nerf may add (`TUNE_NERF_HAND_KEYWORDS`).
+/// Crater, which a Nerf may add (`TUNE_NERF_HAND_KEYWORDS`). R5236005, R5236011, R5236021: so are
+/// Durability, whose loss would lift its cap on uses, Fragile and Unlucky.
 pub const TUNE_HARMFUL_KEYWORDS: &[KeywordKind] = &[
     KeywordKind::CantAttack,
     KeywordKind::Brittle,
     KeywordKind::Untributable,
     KeywordKind::CantDefend,
     KeywordKind::Crater,
+    KeywordKind::Durability,
+    KeywordKind::Fragile,
+    KeywordKind::Unlucky,
 ];
 /// R2657005: the harmful keywords a Buff's keyword row may take off a card that has them of its own, in
-/// this order. A Nerf never adds either.
-pub const TUNE_BUFF_REMOVES: &[KeywordKind] = &[KeywordKind::CantAttack, KeywordKind::CantDefend];
+/// this order. A Nerf never adds the first two. R5236011: Fragile, which a Nerf may add to a Unit
+/// (`TUNE_NERF_UNIT_KEYWORDS`).
+pub const TUNE_BUFF_REMOVES: &[KeywordKind] = &[
+    KeywordKind::CantAttack,
+    KeywordKind::CantDefend,
+    KeywordKind::Fragile,
+];
+/// R5236011: the harmful keywords a Nerf's keyword row may add to a Unit that lacks them, where R3888000's
+/// table calls them live, after `TUNE_NERF_HAND_KEYWORDS`. Never in R21's random pool.
+pub const TUNE_NERF_UNIT_KEYWORDS: &[KeywordKind] = &[KeywordKind::Fragile];
 /// R2657005: the keywords a Buff's keyword row may add to a card of any type that lacks them, after the
 /// row's other keywords.
 pub const TUNE_BUFF_ANY_KEYWORDS: &[KeywordKind] = &[KeywordKind::Flashback];
@@ -704,6 +737,15 @@ pub const PARAM_DEFAULT_STEP: ParamDefaultStep = ParamDefaultStep {
 /// names no `min`, an X, a numbered keyword (Activate X, Tribute X, Armor …) and a Brittle count a
 /// Degrade lowers.
 pub const TUNE_MIN_AMOUNT: i32 = 1;
+/// R5236021: the least a tuned Unlucky comes to: a Buff takes an Unlucky 1 off, where every other
+/// numbered keyword floors at `TUNE_MIN_AMOUNT`.
+pub const UNLUCKY_TUNED_FLOOR: i32 = 0;
+/// R5236000: the Durability one use spends (the `activate` action's, or a `run_activation` with
+/// `spend_use`, however many per-turn uses that run takes).
+pub const DURABILITY_PER_USE: i32 = 1;
+/// R5236001: the Durability left at which a card's Activates are refused, and at which a card that is no
+/// Unit leaves the field (R5236002).
+pub const DURABILITY_SPENT_OUT: i32 = 0;
 /// R1160 (Meditative #84 Volatility, ME-TUNEMULT): no tune multiplier — one Buff or Nerf
 /// application moves each row once.
 pub const TUNE_MULTIPLIER_NONE: i32 = 1;
@@ -2630,6 +2672,16 @@ pub const SLASH_LANES: [i32; 3] = [2, 3, 4];
 
 /// R4589001: "since your last turn" reaches back this many player-turns.
 pub const SINCE_LAST_TURN: i32 = 1;
+
+/// R5237013: the tags whose cards keep the recursion log in a game beside the Infinite Assault set's
+/// (`recursion_log::kept`): the Plagiarized reprints of Felinors vs Humans (FV4), frozen copies of IA
+/// scripts that read it back.
+pub const RECURSION_LOG_TAGS: &[Tag] = &[Tag::Plagiarized];
+
+/// R5237002, R5237005: the set whose cards, held anywhere in a game, make it keep the records only its
+/// cards read (`recursion_log::fvh_kept`): the Float last turn and a played card's hand place. No
+/// recorded game holds one, so no other game's hash moves (D14).
+pub const FVH_KEPT_SET: SetName = SetName::FelinorsVsHumans;
 
 #[cfg(test)]
 mod tests {

@@ -71,13 +71,16 @@ mod tests {
     const FILLER: &str = "core-005";
     /// The non-token Jlockeed cards of every set but this one, sorted: Core #13, #14, C #4, C+ #48, #51,
     /// Meditative #87 and #97 (§8.8), Meditative+ #4 (§8.9, #1187), Stinkyscape #124 to #130 (#1884),
-    /// Stinkyscape+ #21 and #26 (#3573) and Training Grounds #45 and #48 (#2204).
-    const POOL: [&str; 19] = [
+    /// Stinkyscape+ #21 and #26 (#3573), Training Grounds #45 and #48 (#2204) and Felinors vs Humans #17
+    /// and #80 (#5222).
+    const POOL: [&str; 21] = [
         "classic-004",
         "classicplus-048",
         "classicplus-051",
         "core-013",
         "core-014",
+        "felinorsvshumans-017",
+        "felinorsvshumans-080",
         "meditative-087",
         "meditative-097",
         "meditativeplus-004",

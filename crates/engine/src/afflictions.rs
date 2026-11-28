@@ -183,6 +183,8 @@ pub struct Riders {
     pub burn_dealt: bool,
     /// "Damage also applies Toxic N": the N, its declared `toxic` where it declares one (R386); 0 with none.
     pub toxic: i32,
+    /// R5239007, "Damage dealt also applies Toxic": each hit adds what it dealt to that Toxic, in the same gain.
+    pub toxic_dealt: bool,
 }
 
 impl Riders {
@@ -193,7 +195,11 @@ impl Riders {
             return (0, 0);
         }
         let dealt_burn = if self.burn_dealt { dealt } else { 0 };
-        (self.burn.saturating_add(dealt_burn).max(0), self.toxic.max(0))
+        let dealt_toxic = if self.toxic_dealt { dealt } else { 0 };
+        (
+            self.burn.saturating_add(dealt_burn).max(0),
+            self.toxic.saturating_add(dealt_toxic).max(0),
+        )
     }
 }
 
@@ -209,14 +215,16 @@ pub fn riders_of(state: &GameState, source: &CardInstance) -> Riders {
         toxic: flags
             .toxic_on_damage
             .map_or(0, |n| crate::params::declared_or(state, source, TOXIC_PARAM, n)),
+        toxic_dealt: flags.damage_also_toxic == Some(true),
     }
 }
 
 /// R3540002, §4.4 step 7: the Burn and the Toxic a hit from `source` adds to its target after it landed,
 /// when the target survived it: a Unit still standing and not killed, a hero with life left. N is the
 /// source's declared number where it declares one (R386), the flag's otherwise; Burn goes on first.
-/// R4783001: "Damage dealt also Burns" adds `dealt`, what the hit dealt at step 5, to that Burn, one gain.
-/// Both are `riders_of`'s `Riders::after(dealt)` (R5229000).
+/// R4783001: "Damage dealt also Burns" adds `dealt`, what the hit dealt at step 5, to that Burn, one gain;
+/// R5239007: "Damage dealt also applies Toxic" adds it to the Toxic the same way. Both are `riders_of`'s
+/// `Riders::after(dealt)` (R5229000).
 pub(crate) fn ride_damage(
     sink: &mut EngineSink<'_>,
     source: &CardInstance,

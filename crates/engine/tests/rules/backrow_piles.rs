@@ -64,7 +64,11 @@ fn graveyard_ids(state: &GameState, player: PlayerId) -> Vec<String> {
 }
 
 fn zone(row: Row, lane: i32) -> ZoneChoice {
-    ZoneChoice { row, lane }
+    ZoneChoice {
+        row,
+        lane,
+        player: None,
+    }
 }
 
 fn first_played(events: &[GameEvent]) -> String {

@@ -541,6 +541,44 @@
         "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Repeater v5, Ultra Capacitor and Healing Capsule."
       }
     },
+    "felinorsvshumans-042": {
+      "base": {
+        "en": "Stack\nPlayable on either side.\nCry: If you played this on your side, it becomes a {stats}/{stats}. Destroy the Units beneath this.",
+        "zh": "堆叠\n可打出到任意一方。\n战吼：如果你将此牌打出到你的一方，它变为{stats}/{stats}。消灭此单位下方的单位。"
+      },
+      "radiant": {
+        "en": "Stack\nPlayable on either side.\nCry: If you played this on your opponent's side, it becomes a {shrink}/{shrink}. Destroy the Units beneath this.",
+        "zh": "堆叠\n可打出到任意一方。\n战吼：如果你将此牌打出到你对手的一方，它变为{shrink}/{shrink}。消灭此单位下方的单位。"
+      }
+    },
+    "felinorsvshumans-046": {
+      "base": {
+        "en": "Cry: Summon a random (2) Cost Unit left and right of this. Secretly give one of them Fragile. Your opponent sees Fragile on both.",
+        "zh": "战吼：在此单位左右两侧各召唤一个法力值消耗为(2)的随机单位。秘密使其中一个获得脆弱。你的对手看到两者都具有脆弱。"
+      },
+      "radiant": {
+        "en": "Cry: Summon a random Radiant (2) Cost Unit left and right of this. Secretly give one of them Fragile. Your opponent sees Fragile on both.",
+        "zh": "战吼：在此单位左右两侧各召唤一个法力值消耗为(2)的随机光辉单位。秘密使其中一个获得脆弱。你的对手看到两者都具有脆弱。"
+      }
+    },
+    "felinorsvshumans-073": {
+      "base": {
+        "en": "Cry: Exile your non-Human Units from board, hand, deck and graveyard. For the rest of the game, your Humans have +{stats}/+{stats}. Shuffle in {humans|random Human Unit|random Human Units}.",
+        "zh": "战吼：放逐你场上、手牌、牌库和墓地中的非人类单位。在本局对战的剩余时间内，你的人类拥有+{stats}/+{stats}。将{humans}张随机人类单位牌洗入牌库。"
+      },
+      "radiant": {
+        "en": "Cry: Exile your non-Human Units from board, hand, deck and graveyard. For the rest of the game, your Humans have +{stats}/+{stats}. Shuffle in {humans|random Radiant Human Unit|random Radiant Human Units}.",
+        "zh": "战吼：放逐你场上、手牌、牌库和墓地中的非人类单位。在本局对战的剩余时间内，你的人类拥有+{stats}/+{stats}。将{humans}张随机光辉人类单位牌洗入牌库。"
+      }
+    },
+    "felinorsvshumans-100": {
+      "base": "colon",
+      "radiant": "colon"
+    },
+    "felinorsvshumans-112": {
+      "base": 1,
+      "radiant": 1
+    },
     "infiniteassault-235": {
       "base": {
         "en": "Immune to Spells\nStart of turn: Get a random Radiant Infinite Assault card, costing ({setCost}).\nDeath: Summon The Prime Generator, Iteration Two."
@@ -578,6 +616,10 @@
     "traininggrounds-039 radiant",
     "stinkyscapeplus-061-1 radiant",
     "stinkyscapeplus-142 base",
-    "stinkyscapeplus-142 radiant"
+    "stinkyscapeplus-142 radiant",
+    "felinorsvshumans-100 base",
+    "felinorsvshumans-100 radiant",
+    "felinorsvshumans-112 base",
+    "felinorsvshumans-112 radiant"
   ]
 }

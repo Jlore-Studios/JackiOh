@@ -111,6 +111,8 @@ const SET_VARIETY_SALTS: Readonly<Record<string, number>> = {
   traininggrounds: 0x3c6ef373,
   // R3572001: so no held Stinkyscape+ card repeats a shipped card's picture.
   stinkyscapeplus: 0x1b873593,
+  // R5264000: so no held Felinors vs Humans card repeats a shipped card's picture.
+  felinorsvshumans: 0x85ebca6b,
 };
 /**
  * R3572001: the Stinkyscape+ cards whose variety stream is drawn again, by the number of draws it is moved on, because the
@@ -155,6 +157,29 @@ const INFINITE_ASSAULT_REDRAWS: Readonly<Record<string, number>> = {
   "infiniteassault-204": 1,
   "infiniteassault-221": 1,
   "infiniteassault-239": 1,
+};
+/**
+ * R503, R5264000: the held Felinors vs Humans cards whose variety stream is drawn again, as the Stinkyscape+ table's are,
+ * so none repeats another card's layout, backdrop, sky, emblem and motif in its theme, and each theme-and-composition group
+ * it fills draws every layout (B40); found the same way, card by card in catalog order. A card's scene recipe
+ * (`felinorsVsHumansRecipes.ts`) draws over its spec, so no shipped picture moves.
+ */
+const FELINORS_VS_HUMANS_REDRAWS: Readonly<Record<string, number>> = {
+  "felinorsvshumans-012": 1,
+  "felinorsvshumans-045": 1,
+  "felinorsvshumans-060-2": 1,
+  "felinorsvshumans-101": 1,
+  "felinorsvshumans-103": 1,
+  "felinorsvshumans-104": 1,
+  "felinorsvshumans-109": 1,
+  "felinorsvshumans-112": 1,
+  "felinorsvshumans-112-9": 1,
+  "felinorsvshumans-115": 1,
+  "felinorsvshumans-125": 1,
+  "felinorsvshumans-159": 1,
+  "felinorsvshumans-160": 2,
+  "felinorsvshumans-167": 1,
+  "felinorsvshumans-172": 2,
 };
 /** What a redraw adds to the salt, per draw it moves. */
 const REDRAW_STEP = 0x9e3779b1;
@@ -1665,7 +1690,11 @@ export function varietySalt(defId: string): number {
   const dash = defId.indexOf("-");
   const prefix = dash < 0 ? "" : defId.slice(0, dash);
   const salt = Object.hasOwn(SET_VARIETY_SALTS, prefix) ? (SET_VARIETY_SALTS[prefix] ?? VARIETY_SALT) : VARIETY_SALT;
-  const table = Object.hasOwn(STINKYSCAPE_PLUS_REDRAWS, defId) ? STINKYSCAPE_PLUS_REDRAWS : INFINITE_ASSAULT_REDRAWS;
+  const table = Object.hasOwn(STINKYSCAPE_PLUS_REDRAWS, defId)
+    ? STINKYSCAPE_PLUS_REDRAWS
+    : Object.hasOwn(FELINORS_VS_HUMANS_REDRAWS, defId)
+      ? FELINORS_VS_HUMANS_REDRAWS
+      : INFINITE_ASSAULT_REDRAWS;
   const redraws = Object.hasOwn(table, defId) ? (table[defId] ?? 0) : 0;
   return redraws === 0 ? salt : (salt + Math.imul(redraws, REDRAW_STEP)) >>> 0;
 }

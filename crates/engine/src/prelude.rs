@@ -21,6 +21,8 @@ pub use crate::catalog::{
     past_ids_of, pick_generated, pick_generated_unique, pick_unique, query, query_cost,
     register_past_versions, registered_catalog, roll_grape, roll_weighted, self_def_ids, split_past_id,
 };
+// R5239002, R5239009 (issue #5239): a pool's hook filter, and whether a card is simple.
+pub use crate::catalog::{HookFilter, is_simple};
 pub use crate::combat::*;
 pub use crate::config::*;
 pub use crate::cost_rules::*;
@@ -47,6 +49,8 @@ pub use crate::recursion_log::{
     DeathRecord, FaceUpPlay, RecursionLog, deaths_since_last_turn, deaths_this_game, deaths_this_turn,
     last_plays, last_unit_played, played_this_game, plays_last_turn, returned_by_reborn, units_played_by,
 };
+// R5237002, R5237005: whether the game keeps the Felinors vs Humans records.
+pub use crate::recursion_log::fvh_kept;
 pub use crate::replacements::*;
 pub use crate::restrictions::*;
 pub use crate::revealed_hand::*;
@@ -74,6 +78,8 @@ pub use crate::zones::*;
 
 pub use crate::effects::*;
 pub use crate::subsystems;
+// R5236000: a card's Durability left and one use's spend, for the scripts that read or spend it.
+pub use crate::subsystems::activate::{durability_left, spend_durability};
 pub use crate::wire::*;
 
 // Resolved explicitly: the effects' verbs over `mana`'s engine functions of the same names, and

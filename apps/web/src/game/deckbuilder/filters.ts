@@ -90,6 +90,10 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Automa-δ",
   "Automa-Ω",
   "Paperclip",
+  // R5235002: the Felinors vs Humans set's: its 82 Plagiarized reprints (FvH #116 to #197) and its two
+  // Roblox-Tool Field Spells (FvH #19 and #20). "Golem" is left out: only its two Golem tokens carry it.
+  "Plagiarized",
+  "Roblox-Tool",
 ];
 
 /** R4596000: the Infinite Assault's tags, its eight doctrines then its Commanders' (docs/infinite-assault.md IA11). */
@@ -100,10 +104,11 @@ export const ASSAULT_TAGS: readonly Tag[] = ["Hallucination", "Overclock", "Batc
  * "AI", "Other-Origins" (Classic+ #32.1 to #32.3, R1837000), "War Doctrine" (#137.1 to #137.4, R1883000),
  * "Resource" (issue #2521), "Starship" (the Dormant Starship, which only a rule makes, R3038000), "Automa-ζ"
  * (Stinkyscape+'s five Automa-ζ tokens, R3572000), the Infinite Assault's eight doctrines and "Commander"
- * (R4596000: a single-player set's, which no deck holds, R1846001) and "Token".
+ * (R4596000: a single-player set's, which no deck holds, R1846001), "Golem" (Felinors vs Humans #100.1 and
+ * #100.2, tokens both, R5235002) and "Token".
  * Every tag a catalog card carries.
  */
-export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", ...ASSAULT_TAGS, "Token"];
+export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", ...ASSAULT_TAGS, "Golem", "Token"];
 
 /** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). `shows`
  *  picks the sets that lend theirs: the almanac's are every set it shows (R5131000). */

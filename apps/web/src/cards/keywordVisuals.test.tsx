@@ -50,6 +50,8 @@ function keywordOf(kind: KeywordKind, n = 2): Keyword {
     case "Burn":
     case "Toxic":
     case "Woozy":
+    case "Durability":
+    case "Unlucky":
       return { kind, n };
     default:
       return { kind } as Keyword;
@@ -203,9 +205,9 @@ describe("R438 the keyword visuals map", () => {
     expect(onCanAct.sort()).toEqual(["Charge", "Rush"]);
   });
 
-  it("R438 the numbered keywords print their number: Armor, Brittle, Spell Damage and Lucky", () => {
+  it("R438 R5264500 the numbered keywords print their number: Armor, Brittle, Spell Damage, Lucky, and Durability and Unlucky", () => {
     const numbered = ALL_KINDS.filter((kind) => KEYWORD_VISUALS[kind].numbered);
-    expect(numbered.sort()).toEqual(["Armor", "Brittle", "Lucky", "Spell Damage"]);
+    expect(numbered.sort()).toEqual(["Armor", "Brittle", "Durability", "Lucky", "Spell Damage", "Unlucky"]);
   });
 
   it("R438 Divine Shield and Armor are MinionFace's own elements; every other kind is drawn by KeywordFx", () => {
@@ -414,6 +416,32 @@ describe("R438 several keywords compose", () => {
     expect(fxOf(cf, "Spell Damage")?.getAttribute("data-n")).toBe("1");
     const bonus = css.rules.find((rule) => rule.selectors.some((s) => s.includes('[data-keyword-fx="Spell Damage"]::after')));
     expect(bonus?.decls.get("content")).toBe('"+" attr(data-n)');
+  });
+
+  it("R5264500 Durability shows the uses it has left and Unlucky its X, each on its corner, and Fragile crazes the portrait", () => {
+    // R5236031: the view's Durability is the count left, one entry for all its Activates.
+    const cf = renderUnit({ keywords: [{ kind: "Durability", n: 1 }, { kind: "Unlucky", n: 2 }, { kind: "Fragile" }] });
+    expect(fxOf(cf, "Durability")?.getAttribute("data-n")).toBe("1");
+    expect(fxOf(cf, "Durability")?.getAttribute("data-kw-layer")).toBe("glyph");
+    expect(fxOf(cf, "Unlucky")?.getAttribute("data-n")).toBe("2");
+    expect(fxOf(cf, "Unlucky")?.querySelector(".kw-cloud")).not.toBeNull();
+    expect(fxOf(cf, "Fragile")?.getAttribute("data-kw-layer")).toBe("veil");
+    expect(fxOf(cf, "Fragile")?.querySelector(".kw-pane")).not.toBeNull();
+    expect(fxOf(cf, "Fragile")?.hasAttribute("data-n")).toBe(false);
+    // Each acts on the field, so each keeps its chip there.
+    for (const kind of ["Durability", "Fragile", "Unlucky"] as const) {
+      expect(KEYWORD_VISUALS[kind].onField, kind).toBe(true);
+      expect(cf.querySelectorAll(`.keywords > [data-keyword="${kind}"]`), kind).toHaveLength(1);
+    }
+    // A spent Durability still shows its 0, as a Brittle count does.
+    cleanup();
+    expect(fxOf(renderUnit({ keywords: [{ kind: "Durability", n: 0 }] }), "Durability")?.getAttribute("data-n")).toBe("0");
+    // Their numbers sit on Lucky's badge, each kind's own color over it.
+    const badge = css.rules.find((rule) => rule.selectors.some((s) => s.includes('[data-keyword-fx="Lucky"]::after')));
+    for (const kind of ["Durability", "Unlucky"]) {
+      expect(badge?.selectors.some((s) => s.includes(`[data-keyword-fx="${kind}"]::after`)), kind).toBe(true);
+      expect(badge?.decls.get("content"), kind).toBe("attr(data-n)");
+    }
   });
 
   it("R438 a backrow card standing as a Unit wears the Animated treatment from the view's animated", () => {

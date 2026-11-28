@@ -63,6 +63,9 @@ const NUMBERED_KEYWORDS: &[&str] = &[
     "Burn",
     "Toxic",
     "Woozy",
+    // R5236000, R5236020.
+    "Durability",
+    "Unlucky",
 ];
 
 /// R3566004: the keywords that may print a number but need none (Stinkyscape+ #6.2 Stinky Cheese's

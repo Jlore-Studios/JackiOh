@@ -205,6 +205,8 @@ mod tests {
     /// S+ #79 A Glimpse into the Endless Sea, whose plan is Core #75 Infinite Reserves (R3569006).
     const GLIMPSE: &str = "stinkyscapeplus-079";
     const INFINITE_RESERVES: &str = "core-075";
+    /// FvH #196 Plagiarized: Singularity, a later set's Wincon card with no plan, added alone (#5222).
+    const SINGULARITY: &str = "felinorsvshumans-196";
 
     fn casting(seed: &str, radiant: bool, hand_extra: usize) -> Scenario {
         crate::register_all();
@@ -268,6 +270,7 @@ mod tests {
                     Some(AESTHETICIZE) => vec![AESTHETICIZE, SPA_DAY],
                     Some(ALTERAN_REACH) => vec![ALTERAN_REACH, STAR_CHART],
                     Some(GLIMPSE) => vec![GLIMPSE, INFINITE_RESERVES],
+                    Some(SINGULARITY) => vec![SINGULARITY],
                     other => panic!("seed {n} added {other:?}"),
                 };
                 assert_eq!(def_ids(&cards), expected, "seed {n}");
@@ -275,7 +278,7 @@ mod tests {
                 if !seen.contains(&expected[0].to_string()) {
                     seen.push(expected[0].to_string());
                 }
-                if seen.len() == 4 {
+                if seen.len() == 5 {
                     return;
                 }
             }

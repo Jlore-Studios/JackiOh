@@ -280,6 +280,7 @@
   "{target} toxic counters: {value}": "{target}的剧毒指示物：{value}",
   "{target} Woozy counter: {value}": "{target}的晕乎指示物：{value}",
   "Warhero Tokens are worth {value} Credits": "战争英雄代币价值{value}信用点",
+  "{target} Durability left: {value}": "{target}剩余的耐久：{value}",
   "{whose} Jade Counter is {value}": "{whose}青玉指示物为{value}",
   "{whose} starscape map reaches node {node}": "{whose}星图到达第{node}个节点",
   "{target} changed cost": "{target}的法力值消耗改变了",

@@ -21,6 +21,18 @@ const SEEDS_TRIED: u32 = 8;
 const PLAYED_ON: &str = "v-n";
 const BUILD: &str = "v-n+1";
 
+/// R3882000: the cards whose scripts read the win rates of record (the tier pools and KPIs, as
+/// `card_lists.rs` pins them). The version N this test makes up ships no record, so a game that played
+/// one folds otherwise under it than it played on the build, which reads the build's: such a game proves
+/// nothing here.
+const RECORD_READERS: [&str; 5] = [
+    "stinkyscape-109",
+    "stinkyscapeplus-095",
+    "stinkyscapeplus-096",
+    "stinkyscapeplus-097",
+    "stinkyscapeplus-164",
+];
+
 /// `catalog` with `unit` one attack higher on both faces.
 fn patched(catalog: &CardDefs, unit: &str) -> CardDefs {
     let mut patched = catalog.clone();
@@ -70,6 +82,15 @@ fn r767000_a_practice_game_on_version_n_replays_step_for_step_after_a_patch_to_n
                 PLAYER_IDS.map(|seat| view_for(&folded.state, seat))
             })
             .collect();
+        if record
+            .played
+            .p1
+            .iter()
+            .chain(record.played.p2.iter())
+            .any(|id| RECORD_READERS.contains(&id.as_str()))
+        {
+            continue;
+        }
         let Some(unit) = record
             .played
             .p1

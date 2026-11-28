@@ -246,6 +246,8 @@ describe("the filter vocabulary (B31, B34)", () => {
       "Automa-δ",
       "Automa-Ω",
       "Paperclip",
+      "Plagiarized",
+      "Roblox-Tool",
     ]);
     // Only the ten AI tokens carry "AI", the Prime tokens "Prime", Otherworldly Removal's three
     // tokens "Other-Origins" (R1837000) and the six Resource tokens "Resource" (#2521), and the pool
@@ -721,7 +723,7 @@ describe("the set chips (R380: one format, every set)", () => {
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
 
   it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
-    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"]);
+    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Felinors vs Humans"]);
     expect(FILTER_SETS.map(filterSetId)).toEqual([
       "db-filter-set-core",
       "db-filter-set-classic",
@@ -731,6 +733,7 @@ describe("the set chips (R380: one format, every set)", () => {
       "db-filter-set-stinkyscape",
       "db-filter-set-training-grounds",
       "db-filter-set-stinkyscape-plus",
+      "db-filter-set-felinors-vs-humans",
     ]);
   });
 
@@ -760,8 +763,11 @@ describe("the set chips (R380: one format, every set)", () => {
     // Re-pinned for the Stinkyscape+ release (#3573): its 166 cards join the pool; its 38 tokens never do.
     expect(pool(["Stinkyscape+"])).toHaveLength(deckableIn(["Stinkyscape+"]));
     expect(new Set(pool(["Stinkyscape+"]).map(setOf))).toEqual(new Set(["Stinkyscape+"]));
+    // Re-pinned for the Felinors vs Humans release (#5222): its 197 cards join the pool; its 35 tokens never do.
+    expect(pool(["Felinors vs Humans"])).toHaveLength(deckableIn(["Felinors vs Humans"]));
+    expect(new Set(pool(["Felinors vs Humans"]).map(setOf))).toEqual(new Set(["Felinors vs Humans"]));
     expect(pool([])).toHaveLength(
-      deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"]),
+      deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Felinors vs Humans"]),
     );
   });
 });
@@ -787,6 +793,8 @@ describe("the Jlockeed tag (R278)", () => {
     const trainingGrounds = setShips("Training Grounds") ? ["traininggrounds-045", "traininggrounds-048"] : [];
     // Re-pinned for the Stinkyscape+ release (#3573): its #21 and #26 (T-AI-3 and T-AI-4 are tokens).
     const stinkyscapePlus = setShips("Stinkyscape+") ? ["stinkyscapeplus-021", "stinkyscapeplus-026"] : [];
+    // Re-pinned for the Felinors vs Humans release (#5222): its #17 and #80.
+    const felinorsVsHumans = setShips("Felinors vs Humans") ? ["felinorsvshumans-017", "felinorsvshumans-080"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
       "classicplus-048",
@@ -794,6 +802,7 @@ describe("the Jlockeed tag (R278)", () => {
       "classicplus-052",
       "core-013",
       "core-014",
+      ...felinorsVsHumans,
       ...meditative,
       ...meditativePlus,
       ...stinkyscape,
@@ -888,8 +897,8 @@ describe("the almanac's pool (R630)", () => {
     expect(almanacPool(bare, DEFAULT_FILTER, DEFAULT_SORT)).toEqual([]);
   });
 
-  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship, Automa-ζ and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", ...ASSAULT_TAGS, "Token"]);
+  it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship, Automa-ζ, the Assault's, Golem and Token", () => {
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", ...ASSAULT_TAGS, "Golem", "Token"]);
     // R1420, R1381: the chips are the tags the cards of the shipped sets carry, and R5131000 the Infinite
     // Assault's; a set being built adds its tags when it ships.
     const carried = new Set(SHOWN.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));

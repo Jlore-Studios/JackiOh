@@ -246,7 +246,9 @@ pub(crate) fn falls_to_first_strike(
     }
     // Step 7: a Poisonous hit destroys the attacker, and one from a source whose damage exiles marks it
     // for exile; either way it has fallen before its blow (R1124, R4823000).
+    // R5236010: so has a Fragile attacker, which any hit that lowers its Health destroys.
     if has_keyword(&theirs.keywords, KeywordKind::Poisonous)
+        || has_keyword(&mine.keywords, KeywordKind::Fragile)
         || crate::query::exiles_on_damage(state, defender)
     {
         return true;

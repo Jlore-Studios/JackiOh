@@ -35,6 +35,8 @@ struct HandRiders {
     cost_mod_up_to: Option<i32>,
     /// R637: the card is Temporary (a granted keyword) while it is in a hand.
     temporary: Option<bool>,
+    /// R5238000: the card is Temporary N (a granted keyword) while it is in a hand, its count N.
+    temporary_count: Option<i32>,
     /// ME-CN, R1300: the card is a copy of a Chinese card, so it is Chinese too.
     chinese: Option<bool>,
     /// R57: a definition-remade copy's layer-1 face, without `copyOf` (Classic #14; not Chinese, R1300).
@@ -107,6 +109,17 @@ fn apply_cost_riders(card: &mut CardInstance, riders: &HandRiders) {
             .any(|keyword| matches!(keyword, Keyword::Temporary { .. }))
     {
         card.granted_keywords.push(Keyword::TEMPORARY);
+    }
+    // R5238000: Temporary N goes on as plain Temporary does, in place of any Temporary given before it, and
+    // its count starts at N (`CardInstance.temporary`, R2179001), so the card is discarded at the Nth end of
+    // its owner's turn it spends in the hand whatever Temporary it prints. Below 1 gives nothing.
+    if let Some(n) = riders.temporary_count
+        && n > 0
+    {
+        card.granted_keywords
+            .retain(|keyword| !matches!(keyword, Keyword::Temporary { .. }));
+        card.granted_keywords.push(Keyword::Temporary { n: Some(n) });
+        card.temporary = Some(n);
     }
     // R1438: given Lucky goes on with the prices (a burned card gets none) and sums with any Lucky the
     // card has (§6.1). The view shows it to the hand's owner alone (B5 E38), and no event says it.
@@ -244,6 +257,10 @@ pub struct AddToHandArgs {
     pub cost_mod: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub temporary: Option<bool>,
+    /// R5238000: the card is Temporary N once it is in the hand: discarded at the Nth end of its owner's
+    /// turn it spends there (R2179001), in place of any Temporary it had. A card a full hand burns takes none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub temporary_count: Option<i32>,
     /// ME-CN, R1300: the card made is a copy of a Chinese card (T-AI-5, Counterspell, Recycling
     /// Initiative), so it is Chinese too.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -295,6 +312,7 @@ impl AddToHandArgs {
             cost_mod: self.cost_mod,
             cost_mod_up_to: None,
             temporary: self.temporary,
+            temporary_count: self.temporary_count,
             chinese: self.chinese,
             stats_override: self.stats_override,
             armor_override: self.armor_override,
@@ -394,6 +412,9 @@ pub struct AddRandomFromCatalogArgs {
     pub cost_mod_up_to: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub temporary: Option<bool>,
+    /// R5238000: each card added is Temporary N once it is in the hand (`AddToHandArgs.temporary_count`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub temporary_count: Option<i32>,
     /// ME-CN, R921: the cards added are shown in Chinese (Meditative #33).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chinese: Option<bool>,
@@ -426,6 +447,7 @@ impl AddRandomFromCatalogArgs {
             cost_mod: self.cost_mod,
             cost_mod_up_to: self.cost_mod_up_to,
             temporary: self.temporary,
+            temporary_count: self.temporary_count,
             chinese: self.chinese,
             stats_override: None,
             armor_override: None,

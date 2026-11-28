@@ -558,8 +558,9 @@ gated card in by name. Emptying the list lifts the gate and deals every deck as 
 #732 did once it had measured the AI on the Meditative set, the list's one set until then. It held the
 Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
 ships before the AI is trained on it is listing it there. It held the Stinkyscape+ set from its release
-(issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000), and is
-empty since. No deal is shaped: the unban lane's dealt-quality table and the option that read it are
+(issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000). It holds the
+Felinors vs Humans set alone from its release (issue #5222, R5222000) until wave 2's sweep (issue #5223)
+measures the AI on it. No deal is shaped: the unban lane's dealt-quality table and the option that read it are
 removed (R4702001), so practice, the quality gates and both seats of an arena deal by one rule (R976000).
 A sweep timeout counts a decision re-timed over `AI_SWEEP.decision_ms` × `retime_margin` (1.25, 2,500 ms)
 and, apart in `capped_games`, a game past `max_actions` (R5248000); the reason prints the two apart.
