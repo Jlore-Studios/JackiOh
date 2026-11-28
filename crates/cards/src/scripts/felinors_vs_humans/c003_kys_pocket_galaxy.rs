@@ -68,8 +68,7 @@ mod tests {
 
     const DEAR: &str = "stand-in (5) 5/5";
     const CHEAP: &str = "stand-in (0) Spell";
-    /// FvH #16.1 Travertine Stack: (9999), played only at a lowered price.
-    const STACK: &str = "felinorsvshumans-016-1";
+    const STACK: &str = "felinorsvshumans-016-1"; // Travertine Stack: played only at a lowered price
 
     fn price(s: &Scenario, card: &CardInstance) -> i32 {
         effective_cost(s.state(), s.card(card), CostOptions::default())

@@ -139,13 +139,16 @@ mod tests {
         #[test]
         fn r5239002_it_summons_a_non_token_unit_whose_base_face_has_a_death() {
             let s = played("reanimator-any");
-            let summoned = s.unit_at(P1, 2);
+            let first = s.events_of("summoned").into_iter().find_map(|event| match event {
+                GameEvent::Summoned { instance_id, def_id, .. } if def_id != ID => Some(instance_id),
+                _ => None,
+            });
+            let summoned = s.card(must(first, "the Unit the Cry summoned").as_str()).clone();
             let def = crate::card_def(&summoned.def_id);
             assert_eq!(def.type_, CardType::Unit);
             assert!(!def.token, "no token");
             assert!(has_death(&summoned.def_id), "{} has a Death", summoned.def_id);
             assert!(!summoned.radiant);
-            assert_eq!(s.count("destroyed"), 0, "it does not die");
         }
 
         #[test]
@@ -155,6 +158,7 @@ mod tests {
             });
             let s = played(&seed);
             assert_eq!(s.unit_at(P1, 2).def_id, LAR, "Lar is summoned and stays");
+            assert_eq!(s.count("destroyed"), 0, "R4154205: its Death runs without its dying");
             let made = pings(&s);
             assert_eq!(made.len(), 1, "its Death ran once");
             assert!(!made[0].radiant);

@@ -42,19 +42,17 @@ mod tests {
 
     use crate::{filler, hits, scenario};
 
-    /// A 12/12 on the Radiant face, so four passes leave it standing.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    /// A 0/40, so four passes of either face leave it standing and Pierce has no overkill to carry.
+    const WALL: &str = "stand-in (1) 0/40";
+    const VANILLA: &str = "stand-in (1) 4/4";
     const FILLER: &str = "core-005"; // Stockpile: a Spell, each side's spare card (§2.5).
 
-    /// p1's Shredder (`radiant` its face) on the field, two enemy 12/12s across.
+    /// p1's Shredder (`radiant` its face) on the field, two enemy WALLs across.
     fn shredder_board(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": { "field": [{ "def": ID, "radiant": radiant }], "hand": [FILLER], "library": filler(2) },
             "p2": {
-                "field": [
-                    { "def": VANILLA, "radiant": true, "lane": 1 },
-                    { "def": VANILLA, "radiant": true, "lane": 2 },
-                ],
+                "field": [{ "def": WALL, "lane": 1 }, { "def": WALL, "lane": 2 }],
                 "hand": [FILLER],
                 "library": filler(2),
             },
@@ -75,7 +73,7 @@ mod tests {
         assert_eq!(heroes, vec![2, 5, 8, 11]);
         for lane in [1, 2] {
             let id = s.unit_at(P2, lane).id;
-            s.expect_stats(id.as_str(), json!({ "health": 12 - FOUR_TIMES * amount, "maxHealth": 12 }));
+            s.expect_stats(id.as_str(), json!({ "health": 40 - FOUR_TIMES * amount, "maxHealth": 40 }));
         }
         s.expect_health(P2, 30 - FOUR_TIMES * amount);
         s.expect_health(P1, 30);
@@ -116,7 +114,7 @@ mod tests {
         #[test]
         fn r62_the_opponents_end_of_turn_is_silent() {
             let mut s = scenario(json!({
-                "p1": { "field": [{ "def": VANILLA, "radiant": true }], "hand": [FILLER], "library": filler(2) },
+                "p1": { "field": [VANILLA], "hand": [FILLER], "library": filler(2) },
                 "p2": { "field": [ID], "hand": [FILLER], "library": filler(2) },
             }));
             s.end_turn();

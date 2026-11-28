@@ -39001,7 +39001,7 @@
     "flavor": "Chaos",
     "token": false,
     "cost": 3,
-    "loc": 1,
+    "loc": 97,
     "base": {
       "attack": 2,
       "health": 1,

@@ -4105,6 +4105,301 @@
       attack: { voice: "robot" },
       death: { voice: "robot" },
     },
+    "felinorsvshumans-001": { // NGMI Joe
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "felinorsvshumans-002": { // M.O.T.H.E.R
+      play: { voice: "posh" },
+      attack: { voice: "posh" },
+      death: { voice: "posh" },
+    },
+    "felinorsvshumans-003": { // KY's Pocket Galaxy
+      cast: { voice: "prof", effect: "manaRelease" },
+    },
+    "felinorsvshumans-004": { // KY's Unification Mandate
+      cast: { voice: "prof", effect: "buffRelease" },
+    },
+    "felinorsvshumans-005": { // Reanimator
+      play: { voice: "sapi-villain" },
+      attack: { voice: "sapi-villain" },
+      death: { voice: "sapi-villain" },
+    },
+    "felinorsvshumans-006": { // Overpaid Intern
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "felinorsvshumans-007": { // Whimsy!
+      cast: { voice: "goof", effect: "buffRelease" },
+    },
+    "felinorsvshumans-008": { // Joy!
+      cast: { voice: "bubbles", effect: "buffRelease" },
+    },
+    "felinorsvshumans-009": { // Whimsy and Joy!
+      cast: { voice: "wobble", effect: "drawRelease" },
+    },
+    "felinorsvshumans-010": { // Shadow Judge
+      play: { voice: "whisper" },
+      attack: { voice: "whisper" },
+      death: { voice: "whisper" },
+    },
+    "felinorsvshumans-011": { // Ban Hammer
+      play: { voice: "brute" },
+      attack: { voice: "brute", effect: "heavySwing" },
+      death: { voice: "brute" },
+    },
+    "felinorsvshumans-012": { // Mr. Big
+      play: { voice: "brute" },
+      attack: { voice: "brute" },
+      death: { voice: "brute" },
+    },
+    "felinorsvshumans-013": { // Mr. Small
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "felinorsvshumans-014": { // Direwolf
+      play: { voice: "sapi-giant" },
+      attack: { voice: "sapi-giant" },
+      death: { voice: "sapi-giant" },
+    },
+    "felinorsvshumans-015": { // Unstable Magma-Cell
+      play: { voice: "goof" },
+      attack: { voice: "goof" },
+      death: { voice: "goof", effect: "explosion" },
+    },
+    "felinorsvshumans-016": { // Travertine
+      cast: { voice: "narrator", effect: "drawRelease" },
+    },
+    "felinorsvshumans-016-1": { // Travertine Stack
+      cast: { voice: "narrator", effect: "manaRelease" },
+    },
+    "felinorsvshumans-016-2": { // Travertine Golem
+      play: { voice: "brute-golem", effect: "stoneThud" },
+      attack: { voice: "brute-golem" },
+      death: { voice: "brute-golem", effect: "crumble" },
+    },
+    "felinorsvshumans-017": { // Jlockeed Shredder-14
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-018": { // Villa-D Moneybags
+      play: { voice: "hustler" },
+      attack: { voice: "hustler" },
+      death: { voice: "hustler" },
+    },
+    "felinorsvshumans-019": { // Trowel
+      cast: { voice: "digger", effect: "summonRelease" },
+    },
+    "felinorsvshumans-019-1": { // Wall of Bricks
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "felinorsvshumans-020": { // Bomb
+      cast: { voice: "goof", effect: "summonRelease" },
+    },
+    "felinorsvshumans-020-1": { // Ticking Time Bomb
+      play: { voice: "goof" },
+      attack: { voice: "goof" },
+      death: { voice: "goof", effect: "explosion" },
+    },
+    "felinorsvshumans-021": { // Scandalous Top Hat
+      cast: { voice: "posh", effect: "buffRelease" },
+    },
+    "felinorsvshumans-022": { // The Mad Hatter
+      play: { voice: "sapi-trickster" },
+      attack: { voice: "sapi-trickster" },
+      death: { voice: "sapi-trickster" },
+    },
+    "felinorsvshumans-023": { // Book of Excavation
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-024": { // Book of Starflight
+      cast: { voice: "sapi-librarian", effect: "summonRelease" },
+    },
+    "felinorsvshumans-025": { // Book of Jade
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-026": { // Book of Entropy
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-027": { // Book of Monstruo
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-028": { // Book of Design Principles
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-029": { // Book of Legends
+      cast: { voice: "sapi-librarian", effect: "drawRelease" },
+    },
+    "felinorsvshumans-030": { // Big Book
+      cast: { voice: "storyteller" },
+    },
+    "felinorsvshumans-031": { // Desperate Plea
+      cast: { voice: "crone", effect: "healRelease" },
+    },
+    "felinorsvshumans-032": { // Refreshable Shop
+      cast: { voice: "hustler", effect: "morphRelease" },
+    },
+    "felinorsvshumans-033": { // Unstoppable Force
+      play: { voice: "sapi-giant" },
+      attack: { voice: "sapi-giant", effect: "heavyStomp" },
+      death: { voice: "sapi-giant" },
+    },
+    "felinorsvshumans-034": { // Half-True Craft a Card
+      cast: { voice: "sapi-wizard", effect: "shuffleRelease" },
+    },
+    "felinorsvshumans-035": { // Looksmaxxer
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "felinorsvshumans-036": { // Heartrock
+      cast: { voice: "sapi-mystic", effect: "summonRelease" },
+    },
+    "felinorsvshumans-037": { // Old Grum
+      play: { voice: "elder" },
+      attack: { voice: "elder" },
+      death: { voice: "elder" },
+    },
+    "felinorsvshumans-038": { // Short Term Loan
+      cast: { voice: "sapi-bureaucrat", effect: "manaRelease" },
+    },
+    "felinorsvshumans-039": { // Whisperer of KY
+      play: { voice: "whisper" },
+      attack: { voice: "whisper" },
+      death: { voice: "whisper" },
+    },
+    "felinorsvshumans-040": { // Travel Master Drungar
+      play: { voice: "hero" },
+      attack: { voice: "hero" },
+      death: { voice: "hero" },
+    },
+    "felinorsvshumans-041": { // Icecream Vender
+      play: { voice: "sapi-diner" },
+      attack: { voice: "sapi-diner" },
+      death: { voice: "sapi-diner" },
+    },
+    "felinorsvshumans-042": { // Big Billy
+      play: { voice: "brute" },
+      attack: { voice: "brute", effect: "heavyStomp" },
+      death: { voice: "brute" },
+    },
+    "felinorsvshumans-043": { // Dragons Bain
+      play: { voice: "sapi-villain" },
+      attack: { voice: "sapi-villain" },
+      death: { voice: "sapi-villain" },
+    },
+    "felinorsvshumans-044": { // Felinor Converter
+      play: { voice: "cat" },
+      attack: { voice: "cat", effect: "catChirp" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-045": { // Subject 9
+      play: { voice: "sapi-ghost" },
+      attack: { voice: "sapi-ghost" },
+      death: { voice: "sapi-ghost" },
+    },
+    "felinorsvshumans-046": { // Manifestor
+      play: { voice: "sapi-mystic" },
+      attack: { voice: "sapi-mystic" },
+      death: { voice: "sapi-mystic" },
+    },
+    "felinorsvshumans-047": { // Blazing Battlemage
+      play: { voice: "sapi-wizard" },
+      attack: { voice: "sapi-wizard", effect: "fireWhoosh" },
+      death: { voice: "sapi-wizard" },
+    },
+    "felinorsvshumans-048": { // Toxic Timmy
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "felinorsvshumans-049": { // Candle Master
+      play: { voice: "storyteller" },
+      attack: { voice: "storyteller" },
+      death: { voice: "storyteller" },
+    },
+    "felinorsvshumans-049-1": { // Candle Shot
+      cast: { voice: "storyteller", effect: "fireRelease" },
+    },
+    "felinorsvshumans-050": { // Field Kit
+      cast: { voice: "sapi-hero", effect: "physicalRelease" },
+    },
+    "felinorsvshumans-051": { // Scavengers Ingenuity
+      cast: { voice: "digger", effect: "drawRelease" },
+    },
+    "felinorsvshumans-052": { // Ace Hunter Jay
+      play: { voice: "hero" },
+      attack: { voice: "hero" },
+      death: { voice: "hero" },
+    },
+    "felinorsvshumans-053": { // Jay Sharp Shooter
+      play: { voice: "sapi-hero" },
+      attack: { voice: "sapi-hero", effect: "sharpCrack" },
+      death: { voice: "sapi-hero" },
+    },
+    "felinorsvshumans-054": { // Intrepid initiate
+      play: { voice: "sapi-heroine" },
+      attack: { voice: "sapi-heroine" },
+      death: { voice: "sapi-heroine" },
+    },
+    "felinorsvshumans-055": { // Adorable Infestation
+      cast: { voice: "sapi-cat", effect: "summonRelease" },
+    },
+    "felinorsvshumans-056": { // Pressure Plate
+      cast: { voice: "sapi-trickster", effect: "shatterRelease" },
+    },
+    "felinorsvshumans-057": { // Otherworldly Hunting
+      cast: { voice: "narrator", effect: "drawRelease" },
+    },
+    "felinorsvshumans-057-1": { // Kill Command
+      cast: { voice: "hero", effect: "physicalRelease" },
+    },
+    "felinorsvshumans-057-2": { // Tackling
+      cast: { voice: "brute", effect: "drawRelease" },
+    },
+    "felinorsvshumans-057-3": { // Felinor Companion
+      cast: { voice: "cat", effect: "summonRelease" },
+    },
+    "felinorsvshumans-057-4": { // Wide Felinor
+      play: { voice: "cat" },
+      attack: { voice: "cat", effect: "bigCatPounce" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-057-5": { // Narrow Felinor
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat", effect: "zip" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-057-6": { // Square Felinor
+      play: { voice: "cat" },
+      attack: { voice: "cat", effect: "catChirp" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-058": { // Call of the Shaped Felinors
+      cast: { voice: "sapi-cat", effect: "summonRelease" },
+    },
+    "felinorsvshumans-059": { // Voracious Reader
+      play: { voice: "sapi-librarian" },
+      attack: { voice: "sapi-librarian" },
+      death: { voice: "sapi-librarian" },
+    },
+    "felinorsvshumans-060": { // Toolmaster Luna
+      play: { voice: "diva" },
+      attack: { voice: "diva" },
+      death: { voice: "diva" },
+    },
+    "felinorsvshumans-060-1": { // Tools of Creation
+      cast: { voice: "diva", effect: "drawRelease" },
+    },
+    "felinorsvshumans-060-2": { // Tools of Cremation
+      cast: { voice: "diva", effect: "fireWhoosh" },
+    },
     "infiniteassault-001": { // Seed Drone
       play: { voice: "robot" },
       attack: { voice: "robot" },
