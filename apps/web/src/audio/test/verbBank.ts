@@ -1,6 +1,7 @@
 // #5190: the spell verbs' effects in card-audio.json5 (its head comment holds the table), as data for
-// the tests. The card parts (#5187) name these effects from their cards; until they do, voice-lines.test.ts
-// exempts exactly these names from "every bank effect is used". Test support only: the client reads the bank.
+// the tests. The card parts (#5187) name these effects from their cards; voice-lines.test.ts keeps its own
+// UNUSED_VERB_EFFECTS list of those not yet named, checked against this table. Test support only: the client
+// reads the bank.
 
 import type { SfxElement } from "../types.ts";
 
