@@ -21520,15 +21520,8 @@
       "taken_asks": []
     },
     "5248": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46099027461",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-28T02:45:00Z",
-        "until": "2026-11-28T03:15:00Z"
-      },
       "difficulty_by": {
         "at": "2026-11-28T02:44:52Z",
         "difficulty": "medium",
@@ -21547,10 +21540,9 @@
         "reason": "planned on sonnet",
         "trail": "- Grep: {\"pattern\": \"timeouts|AI_SWEEP|decision_ms|face_flags|flag_detail\", \"path\": \"/home/runner/work/_temp/work/item-5248/crates/ai/src/sweep.rs\", \"output_mode\": \"content\"}\n- Grep: {\"pattern\": \"still_slow|face_flags|timeouts|raw_timeouts\", \"path\": \"/home/runner/work/_temp/work/item-5248/crates/tools/src/sweep.rs\", \"output_mode\": \"content\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/crates/ai/src/sweep.rs\", \"offset\": 75, \"limit\": 260}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/crates/ai/src/sweep.rs\", \"offset\": 470, \"limit\": 580}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/crates/tools/src/sweep.rs\", \"offset\": 20, \"limit\": 330}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/crates/tools/src/sweep.rs\", \"offset\": 520, \"limit\": 100}\n- Grep: {\"pattern\": \"raw_timeouts|face_flags\\\\(|rawTimeouts\", \"glob\": \"!*.md\", \"output_mode\": \"content\", \"path\": \"/home/runner/work/_temp/work/item-5248\", \"-n\": true, \"head_limit\": 80}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/crates/ai/tests/ai/shadow_ban.rs\", \"offset\": 1290, \"limit\": 150}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/crates/ai/tests/ai/shadow_ban.rs\", \"offset\": 140, \"limit\": 80}\n- Grep: {\"pattern\": \"SweepStats \\\\{|max_actions|past 600|game\\\\(s\\\\) past\", \"path\": \"/home/runner/work/_temp/work/item-5248/crates\", \"output_mode\": \"content\", \"-n\": true, \"glob\": \"*.rs\"}\n- Grep: {\"pattern\": \"decision\\\\(s\\\\) over\", \"path\": \"/home/runner/work/_temp/work/item-5248\", \"output_mode\": \"files_with_matches\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/crates/ai/tests/ai/shadow_ban.rs\", \"offset\": 560, \"limit\": 110}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/crates/ai/tests/ai/shadow_ban.rs\", \"offset\": 860, \"limit\": 70}\n- Grep: {\"pattern\": \"decision\\\\(s\\\\) over\", \"path\": \"/home/runner/work/_temp/work/item-5248/crates/tools/src/stats.rs\", \"output_mode\": \"content\", \"-n\": true, \"-C\": 4}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/crates/tools/src/sweep.rs\", \"offset\": 1380, \"limit\": 180}\n- Grep: {\"pattern\": \"fn matches_reason|fn pass2_of|fn result\\\\(|fn verdict\\\\(|fn results|fn passes|fn reason_of\", \"path\": \"/home/runner/work/_temp/work/item-5248/crates/ai/tests/ai/shadow_ban.rs\", \"output_mo\u2026\n- Grep: {\"pattern\": \"AiSweep|AI_SWEEP|min_harm_plays|minHarmPlays\", \"path\": \"/home/runner/work/_temp/work/item-5248\", \"output_mode\": \"files_with_matches\", \"glob\": \"!training/**\"}\n- Grep: {\"pattern\": \"sweep\", \"path\": \"/home/runner/work/_temp/work/item-5248/crates/ai/src/lib.rs\", \"output_mode\": \"content\", \"-n\": true}\n- Grep: {\"pattern\": \"AI_SWEEP|AiSweep\", \"path\": \"/home/runner/work/_temp/work/item-5248/crates/ai/tests/ai/surface.rs\", \"output_mode\": \"content\", \"-n\": true, \"-C\": 8}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/spec/rulings/R977000.md\"}\n- Bash: {\"command\": \"ls spec/pending | tail -5; ls spec/rulings | grep -E '^R5248|^R524' ; ls spec/rulings | grep -E 'R5[0-9]{6}' | tail -3; grep -n \\\"R977000\\\" -r spec/09-architecture/9.9-practice-ai.md cra\u2026\n- Bash: {\"command\": \"cat spec/rulings/R5231000.md | head -30; echo ----; cat spec/pending/5231.md | head -20; echo ---; grep -n -i \\\"pending\\\" spec/README.md | head -20; grep -rn \\\"R977000\\\" crates/ai/src/*.\u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/ai/README.md | cut -c1-600; grep -n \\\"R977000\\\\|shadow\\\" crates/ai/README.md | cut -c1-200\"}\n- Bash: {\"command\": \"sed -n 523,575p crates/ai/README.md | cut -c1-900; grep -n \\\"classif\\\\|ai-sweep\\\\|difficulty\\\" /dev/null; cat .bot-plan.md 2>/dev/null | head -3; grep -rn \\\"AI_SWEEP\\\\|AiSweep\\\" crates/t\u2026\n- Bash: {\"command\": \"grep -n \\\"crates/ai\\\\|sweep\\\" crates/tools/src/classify.rs | head -30; grep -n \\\"Patch:\\\" docs/issues-and-patches.md | head -8; ls patches 2>/dev/null | head -3; ls patches/pending 2>/de\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn time_decision\\\" -B12 -A45 crates/tools/src/gate.rs | cut -c1-200\"}\n- Grep: {\"pattern\": \"fn time_decision\", \"path\": \"/home/runner/work/_temp/work/item-5248/crates/tools/src\", \"output_mode\": \"content\", \"-n\": true, \"-B\": 14, \"-A\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/crates/tools/src/sweep.rs\", \"offset\": 425, \"limit\": 98}\n- Bash: {\"command\": \"grep -n \\\"pub struct MatchRecord\\\" -B4 -A30 crates/ai/src/match_.rs; grep -n \\\"derive\\\" crates/ai/src/match_.rs | head; sed -n 1,20p crates/ai/tests/ai/shadow_ban.rs; grep -n \\\"^use\\\\|^ \u2026\n- Bash: {\"command\": \"grep -rn \\\"pub struct PerPlayer\\\" -B3 -A8 crates/engine/src | head -30; grep -n \\\"played:\\\" crates/ai/src/match_.rs | head; grep -n \\\"MatchRecord {\\\" crates/ai/tests/ai/*.rs crates/ai/sr\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5248/.bot-plan.md\", \"content\": \"# Draft plan #5248 (final plan is in the last message)\\nRead: crates/ai/src/sweep.rs (AiSweep, SweepStats, play_sweep_\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Sweep tooling only (crates/ai/src/sweep.rs plays no decision and search is untouched; classify marks it Internal), two crates agreeing on a call site and a function signature, a ruling and READMEs, about 10 files; no rule-1 to rule-5 line holds.\"} --> ## G\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-28T02:37:50Z",
       "owner_why": "it plans it",
@@ -21563,9 +21555,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-28T02:36:34Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46099027461",
+      "run_id": "pending:a8e3ea34-1795833930",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T02:37:50Z",
+      "started_at": "2026-11-28T02:45:48Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -21573,9 +21565,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T02:37:50Z",
+    "at": "2026-11-28T02:45:48Z",
     "url": "",
-    "what": "plan #5248 on claude-8"
+    "what": "build #5248 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-28T02:34:09Z",
