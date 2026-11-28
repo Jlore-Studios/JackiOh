@@ -125,7 +125,10 @@ describe("R277 the word diff", () => {
     // Divine Shield: the Unit it attacks becomes a base-face one, and its doubled stats carry its marks. The
     // Infinite Assault (§8.13, #4601) adds five of the designer's: #36 Deepfake's, #86 Replica Hatchery's, #94 Batch
     // Monarch's and #189 Clone Vat's (less the copy's Brittle) and #166 Aegis Prime's (less "While you control
-    // another Taunt Unit,").
+    // another Taunt Unit,"). The held Felinors vs Humans (§8.14) adds eight of the designer's: #37 Old Grum's (less
+    // Untributable), #85 and #86's Living potions (less the Tribute), #112.1 Recursion Module's (less its no-Cry line),
+    // #115 Call to Chaos Vending Machine's (less "Pay (2) to") and the reprints #143, #161 and #186 (less the copy's
+    // Brittle, as their originals).
     expect(silent).toEqual([
       "core-055",
       "core-079",
@@ -147,6 +150,14 @@ describe("R277 the word diff", () => {
       "stinkyscapeplus-072",
       "stinkyscapeplus-073",
       "stinkyscapeplus-085",
+      "felinorsvshumans-037",
+      "felinorsvshumans-085",
+      "felinorsvshumans-086",
+      "felinorsvshumans-112-1",
+      "felinorsvshumans-115",
+      "felinorsvshumans-143",
+      "felinorsvshumans-161",
+      "felinorsvshumans-186",
       "infiniteassault-036",
       "infiniteassault-086",
       "infiniteassault-094",

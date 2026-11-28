@@ -198,9 +198,11 @@ export const FELINORS_VS_HUMANS_SCENE_CARDS: readonly (readonly [string, FvhTemp
 
 /**
  * Every Plagiarized reprint (#116–#197): `[id, its Infinite Assault original, the original's template, rank]`, in card
- * order (`.fullsend/reprints-map.json`'s pairs; the template is the original's row of `INFINITE_ASSAULT_SCENE_CARDS`).
+ * order (`.fullsend/reprints-map.json`'s pairs; the template is the original's row of `INFINITE_ASSAULT_SCENE_CARDS`); a
+ * Mythic's row ends with the drifts of motes it draws over its photocopy, as an Infinite Assault Mythic's row does
+ * (R4577009), each found by drawing it so it clears the Mythic floor within the ceiling on both faces.
  */
-export const FELINORS_VS_HUMANS_PLAGIARIZED: readonly (readonly [string, string, AssaultTemplate, FvhRank])[] = [
+export const FELINORS_VS_HUMANS_PLAGIARIZED: readonly (readonly [string, string, AssaultTemplate, FvhRank, number?])[] = [
   ["felinorsvshumans-116", "infiniteassault-049", "unit", "plain"], // Plagiarized: Spark Plug
   ["felinorsvshumans-117", "infiniteassault-133", "swarm", "plain"], // Plagiarized: Backdoor
   ["felinorsvshumans-118", "infiniteassault-016", "swarm", "plain"], // Plagiarized: Benchmark Run
@@ -258,7 +260,7 @@ export const FELINORS_VS_HUMANS_PLAGIARIZED: readonly (readonly [string, string,
   ["felinorsvshumans-170", "infiniteassault-106", "unit", "plain"], // Plagiarized: Checkpoint Daemon
   ["felinorsvshumans-171", "infiniteassault-185", "unit", "plain"], // Plagiarized: Deep Crawler
   ["felinorsvshumans-172", "infiniteassault-202", "unit", "plain"], // Plagiarized: Exponent
-  ["felinorsvshumans-173", "infiniteassault-048", "swarm", "mythic"], // Plagiarized: Ego Death
+  ["felinorsvshumans-173", "infiniteassault-048", "swarm", "mythic", 0], // Plagiarized: Ego Death
   ["felinorsvshumans-174", "infiniteassault-156", "unit", "plain"], // Plagiarized: Mirror Firewall
   ["felinorsvshumans-175", "infiniteassault-114", "unit", "plain"], // Plagiarized: Ouroboros Engine
   ["felinorsvshumans-176", "infiniteassault-131", "swarm", "plain"], // Plagiarized: Privilege Escalation
@@ -273,15 +275,15 @@ export const FELINORS_VS_HUMANS_PLAGIARIZED: readonly (readonly [string, string,
   ["felinorsvshumans-185", "infiniteassault-227", "unit", "legendary"], // Plagiarized: Bastion.exe
   ["felinorsvshumans-186", "infiniteassault-189", "factory", "plain"], // Plagiarized: Clone Vat
   ["felinorsvshumans-187", "infiniteassault-045", "swarm", "plain"], // Plagiarized: Dream Within a Dream
-  ["felinorsvshumans-188", "infiniteassault-120", "swarm", "mythic"], // Plagiarized: Eternal Return
+  ["felinorsvshumans-188", "infiniteassault-120", "swarm", "mythic", 1], // Plagiarized: Eternal Return
   ["felinorsvshumans-189", "infiniteassault-214", "unit", "legendary"], // Plagiarized: Emergent Mind
   ["felinorsvshumans-190", "infiniteassault-093", "unit", "plain"], // Plagiarized: Gestalt
   ["felinorsvshumans-191", "infiniteassault-230", "swarm", "legendary"], // Plagiarized: Everything You've Ever Played
   ["felinorsvshumans-192", "infiniteassault-223", "unit", "legendary"], // Plagiarized: Loopback, Who Returns
   ["felinorsvshumans-193", "infiniteassault-210", "unit", "plain"], // Plagiarized: Matrioshka Brain
-  ["felinorsvshumans-194", "infiniteassault-233", "unit", "mythic"], // Plagiarized: Model Collapse
+  ["felinorsvshumans-194", "infiniteassault-233", "unit", "mythic", 2], // Plagiarized: Model Collapse
   ["felinorsvshumans-195", "infiniteassault-115", "unit", "plain"], // Plagiarized: Phoenix Protocol
-  ["felinorsvshumans-196", "infiniteassault-216-1", "unit", "mythic"], // Plagiarized: Singularity
+  ["felinorsvshumans-196", "infiniteassault-216-1", "unit", "mythic", 6], // Plagiarized: Singularity
   ["felinorsvshumans-197", "infiniteassault-213", "unit", "plain"], // Plagiarized: The Long Game
 ];
 
@@ -730,8 +732,9 @@ const TEMPLATES: Readonly<Record<FvhTemplate, (v: Vary, detail: FvhDetail) => Dr
 /**
  * R5264000: what a Legendary's or a Mythic's scene (a token printed either's too) draws over its template, last of the
  * layers it adds to so no draw of the template moves, from parts whose shapes are counted: a Legendary's more stars and
- * a drift of motes (20 shapes at the least), a Mythic's a field of stars, a second halo, a storm of motes and sparks (69
- * at the least), so each clears its floor (Legendary 90, Mythic 140) over a template's own.
+ * a drift of motes (20 shapes at the least), a Mythic's a field of stars, a second halo, four drifts of motes and sparks
+ * (45 at the least), so each clears its floor (Legendary 90, Mythic 140) over a template's own and stays under the
+ * ceiling (`ART_DETAIL_MAX_BYTES`) on both faces.
  */
 function setPiece(layers: Layers, rank: FvhRank, accent: PaletteName): Layers {
   if (rank === "plain") return layers;
@@ -748,7 +751,7 @@ function setPiece(layers: Layers, rank: FvhRank, accent: PaletteName): Layers {
     light: [...layers.light, { part: "halo", x: 50, y: 50, scale: 2.6, paint: accent }],
     particles: [
       ...layers.particles,
-      { part: "motes", x: 50, y: 50, scale: 1, count: 12, spread: [32, 34], paint: accent },
+      { part: "motes", x: 50, y: 50, scale: 1, count: 4, spread: [32, 34], paint: accent },
       { part: "sparks", x: 50, y: 46, scale: 1.2, count: 2, spread: [22, 18], paint: "white" },
     ],
   };
@@ -774,28 +777,27 @@ const PHOTOCOPY_SKY: Readonly<Record<AssaultTemplate, readonly [PaletteName, Pal
 
 /**
  * R5264000: a Plagiarized reprint's scene: its original's template (`assaultRecipe`, seeded by the reprint's own id, so it
- * echoes the original and is still its own), its sky and glow photocopied to greys, toner grain across the frame, and a
- * red stamp in its lower corner; a Mythic adds a drift of motes and a field of stars (26 shapes at the least, over a
- * template of about 115 to 130 elements, ART.md).
+ * echoes the original and is still its own), its sky and glow photocopied to greys, a drift of toner grain across the
+ * frame, and a red stamp in its lower corner; a Mythic adds its row's `drifts` of motes, as an Infinite Assault Mythic
+ * does, enough to clear the Mythic floor over its template's 115 to 130 elements and few enough to stay under the
+ * ceiling (ART.md).
  */
-export function plagiarizedRecipe(id: string, template: AssaultTemplate, rank: FvhRank): SceneRecipe {
+export function plagiarizedRecipe(id: string, template: AssaultTemplate, rank: FvhRank, drifts = 0): SceneRecipe {
   const original = assaultRecipe(id, template);
   const v = varyFor(id);
   const stamp: ScenePlacement = { part: "ink-seal", x: v.move(STAMP_X), y: v.move(STAMP_Y), scale: STAMP_SCALE };
-  const grain: ScenePlacement = { part: "dust", x: 50, y: v.move(58), scale: 2.2, count: 2, spread: [20, 26], paint: "grey-500" };
-  const sky = original.layers.sky ?? [];
+  const grain: ScenePlacement = { part: "dust", x: 50, y: v.move(58), scale: 2.2, count: 1, spread: [20, 26], paint: "grey-500" };
   const near = original.layers.near ?? [];
   const particles = original.layers.particles ?? [];
-  const mythic = rank === "mythic";
+  const motes: ScenePlacement[] = rank === "mythic" && drifts > 0 ? [{ part: "motes", x: 50, y: 50, scale: 1, count: drifts, spread: [32, 34], paint: "slate-100" }] : [];
   return {
     ...original,
     sky: PHOTOCOPY_SKY[template],
     light: { ...original.light, paint: "slate-100" },
     layers: {
       ...original.layers,
-      sky: mythic ? [...sky, { part: "stars", x: 50, y: 26, scale: 2 }] : sky,
       near: [...near, stamp],
-      particles: mythic ? [...particles, grain, { part: "motes", x: 50, y: 50, scale: 1, count: 6, spread: [32, 34], paint: "slate-100" }] : [...particles, grain],
+      particles: [...particles, grain, ...motes],
     },
   };
 }
@@ -803,5 +805,5 @@ export function plagiarizedRecipe(id: string, template: AssaultTemplate, rank: F
 /** R5264000: every Felinors vs Humans entry's scene, by id: the originals and their tokens, then the reprints. */
 export const FELINORS_VS_HUMANS_RECIPES: Readonly<Record<string, SceneRecipe>> = Object.fromEntries([
   ...FELINORS_VS_HUMANS_SCENE_CARDS.map(([id, template, rank, detail]) => [id, felinorsVsHumansRecipe(id, template, rank, detail)] as const),
-  ...FELINORS_VS_HUMANS_PLAGIARIZED.map((row) => [row[0], plagiarizedRecipe(row[0], row[2], row[3])] as const),
+  ...FELINORS_VS_HUMANS_PLAGIARIZED.map((row) => [row[0], plagiarizedRecipe(row[0], row[2], row[3], row[4])] as const),
 ]);

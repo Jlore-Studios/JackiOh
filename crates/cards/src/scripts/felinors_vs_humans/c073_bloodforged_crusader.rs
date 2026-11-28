@@ -47,7 +47,11 @@ fn crusade(radiant: bool) -> Script {
             }
             let mut effects: Vec<Effect> = doomed
                 .iter()
-                .map(|id| exile(json_as(json!({ "target": { "of": "instance", "instanceId": id } }))))
+                .map(|id| {
+                    exile(json_as(
+                        json!({ "target": { "of": "instance", "instanceId": id } }),
+                    ))
+                })
                 .collect();
             effects.push(give_units_stats(GiveUnitsStatsArgs {
                 player: None,
@@ -110,7 +114,12 @@ mod tests {
     fn others_of_p1(s: &Scenario) -> Vec<String> {
         let mut out = vec![s.unit_at(P1, 1).id];
         for pile in ["hand", "library", "graveyard"] {
-            out.extend(s.pile(P1, pile).into_iter().filter(|card| card.def_id == OTHER).map(|card| card.id));
+            out.extend(
+                s.pile(P1, pile)
+                    .into_iter()
+                    .filter(|card| card.def_id == OTHER)
+                    .map(|card| card.id),
+            );
         }
         out
     }
@@ -132,7 +141,10 @@ mod tests {
             for id in &others {
                 s.expect_in_zone(id.as_str(), "exile");
             }
-            assert!(s.hand(P1).iter().any(|card| card.def_id == SPELL), "a Spell is no Unit");
+            assert!(
+                s.hand(P1).iter().any(|card| card.def_id == SPELL),
+                "a Spell is no Unit"
+            );
             assert!(s.hand(P1).iter().any(|card| card.def_id == HUMAN));
         }
 
@@ -153,7 +165,10 @@ mod tests {
             let (before, their_before) = (s.stats(mine.as_str()), s.stats(theirs.as_str()));
             s.play(ID, json!({}));
             let after = s.stats(mine.as_str());
-            assert_eq!((after.attack, after.max_health), (before.attack + 2, before.max_health + 2));
+            assert_eq!(
+                (after.attack, after.max_health),
+                (before.attack + 2, before.max_health + 2)
+            );
             let theirs_after = s.stats(theirs.as_str());
             assert_eq!(
                 (theirs_after.attack, theirs_after.max_health),
@@ -182,7 +197,10 @@ mod tests {
             );
             let theirs = s.stats(s.unit_at(P2, 2).id.as_str());
             let grown = s.stats(later.as_str());
-            assert_eq!((grown.attack, grown.max_health), (theirs.attack + 2, theirs.max_health + 2));
+            assert_eq!(
+                (grown.attack, grown.max_health),
+                (theirs.attack + 2, theirs.max_health + 2)
+            );
         }
 
         #[test]
@@ -220,7 +238,10 @@ mod tests {
             let before = s.stats(mine.as_str());
             s.play(ID, json!({}));
             let after = s.stats(mine.as_str());
-            assert_eq!((after.attack, after.max_health), (before.attack + 4, before.max_health + 4));
+            assert_eq!(
+                (after.attack, after.max_health),
+                (before.attack + 4, before.max_health + 4)
+            );
         }
 
         #[test]

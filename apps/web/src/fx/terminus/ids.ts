@@ -38,5 +38,11 @@ export const STINKYSCAPE_PLUS_TERMINUS_IDS: readonly string[] = [
   "stinkyscapeplus-t-the-enigmata",
 ];
 
+/**
+ * The held Felinors vs Humans set's Terminus card, #82 The Last Meow, in catalog order (R3338000): like Stinkyscape+'s,
+ * it has no set piece of its own yet, so the rift and the jackpot light no star for it.
+ */
+export const FELINORS_VS_HUMANS_TERMINUS_IDS: readonly string[] = ["felinorsvshumans-082"];
+
 /** The cards that owe their caster a turn, whose opening plays their follow-up (Event Horizon's, Last Word's). */
 export const TURN_FOLLOWS: ReadonlySet<string> = new Set([EVENT_HORIZON, LAST_WORD]);

@@ -91,6 +91,8 @@ export const PIXEL_GLYPHS: Readonly<Record<string, readonly string[]>> = {
   ":": ["00000", "01100", "01100", "00000", "01100", "01100", "00000"],
   "?": ["01110", "10001", "00001", "00010", "00100", "00000", "00100"],
   "…": ["00000", "00000", "00000", "00000", "00000", "00000", "10101"],
+  // Felinors vs Humans #84's whole name, the seated-cat hieroglyph: a cat sitting facing left, its tail curled at its feet.
+  "𓃠": ["10100", "11100", "01100", "01110", "01111", "01111", "11101"],
 };
 
 /** The path of `glyphs`' lit cells, each row's runs one rectangle, moved `shift` cells right and down. */

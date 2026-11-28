@@ -246,6 +246,21 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Units keyword this turn",
     "Double stats",
     "Cheapest or highest-Attack Unit",
+    // R5237000–R5237011, R5238001–R5238011: the held Felinors vs Humans set's verbs (§8.14), which its cards print in
+    // plain words ("Your cards have", "for two turns", "Immune to Humans", "Secretly choose one").
+    "Summon watch",
+    "Grant for turns",
+    "Raise the mana cap",
+    "Stay summoning-sick",
+    "Units have stats",
+    "Cards have keyword",
+    "Harm passes a tag by",
+    "Immune to a tag",
+    "Log 2 utility",
+    "Secret keyword",
+    "Play onto either side",
+    "Watch deaths",
+    "Raise Woozy",
   ],
 };
 
@@ -273,6 +288,8 @@ const TRIGGERS: readonly TriggerTermId[] = [
   "When this awakens",
   "When launched",
   "Evolves when",
+  // R5236030: Felinors vs Humans' Endless Evolve, §6.2's.
+  "Endless Evolve",
 ];
 
 /** R512: §6.1's statuses that are not keyword kinds. */

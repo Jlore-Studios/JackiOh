@@ -958,7 +958,9 @@ template's would not do; `hashId(id)` varies the rest. Every Felinor wears the c
 on its figure's head, placed from its pose's neck (`POSE_ANCHORS`). A Legendary, a Mythic and a token printed either
 draw a set piece of counted parts over the template (stars, motes, sparks, a halo), so each clears its printed
 rarity's floor. A reprint is its original's template (`assaultRecipe`, seeded by the reprint's own id) photocopied:
-greys for its sky and glow, toner grain (`dust`) across it and a red `ink-seal` stamp in its lower corner. Every part
+greys for its sky and glow, a drift of toner grain (`dust`) across it and a red `ink-seal` stamp in its lower corner;
+a Mythic reprint's row adds its drifts of motes, as an Infinite Assault Mythic's does, so it clears the Mythic floor
+under the 48 KiB ceiling. Every part
 and figure part is one a shipped scene already places, so no Mythic's part of its own is taken; no part turns and no
 paint is gold. The 63 Legendaries, Mythics and tokens printed either move by `RARE_CARDS` recipes of their own
 (`motion.ts`), and the 26 Mythics and tokens printed Mythic have dioramas (`dioramas/felinorsvshumans/`). Only

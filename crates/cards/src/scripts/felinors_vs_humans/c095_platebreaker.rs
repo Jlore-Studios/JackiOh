@@ -48,7 +48,10 @@ mod tests {
     const FILLER: &str = "core-005"; // Stockpile: a card in hand
 
     fn pierces(s: &Scenario, card: &str) -> bool {
-        s.stats(card).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Pierce)
+        s.stats(card)
+            .keywords
+            .iter()
+            .any(|keyword| keyword.kind() == KeywordKind::Pierce)
     }
 
     /// p1's ally (lane 1) and Field Spell (backrow lane 1), the Platebreaker in hand; p2's Unit (lane 1)

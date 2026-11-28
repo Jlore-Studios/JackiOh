@@ -23,7 +23,9 @@ fn controls_a_felinor(state: &GameState, player: PlayerId) -> bool {
 pub fn script() -> CardScripts {
     let base = Script {
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))],
-        cry: Some(hook(|_ctx| vec![destroy(json_as(json!({ "target": { "of": "chosen" } })))])),
+        cry: Some(hook(|_ctx| {
+            vec![destroy(json_as(json!({ "target": { "of": "chosen" } })))]
+        })),
         cost: Some(cost_hook(|CostArgs { state, instance }| {
             // The printed cost of the version the game folds under (R767000).
             let printed_cost = query_cost(def_of(Some(state), ID));
@@ -80,7 +82,10 @@ mod tests {
     }
 
     fn hand_price(s: &Scenario) -> i32 {
-        let card = must(s.hand(P1).into_iter().find(|card| card.def_id == ID), "Anaphylaxis in hand");
+        let card = must(
+            s.hand(P1).into_iter().find(|card| card.def_id == ID),
+            "Anaphylaxis in hand",
+        );
         price(s, &card.id)
     }
 
@@ -125,7 +130,11 @@ mod tests {
             // A token that dies ceases to exist.
             s.expect_in_zone(&felinor, "gone");
             assert_eq!(price(&s, &copies[1].id), 4, "no Felinor, no discount");
-            assert_eq!(price(&s, &copies[0].id), 4, "in the graveyard with no Flashback: no play, its printed cost");
+            assert_eq!(
+                price(&s, &copies[0].id),
+                4,
+                "in the graveyard with no Flashback: no play, its printed cost"
+            );
         }
     }
 
@@ -141,13 +150,20 @@ mod tests {
         #[test]
         fn r783012_flashback_offers_it_from_the_graveyard_at_the_discounted_price() {
             let mut s = board(true, json!([FELINOR]), json!([WALL, WALL]));
-            let card = must(s.hand(P1).into_iter().find(|card| card.def_id == ID), "Anaphylaxis in hand");
+            let card = must(
+                s.hand(P1).into_iter().find(|card| card.def_id == ID),
+                "Anaphylaxis in hand",
+            );
             let first = s.unit_at(P2, 1).id;
             s.play(&card, pick::targets(pick::id(&first)));
             s.expect_in_zone(&first, "graveyard");
             s.expect_in_zone(&card.id, "graveyard");
             assert!(s.can_play(&card.id), "Flashback offers it from the graveyard");
-            assert_eq!(price(&s, &card.id), 1, "the Felinor's discount prices it there too");
+            assert_eq!(
+                price(&s, &card.id),
+                1,
+                "the Felinor's discount prices it there too"
+            );
             let second = s.unit_at(P2, 2).id;
             let aims = pick::instance_ids(&s.play_targets(&card.id));
             assert!(aims.contains(&second), "it may aim at a Unit again: {aims:?}");
@@ -156,7 +172,10 @@ mod tests {
         #[test]
         fn r783012_without_a_felinor_the_graveyard_play_costs_its_printed_4() {
             let mut s = board(true, json!([WALL]), json!([WALL]));
-            let card = must(s.hand(P1).into_iter().find(|card| card.def_id == ID), "Anaphylaxis in hand");
+            let card = must(
+                s.hand(P1).into_iter().find(|card| card.def_id == ID),
+                "Anaphylaxis in hand",
+            );
             let theirs = s.unit_at(P2, 1).id;
             s.play(&card, pick::targets(pick::id(&theirs)));
             s.expect_in_zone(&card.id, "graveyard");

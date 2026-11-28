@@ -22,7 +22,9 @@ const PRIME: &str = "felinorsvshumans-074-1";
 fn yile(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |_ctx| {
-            vec![add_to_hand(json_as(json!({ "defId": AESTHETIST, "radiant": radiant })))]
+            vec![add_to_hand(json_as(
+                json!({ "defId": AESTHETIST, "radiant": radiant }),
+            ))]
         })),
         death: Some(hook(move |_ctx| {
             vec![shuffle_into(json_as(json!({

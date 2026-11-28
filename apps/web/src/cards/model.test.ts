@@ -271,7 +271,8 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // Living Potions, the Stinkyscape set's #9 Ticketed and Core #79 Twinspell, whose Radiant face drops
     // "Then this goes to the graveyard." (R3044000), Stinkyscape+ #31, #72, #73 and #85 (§8.12) and
     // Classic+ #73.1 Classic Golem, less "Radiant" since issue #4292, and the Infinite Assault's #36, #86, #94,
-    // #166 and #189 (§8.13) (radiantDiff.test.ts names all twenty-five;
+    // #166 and #189 (§8.13), and the held Felinors vs Humans' #37, #85, #86, #112.1, #115, #143, #161 and #186
+    // (§8.14) (radiantDiff.test.ts names all thirty-three;
     // #149 Wildar's Radiant face adds "It costs (0)." (#2657), a mark, no deletion).
     const pureDeletions = new Set([
       "core-055",
@@ -294,6 +295,14 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
       "stinkyscapeplus-072",
       "stinkyscapeplus-073",
       "stinkyscapeplus-085",
+      "felinorsvshumans-037",
+      "felinorsvshumans-085",
+      "felinorsvshumans-086",
+      "felinorsvshumans-112-1",
+      "felinorsvshumans-115",
+      "felinorsvshumans-143",
+      "felinorsvshumans-161",
+      "felinorsvshumans-186",
       "infiniteassault-036",
       "infiniteassault-086",
       "infiniteassault-094",

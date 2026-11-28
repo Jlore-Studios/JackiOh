@@ -378,8 +378,9 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
 
   it("B33 R1448 gives every card a line per its kind: three times the units plus the spells and traps", () => {
     const units = Object.keys(CARDS).filter((id) => catalogKind(id) === "unit").length;
-    // R1448: a Unit's attack line (R655) is required beside its play and death lines.
-    const lines = allAssignments().filter(({ value }) => isLine(value));
+    // R1448: a Unit's attack line (R655) is required beside its play and death lines. R5264500: an End of turn line
+    // (FvH #59's) is a card's own extra, as a trigger's lines are, so it is not among the required.
+    const lines = allAssignments().filter(({ hook, value }) => hook !== "endOfTurn" && isLine(value));
     expect(lines, "lines in the table").toHaveLength(units * 3 + (Object.keys(CARDS).length - units));
     const required = Object.keys(CARDS).flatMap((id) => {
       const kind = catalogKind(id);

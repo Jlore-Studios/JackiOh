@@ -46,7 +46,10 @@ fn next_discover(picks: &[String]) -> Option<Effect> {
 /// The picks a paused Cry has made so far, read back out of the prompt's data.
 fn picks_so_far(ctx: &EffectContext<'_>) -> Vec<String> {
     match ctx.data.get(PICKS_KEY).and_then(Value::as_array) {
-        Some(stored) => stored.iter().filter_map(|pick| pick.as_str().map(str::to_string)).collect(),
+        Some(stored) => stored
+            .iter()
+            .filter_map(|pick| pick.as_str().map(str::to_string))
+            .collect(),
         None => Vec::new(),
     }
 }
@@ -148,8 +151,11 @@ mod tests {
             picks.push(answer_first(&mut s, tag));
         }
         assert!(s.state().pending.is_none(), "four Discovers, no more");
-        let made: Vec<CardInstance> =
-            s.hand(P1).into_iter().filter(|card| !held.contains(&card.id)).collect();
+        let made: Vec<CardInstance> = s
+            .hand(P1)
+            .into_iter()
+            .filter(|card| !held.contains(&card.id))
+            .collect();
         assert_eq!(made.len(), 1, "one hand card");
         let card = must(made.into_iter().next(), "the fused card");
         (s, picks, card)
@@ -202,7 +208,10 @@ mod tests {
                 answer_first(&mut s, tag);
             }
             let made = nonempty(
-                s.hand(P1).into_iter().filter(|card| !held.contains(&card.id)).collect(),
+                s.hand(P1)
+                    .into_iter()
+                    .filter(|card| !held.contains(&card.id))
+                    .collect(),
                 "the fused card",
             );
             assert_eq!(made[0].cost_override, Some(1));

@@ -4120,8 +4120,9 @@
     },
     "felinorsvshumans-059": {
       "play": "You have to read this one",
-      "attack": "To the library!",
-      "death": "I never finished it."
+      "attack": "Shh, I'm reading.",
+      "death": "I never finished it.",
+      "endOfTurn": "To the library!"
     },
     "felinorsvshumans-060": {
       "play": "Choose your tools wisely.",

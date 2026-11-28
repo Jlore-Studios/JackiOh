@@ -96,7 +96,10 @@ mod tests {
     }
 
     fn primes(s: &Scenario) -> Vec<CardInstance> {
-        s.pile(P1, "library").into_iter().filter(|card| card.def_id == PRIME).collect()
+        s.pile(P1, "library")
+            .into_iter()
+            .filter(|card| card.def_id == PRIME)
+            .collect()
     }
 
     fn kill_harbinger(s: &mut Scenario) {
@@ -112,14 +115,23 @@ mod tests {
         fn has_taunt() {
             let mut s = rally(false);
             s.play(ID, json!({}));
-            assert!(s.stats(ID).keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Taunt));
+            assert!(
+                s.stats(ID)
+                    .keywords
+                    .iter()
+                    .any(|keyword| keyword.kind() == KeywordKind::Taunt)
+            );
         }
 
         #[test]
         fn your_other_humans_have_2_2_not_itself_not_a_non_human_not_the_opponents() {
             let mut s = rally(false);
             let (human, other, theirs) = (s.unit_at(P1, 1).id, s.unit_at(P1, 2).id, s.unit_at(P2, 1).id);
-            let before = [stat_line(&s, &human), stat_line(&s, &other), stat_line(&s, &theirs)];
+            let before = [
+                stat_line(&s, &human),
+                stat_line(&s, &other),
+                stat_line(&s, &theirs),
+            ];
             let own_before = stat_line(&s, ID);
             s.play(ID, json!({}));
             assert_eq!(stat_line(&s, &human), (before[0].0 + 2, before[0].1 + 2));

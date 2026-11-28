@@ -9,7 +9,8 @@
 //! Dream Portals (R386), Radiant on the Radiant face, a full deck taking what fits (R80, R316). Death,
 //! base: `draw` of the declared `draw`. Death, Radiant: `draw_from_library` of a Dream Portal `draw` times,
 //! the nearest the top first; with fewer in the deck it draws what there is and takes no fatigue; each is
-//! a real draw, so it casts on draw (R58). Tunes: portals 7 ↑, draw 2 ↑.
+//! a real draw, so it casts on draw (R58) and that draw repeats from the top (§2.4). Tunes: portals 7 ↑,
+//! draw 2 ↑.
 
 use jackioh_engine::prelude::*;
 
@@ -31,7 +32,9 @@ fn shuffle_portals(radiant: bool) -> Hook {
 pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(shuffle_portals(false)),
-        death: Some(hook(|ctx| vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))])),
+        death: Some(hook(|ctx| {
+            vec![draw(json_as(json!({ "count": param(&*ctx, "draw") })))]
+        })),
         ..Script::default()
     };
     let radiant = Script {
@@ -77,7 +80,11 @@ mod tests {
         s.last_events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Drawn { player: drawer, def_id, .. } if *drawer == player => Some(def_id.clone()),
+                GameEvent::Drawn {
+                    player: drawer,
+                    def_id,
+                    ..
+                } if *drawer == player => Some(def_id.clone()),
                 _ => None,
             })
             .collect()
@@ -144,18 +151,23 @@ mod tests {
 
         #[test]
         fn r58_its_death_draws_2_dream_portals_from_your_deck_each_cast_on_draw() {
-            let s = killed(true, json!([FILLER, portal(true), FILLER, portal(true), portal(true)]));
-            assert_eq!(drawn_by(&s, P1), vec![DREAM_PORTAL; DRAW]);
+            let s = killed(
+                true,
+                json!([FILLER, portal(true), FILLER, portal(true), portal(true)]),
+            );
+            // §2.4: each Portal casts as it is drawn and the draw repeats, from the top.
+            assert_eq!(drawn_by(&s, P1), [DREAM_PORTAL, FILLER, DREAM_PORTAL, FILLER]);
             assert_eq!(in_library(&s, DREAM_PORTAL), [true]);
-            assert_eq!(in_library(&s, FILLER).len(), 2);
+            assert!(in_library(&s, FILLER).is_empty());
             // Each Portal cast on draw summons a Felinor: two in all, the Prime gone.
             assert_eq!(s.last_count("summoned"), DRAW);
         }
 
         #[test]
         fn with_fewer_dream_portals_it_draws_what_there_is_and_takes_no_fatigue() {
-            let s = killed(true, json!([FILLER, portal(true)]));
-            assert_eq!(drawn_by(&s, P1), [DREAM_PORTAL]);
+            let s = killed(true, json!([FILLER, portal(true), FILLER]));
+            // The one Portal casts and its draw repeats from the top (§2.4); the second finds no Portal.
+            assert_eq!(drawn_by(&s, P1), [DREAM_PORTAL, FILLER]);
             assert_eq!(s.last_count("fatigue"), 0);
             assert_eq!(in_library(&s, FILLER).len(), 1);
         }

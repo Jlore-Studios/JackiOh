@@ -125,7 +125,12 @@ mod tests {
 
     /// The base face, rolling `entry`, in a game seeded `seed`.
     fn chaos_seeded(seed: &str, entry: &str) -> Scenario {
-        chaos_in(seed, cursor_in(seed, entry), side(false), json!({ "hand": [VANILLA] }))
+        chaos_in(
+            seed,
+            cursor_in(seed, entry),
+            side(false),
+            json!({ "hand": [VANILLA] }),
+        )
     }
 
     fn has(s: &Scenario, card: &CardInstance, kind: KeywordKind) -> bool {
@@ -165,7 +170,9 @@ mod tests {
 
     fn has_aura(def_id: &str) -> bool {
         jackioh_engine::scripts::registered_entry(def_id).is_some_and(|scripts| {
-            scripts.base.aura.is_some() || scripts.base.hand_aura.is_some() || scripts.base.cost_aura.is_some()
+            scripts.base.aura.is_some()
+                || scripts.base.hand_aura.is_some()
+                || scripts.base.cost_aura.is_some()
         })
     }
 
@@ -239,7 +246,10 @@ mod tests {
                     "{} has neither a Death nor Reborn",
                     def.id
                 );
-                assert!(s.unit(P1, 2).is_some(), "game {n}: each of the five is its own summon");
+                assert!(
+                    s.unit(P1, 2).is_some(),
+                    "game {n}: each of the five is its own summon"
+                );
             }
         }
 
@@ -270,7 +280,10 @@ mod tests {
             s.state_mut().rng_cursor = cursor;
             s.play(ID, json!({}));
             assert!(s.unit(P1, 1).is_some(), "one Felinor");
-            assert!(s.unit(P1, 2).is_none(), "and only one, its `felinors` lowered to 1");
+            assert!(
+                s.unit(P1, 2).is_none(),
+                "and only one, its `felinors` lowered to 1"
+            );
         }
 
         #[test]
@@ -288,10 +301,19 @@ mod tests {
             );
             let mut theirs: Vec<CardInstance> = vec![s.unit_at(P2, 1)];
             theirs.extend(s.hand(P2).into_iter().filter(|card| card.def_id == VANILLA));
-            theirs.extend(s.pile(P2, "library").into_iter().filter(|card| card.def_id == VANILLA));
+            theirs.extend(
+                s.pile(P2, "library")
+                    .into_iter()
+                    .filter(|card| card.def_id == VANILLA),
+            );
             assert_eq!(theirs.len(), 4, "the field's, the hand's and the deck's two");
             for card in nonempty(theirs, "an enemy Unit card") {
-                assert!(has(&s, &card, KeywordKind::Fragile), "{} {:?}", card.def_id, card.zone);
+                assert!(
+                    has(&s, &card, KeywordKind::Fragile),
+                    "{} {:?}",
+                    card.def_id,
+                    card.zone
+                );
             }
             assert!(!has(&s, &s.unit_at(P1, 1), KeywordKind::Fragile), "your own Unit");
             let spell = s
@@ -317,22 +339,41 @@ mod tests {
             }
         }
 
+        /// A unit zone is filled when a Unit stands in it or a GIGA covers it (R3546000).
+        fn filled(s: &Scenario, player: PlayerId, lane: i32) -> bool {
+            occupant_at(
+                s.state(),
+                ZoneSlot {
+                    player,
+                    row: Row::Units,
+                    lane,
+                },
+            )
+            .is_some()
+        }
+
         fn fills(entry: &str, own: Tag, theirs: Tag) {
+            // Whether each side's last zone was filled in some game: the GIGA case is rare, never the rule.
+            let mut last_filled = [false; 2];
             for n in 0..GAMES {
                 let s = chaos_seeded(&format!("{SEED}-{entry}-{n}"), entry);
-                for lane in 1..=UNIT_ZONES {
-                    if s.unit(P1, lane).is_none() || s.unit(P2, lane).is_none() {
-                        eprintln!("DBG100 game {n} lane {lane}");
-                        for event in s.events() {
-                            let line = format!("{event:?}");
-                            eprintln!("DBG100   {}", line.chars().take(260).collect::<String>());
-                        }
-                        break;
-                    }
+                // R3546000: a GIGA drawn for the last zone fits nowhere there and its summon fails, so the
+                // last zone alone may stay open; a GIGA drawn for any other covers the zone beside it.
+                for lane in 1..UNIT_ZONES {
+                    assert!(filled(&s, P1, lane), "game {n}: your lane {lane} is filled");
+                    assert!(filled(&s, P2, lane), "game {n}: their lane {lane} is filled");
                 }
-                for lane in 1..=UNIT_ZONES {
-                    assert!(s.unit(P1, lane).is_some(), "game {n}: your lane {lane} is filled");
-                    assert!(s.unit(P2, lane).is_some(), "game {n}: their lane {lane} is filled");
+                for (seat, player) in [P1, P2].into_iter().enumerate() {
+                    last_filled[seat] |= filled(&s, player, UNIT_ZONES);
+                    let landed_last = s.events().iter().any(|event| {
+                        matches!(event, GameEvent::Summoned { player: at, row: Row::Units, lane, .. }
+                            if *at == player && *lane == UNIT_ZONES)
+                    });
+                    // Open only because nothing landed there, never because what landed left.
+                    assert!(
+                        filled(&s, player, UNIT_ZONES) || !landed_last,
+                        "game {n}: {player:?}'s last zone"
+                    );
                 }
                 let mine = s.unit_at(P1, 1);
                 assert!(mine.radiant, "{}", mine.def_id);
@@ -342,15 +383,18 @@ mod tests {
                 assert_eq!(their.controller, P2);
                 assert!(card_def(&their.def_id).tags.contains(&theirs), "{}", their.def_id);
             }
+            assert_eq!(last_filled, [true, true], "the last zone is filled in most games");
         }
 
         #[test]
-        fn r5262000_r1080_entry_radiant_felinors_fills_your_board_with_radiant_felinors_and_theirs_with_humans() {
+        fn r5262000_r1080_entry_radiant_felinors_fills_your_board_with_radiant_felinors_and_theirs_with_humans()
+         {
             fills("radiantFelinors", Tag::Felinor, Tag::Human);
         }
 
         #[test]
-        fn r5262000_r1080_entry_radiant_humans_fills_your_board_with_radiant_humans_and_theirs_with_felinors() {
+        fn r5262000_r1080_entry_radiant_humans_fills_your_board_with_radiant_humans_and_theirs_with_felinors()
+        {
             fills("radiantHumans", Tag::Human, Tag::Felinor);
         }
 
@@ -371,13 +415,29 @@ mod tests {
                 .into_iter()
                 .filter(|card| card.def_id == VANILLA || card.def_id == FIELD_SPELL)
                 .collect();
-            reached.extend(s.pile(P2, "library").into_iter().filter(|card| card.def_id == VANILLA));
-            reached.extend(s.pile(P2, "graveyard").into_iter().filter(|card| card.def_id == VANILLA));
+            reached.extend(
+                s.pile(P2, "library")
+                    .into_iter()
+                    .filter(|card| card.def_id == VANILLA),
+            );
+            reached.extend(
+                s.pile(P2, "graveyard")
+                    .into_iter()
+                    .filter(|card| card.def_id == VANILLA),
+            );
             assert_eq!(reached.len(), 4);
             for card in nonempty(reached, "an enemy Unit or Field Spell card") {
-                assert!(granted(&card, KeywordKind::Giga), "{} {:?}", card.def_id, card.zone);
+                assert!(
+                    granted(&card, KeywordKind::Giga),
+                    "{} {:?}",
+                    card.def_id,
+                    card.zone
+                );
             }
-            assert!(!granted(&s.unit_at(P2, 1), KeywordKind::Giga), "the field's are not");
+            assert!(
+                !granted(&s.unit_at(P2, 1), KeywordKind::Giga),
+                "the field's are not"
+            );
             let spell = s
                 .hand(P2)
                 .into_iter()
@@ -393,9 +453,9 @@ mod tests {
                 .events()
                 .iter()
                 .find_map(|event| match event {
-                    GameEvent::Summoned { instance_id, def_id, .. } if def_id == VENDING_MACHINE => {
-                        Some(instance_id.clone())
-                    }
+                    GameEvent::Summoned {
+                        instance_id, def_id, ..
+                    } if def_id == VENDING_MACHINE => Some(instance_id.clone()),
                     _ => None,
                 })
                 .expect("the Vending Machine was summoned");
@@ -420,7 +480,10 @@ mod tests {
             for cursor in (0..SWEEP).filter(|at| rolled_names(SEED, *at, false).first() == Some(&"recast")) {
                 let s = chaos_in(SEED, cursor, side(false), json!({ "hand": [VANILLA] }));
                 let played = nonempty(played_after(&s), "the recast's cast");
-                assert!(card_def(&played[0]).tags.contains(&Tag::CallToChaos), "cursor {cursor}");
+                assert!(
+                    card_def(&played[0]).tags.contains(&Tag::CallToChaos),
+                    "cursor {cursor}"
+                );
                 assert_ne!(played[0], ID, "cursor {cursor}");
                 plays += 1;
                 if plays >= GAMES {
@@ -436,7 +499,9 @@ mod tests {
 
         #[test]
         fn r423_the_radiant_face_rolls_three_different_entries_in_list_order() {
-            let cursor = cursor_where(SEED, |at| rolled_names(SEED, at, true) == ["fragile", "vendingMachine", "golems"]);
+            let cursor = cursor_where(SEED, |at| {
+                rolled_names(SEED, at, true) == ["fragile", "vendingMachine", "golems"]
+            });
             let s = chaos_in(
                 SEED,
                 cursor,
@@ -445,7 +510,11 @@ mod tests {
             );
             assert_eq!(
                 js(&s.events_of("chaosRolled")[0])["effects"],
-                json!([label_of("fragile"), label_of("vendingMachine"), label_of("golems")])
+                json!([
+                    label_of("fragile"),
+                    label_of("vendingMachine"),
+                    label_of("golems")
+                ])
             );
             for card in nonempty(s.hand(P2), "an enemy hand card") {
                 assert!(has(&s, &card, KeywordKind::Fragile), "{}", card.def_id);
@@ -453,7 +522,10 @@ mod tests {
             assert!(summoned(&s).iter().any(|id| id == VENDING_MACHINE));
             assert_eq!(s.unit_at(P1, 1).def_id, FELINOR_GOLEM);
             assert_eq!(s.unit_at(P1, 2).def_id, HUMAN_GOLEM);
-            let order: Vec<&str> = subsystems::CHAOS_FVH_EFFECTS.iter().map(|entry| entry.name).collect();
+            let order: Vec<&str> = subsystems::CHAOS_FVH_EFFECTS
+                .iter()
+                .map(|entry| entry.name)
+                .collect();
             for at in 0..SWEEP {
                 let names = rolled_names(SEED, at, true);
                 assert_eq!(names.len(), 3);
