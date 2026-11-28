@@ -22033,6 +22033,13 @@
         "reason": "`claude-8` stops mid-call: 5-hour usage is 85%, at or over its 85% cap; it resets at 2026-11-28T11:50:00Z",
         "trail": "- Grep: {\"pattern\": \"duck|voice lines off|turning voice lines\", \"path\": \"/home/runner/work/_temp/work/item-5292/spec/10-engine-guide/10.11-audio.md\", \"output_mode\": \"content\", \"-i\": true}\n- Bash: {\"command\": \"cat spec/pending/5284.md spec/rulings/R5284000.md && grep -n \\\"Adding a ruling\\\" -A25 spec/README.md | head -60\"}\n- said: The finding holds. Let me read the three spots in \u00a710.11.\n- Bash: {\"command\": \"cd spec/10-engine-guide && sed -n '66,70p;96,99p;124,128p' 10.11-audio.md\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5292 && python3 -I - <<'EOF'\\np='spec/10-engine-guide/10.11-audio.md'\\ns=open(p).read()\\na=\\\"under the effects volume, never for a card the viewer ca\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: voice lines at volume 0 no longer hold the practice AI, dip the music or download in the background, and effects at volume 0 dip no music\"} --> A voice volume of 0, or a master volume of 0, now behaves like unticking Voice lines. With effects at 0 or ma\u2026"
       },
+      "hold": {
+        "ends": "2026-11-28T12:05:03Z",
+        "owner": "claude-8",
+        "since": "2026-11-28T10:05:03Z",
+        "until": "2026-11-28T10:50:00Z",
+        "why": "5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)"
+      },
       "issue": 5284,
       "kind": "review",
       "live": "reviewing",
