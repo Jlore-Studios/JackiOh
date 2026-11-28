@@ -416,9 +416,11 @@ pub fn trigger_holders_with_hook(
 ) -> Vec<TriggerHolder> {
     let carries = |card: &CardInstance, zone: TriggerZone| {
         zone_registers_hook_in(zone, card, hook)
-            && crate::scripts::script_of(state, card)
+            && (crate::scripts::script_of(state, card)
                 .hook_named(hook.as_str())
                 .is_some()
+                // R5237006: a field card holding a granted End of turn is an end-of-turn holder too.
+                || granted_end_of_turn(hook, zone, card))
     };
     match only {
         None => holders_where(state, carries),
@@ -428,6 +430,12 @@ pub fn trigger_holders_with_hook(
             .map(|(card, zone)| holder_of(state, card, zone, player))
             .collect(),
     }
+}
+
+/// R5237006 (FvH #79): whether `card`, answering `hook` from `zone`, runs a granted End of turn: the
+/// end-of-turn hook on the field, with an EndOfTurn grant (`grants::end_of_turn_hook_of` runs it).
+fn granted_end_of_turn(hook: HookName, zone: TriggerZone, card: &CardInstance) -> bool {
+    hook == HookName::EndOfTurn && zone == TriggerZone::Field && crate::grants::has_end_of_turn_grant(card)
 }
 
 // 2. The queue.
