@@ -1421,7 +1421,7 @@ if (pos[0] === "api") {
     expect(STEP).toContain("set -euo pipefail");
   });
 
-  // #5207: the report-only jobs, which leave the run green when they fail (the header), are the jobs
+  // #5287: the report-only jobs, which leave the run green when they fail (the header), are the jobs
   // REPORT_ONLY_JOBS names, so a job never holds production without the report calling it gating, nor
   // the reverse.
   it("names in REPORT_ONLY_JOBS exactly the jobs that carry continue-on-error", () => {
