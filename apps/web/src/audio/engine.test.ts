@@ -1508,6 +1508,79 @@ describe("B58 background voice work waits while the engine is busy", () => {
     await settle();
     expect(r.fetch.urls()).toHaveLength(1 + 2 * VOICE_PREFETCH_CONCURRENCY);
   });
+
+  it("R5284000 voice at 0 makes no prefetch request; raising it resumes the prefetch", async () => {
+    const r = rig({ engine: { manifest: PRELOAD_MANIFEST } });
+    unlocked(r);
+    r.fetch.mode = "hang";
+    r.engine.preloadVoices(["core-004-play"]);
+    await settle();
+
+    writeAudioSettings({ voice: 0 });
+    r.engine.preloadVoices(["core-200-play"]);
+    await elapse(r, VOICE_PREFETCH_DELAY_MS + 1_000);
+    expect(r.fetch.urls(), "voice at 0").toEqual([url("core-004-play")]);
+
+    writeAudioSettings({ voice: 0.7 });
+    await settle();
+    expect(r.fetch.urls()).toHaveLength(1 + VOICE_PREFETCH_CONCURRENCY);
+  });
+});
+
+// R5284000: a voice line or effect nobody can hear
+describe("R5284000 a voice line nobody can hear holds no channel and ducks nothing", () => {
+  /** Both a file line and a speech line, asked for at the level `write` sets. */
+  async function silent(write: { voice?: number; master?: number }): Promise<void> {
+    const r = rig();
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    writeAudioSettings({ duckMusic: true, ...write });
+    const music = audio.nodeOf(must(r.engine.musicOutput(), "the music bus").input);
+    const duck = must(music.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain"), "the duck");
+    const heard = vi.fn();
+    r.engine.subscribeSpeaking(heard);
+
+    expect(r.engine.playVoice("core-004", "play", 0), "file line").toBe(false);
+    expect(r.engine.playVoice("core-005", "cast", 0), "speech line").toBe(false);
+    await elapse(r, 10);
+    expect(r.engine.speaking()).toBe(false);
+    expect(heard).not.toHaveBeenCalled();
+    expect(r.speech.spoken).toEqual([]);
+    expect(voiceEntries(r)).toEqual([]);
+    expect(bus.sfxDuck.param("gain").targets(), "the effects duck stays at 1").toEqual([]);
+    expect(duck.param("gain").targets(), "the music duck stays at 1").toEqual([]);
+  }
+
+  it("R5284000 voice at 0 with Voice lines on: playVoice is false, speaking stays false, no duck and no speech", async () => {
+    await silent({ voice: 0 });
+  });
+
+  it("R5284000 master at 0 holds the same", async () => {
+    await silent({ master: 0 });
+  });
+
+  it("R5284000 dropping voice to 0 stops a playing file line and a speech line and frees the channel", async () => {
+    const r = rig();
+    unlocked(r);
+    const heard = vi.fn();
+    r.engine.subscribeSpeaking(heard);
+
+    expect(r.engine.playVoice("core-004", "play", 0)).toBe(true);
+    await settle();
+    expect(r.engine.speaking()).toBe(true);
+    heard.mockClear();
+    writeAudioSettings({ voice: 0 });
+    expect(r.engine.speaking(), "file line").toBe(false);
+    expect(heard).toHaveBeenCalledTimes(1);
+
+    writeAudioSettings({ voice: 0.7 });
+    expect(r.engine.playVoice("core-005", "cast", 0)).toBe(true);
+    await elapse(r, 10);
+    expect(r.engine.speaking()).toBe(true);
+    writeAudioSettings({ voice: 0 });
+    expect(r.speech.cancel).toHaveBeenCalled();
+    expect(r.engine.speaking(), "speech line").toBe(false);
+  });
 });
 
 /* Integration: `speaking`, behind `data-speaking` (SPEC §9.9: practice holds the AI's next step while a line plays) */
@@ -1869,6 +1942,43 @@ describe("R655 a card's effect and a Unit picked up to attack", () => {
     expect(r.engine.playPickup("core-004")).toBe(true);
     await settle();
     expect(r.engine.log().map((c) => c.kind)).toEqual(["effect"]);
+  });
+
+  it("R5284000 a pick-up at voice 0 plays its effect and no line", async () => {
+    const r = fxRig();
+    unlocked(r);
+    writeAudioSettings({ voice: 0 });
+
+    expect(r.engine.playPickup("core-004")).toBe(true);
+    await settle();
+    expect(effectEntries(r)).toHaveLength(1);
+    expect(voiceEntries(r)).toEqual([]);
+  });
+
+  it("R5284000 effects at 0 leave the music duck at 1 for a card effect, trapSting, victory and defeat; above 0 they duck", () => {
+    const r = fxRig();
+    const audio = unlocked(r);
+    writeAudioSettings({ duckMusic: true, sfx: 0 });
+    const music = audio.nodeOf(must(r.engine.musicOutput(), "the music bus").input);
+    const duck = must(music.connections.find((c): c is FakeNode => "kind" in c && c.kind === "gain"), "the duck");
+
+    expect(r.engine.playEffect("core-066", "attack")).toBe(true);
+    expect(duck.param("gain").targets(), "card effect").toEqual([]);
+    for (const id of ["trapSting", "victory", "defeat"] as const) {
+      tick(r, SFX_RETRIGGER_MS);
+      r.engine.playSfx(id);
+      expect(duck.param("gain").targets(), id).toEqual([]);
+    }
+
+    writeAudioSettings({ sfx: 0.3, master: 0 });
+    tick(r, SFX_RETRIGGER_MS);
+    r.engine.playSfx("trapSting");
+    expect(duck.param("gain").targets(), "master at 0").toEqual([]);
+
+    writeAudioSettings({ master: 0.5 });
+    tick(r, SFX_RETRIGGER_MS);
+    r.engine.playSfx("trapSting");
+    expect(duck.param("gain").targets().map((t) => t.value)).toEqual([MUSIC_DUCK_GAIN, 1]);
   });
 
   /** #91 with a list of effects on its Whenever, and a pool of attack lines. */
