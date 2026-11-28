@@ -28504,12 +28504,8 @@
       }
     },
     "claude-3": {
-      "refused_until": "2026-11-28T10:10:00Z",
+      "refused_until": "2026-11-28T15:10:00Z",
       "spent": [
-        {
-          "at": "2026-11-22T07:05:00Z",
-          "minutes": 10.1
-        },
         {
           "at": "2026-11-22T08:06:13Z",
           "minutes": 150.0
@@ -29305,6 +29301,10 @@
         {
           "at": "2026-11-28T10:50:47Z",
           "minutes": 26.7
+        },
+        {
+          "at": "2026-11-28T11:19:56Z",
+          "minutes": 4.6
         }
       ],
       "tokens_spent": [
@@ -30712,10 +30712,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-28T15:10:00Z",
-          "utilization": 0.79
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-28T10:50:47Z",
-        "status": "allowed"
+        "observed_at": "2026-11-28T11:19:56Z",
+        "rejected_resets_at": "2026-11-28T15:10:00Z",
+        "status": "rejected"
       }
     },
     "claude-4": {
@@ -46592,6 +46593,23 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-28T11:10:27Z,claude-3,stream,call,46138304714,81,2026-11-28T15:10:00Z,,,allowed,,,",
+      "2026-11-28T11:10:57Z,claude-3,stream,call,46138304714,82,2026-11-28T15:10:00Z,,,allowed,,,",
+      "2026-11-28T11:11:12Z,claude-3,stream,call,46138304714,84,2026-11-28T15:10:00Z,,,allowed,,,",
+      "2026-11-28T11:11:27Z,claude-3,stream,call,46138304714,86,2026-11-28T15:10:00Z,,,allowed,,,",
+      "2026-11-28T11:11:42Z,claude-3,stream,call,46138304714,87,2026-11-28T15:10:00Z,,,allowed,,,",
+      "2026-11-28T11:11:57Z,claude-3,stream,call,46138304714,90,2026-11-28T15:10:00Z,,,allowed_warning,,,",
+      "2026-11-28T11:12:12Z,claude-3,stream,call,46138304714,93,2026-11-28T15:10:00Z,,,allowed_warning,,,",
+      "2026-11-28T11:12:27Z,claude-3,stream,call,46138304714,94,2026-11-28T15:10:00Z,,,allowed_warning,,,",
+      "2026-11-28T11:12:42Z,claude-3,stream,call,46138304714,96,2026-11-28T15:10:00Z,,,allowed_warning,,,",
+      "2026-11-28T11:12:57Z,claude-3,stream,call,46138304714,97,2026-11-28T15:10:00Z,,,allowed_warning,,,",
+      "2026-11-28T11:13:12Z,claude-3,stream,call,46138304714,98,2026-11-28T15:10:00Z,,,allowed_warning,,,",
+      "2026-11-28T11:13:27Z,claude-3,stream,call,46138304714,100,2026-11-28T15:10:00Z,,,rejected,,,",
+      "2026-11-28T11:14:48Z,claude-3,refusal,call,46138304714,100,2026-11-28T15:10:00Z,,,rejected,,,2026-11-28T15:10:00Z"
+    ]
   },
   "version": 1
 }
