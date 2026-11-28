@@ -1,51 +1,5 @@
 {
   "set": {
-    "classicplus-073-1": {
-      "id": "classicplus-073-1",
-      "index": "73.1",
-      "name": "Classic Golem",
-      "set": "Classic+",
-      "type": "Unit",
-      "tags": [
-        "Token"
-      ],
-      "rarity": "Token",
-      "printedRarity": "Legendary",
-      "token": true,
-      "cost": 4,
-      "loc": 20,
-      "base": {
-        "attack": 10,
-        "health": 10,
-        "keywords": [
-          {
-            "kind": "Rush"
-          },
-          {
-            "kind": "First Strike"
-          },
-          {
-            "kind": "Trample"
-          }
-        ],
-        "text": "Rush, First Strike, Trample\nWhen this attacks a Unit, that Unit transforms into a random Radiant Classic or Classic+ Unit. If it dies, this may attack again."
-      },
-      "radiant": {
-        "attack": 20,
-        "health": 20,
-        "keywords": [
-          {
-            "kind": "Rush"
-          },
-          {
-            "kind": "Trample"
-          },
-          {
-            "kind": "Divine Shield"
-          }
-        ],
-        "text": "Rush, Trample, Divine Shield\nWhen this attacks a Unit, that Unit transforms into a random Classic or Classic+ Unit. If it dies, this may attack again."
-      }
-    }
+    "classicplus-073-1": {"id":"classicplus-073-1","index":"73.1","name":"Classic Golem","set":"Classic+","type":"Unit","tags":["Token"],"rarity":"Token","printedRarity":"Legendary","token":true,"cost":4,"loc":20,"base":{"attack":10,"health":10,"keywords":[{"kind":"Rush"},{"kind":"First Strike"},{"kind":"Trample"}],"text":"Rush, First Strike, Trample\nWhen this attacks a Unit, that Unit transforms into a random Radiant Classic or Classic+ Unit. If it dies, this may attack again."},"radiant":{"attack":20,"health":20,"keywords":[{"kind":"Rush"},{"kind":"Trample"},{"kind":"Divine Shield"}],"text":"Rush, Trample, Divine Shield\nWhen this attacks a Unit, that Unit transforms into a random Classic or Classic+ Unit. If it dies, this may attack again."}}
   }
 }

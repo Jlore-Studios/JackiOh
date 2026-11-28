@@ -1,64 +1,6 @@
 {
   "set": {
-    "meditative-099": {
-      "id": "meditative-099",
-      "index": "99",
-      "name": "Paranoia",
-      "set": "Meditative",
-      "type": "Field Spell",
-      "rarity": "Epic",
-      "token": false,
-      "cost": 2,
-      "params": [
-        {
-          "key": "draw",
-          "base": 1,
-          "radiant": 1,
-          "better": "up",
-          "step": 1,
-          "min": 1,
-          "cry": true
-        },
-        {
-          "key": "echo",
-          "base": 1,
-          "radiant": 1,
-          "better": "up",
-          "step": 1,
-          "min": 1,
-          "tunedOn": "radiant"
-        }
-      ],
-      "loc": 29,
-      "base": {
-        "keywords": [],
-        "text": "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when revealed.\nCry: Draw {draw}."
-      },
-      "radiant": {
-        "keywords": [],
-        "text": "Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when revealed. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
-      },
-      "tags": []
-    },
-    "stinkyscapeplus-031": {
-      "id": "stinkyscapeplus-031",
-      "index": "31",
-      "name": "Soul Read",
-      "set": "Stinkyscape+",
-      "type": "Trap",
-      "tags": [],
-      "rarity": "Common",
-      "token": false,
-      "cost": 1,
-      "loc": 48,
-      "base": {
-        "keywords": [],
-        "text": "When played face down: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card before any of the other cards you saw. Take control of that card instead. Otherwise, Tribute this Trap."
-      },
-      "radiant": {
-        "keywords": [],
-        "text": "When played face down: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card. Take control of that card instead."
-      }
-    }
+    "meditative-099": {"id":"meditative-099","index":"99","name":"Paranoia","set":"Meditative","type":"Field Spell","rarity":"Epic","token":false,"cost":2,"params":[{"key":"draw","base":1,"radiant":1,"better":"up","step":1,"min":1,"cry":true},{"key":"echo","base":1,"radiant":1,"better":"up","step":1,"min":1,"tunedOn":"radiant"}],"loc":29,"base":{"keywords":[],"text":"Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when revealed.\nCry: Draw {draw}."},"radiant":{"keywords":[],"text":"Aura: Your Spells have Cloaked. Spells you set face-down resolve when set and when revealed. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."},"tags":[]},
+    "stinkyscapeplus-031": {"id":"stinkyscapeplus-031","index":"31","name":"Soul Read","set":"Stinkyscape+","type":"Trap","tags":[],"rarity":"Common","token":false,"cost":1,"loc":48,"base":{"keywords":[],"text":"When played face down: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card before any of the other cards you saw. Take control of that card instead. Otherwise, Tribute this Trap."},"radiant":{"keywords":[],"text":"When played face down: Look at your opponent's hand and choose a card secretly.\nReveals if your opponent plays the chosen card. Take control of that card instead."}}
   }
 }

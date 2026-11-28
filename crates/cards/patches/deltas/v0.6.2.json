@@ -1,42 +1,5 @@
 {
   "set": {
-    "classicplus-019-2": {
-      "id": "classicplus-019-2",
-      "index": "19.2",
-      "name": "Jungle Loser",
-      "set": "Classic+",
-      "type": "Unit",
-      "tags": [
-        "Token"
-      ],
-      "rarity": "Token",
-      "printedRarity": "Legendary",
-      "token": true,
-      "cost": 2,
-      "refs": [
-        "classicplus-019-5"
-      ],
-      "loc": 37,
-      "base": {
-        "attack": 4,
-        "health": 4,
-        "keywords": [
-          {
-            "kind": "Can't attack"
-          }
-        ],
-        "text": "Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
-      },
-      "radiant": {
-        "attack": 8,
-        "health": 8,
-        "keywords": [
-          {
-            "kind": "Can't attack"
-          }
-        ],
-        "text": "Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
-      }
-    }
+    "classicplus-019-2": {"id":"classicplus-019-2","index":"19.2","name":"Jungle Loser","set":"Classic+","type":"Unit","tags":["Token"],"rarity":"Token","printedRarity":"Legendary","token":true,"cost":2,"refs":["classicplus-019-5"],"loc":37,"base":{"attack":4,"health":4,"keywords":[{"kind":"Can't attack"}],"text":"Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."},"radiant":{"attack":8,"health":8,"keywords":[{"kind":"Can't attack"}],"text":"Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."}}
   }
 }

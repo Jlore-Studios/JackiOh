@@ -50,6 +50,8 @@ import { fileURLToPath } from "node:url";
 
 import JSON5 from "json5";
 
+import { layout, VOICE_MANIFEST_DEPTH } from "./json-layout.mjs";
+
 /** Bump when the encoding flags below change, so every file renders again. */
 const HASH_VERSION = 1;
 const HASH_CHARS = 16;
@@ -789,7 +791,8 @@ async function generate(ctx, opts) {
   }
 
   const next = { version: 1, format: FORMAT, files: sortedObject(entries) };
-  const nextText = `${JSON.stringify(next, null, 2)}\n`;
+  // R5289000: a line's entry a line, as `cargo jackioh format-json --check` holds the manifest.
+  const nextText = layout(JSON.stringify(next), VOICE_MANIFEST_DEPTH);
   if (nextText !== ctx.manifestText) {
     fs.mkdirSync(path.dirname(files.manifest), { recursive: true });
     fs.writeFileSync(files.manifest, nextText);
