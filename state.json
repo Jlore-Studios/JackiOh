@@ -22090,9 +22090,11 @@
     "what": "suggestions (ai) on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-28T07:14:09Z",
+    "at": "2026-11-28T07:21:07Z",
     "notes": [
-      "delivered review #5270 on claude-4 (run 46111782759): approved"
+      "delivered suggest on claude-7 (run 46119697651): interrupted",
+      "delivered suggest on claude-7 (run 46119623027): interrupted",
+      "#5281: closed, so `bot:merging` is off"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22798,7 +22800,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T07:14:09Z",
+  "loop_tick": "2026-11-28T07:21:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
