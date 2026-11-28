@@ -256,8 +256,16 @@ fn the_audits_long_lethals_as_they_stand() {
         ),
     ] {
         let at = pinned(text);
-        let worlds = worlds(&at, at.rng_cursor);
         let prices = decision_prices_at(&at.state, at.seat);
+        // The worlds sample the hidden cards from the pools, so a set joining them deals the audit's cursor
+        // other worlds (a backrow sampled with the Traps that set prints may hold the lethal off): the
+        // first cursor of the stream whose worlds hold a lethal the walk proves given the room, searched
+        // (#848), as `premise_cursor` searches R4788000's.
+        let cursor = cursor_where(&at.rng_seed, |cursor| {
+            let counter = create_node_counter(room, None);
+            find_lethal(&worlds(&at, cursor), at.seat, &counter, room, &prices).is_some()
+        });
+        let worlds = worlds(&at, cursor);
         let counter = create_node_counter(room, None);
         let proved = find_lethal(&worlds, at.seat, &counter, room, &prices);
         assert!(

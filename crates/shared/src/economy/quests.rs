@@ -1031,6 +1031,7 @@ mod tests {
                 quest.id != "stinkyscape-8"
                     && quest.id != "training-grounds-8"
                     && quest.id != "stinkyscape-plus-8"
+                    && quest.id != "felinors-vs-humans-8"
             })
             .collect();
         assert_eq!(
@@ -1038,7 +1039,8 @@ mod tests {
             vec![
                 SetName::Stinkyscape,
                 SetName::TrainingGrounds,
-                SetName::StinkyscapePlus
+                SetName::StinkyscapePlus,
+                SetName::FelinorsVsHumans
             ]
         );
     }

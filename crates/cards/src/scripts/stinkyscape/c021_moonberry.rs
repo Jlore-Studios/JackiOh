@@ -63,6 +63,19 @@ mod tests {
         "stinkyscape-012-3",
     ];
 
+    /// The Felinors vs Humans set's nine, #57.1 to #57.6 and #72.1 to #72.3, since its release (#5222).
+    const FVH_TOKENS: [&str; 9] = [
+        "felinorsvshumans-057-1",
+        "felinorsvshumans-057-2",
+        "felinorsvshumans-057-3",
+        "felinorsvshumans-057-4",
+        "felinorsvshumans-057-5",
+        "felinorsvshumans-057-6",
+        "felinorsvshumans-072-1",
+        "felinorsvshumans-072-2",
+        "felinorsvshumans-072-3",
+    ];
+
     fn added_def(seed: &str, radiant: bool) -> String {
         let mut s = scenario(json!({
             "seed": seed,
@@ -92,12 +105,15 @@ mod tests {
 
         #[test]
         fn r1867007_adds_an_other_origins_token_each_of_c_32_1_to_32_3_and_the_sets_nine_seen_over_the_seeds() {
-            // Since the release (#1884) the set's own nine join C+ #32.1 to #32.3.
+            // Since the release (#1884) the set's own nine join C+ #32.1 to #32.3, and since the Felinors vs
+            // Humans release (#5222) that set's nine.
             let mut seen: IndexSet<String> = IndexSet::new();
             for seed in 0..200 {
                 let def = added_def(&format!("moonberry-{seed}"), false);
                 assert!(
-                    SHIPPED_TOKENS.contains(&def.as_str()) || STINKYSCAPE_TOKENS.contains(&def.as_str()),
+                    SHIPPED_TOKENS.contains(&def.as_str())
+                        || STINKYSCAPE_TOKENS.contains(&def.as_str())
+                        || FVH_TOKENS.contains(&def.as_str()),
                     "only an Other-Origins token of a set that ships: {def}"
                 );
                 seen.insert(def);
@@ -105,8 +121,13 @@ mod tests {
             let expected: IndexSet<String> = SHIPPED_TOKENS
                 .into_iter()
                 .chain(STINKYSCAPE_TOKENS)
+                .chain(FVH_TOKENS)
                 .map(str::to_string)
                 .collect();
+            let mut seen: Vec<String> = seen.into_iter().collect();
+            seen.sort();
+            let mut expected: Vec<String> = expected.into_iter().collect();
+            expected.sort();
             assert_eq!(seen, expected);
         }
 
@@ -127,7 +148,8 @@ mod tests {
                 assert!(crate::card_def(&added.def_id).token, "{} is a token", added.def_id);
                 assert!(
                     SHIPPED_TOKENS.contains(&added.def_id.as_str())
-                        || STINKYSCAPE_TOKENS.contains(&added.def_id.as_str()),
+                        || STINKYSCAPE_TOKENS.contains(&added.def_id.as_str())
+                        || FVH_TOKENS.contains(&added.def_id.as_str()),
                     "an Other-Origins token: {}",
                     added.def_id
                 );

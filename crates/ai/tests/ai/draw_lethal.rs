@@ -65,13 +65,11 @@ fn r4697000_the_ai_wins_a_turn_whose_lethal_it_reaches_by_drawing_first() {
     );
 }
 
-/// R4697000: [Stockpile, a True Strike it drew on world A at the opponent's hero] is cut on world B,
-/// which drew other True Strikes. Off, B's replay ends its turn after the draw, a crystal unspent and
-/// the game on; with the fill on it plays one of B's own True Strikes and wins.
-#[test]
-fn r4697000_a_line_that_plays_the_card_it_drew_wins_on_a_world_that_drew_another_with_the_fill_on() {
+/// Worlds A and B, drawn in turn from `cursor` of the scene's stream, and the line [Stockpile, a True Strike
+/// it drew on A that B does not offer and that wins on A], when A drew one.
+fn worlds_and_line(cursor: u32) -> Option<(GameState, [ActionBody; 2])> {
     let public = redact(&draw_lethal_turn(), AI);
-    let mut rng = create_rng("r4697000-worlds", 0);
+    let mut rng = create_rng("r4697000-worlds", cursor);
     let a = det(&public, AI, &mut rng);
     let b = det(&public, AI, &mut rng);
     let stockpile_id = a.players[AI]
@@ -96,9 +94,28 @@ fn r4697000_a_line_that_plays_the_card_it_drew_wins_on_a_world_that_drew_another
                     .result
                     .and_then(|result| result.winner.player())
                     == Some(AI)
+        })?;
+    Some((b, [stockpile, strike]))
+}
+
+/// R4697000: [Stockpile, a True Strike it drew on world A at the opponent's hero] is cut on world B,
+/// which drew other True Strikes. Off, B's replay ends its turn after the draw, a crystal unspent and
+/// the game on; with the fill on it plays one of B's own True Strikes and wins. The worlds sample the
+/// opponent's hidden cards from the pools, so the stream is searched (#848) for the first cursor whose
+/// worlds show the cut as the premise reads it (a card a set adds to the pools, sampled into B, can change
+/// what its replay closes on).
+#[test]
+fn r4697000_a_line_that_plays_the_card_it_drew_wins_on_a_world_that_drew_another_with_the_fill_on() {
+    let premise = |cursor: u32| {
+        worlds_and_line(cursor).is_some_and(|(b, line)| {
+            let off = replayed(&b, &line, ReplayFill::OFF);
+            off.cut
+                && off.closed.result.is_none()
+                && off.closed.players[AI].turn_log.unspent_at_end == Some(1)
         })
-        .unwrap_or_else(|| panic!("B offers every lethal True Strike Stockpile drew on A"));
-    let line = [stockpile, strike];
+    };
+    let cursor = cursor_where("r4697000-worlds", premise);
+    let (b, line) = worlds_and_line(cursor).expect("the premise's worlds");
     let off = replayed(&b, &line, ReplayFill::OFF);
     assert!(off.cut);
     assert!(off.closed.result.is_none());

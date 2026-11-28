@@ -3476,14 +3476,22 @@ mod i21_every_spell_passes_a_unit_immune_to_spells_by {
             .collect()
     }
 
-    /// p1's main phase with `spell` in hand on `radiant`'s face at full mana; on each side a 1/4 in lane 1,
-    /// the immune stand-in in lane 2 and a 9/4 in lane 3 (p2's first two Radiant), and plain stand-ins to
-    /// draw. No card on it has text but the Spell.
+    /// The Spells played only at a lowered price, each with the price the sweep plays it at: FvH #16.1
+    /// Travertine Stack costs (9999) until a card lowers it, as FvH #3 sets it to (2) (§8.14, FV2 #16).
+    const LOWERED_PRICES: &[(&str, i32)] = &[("felinorsvshumans-016-1", 2)];
+
+    /// p1's main phase with `spell` in hand on `radiant`'s face at full mana (at its `LOWERED_PRICES` price
+    /// if it has one); on each side a 1/4 in lane 1, the immune stand-in in lane 2 and a 9/4 in lane 3 (p2's
+    /// first two Radiant), and plain stand-ins to draw. No card on it has text but the Spell.
     fn board(spell: &str, radiant: bool) -> Scenario {
         let library = json!([PLAIN, PLAIN, PLAIN, PLAIN, PLAIN, PLAIN]);
+        let mut held = json!({ "def": spell, "radiant": radiant });
+        if let Some((_, price)) = LOWERED_PRICES.iter().find(|(id, _)| *id == spell) {
+            held["costOverride"] = json!(price);
+        }
         let mut s = scenario(json!({
             "p1": {
-                "hand": [{ "def": spell, "radiant": radiant }],
+                "hand": [held],
                 "mana": 10,
                 "field": [
                     { "def": "stand-in (1) 1/4", "lane": 1 },

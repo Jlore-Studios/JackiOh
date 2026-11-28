@@ -504,8 +504,8 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     }
 
     /// R5235002: the latest check, 0102's, admits the Felinors vs Humans set's three new tags, right
-    /// after Commander and before Token as the engine's `Tag` union orders them, though `seed-catalog`
-    /// writes none of the held set's cards yet (R5235000) (CLAUDE.md rule 3).
+    /// after Commander and before Token as the engine's `Tag` union orders them, so `seed-catalog`
+    /// writes the set's cards since its release ships it (R5222000) (CLAUDE.md rule 3).
     #[tokio::test]
     async fn r5235002_the_latest_check_admits_the_felinors_vs_humans_tags() {
         let (file, tags) = admitted_tags();
@@ -570,6 +570,17 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
     /// and the nine family tags 0088 admits (R3535002).
     fn stinkyscape_plus(n: usize) -> usize {
         if set_ships(SetName::StinkyscapePlus) { n } else { 0 }
+    }
+
+    /// R5222000: `n` once the Felinors vs Humans set ships (#5222), and nothing before. The counts are
+    /// its census (`catalog check`, SPEC §8.14), the tags it shares with the earlier sets and the three
+    /// 0102 admits (R5235002).
+    fn felinors_vs_humans(n: usize) -> usize {
+        if set_ships(SetName::FelinorsVsHumans) {
+            n
+        } else {
+            0
+        }
     }
 
     /// The harness's truncate: every table but `public.cards`, including the three that reference it.
@@ -691,6 +702,15 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
                 "stinkyscapeplus-t-ai-04",
             ]);
         }
+        // R5222000: the Felinors vs Humans set's two, #17 Jlockeed Shredder-14 and #80 Support Chinook,
+        // once it ships (its ids sort after the Classic sets' and before the Meditative sets').
+        if set_ships(SetName::FelinorsVsHumans) {
+            let at = expected
+                .iter()
+                .position(|id| id.starts_with("meditative"))
+                .unwrap_or(expected.len());
+            expected.splice(at..at, ["felinorsvshumans-017", "felinorsvshumans-080"]);
+        }
         // R2204000: the Training Grounds set's two, #45 and #48, the Legacy cards of Core #14 and #13 that
         // carry its tags (R2195003), once it ships.
         if set_ships(SetName::TrainingGrounds) {
@@ -718,10 +738,12 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // and Acclaimed is on #49 and #49.1 alone. Meditative+ adds a Catalyst and a Prime (#16, #16.1) and
         // no Acclaimed; the Stinkyscape set #147 (a Catalyst), #147.1 (a Prime) and nine Acclaimed; the
         // Stinkyscape+ set one Catalyst (#4), one Prime (#4.1, since #4440) and four Acclaimed.
-        for (tag, theirs, plus, stinky, stinky_plus) in [
-            ("Catalyst", 3, 1, 1, 1),
-            ("Prime", 3, 1, 1, 1),
-            ("Acclaimed", 2, 0, 9, 4),
+        // The Felinors vs Humans set three Catalysts (#74, #78, #98), their three Primes and three
+        // Acclaimed (#74, #74.1, #107).
+        for (tag, theirs, plus, stinky, stinky_plus, fvh) in [
+            ("Catalyst", 3, 1, 1, 1, 3),
+            ("Prime", 3, 1, 1, 1, 3),
+            ("Acclaimed", 2, 0, 9, 4, 3),
         ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(
@@ -729,39 +751,45 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
                 2 + meditative(theirs)
                     + meditative_plus(plus)
                     + stinkyscape(stinky)
-                    + stinkyscape_plus(stinky_plus),
+                    + stinkyscape_plus(stinky_plus)
+                    + felinors_vs_humans(fvh),
                 "{tag}"
             );
         }
         // R1411: Wincon, the tag 0030 admits, is on the Meditative set's #8 and #20 and the Stinkyscape
-        // set's #148 and #148.1, and the Stinkyscape+ set's one.
+        // set's #148 and #148.1, the Stinkyscape+ set's one and the Felinors vs Humans set's #196.
         assert_eq!(rows_tagged("Wincon"), tagged("Wincon"));
         assert_eq!(
             tagged("Wincon"),
-            meditative(2) + stinkyscape(2) + stinkyscape_plus(1)
+            meditative(2) + stinkyscape(2) + stinkyscape_plus(1) + felinors_vs_humans(1)
         );
         // R1178000: Potion, the tag 0043 admits, is on the Meditative+ set's #11, #12 and #13, the
-        // Living Potions, alone (a potion #16 or #16.1 crafts is a transient definition made in play,
-        // R882, and no catalog entry).
+        // Living Potions (a potion #16 or #16.1 crafts is a transient definition made in play, R882,
+        // and no catalog entry), and the Felinors vs Humans set's #85 and #86.
         assert_eq!(rows_tagged("Potion"), tagged("Potion"));
-        assert_eq!(tagged("Potion"), meditative_plus(3));
+        assert_eq!(tagged("Potion"), meditative_plus(3) + felinors_vs_humans(2));
         // R1837000: the five tags 0058 admits, on Core #100 (Terminus), Classic #90 (Quest), Classic+ #32
         // (Otherworldly), its three tokens (Other-Origins) and Core #26 to #29 (Jelly Bean); and, once each
         // ships, on the Stinkyscape set's #4.1 to #4.6 (Terminus), two Quests (#7, #112), three
         // Otherworldlies (#10 to #12) and their nine spells (Other-Origins), and the Training Grounds set's
         // #27 and #50, a Legacy card (R2195003), and the Stinkyscape+ set's nine Terminus (#77 to #80
-        // and #89, with the four `#Token`s) and two Jelly Beans.
-        for (tag, count, stinky, grounds, stinky_plus) in [
-            ("Terminus", 1, 6, 0, 9),
-            ("Quest", 1, 2, 0, 0),
-            ("Otherworldly", 1, 3, 0, 0),
-            ("Other-Origins", 3, 9, 0, 0),
-            ("Jelly Bean", 4, 0, 2, 2),
+        // and #89, with the four `#Token`s) and two Jelly Beans, and the Felinors vs Humans set's one
+        // Terminus (#82), two Otherworldlies (#57, #72) and their nine tokens (Other-Origins).
+        for (tag, count, stinky, grounds, stinky_plus, fvh) in [
+            ("Terminus", 1, 6, 0, 9, 1),
+            ("Quest", 1, 2, 0, 0, 0),
+            ("Otherworldly", 1, 3, 0, 0, 2),
+            ("Other-Origins", 3, 9, 0, 0, 9),
+            ("Jelly Bean", 4, 0, 2, 2, 0),
         ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(
                 tagged(tag),
-                count + stinkyscape(stinky) + training_grounds(grounds) + stinkyscape_plus(stinky_plus),
+                count
+                    + stinkyscape(stinky)
+                    + training_grounds(grounds)
+                    + stinkyscape_plus(stinky_plus)
+                    + felinors_vs_humans(fvh),
                 "{tag}"
             );
         }
@@ -769,17 +797,18 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // Core), #50 to #61 and #140 to #143 (Weapon), #137.1 to #137.4 (War Doctrine) and #91 and
         // #92 (Swarm).
         // The Stinkyscape+ set adds nine Weapons and fifteen Swarm cards, and no Drone Core or War Doctrine;
-        // its patch to shipped cards (S01, #3551) makes Classic+ #49 Jay Fungus a Swarm card too.
-        for (tag, other, count, stinky_plus) in [
-            ("Drone Core", 0, 10, 0),
-            ("Weapon", 0, 16, 9),
-            ("War Doctrine", 0, 4, 0),
-            ("Swarm", 1, 2, 15),
+        // its patch to shipped cards (S01, #3551) makes Classic+ #49 Jay Fungus a Swarm card too. The
+        // Felinors vs Humans set adds one Swarm card, #111.
+        for (tag, other, count, stinky_plus, fvh) in [
+            ("Drone Core", 0, 10, 0, 0),
+            ("Weapon", 0, 16, 9, 0),
+            ("War Doctrine", 0, 4, 0, 0),
+            ("Swarm", 1, 2, 15, 1),
         ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(
                 tagged(tag),
-                other + stinkyscape(count) + stinkyscape_plus(stinky_plus),
+                other + stinkyscape(count) + stinkyscape_plus(stinky_plus) + felinors_vs_humans(fvh),
                 "{tag}"
             );
         }
@@ -821,8 +850,31 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
                 "{tag}"
             );
         }
-        // The shared tags the set adds to: Human 11, Felinor 1, KY 1, CN 2, Fruit 7, Call to Chaos 1,
-        // Quickdraw 2 and AI 7.
+        // R5235002: the three tags 0102 admits, the Felinors vs Humans set's alone (counts from `catalog
+        // check`, SPEC §8.14): its 82 Plagiarized reprints, #19 and #20 (Roblox-Tool) and #100.1 and #100.2
+        // (Golem).
+        for (tag, count) in [("Plagiarized", 82), ("Roblox-Tool", 2), ("Golem", 2)] {
+            assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
+            assert_eq!(tagged(tag), felinors_vs_humans(count), "{tag}");
+        }
+        // The shared tags the Felinors vs Humans set adds to: Human 47, Felinor 21, KY 6, Book 7, CN 1,
+        // Fruit 1, Call to Chaos 1, Quickdraw 1 and Jlockeed 2.
+        for (tag, theirs) in [
+            ("Human", 47),
+            ("Felinor", 21),
+            ("KY", 6),
+            ("Book", 7),
+            ("CN", 1),
+            ("Fruit", 1),
+            ("Call to Chaos", 1),
+            ("Quickdraw", 1),
+            ("Jlockeed", 2),
+        ] {
+            assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
+            assert!(tagged(tag) >= felinors_vs_humans(theirs), "{tag}");
+        }
+        // The shared tags the Stinkyscape+ set adds to: Human 11, Felinor 1, KY 1, CN 2, Fruit 7, Call to
+        // Chaos 1, Quickdraw 2 and AI 7.
         for (tag, theirs) in [
             ("Human", 11),
             ("Felinor", 1),

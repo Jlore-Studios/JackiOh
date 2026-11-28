@@ -41,7 +41,8 @@ const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle", "Fuse", "Duo"
 /// R4602000: "Infinite Assault card", "Infinite Assault Unit" and "Infinite Assault Spell" hold
 /// "Infinite Assault" (IA #236), which names nothing inside them. IA #235.1's name, "The Prime
 /// Generator, Iteration Two", holds IA #235's, which IA #235's Death names only inside it (R2198004's
-/// shape: the token still names itself).
+/// shape: the token still names itself). R5222000: "Love Bomb" (M #30.1), and its plural, hold "Bomb" (FvH
+/// #20), which the texts that shuffle Love Bombs in (M #30, M #67, M+ #1.2) do not name.
 const RULES_PHRASES: &[&str] = &[
     "Jade Counter",
     "Fortify Mind",
@@ -50,6 +51,18 @@ const RULES_PHRASES: &[&str] = &[
     "Infinite Assault Unit",
     "Infinite Assault Spell",
     "The Prime Generator, Iteration Two",
+    "Love Bomb",
+    "Love Bombs",
+];
+
+/// R5235001: a Plagiarized reprint makes the token its Infinite Assault card makes, which stays the
+/// Infinite Assault's, so these cards of a set that ships name a token of a single-player set: each
+/// reprint by the token its text names.
+const REPRINTS_NAME_IA_TOKENS: &[(&str, &str)] = &[
+    ("felinorsvshumans-124", "infiniteassault-025-1"),
+    ("felinorsvshumans-136", "infiniteassault-078-1"),
+    ("felinorsvshumans-148", "infiniteassault-154-1"),
+    ("felinorsvshumans-178", "infiniteassault-041-1"),
 ];
 
 /// A match that is the whole phrase is not inside it (R2198004: the phrase may be a card's own name).
@@ -184,7 +197,11 @@ fn named_by(card: &CardDef) -> Vec<String> {
     let texts = [&card.base.text, &card.radiant.text];
     entries()
         .into_iter()
-        .filter(|other| !set_ships(card.set) || set_ships(other.set))
+        .filter(|other| {
+            !set_ships(card.set)
+                || set_ships(other.set)
+                || REPRINTS_NAME_IA_TOKENS.contains(&(card.id.as_str(), other.id.as_str()))
+        })
         .filter(|other| {
             names_of(other)
                 .iter()

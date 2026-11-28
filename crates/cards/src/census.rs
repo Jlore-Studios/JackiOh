@@ -259,12 +259,12 @@ pub const CENSUS: &[SetCensus] = &[
             ("Mythic", 12),
         ],
     },
-    // R1420, R5235000: the Felinors vs Humans set (tracker #5220, docs/felinors-vs-humans-set.md FV1),
-    // held while wave 1 builds it: its 197 cards (#1 to #115 of its own and the 82 Plagiarized reprints,
-    // #116 to #197) and 35 tokens (the 22 sub-numbered tokens and Jilliax Deluxe's 13 modules, #112.1 to
-    // #112.13) are written here from the merged catalog, as the set's entries land. It follows
-    // Stinkyscape+ in the catalog order, so its entry comes before the single-player sets'. It counts
-    // toward no total and no tag until it ships.
+    // R1420, R5235000, R5222000: the Felinors vs Humans set (tracker #5220, docs/felinors-vs-humans-set.md
+    // FV1), held while wave 1 built it and shipped by its release (#5222): its 197 cards (#1 to #115 of
+    // its own and the 82 Plagiarized reprints, #116 to #197) and 35 tokens (the 22 sub-numbered tokens
+    // and Jilliax Deluxe's 13 modules, #112.1 to #112.13), from FV1 and §8.14. It follows Stinkyscape+
+    // in the catalog order, so its entry comes before the single-player sets'. It counts toward the
+    // totals and the tags since it ships.
     SetCensus {
         set: "Felinors vs Humans",
         segment: "felinorsvshumans",
@@ -323,72 +323,108 @@ pub fn tag_count(tag: Tag) -> usize {
         // Training Grounds #1, #2, #3, #5, #8, #9, #18, #25, #28, #32 and #38, and the Legacy cards #41, #43,
         // #53 and #54.
         // Stinkyscape+ #61 Jayaad joined them in issue #4154, and #4.1 Profe Yates Prime in issue #4440.
+        // Felinors vs Humans #1, #2, #5, #6, #10, #12, #13, #15, #18, #22, #35, #40, #41, #42, #47, #48, #49,
+        // #52, #53, #54, #59, #60, #63, #64, #67, #68, #69, #73, #74, #74.1, #75, #76, #78, #78.1, #79, #83,
+        // #90, #95, #100.2, #101, #103, #106, #107, #108, #109, #110 and #113 (R5222000).
         Tag::Human => {
             39 + meditative(16)
                 + meditative_plus(5)
                 + stinkyscape(21)
                 + training_grounds(15)
                 + stinkyscape_plus(13)
+                + felinors_vs_humans(47)
         }
         // Not Core #62 Friend of Felinors nor Classic #32 Felinor Feelings (#1837, R1837000).
         // Stinkyscape #87.
         // Training Grounds #17, #22, #23 and #33, and the Legacy cards #44 and #51.
         // Stinkyscape+ #4 Profe Yates and, since issue #4440, its #4.1 Profe Yates Prime.
-        Tag::Felinor => 9 + meditative(11) + stinkyscape(1) + training_grounds(6) + stinkyscape_plus(2),
+        // Felinors vs Humans #44, #57.4, #57.5, #57.6, #62, #65, #69, #70, #71, #81, #83, #84, #88, #89, #94,
+        // #96, #97, #98, #98.1, #100.1 and #105.
+        Tag::Felinor => {
+            9 + meditative(11)
+                + stinkyscape(1)
+                + training_grounds(6)
+                + stinkyscape_plus(2)
+                + felinors_vs_humans(21)
+        }
         // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
         // Stinkyscape #4.2 and #25.
-        Tag::Ky => 9 + meditative(6) + meditative_plus(3) + stinkyscape(2) + stinkyscape_plus(1),
+        // Felinors vs Humans #3, #4, #39, #91, #92 and #107.
+        Tag::Ky => {
+            9 + meditative(6)
+                + meditative_plus(3)
+                + stinkyscape(2)
+                + stinkyscape_plus(1)
+                + felinors_vs_humans(6)
+        }
         // Meditative+ #21 Harmony Spirit.
         // Stinkyscape #142.
         // Training Grounds #29 Easterner.
+        // Felinors vs Humans #83 Maomao.
         Tag::Cn => {
             7 + meditative(33)
                 + meditative_plus(1)
                 + stinkyscape(1)
                 + training_grounds(1)
                 + stinkyscape_plus(2)
+                + felinors_vs_humans(1)
         }
         // Meditative #4 Juicy Kumquat Melon and #55 Dragon Fruit; not C+ #61 Bauble Bubble (#831) nor
         // Classic+ #63 Fruit Tree and #68 Organic Produce, the two Field Spells that make Fruit
         // (#1837, R1837000). Meditative+ #23 Enormous Elderberry.
         // Stinkyscape #21.
         // Training Grounds' Legacy card #59 Legacy: Fig of Life.
+        // Felinors vs Humans #66 Fuzzyfruit.
         Tag::Fruit => {
             12 + meditative(2)
                 + meditative_plus(1)
                 + stinkyscape(1)
                 + training_grounds(1)
                 + stinkyscape_plus(7)
+                + felinors_vs_humans(1)
         }
         // Meditative #95 Call to Chaos (Meditative Edition).
         // Stinkyscape #150 and #151.
         // Training Grounds #39.
-        Tag::CallToChaos => 2 + meditative(1) + stinkyscape(2) + training_grounds(1) + stinkyscape_plus(1),
+        // Felinors vs Humans #100 Call to Chaos (Felinors vs. Humans Edition).
+        Tag::CallToChaos => {
+            2 + meditative(1)
+                + stinkyscape(2)
+                + training_grounds(1)
+                + stinkyscape_plus(1)
+                + felinors_vs_humans(1)
+        }
         // Not Core #84 Going Long nor Meditative #80 Aluneth (#2521).
         // Meditative+ #1 Bob's Plan.
         // Stinkyscape #44, #116, #148 and #154 (#16 Rod of Ages lost it in #3041).
         // Training Grounds #40 Goetzmann Game Design.
+        // Felinors vs Humans #73 Bloodforged Crusader.
         Tag::Quickdraw => {
             4 + meditative(4)
                 + meditative_plus(1)
                 + stinkyscape(4)
                 + training_grounds(1)
                 + stinkyscape_plus(2)
+                + felinors_vs_humans(1)
         }
         // Meditative #87 Tatches the Totem (every tribal tag, R1424), #97 and #97.9; Meditative+ #4
         // Jlockeed's Supply Drop (the designer's "Jlockheed").
         // Stinkyscape #124 to #130.
         // Training Grounds' Legacy cards #45 and #48.
+        // Felinors vs Humans #17 Jlockeed Shredder-14 and #80 Support Chinook.
         Tag::Jlockeed => {
             6 + meditative(3)
                 + meditative_plus(1)
                 + stinkyscape(7)
                 + training_grounds(2)
                 + stinkyscape_plus(4)
+                + felinors_vs_humans(2)
         }
         // Meditative+ #15 Book of Potions.
         // Stinkyscape #102.
-        Tag::Book => 14 + meditative_plus(1) + stinkyscape(1),
+        // Felinors vs Humans #23, #24, #25, #26, #27, #28 and #29, the Books (not #30 Big Book, which prints
+        // no tag).
+        Tag::Book => 14 + meditative_plus(1) + stinkyscape(1) + felinors_vs_humans(7),
         Tag::Pancake => 10,
         // Meditative+ #1.1 Base Camp, #1.2 Spa Day, #1.3 Garage Sale, #1.4 Leg Day and #1.5 Star Chart
         // (#2521), #1 Bob's Plan's AI generated helpers.
@@ -401,26 +437,45 @@ pub fn tag_count(tag: Tag) -> usize {
         // Meditative+ #16 Jazakus and its #16.1 Jazakus Prime.
         // Stinkyscape #147 (Catalyst) and its #147.1 (Prime).
         // Stinkyscape+ #4 Profe Yates (Catalyst) and, since issue #4440, its #4.1 (Prime).
-        Tag::Catalyst => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1) + stinkyscape_plus(1),
-        Tag::Prime => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1) + stinkyscape_plus(1),
+        // Felinors vs Humans #74, #78 and #98 (Catalyst) and their #74.1, #78.1 and #98.1 (Prime).
+        Tag::Catalyst => {
+            2 + meditative(3)
+                + meditative_plus(1)
+                + stinkyscape(1)
+                + stinkyscape_plus(1)
+                + felinors_vs_humans(3)
+        }
+        Tag::Prime => {
+            2 + meditative(3)
+                + meditative_plus(1)
+                + stinkyscape(1)
+                + stinkyscape_plus(1)
+                + felinors_vs_humans(3)
+        }
         // Meditative #49 and #49.1, not #49.2 nor #49.3 (#831).
         // Stinkyscape #6, #26, #37, #87, #88, #109, #110, #111 and #115.
         // Stinkyscape+ #4, #5 and #61, and since issue #4440 #4.1 Profe Yates Prime.
-        Tag::Acclaimed => 2 + meditative(2) + stinkyscape(9) + stinkyscape_plus(4),
+        // Felinors vs Humans #74, #74.1 and #107.
+        Tag::Acclaimed => 2 + meditative(2) + stinkyscape(9) + stinkyscape_plus(4) + felinors_vs_humans(3),
         // Meditative #8 Reach the Summit and #20 Aestheticize the Game, the tag's only cards.
         // Stinkyscape #148 and #148.1.
-        Tag::Wincon => meditative(2) + stinkyscape(2) + stinkyscape_plus(1),
-        // Meditative+ #11, #12 and #13, the Living Potions, the tag's only catalog cards (R1178000).
-        Tag::Potion => meditative_plus(3),
+        // Felinors vs Humans #196 Plagiarized: Singularity, beside its Plagiarized (R5235001).
+        Tag::Wincon => meditative(2) + stinkyscape(2) + stinkyscape_plus(1) + felinors_vs_humans(1),
+        // Meditative+ #11, #12 and #13, the Living Potions (R1178000).
+        // Felinors vs Humans #85 Living Fire Potion and #86 Living Poison Potion.
+        Tag::Potion => meditative_plus(3) + felinors_vs_humans(2),
         // #1837, ahead of the Stinkyscape set (R1837000): Core #100 Ceaseless Void; Classic #90 In Too
         // Deep; Classic+ #32 Otherworldly Removal; its three tokens, #32.1 Execute, #32.2 Brawl and
         // #32.3 Blade Storm; and Core #26 to #29, the four Glowy Jelly Beans.
         // Stinkyscape: #4.1 to #4.6 (Terminus); #7 and #112 (Quest); #10 to #12 (Otherworldly) and
         // their nine tokens, #10.1 to #12.3 (Other-Origins).
-        Tag::Terminus => 1 + stinkyscape(6) + stinkyscape_plus(9),
+        // Felinors vs Humans #82 The Last Meow (Terminus); #57 Otherworldly Hunting and #72
+        // Otherworldly Naturalism (Otherworldly) and their nine tokens, #57.1 to #57.6 and #72.1 to
+        // #72.3 (Other-Origins).
+        Tag::Terminus => 1 + stinkyscape(6) + stinkyscape_plus(9) + felinors_vs_humans(1),
         Tag::Quest => 1 + stinkyscape(2),
-        Tag::Otherworldly => 1 + stinkyscape(3),
-        Tag::OtherOrigins => 3 + stinkyscape(9),
+        Tag::Otherworldly => 1 + stinkyscape(3) + felinors_vs_humans(2),
+        Tag::OtherOrigins => 3 + stinkyscape(9) + felinors_vs_humans(9),
         // Training Grounds #27 Hopeful Jelly Bean and the Legacy card #50 Legacy: Glowy Jelly Bean.
         Tag::JellyBean => 4 + training_grounds(2) + stinkyscape_plus(2),
         // R1857000, the Stinkyscape set's four: #27 to #36 (Drone Core); #50 to #61 and #140 to #143
@@ -429,7 +484,8 @@ pub fn tag_count(tag: Tag) -> usize {
         Tag::Weapon => stinkyscape(16) + stinkyscape_plus(9),
         Tag::WarDoctrine => stinkyscape(4),
         // S01: C+ #49 Jay Fungus gains the tag, beside the Stinkyscape set's two.
-        Tag::Swarm => 1 + stinkyscape(2) + stinkyscape_plus(15),
+        // Felinors vs Humans #111 Vicious Fledgeling.
+        Tag::Swarm => 1 + stinkyscape(2) + stinkyscape_plus(15) + felinors_vs_humans(1),
         // R2511000: Training Grounds #41 to #60, its twenty Legacy cards.
         Tag::Legacy => training_grounds(20),
         // #2521: the Stinkyscape set's six Resources, T-reknite, T-korrelite, T-gellium, T-axnit,
@@ -518,7 +574,7 @@ fn stinkyscape_plus(count: usize) -> usize {
     }
 }
 
-/// R5235000: `count` once the Felinors vs Humans set ships, else 0.
+/// R5235000, R5222000: `count` once the Felinors vs Humans set ships (#5222), else 0.
 fn felinors_vs_humans(count: usize) -> usize {
     if set_ships(SetName::FelinorsVsHumans) {
         count

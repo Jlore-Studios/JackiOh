@@ -57,7 +57,7 @@ mod tests {
     const MEDITATIVE_CHAOS: &str = "meditative-095";
     /// The "Call to Chaos" pool: every edition, #95, this card, M #95, Stinkyscape #150 and #151 (#1884),
     /// Training Grounds #39 (#2204, R2200004) and Stinkyscape+ #142 (#3573) (§8.7 row 73, R1240, R1420).
-    const EDITIONS: [&str; 7] = [
+    const EDITIONS: [&str; 8] = [
         CORE_CHAOS,
         CHAOS,
         MEDITATIVE_CHAOS,
@@ -65,6 +65,7 @@ mod tests {
         "stinkyscape-151",
         "traininggrounds-039",
         "stinkyscapeplus-142",
+        "felinorsvshumans-100",
     ];
     const GOLEM: &str = "classicplus-073-1";
     const VANILLA: &str = "core-008"; // Mr. Vanilla

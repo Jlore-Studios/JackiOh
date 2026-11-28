@@ -37,8 +37,15 @@ mod tests {
     const P1: PlayerId = PlayerId::P1;
 
     const BOOK: &str = "meditativeplus-015";
-    /// The Potion pool of the sets that ship (R1179003): M+ #11 to #13, nothing else.
-    const POTIONS: [&str; 3] = ["meditativeplus-011", "meditativeplus-012", "meditativeplus-013"];
+    /// The Potion pool of the sets that ship (R1179003): M+ #11 to #13, and FvH #85 and #86 since their set
+    /// ships (#5222).
+    const POTIONS: [&str; 5] = [
+        "meditativeplus-011",
+        "meditativeplus-012",
+        "meditativeplus-013",
+        "felinorsvshumans-085",
+        "felinorsvshumans-086",
+    ];
     const FILLER: &str = "core-005"; // Stockpile: a Spell
 
     use crate::scenario;

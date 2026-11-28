@@ -6,7 +6,7 @@
  * Training Grounds (issue #2193, R2194000; released by #2204) and Stinkyscape+ (issue #3535,
  * R3535000; released by #3573) ship; Boss and Boss-X are reserved; the Infinite Assault
  * (tracker #4576, R4577000) is a single-player set, held while it was built and open since
- * its release (#4597); Felinors vs Humans (tracker #5220, R5235000) is held while it is
- * built.
+ * its release (#4597); Felinors vs Humans (tracker #5220, R5235000; released by #5222,
+ * R5222000) ships.
  */
 export type SetName = "Core" | "Classic" | "Classic+" | "Meditative" | "Meditative+" | "Stinkyscape" | "Training Grounds" | "Boss" | "Boss-X" | "Stinkyscape+" | "Infinite Assault" | "Felinors vs Humans";

@@ -532,8 +532,9 @@ gated card in by name. Emptying the list lifts the gate and deals every deck as 
 #732 did once it had measured the AI on the Meditative set, the list's one set until then. It held the
 Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
 ships before the AI is trained on it is listing it there. It held the Stinkyscape+ set from its release
-(issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000), and is
-empty since. No deal is shaped: the unban lane's dealt-quality table and the option that read it are
+(issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000). It holds the
+Felinors vs Humans set alone from its release (issue #5222, R5222000) until wave 2's sweep (issue #5223)
+measures the AI on it. No deal is shaped: the unban lane's dealt-quality table and the option that read it are
 removed (R4702001), so practice, the quality gates and both seats of an arena deal by one rule (R976000).
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand, and

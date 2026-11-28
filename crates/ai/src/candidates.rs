@@ -205,6 +205,8 @@ pub(crate) struct Side {
     pub(crate) indestructible: bool,
     pub(crate) first_strike: bool,
     pub(crate) poisonous: bool,
+    /// R5236010: any damage that lowers its Health destroys it, as if every hit on it were Poisonous.
+    pub(crate) fragile: bool,
     /// R346: its hits skip §4.4 step 2, the Armor.
     pub(crate) pierce: bool,
     /// R2179005: its own guard's cap on each hit it takes, after Armor (§4.4 step 3, `unit_damage_cap`).
@@ -227,6 +229,7 @@ pub(crate) fn side_of(state: &GameState, unit: &CardInstance) -> Side {
         indestructible: has_keyword(&view.keywords, KeywordKind::Indestructible),
         first_strike: has_keyword(&view.keywords, KeywordKind::FirstStrike),
         poisonous: has_keyword(&view.keywords, KeywordKind::Poisonous),
+        fragile: has_keyword(&view.keywords, KeywordKind::Fragile),
         pierce: pierces(state, Some(unit), None),
         cap: unit_damage_cap(state, unit),
         exiles: exiles_what_it_damages(state, unit, &AI_EVAL),
@@ -257,7 +260,8 @@ pub(crate) struct Blow {
 /// `from` pierces (R346), and step 3 caps it at `to`'s own cap (R2179005). Then a hit that converts
 /// deals nothing and is its counter (step 3a, R4064001), and `to.pool` soaks what it can of the rest
 /// (step 3b, R4064000). A blow from a side that exiles what it damages removes `to` with any damage
-/// left dealt, as a Poisonous one does (R1124, R4065001).
+/// left dealt, as a Poisonous one does (R1124, R4065001), and so does any blow on a Fragile `to`
+/// (R5236010).
 pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow {
     if amount <= 0 {
         return Blow::default();
@@ -288,7 +292,7 @@ pub(crate) fn blow(from: &Side, amount: i32, poisonous: bool, to: &Side) -> Blow
     // R4064000, step 3b: the target side's pools soak what they have left.
     let soaked = dealt.min(to.pool).max(0);
     let dealt = dealt - soaked;
-    let kills = dealt >= to.view.health || ((poisonous || from.exiles) && dealt > 0);
+    let kills = dealt >= to.view.health || ((poisonous || from.exiles || to.fragile) && dealt > 0);
     Blow {
         dealt,
         kills,
@@ -2263,6 +2267,12 @@ mod tests {
             }
             for (index, state) in states.iter().enumerate() {
                 for seat in [PlayerId::P1, PlayerId::P2] {
+                    // R5238001: the forecast believes what `seat` is shown, a secret grant's disguise (FvH
+                    // #46's Fragile on both its Units), as the AI's copy of the state for the seat does
+                    // (`redact`), so the AI's reads are taken on that belief too.
+                    let mut believed = state.clone();
+                    jackioh_engine::effects::secret_grant::believe_secret_grants(&mut believed, seat);
+                    let state = &believed;
                     for entry in combat_forecast(state, seat).attacks {
                         if entry.target_id.starts_with("hero-") {
                             continue;

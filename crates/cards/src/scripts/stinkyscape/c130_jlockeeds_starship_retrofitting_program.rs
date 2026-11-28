@@ -96,11 +96,17 @@ mod tests {
 
     #[test]
     fn r1878003_r1852000_played_as_a_unit_it_is_a_starship_piece_and_its_death_fuses_it_into_the_dormant_starship() {
+        // A Unit it can play with a Tribute-free field and still afford the Hit Job after.
         let seed = seed_where("retrofit-unit", |seed| {
             let mut s = holding(false, seed, 1);
             s.play(PROGRAM, json!({}));
+            let left = s.state().players.p1.mana.current;
             added(&s).is_some_and(|card| {
-                crate::card_def(&card.def_id).type_ == CardType::Unit && tribute_cost(&card.def_id) == 0
+                let def = crate::card_def(&card.def_id);
+                def.type_ == CardType::Unit
+                    && tribute_cost(&card.def_id) == 0
+                    && left - jackioh_engine::catalog::query_cost(&def)
+                        >= jackioh_engine::catalog::query_cost(&crate::card_def(HIT_JOB))
             })
         });
         let mut s = holding(false, &seed, 1);

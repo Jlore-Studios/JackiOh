@@ -188,6 +188,34 @@
       ]
     ]
   },
+  "felinorsvshumans-041": {
+    "base": [
+      [
+        "Vanilla a Unit",
+        "Freeze a Unit"
+      ]
+    ],
+    "radiant": [
+      [
+        "Vanilla a Unit",
+        "Freeze a Unit"
+      ]
+    ]
+  },
+  "felinorsvshumans-060": {
+    "base": [
+      [
+        "Summon the Tools of Creation",
+        "Summon the Tools of Cremation"
+      ]
+    ],
+    "radiant": [
+      [
+        "Summon the Tools of Creation",
+        "Summon the Tools of Cremation"
+      ]
+    ]
+  },
   "meditative-020": {
     "base": [
       [

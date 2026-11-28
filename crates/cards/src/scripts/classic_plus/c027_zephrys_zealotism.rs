@@ -234,9 +234,12 @@ mod tests {
             fn r1446_a_core_card_that_enables_lethal_is_dealt_45_deft_duelist() {
                 crate::register_all();
                 // p2 at 4 with the 4 mana left after this card's (4): #45 Deft Duelist, a Core 4/3 Charge
-                // for 2, is lethal, and the pool reaches Core since R1446, so it is dealt.
+                // for 2, is lethal, and the pool reaches Core since R1446, so it is dealt. A hand of three:
+                // since the Felinors vs Humans release (#5222) FvH #93 Twin Tyrant ranks between Core #68
+                // and it.
                 const DEFT_DUELIST: &str = "core-045";
-                let setup = json!({ "p1": { "hand": [STOCKPILE, MENACE], "mana": 8 }, "p2": { "health": 4 } });
+                let setup =
+                    json!({ "p1": { "hand": [STOCKPILE, MENACE, STOCKPILE], "mana": 8 }, "p2": { "health": 4 } });
                 let duelist = ranked(&setup, false)
                     .into_iter()
                     .find(|scored| scored.def.id == DEFT_DUELIST)

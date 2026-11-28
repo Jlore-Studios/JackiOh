@@ -1581,8 +1581,8 @@ scans off.
 
 Migration 0102 widens the `cards` tag check once more, as 0099 did, with #5235's three Felinors vs Humans tags
 (R5235002), Plagiarized, Roblox-Tool and Golem, so the check names the engine's whole `Tag` union again. The set
-is held while it is built (R5235000), so `seed-catalog` writes none of its cards until it ships; the day it does,
-nothing fails. It rewrites no row. `tests/sql/01_schema_invariants.sql` CHECK 18 probes every tag.
+was held while it was built (R5235000), so `seed-catalog` wrote none of its cards until wave 1's release shipped it
+(#5222, R5222000); since then it writes them all, and nothing fails. It rewrites no row. `tests/sql/01_schema_invariants.sql` CHECK 18 probes every tag.
 
 ## Tests
 

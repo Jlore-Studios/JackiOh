@@ -393,6 +393,7 @@ fn r3114000_each_shipped_set_s_offset_is_its_catalog_place_in_thousands() {
             "Stinkyscape": 5000,
             "Training Grounds": 6000,
             "Stinkyscape+": 7000,
+            "Felinors vs Humans": 8000,
         })
     );
     for set in [SetName::Boss, SetName::BossX] {
@@ -411,6 +412,25 @@ fn r3535000_the_stinkyscape_plus_set_is_exported_at_7000_since_it_shipped() {
             .expect("offsets are a record")
             .get("Stinkyscape+"),
         Some(&json!(7000)),
+        "a shipped set is in a deck"
+    );
+}
+
+// R5222000: the Felinors vs Humans set kept its catalog place (offset 8000) while it was held
+// (R5235000), and since wave 1's release (#5222) ships it a deck holds it, so the client is given its
+// offset with the others' (CLAUDE.md rule 3).
+#[test]
+fn r5222000_the_felinors_vs_humans_set_is_exported_at_8000_since_it_shipped() {
+    assert_eq!(
+        c::catalog_number_set_offset(SetName::FelinorsVsHumans),
+        Some(8000)
+    );
+    assert_eq!(
+        catalog_number_set_offsets()
+            .as_object()
+            .expect("offsets are a record")
+            .get("Felinors vs Humans"),
+        Some(&json!(8000)),
         "a shipped set is in a deck"
     );
 }

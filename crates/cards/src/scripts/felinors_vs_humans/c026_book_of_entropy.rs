@@ -83,19 +83,16 @@ mod tests {
             .collect()
     }
 
+    /// The set ships since wave 1's release (#5222, R5222000), so its own edition is among the shipped ones.
     #[test]
     fn r5253002_the_pool_is_every_shipped_edition_and_the_sets_own_once_it_ships() {
         crate::register_all();
-        let held = pool();
-        assert!(held.len() > 2, "{held:?}");
-        assert!(held.iter().all(|def_id| is_call_to_chaos(def_id)), "{held:?}");
-        assert!(!held.contains(&FVH_CHAOS.to_string()), "{held:?}");
-        let _preview = preview_sets(&[SetName::FelinorsVsHumans]);
+        assert!(set_ships(SetName::FelinorsVsHumans));
         let shipped = pool();
+        assert!(shipped.len() > 2, "{shipped:?}");
+        assert!(shipped.iter().all(|def_id| is_call_to_chaos(def_id)), "{shipped:?}");
         assert!(shipped.contains(&FVH_CHAOS.to_string()), "{shipped:?}");
-        for def_id in nonempty(held, "the shipped editions") {
-            assert!(shipped.contains(&def_id), "{def_id}");
-        }
+        assert!(shipped.iter().any(|def_id| def_id != FVH_CHAOS), "{shipped:?}");
     }
 
     mod base {

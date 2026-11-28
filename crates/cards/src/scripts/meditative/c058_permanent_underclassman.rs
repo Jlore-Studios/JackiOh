@@ -329,7 +329,14 @@ mod tests {
 
         #[test]
         fn r1107_the_grant_survives_a_json_round_trip() {
-            let (mut s, unit) = summoned("underclassman-json");
+            // A seed whose summon dies plainly and whose grant adds the Book with no round trip, searched
+            // for at run time (#848): a summon with a text of its own may answer its death otherwise.
+            let seed = seed_where("underclassman-json", |seed| {
+                let (mut s, unit) = summoned(seed);
+                kill(&mut s, &unit);
+                books(&s).len() == 1
+            });
+            let (mut s, unit) = summoned(&seed);
             let round: GameState = serde_json::from_value(js(s.state())).expect("deserializes");
             assert_eq!(
                 find_instance(&round, &unit.id).and_then(|card| card.grants.clone()),

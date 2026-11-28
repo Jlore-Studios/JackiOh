@@ -72,8 +72,8 @@ mod tests {
     /// Flesh, #153 Stimmycheck, #166 and #167 (the Scanning Probes) and #53, #57 and #61 (the Flaks, whose
     /// Radiant faces print Lucky 1, #2521); Training Grounds' #49 Reoccurring Dream (#2204), the snapshot of
     /// Core #23; and Stinkyscape+'s #20 B-Patch (it flips a coin), #25 Snom Bunny and #55 Thorium Reactor
-    /// (whose Radiant faces print Lucky 1, #3573).
-    const SHIPPED_POOL: [&str; 25] = [
+    /// (whose Radiant faces print Lucky 1, #3573); and Felinors vs Humans' #93 Twin Tyrant (#5222).
+    const SHIPPED_POOL: [&str; 26] = [
         "core-004",
         "core-023",
         "classic-065",
@@ -99,6 +99,7 @@ mod tests {
         "stinkyscapeplus-020",
         "stinkyscapeplus-025",
         "stinkyscapeplus-055",
+        "felinorsvshumans-093",
     ];
 
     /// p1 holds Gachaholic (Radiant on `radiant`) and `others` fillers.

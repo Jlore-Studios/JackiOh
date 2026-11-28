@@ -665,6 +665,12 @@ const KEPT_IN_HAND_OR_LIBRARY: [&str; 8] = [
     "tipsy",
 ];
 
+/// R5262000, R3546002: what a graveyard card may hold when every keyword granted it is GIGA: FvH #100's
+/// "make enemy Units and Field Spells in their hand, deck and graveyard GIGA" grants it there, the size the
+/// card takes as it next enters the field. R78's reset takes every grant a card held on the field as it
+/// leaves, so a GIGA grant a graveyard card holds is one made in the graveyard.
+const KEPT_BY_A_GIGA_GRANT: [&str; 1] = ["grantedKeywords"];
+
 /// What a graveyard or an exile card that evolved there may hold: R3566004's Stinky Cheese keeps what its
 /// Evolve gave it, for the Flashback play that brings it back (S+ #6.2). Leaving the field clears `evolved`
 /// (R3536000), so a card that holds it off the field evolved there.
@@ -742,10 +748,17 @@ fn field_state_held(card: &CardInstance, zone: &Zone) -> Vec<String> {
     let in_hand_or_library = matches!(zone, Zone::Hand { .. } | Zone::Library { .. });
     let evolved_here =
         matches!(zone, Zone::Graveyard { .. } | Zone::Exile { .. }) && card.evolved == Some(true);
+    let giga_granted_here = matches!(zone, Zone::Graveyard { .. })
+        && !card.granted_keywords.is_empty()
+        && card
+            .granted_keywords
+            .iter()
+            .all(|keyword| keyword.kind() == KeywordKind::Giga);
     let lawful = |field: &str| {
         KEPT_IN_EVERY_PILE.contains(&field)
             || (in_hand_or_library && KEPT_IN_HAND_OR_LIBRARY.contains(&field))
             || (evolved_here && KEPT_BY_AN_EVOLVE.contains(&field))
+            || (giga_granted_here && KEPT_BY_A_GIGA_GRANT.contains(&field))
     };
     held.keys()
         .chain(clean.keys().filter(|field| !held.contains_key(*field)))

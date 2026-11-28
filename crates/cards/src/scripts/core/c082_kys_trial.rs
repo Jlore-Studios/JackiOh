@@ -102,9 +102,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const TRIAL: &str = "core-082";
-    /// The eight sets that ship, which the first Discover draws from (R831004). Re-pinned for the
-    /// Training Grounds release (#2204): that set joins them; and for the Stinkyscape+ release (#3573).
-    const SETS: [&str; 8] = [
+    /// The nine sets that ship, which the first Discover draws from (R831004). Re-pinned for the
+    /// Training Grounds release (#2204): that set joins them; for the Stinkyscape+ release (#3573); and for
+    /// the Felinors vs Humans release (#5222).
+    const SETS: [&str; 9] = [
         "Core",
         "Classic",
         "Classic+",
@@ -113,6 +114,7 @@ mod tests {
         "Stinkyscape",
         "Training Grounds",
         "Stinkyscape+",
+        "Felinors vs Humans",
     ];
 
     use crate::js;
@@ -204,7 +206,7 @@ mod tests {
         fn r831004_the_first_discover_offers_3_different_sets_of_the_four_that_ship_and_seeds_reach_each() {
             crate::register_all();
             let mut seen: IndexSet<String> = IndexSet::new();
-            // 3 of 8 sets per seed: 40 seeds leave a set unseen about one time in 18 million.
+            // 3 of 9 sets per seed: 40 seeds leave a set unseen about one time in 900,000.
             for n in 0..40 {
                 let sets = options_of(&played(&format!("kys-trial-sets-{n}"), false), PromptKind::Mode);
                 assert_eq!(sets.len(), 3);

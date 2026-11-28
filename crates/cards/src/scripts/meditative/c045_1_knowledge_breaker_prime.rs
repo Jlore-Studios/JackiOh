@@ -124,35 +124,32 @@ mod tests {
 
         #[test]
         fn cry_sets_five_random_traps_fewer_on_a_full_backrow() {
-            let mut s = scenario(json!({
-                "seed": "prime-traps",
-                "p1": { "mana": 8, "hand": [PRIME], "library": [VANILLA] },
-                "p2": { "hand": [VANILLA], "library": [VANILLA] },
-            }));
-            let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
-            s.play(&prime.id, json!({ "zone": 1 }));
-            assert_eq!(trap_count(&s, P1), 5);
+            // The Traps it sets are random, and one may leave at once (C #88 Siphon Squad Tributes itself
+            // while the opponent has no Units, R403): each scene is the first seed where none does,
+            // searched for (#848).
+            let played = |seed: &str, backrow: Value| {
+                let mut s = scenario(json!({
+                    "seed": seed,
+                    "p1": { "mana": 8, "hand": [PRIME], "backrow": backrow, "library": [VANILLA] },
+                    "p2": { "hand": [VANILLA], "library": [VANILLA] },
+                }));
+                let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
+                s.play(&prime.id, json!({ "zone": 1 }));
+                s
+            };
+            let stays = |s: &Scenario| {
+                !s.last_events()
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Destroyed { .. }))
+            };
+            let seed = seed_where("prime-traps", |seed| stays(&played(seed, json!([]))));
+            assert_eq!(trap_count(&played(&seed, json!([])), P1), 5);
 
             // Three backrow zones taken (by Field Spells, which no Trap count sees): only two
             // Traps fit.
-            let mut full = scenario(json!({
-                "seed": "prime-traps-full",
-                "p1": {
-                    "mana": 8,
-                    "hand": [PRIME],
-                    "backrow": [
-                        { "def": MANA_WELL },
-                        { "def": MANA_WELL },
-                        { "def": MANA_WELL },
-                    ],
-                    "library": [VANILLA],
-                },
-                "p2": { "hand": [VANILLA], "library": [VANILLA] },
-            }));
-            let prime =
-                full.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
-            full.play(&prime.id, json!({ "zone": 1 }));
-            assert_eq!(trap_count(&full, P1), 2);
+            let wells = json!([{ "def": MANA_WELL }, { "def": MANA_WELL }, { "def": MANA_WELL }]);
+            let seed = seed_where("prime-traps-full", |seed| stays(&played(seed, wells.clone())));
+            assert_eq!(trap_count(&played(&seed, wells), P1), 2);
         }
 
         #[test]

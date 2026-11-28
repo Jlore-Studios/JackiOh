@@ -3572,7 +3572,8 @@
       "stinkyscape-150",
       "stinkyscape-151",
       "traininggrounds-039",
-      "stinkyscapeplus-142"
+      "stinkyscapeplus-142",
+      "felinorsvshumans-100"
     ],
     "loc": 3,
     "base": {
@@ -11103,7 +11104,8 @@
       "stinkyscape-150",
       "stinkyscape-151",
       "traininggrounds-039",
-      "stinkyscapeplus-142"
+      "stinkyscapeplus-142",
+      "felinorsvshumans-100"
     ],
     "loc": 3,
     "base": {
@@ -16188,7 +16190,8 @@
       "stinkyscape-150",
       "stinkyscape-151",
       "traininggrounds-039",
-      "stinkyscapeplus-142"
+      "stinkyscapeplus-142",
+      "felinorsvshumans-100"
     ],
     "loc": 22,
     "base": {
@@ -18491,7 +18494,8 @@
       "stinkyscape-150",
       "stinkyscape-151",
       "traininggrounds-039",
-      "stinkyscapeplus-142"
+      "stinkyscapeplus-142",
+      "felinorsvshumans-100"
     ],
     "loc": 37,
     "base": {
@@ -24601,7 +24605,8 @@
       "stinkyscape-150",
       "stinkyscape-151",
       "traininggrounds-039",
-      "stinkyscapeplus-142"
+      "stinkyscapeplus-142",
+      "felinorsvshumans-100"
     ],
     "loc": 28,
     "base": {
@@ -24638,7 +24643,8 @@
       "stinkyscape-151",
       "stinkyscape-159",
       "traininggrounds-039",
-      "stinkyscapeplus-142"
+      "stinkyscapeplus-142",
+      "felinorsvshumans-100"
     ],
     "loc": 22,
     "base": {
@@ -24728,7 +24734,8 @@
       "stinkyscape-t-propagation-layer",
       "stinkyscape-t-meltdown-layer",
       "traininggrounds-039",
-      "stinkyscapeplus-142"
+      "stinkyscapeplus-142",
+      "felinorsvshumans-100"
     ],
     "loc": 77,
     "base": {
@@ -28046,7 +28053,8 @@
       "stinkyscapeplus-142",
       "traininggrounds-039-1",
       "traininggrounds-040",
-      "core-t-rush"
+      "core-t-rush",
+      "felinorsvshumans-100"
     ],
     "loc": 22,
     "base": {
@@ -35412,7 +35420,8 @@
       "stinkyscapeplus-142",
       "stinkyscapeplus-142-1",
       "stinkyscapeplus-142-2",
-      "traininggrounds-039"
+      "traininggrounds-039",
+      "felinorsvshumans-100"
     ]
   },
   "stinkyscapeplus-142-1": {
@@ -35999,7 +36008,8 @@
       "stinkyscape-150",
       "stinkyscape-151",
       "stinkyscapeplus-142",
-      "traininggrounds-039"
+      "traininggrounds-039",
+      "felinorsvshumans-100"
     ]
   },
   "stinkyscapeplus-155": {

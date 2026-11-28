@@ -8,7 +8,7 @@ one screen, play online, or practice against the AI.
 
 | Read | For |
 |---|---|
-| [`SPEC.md`](SPEC.md), [`spec/`](spec/README.md) | The rules, every card and token of Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape, Training Grounds and Stinkyscape+, the architecture and the engine design, one note per section and per ruling. The only source of rules |
+| [`SPEC.md`](SPEC.md), [`spec/`](spec/README.md) | The rules, every card and token of Core, Classic, Classic+, Meditative, Meditative+, Stinkyscape, Training Grounds, Stinkyscape+ and Felinors vs Humans, the architecture and the engine design, one note per section and per ruling. The only source of rules |
 | [`BUILD.md`](BUILD.md) | The work order: milestones, acceptance criteria, the definition of done |
 | [`REVIEW.md`](REVIEW.md) | The audit procedure |
 | [`CLAUDE.md`](CLAUDE.md) | How the codebase is laid out, the rules every change follows, and the commands |

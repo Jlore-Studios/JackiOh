@@ -37,6 +37,8 @@ pub(super) const CATALOG_NOTE: &str = concat!(
     include_str!("../../../../spec/08-catalog/8.12-stinkyscape-plus.md"),
     "\n",
     include_str!("../../../../spec/08-catalog/8.13-infinite-assault.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.14-felinors-vs-humans.md"),
 );
 
 /// The header of every §8 card table.

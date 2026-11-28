@@ -61,8 +61,9 @@ mod tests {
     /// R380: the KY tag of every set — Core #31, #51, #82, Classic+ #41, #42, #62, Meditative #34
     /// 高考, #38 H1B Printer, #45 Knowledge Breaker, #79 Touched by KY and #87 Tatches the Totem (all
     /// tribes), Meditative+ #20 KY's Competition and #25 KY's Intuition (§8.1 #57, #1187) and Stinkyscape's
-    /// #25 KY's Tricknology (#1884) — no token, never #57.
-    const KY_POOL: [&str; 14] = [
+    /// #25 KY's Tricknology (#1884) and Felinors vs Humans #3, #4, #39, #91, #92 and #107 (#5222) — no
+    /// token, never #57.
+    const KY_POOL: [&str; 20] = [
         "core-031",
         "core-051",
         "core-082",
@@ -77,6 +78,12 @@ mod tests {
         "meditativeplus-020",
         "meditativeplus-025",
         "stinkyscape-025",
+        "felinorsvshumans-003",
+        "felinorsvshumans-004",
+        "felinorsvshumans-039",
+        "felinorsvshumans-091",
+        "felinorsvshumans-092",
+        "felinorsvshumans-107",
     ];
 
     /// The def ids `crate::query::pool` returns (SPEC §5.1).
@@ -180,7 +187,7 @@ mod tests {
                 .collect();
 
             // Every hand is 3 cards from the pool, and no seed repeats a def: 3 picks are far short of
-            // the 14 cards of the pool, so each comes up once.
+            // the 20 cards of the pool, so each comes up once.
             for hand in &hands {
                 assert_eq!(hand.len(), 3);
                 assert!(hand.iter().all(|def_id| in_ky_pool(def_id)), "{hand:?} leaves the KY pool");

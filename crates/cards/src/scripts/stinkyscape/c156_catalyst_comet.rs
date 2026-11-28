@@ -54,8 +54,9 @@ mod tests {
     const FILLER: &str = "core-005";
 
     /// The shipped Catalyst cards: the Comet's pool, the set's own #147 IN33DH3 among them since its
-    /// release (#1884), and Stinkyscape+'s #4 Profe Yates since its (#3573).
-    const POOL: [&str; 8] = [
+    /// release (#1884), Stinkyscape+'s #4 Profe Yates since its (#3573), and Felinors vs Humans' #74, #78
+    /// and #98 since its (#5222).
+    const POOL: [&str; 11] = [
         "classicplus-038",
         "classicplus-046",
         "meditative-045",
@@ -64,6 +65,9 @@ mod tests {
         "meditativeplus-016",
         "stinkyscape-147",
         "stinkyscapeplus-004",
+        "felinorsvshumans-074",
+        "felinorsvshumans-078",
+        "felinorsvshumans-098",
     ];
 
     fn added_card(seed: &str, radiant: bool) -> CardInstance {
@@ -80,7 +84,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1867010_adds_a_catalyst_card_each_of_the_eight_seen_over_the_seeds() {
+        fn r1867010_adds_a_catalyst_card_each_of_the_pool_seen_over_the_seeds() {
             let mut seen: IndexSet<String> = IndexSet::new();
             for seed in 0..120 {
                 let added = added_card(&format!("comet-{seed}"), false);

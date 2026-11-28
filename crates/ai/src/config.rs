@@ -1338,8 +1338,9 @@ pub const AI_DETERMINIZE: AiDeterminize = AiDeterminize {
 /// (`gated_sets: Some(vec![])`) is dealt from every set. A lean on a gated set leans on the newest
 /// ungated set instead. Meditative was gated until #732 (MN08 of #496), Stinkyscape from #1884 until
 /// #1885's sweep (R1885000), and Stinkyscape+ from its release (#3573) until fullsend 2's sweep (#3574,
-/// R3574000) measured the AI on it. Empty: the AI deals itself every set the shadow ban leaves it.
-pub const AI_DECK_GATED_SETS: &[SetName] = &[];
+/// R3574000) measured the AI on it. Felinors vs Humans is gated from its release (wave 1, #5222,
+/// R5222000) until wave 2's sweep (#5223) measures the AI on it.
+pub const AI_DECK_GATED_SETS: &[SetName] = &[SetName::FelinorsVsHumans];
 
 /// The most times the AI plays one card (one instance) in a turn; past it the card is no candidate
 /// until the next turn. Only a card that comes back after each play reaches it: a (0) Spell castable

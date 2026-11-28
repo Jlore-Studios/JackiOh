@@ -5726,6 +5726,22 @@ mod tests {
         assert!(plus > 0, "the shipped Stinkyscape+ set is in shipped_defs");
     }
 
+    // R5222000: wave 1's release (#5222) ships the Felinors vs Humans set, so `shipped_defs` holds its
+    // cards and tokens since then (a token still gets no version offer, `offered`) (CLAUDE.md rule 3).
+    #[test]
+    fn r5222000_shipped_defs_holds_the_felinors_vs_humans_set_since_it_shipped() {
+        let fvh: Vec<&CardDef> = shipped_defs()
+            .values()
+            .filter(|def| def.set == SetName::FelinorsVsHumans)
+            .collect();
+        assert_eq!(
+            fvh.len(),
+            232,
+            "every entry of the shipped set is in shipped_defs"
+        );
+        assert_eq!(fvh.iter().filter(|def| !def.is_token()).count(), 197);
+    }
+
     #[test]
     fn r3343001_prismatic_is_a_full_art_at_both_its_levels() {
         let levels = ladder(registry(), "prismatic");

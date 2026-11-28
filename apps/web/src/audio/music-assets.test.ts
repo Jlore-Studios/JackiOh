@@ -146,6 +146,13 @@ describe("R631 the cards that play music", () => {
     for (const id of cards) expect(MUSIC_MANIFEST.files[`intro-${id}`], id).toBeDefined();
   });
 
+  it("R5222001 gives every Legendary and Mythic of the Felinors vs Humans set, tokens printed so included, an intro of its own as it ships", () => {
+    const cards = introCards(["Felinors vs Humans"]);
+    expect(cards).toHaveLength(63);
+    for (const id of cards) expect(MUSIC_CARDS[id]?.intro, id).toBe(`intro-${id}`);
+    for (const id of cards) expect(MUSIC_MANIFEST.files[`intro-${id}`], id).toBeDefined();
+  });
+
   it("R1352 gives an intro to no card that is not printed Legendary or Mythic", () => {
     const allowed = new Set(introCards(CATALOG_SETS));
     for (const [id, entry] of Object.entries(MUSIC_CARDS)) if (entry.intro !== undefined) expect(allowed.has(id), id).toBe(true);

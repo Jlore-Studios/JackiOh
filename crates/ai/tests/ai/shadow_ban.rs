@@ -2009,8 +2009,9 @@ mod r732000_the_shadow_ban_holds_no_card_of_an_earlier_set {
     #[test]
     fn r732000_the_gate_is_lifted_and_generation_json_counts_the_table() {
         // Generation 9 lifted R1390's gate on the table (#1884, #1885); the Stinkyscape+ release (#3573)
-        // gated that set alone until fullsend 2's sweep lifted it (#3574, R3574000).
-        assert!(AI_DECK_GATED_SETS.is_empty());
+        // gated that set alone until fullsend 2's sweep lifted it (#3574, R3574000), and the Felinors vs
+        // Humans release (#5222, R5222000) gates that set alone until wave 2's sweep (#5223).
+        assert_eq!(AI_DECK_GATED_SETS, &[SetName::FelinorsVsHumans]);
         let record: Value = serde_json::from_str(GENERATION_JSON).expect("generation.json is JSON");
         assert_eq!(record["shadowBan"].as_u64(), Some(SHADOW_BAN.len() as u64));
         assert!(record["generation"].as_i64().unwrap_or_default() >= 9, "{record}");

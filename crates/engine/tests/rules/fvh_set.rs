@@ -1,6 +1,6 @@
-//! F #5235's set (docs/felinors-vs-humans-set.md FV0, FV1, FV4; R5235000 to R5235002): Felinors vs Humans
-//! is a `Held` set, its row and its share, the pools that never reach its cards and the preview that
-//! opens it; the Plagiarized reprints, FvH #116 to #197, each its own card; and the three new tags.
+//! F #5235's set (docs/felinors-vs-humans-set.md FV0, FV1, FV4; R5235000 to R5235002), shipped by wave 1's
+//! release (#5222, R5222000): Felinors vs Humans, its row and its share, the pools that reach its cards
+//! since it ships; the Plagiarized reprints, FvH #116 to #197, each its own card; and the three new tags.
 //!
 //! The pool and deck tests stand on this file's own fixtures (two cards of the set and a shipped Core
 //! Felinor, over the engine's fixture catalog); the catalog tests read the real catalog
@@ -40,8 +40,6 @@ const PLAGIARIZED: &str = "Plagiarized";
 const WINCON: &str = "Wincon";
 const ROBLOX_TOOL: &str = "Roblox-Tool";
 const GOLEM: &str = "Golem";
-/// R1420's refusal of a deck holding a card of a set that does not ship.
-const NOT_SHIPPED: &str = "has not shipped yet";
 
 /// A Felinor Unit of the set.
 const FVH_CARD: &str = "felinorsvshumans-001";
@@ -142,16 +140,18 @@ fn tag_named(name: &str) -> Option<Tag> {
     serde_json::from_value(json!(name)).ok()
 }
 
-mod r5235000_a_held_set {
+/// R5235000, R5222000: the set's row, held while wave 1 built it and shipped by its release (#5222):
+/// every pool that names no set reaches its cards, a deck holds them, and a preview changes nothing.
+mod r5235000_r5222000_the_set_held_then_shipped {
     use super::*;
 
     #[test]
-    fn r5235000_its_row_is_held_with_its_segment_abbreviation_and_share() {
+    fn r5235000_r5222000_its_row_ships_with_its_segment_abbreviation_and_share() {
         assert_eq!(
             *set_row(FVH),
             SetRow {
                 set: FVH,
-                stage: SetStage::Held,
+                stage: SetStage::Shipped,
                 segment: SEGMENT,
                 abbreviation: Some(ABBREVIATION),
                 shadow_ban_share: Some(SHARE),
@@ -190,42 +190,45 @@ mod r5235000_a_held_set {
     }
 
     #[test]
-    fn r5235000_it_does_not_ship_and_is_not_open() {
-        assert!(!set_ships(FVH));
-        assert!(!SHIPPED_SETS.contains(&FVH));
-        assert!(!set_is_open(FVH));
-        assert_ne!(newest_shipped_set(), FVH);
+    fn r5222000_it_ships_open_as_the_newest_set() {
+        assert!(set_ships(FVH));
+        assert_eq!(SHIPPED_SETS.last(), Some(&FVH));
+        assert!(set_is_open(FVH));
+        assert_eq!(newest_shipped_set(), FVH);
+        assert_eq!(LeanPick::parse(FVH_NAME), Some(LeanPick::Set(FVH)));
+        assert!(LeanPick::choices().contains(&LeanPick::Set(FVH)));
+        assert_eq!(LeanPick::Newest.resolve(), FVH);
     }
 
     #[test]
-    fn r5235000_a_pool_that_names_no_set_never_draws_its_cards() {
+    fn r5222000_a_pool_that_names_no_set_draws_its_cards() {
         register();
         let ids = pool_ids(json!({}));
         assert!(
             ids.contains(&CORE_FELINOR.to_string()),
             "setup: the pool draws shipped cards"
         );
-        assert_eq!(of_the_set(&ids), Vec::<String>::new());
+        assert_eq!(of_the_set(&ids), vec![FVH_CARD.to_string()]);
     }
 
     #[test]
-    fn r5235000_a_pool_with_tokens_never_draws_its_cards_or_tokens() {
+    fn r5222000_a_pool_with_tokens_draws_its_cards_and_tokens() {
         register();
-        assert_eq!(
-            of_the_set(&pool_ids(json!({ "withTokens": true }))),
-            Vec::<String>::new()
-        );
+        let drawn: BTreeSet<String> = of_the_set(&pool_ids(json!({ "withTokens": true })))
+            .into_iter()
+            .collect();
+        assert_eq!(drawn, names(&[FVH_CARD, FVH_TOKEN]));
     }
 
     #[test]
-    fn r5235000_a_tag_pool_never_draws_its_cards() {
+    fn r5222000_a_tag_pool_draws_its_cards() {
         register();
         let ids = pool_ids(json!({ "tags": ["Felinor"] }));
         assert!(
             ids.contains(&CORE_FELINOR.to_string()),
             "setup: the tag pool draws"
         );
-        assert_eq!(of_the_set(&ids), Vec::<String>::new());
+        assert_eq!(of_the_set(&ids), vec![FVH_CARD.to_string()]);
     }
 
     #[test]
@@ -239,16 +242,16 @@ mod r5235000_a_held_set {
     }
 
     #[test]
-    fn r5235000_no_card_of_it_is_deckable() {
+    fn r5222000_its_cards_are_deckable_and_its_tokens_are_not() {
         register();
         let catalog: CardDefs = registered_catalog().clone();
-        assert!(!deckable(&catalog[FVH_CARD]));
+        assert!(deckable(&catalog[FVH_CARD]));
         assert!(!deckable(&catalog[FVH_TOKEN]));
         assert!(deckable(&catalog[CORE_FELINOR]), "setup: a shipped card is");
     }
 
     #[test]
-    fn r5235000_a_deck_holding_one_of_its_cards_is_refused() {
+    fn r5222000_a_deck_holding_one_of_its_cards_is_valid() {
         register();
         let catalog: CardDefs = registered_catalog().clone();
         let mut deck: Vec<String> = (1..=DECK_FILL).map(|n| format!("fx-{n}")).collect();
@@ -260,30 +263,20 @@ mod r5235000_a_held_set {
         );
         deck.pop();
         deck.push(FVH_CARD.to_string());
-        let refused = validate_deck(&deck, &catalog, "p1", size).expect_err("refused");
-        assert!(refused.to_string().contains(NOT_SHIPPED), "{refused}");
+        assert!(validate_deck(&deck, &catalog, "p1", size).is_ok(), "{deck:?}");
     }
 
     #[test]
-    fn r5235000_preview_sets_opens_it_until_its_guard_drops() {
+    fn r5222000_a_preview_of_it_or_another_set_changes_nothing() {
         register();
         {
-            let _preview = preview_sets(&[FVH]);
+            let _preview = preview_sets(&[FVH, SetName::Boss]);
             assert!(set_is_open(FVH));
-            assert!(!set_ships(FVH), "a preview ships nothing");
+            assert_eq!(newest_shipped_set(), FVH);
             assert_eq!(of_the_set(&pool_ids(json!({}))), vec![FVH_CARD.to_string()]);
-            assert!(deckable(&registered_catalog()[FVH_CARD]));
         }
-        assert!(!set_is_open(FVH));
-        assert_eq!(of_the_set(&pool_ids(json!({}))), Vec::<String>::new());
-    }
-
-    #[test]
-    fn r5235000_a_preview_of_another_set_leaves_it_closed() {
-        register();
-        let _preview = preview_sets(&[SetName::Boss]);
-        assert!(!set_is_open(FVH));
-        assert_eq!(of_the_set(&pool_ids(json!({}))), Vec::<String>::new());
+        assert!(set_is_open(FVH));
+        assert_eq!(of_the_set(&pool_ids(json!({}))), vec![FVH_CARD.to_string()]);
     }
 
     #[test]

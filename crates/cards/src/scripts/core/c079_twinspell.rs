@@ -38,7 +38,9 @@ fn next_spell_echoes(ctx: &EffectContext<'_>) -> Effect {
 /// the base face's Durability 1 is that move: its list makes it the moment the use spends the last of
 /// it, as the words "Then this goes to the graveyard" always did, and a card printing no Durability (an
 /// older catalog's, R767000) makes it after every use. A Buff's Durability 2 keeps it for a second use.
-fn twinspell(stays: bool) -> Script {
+/// `reads_durability` off is the script before R5236006, which made the move after every use; `KEPT_SCRIPTS`
+/// folds the replays of the versions before the release (#5222) under it (`history.rs`).
+pub(crate) fn twinspell(stays: bool, reads_durability: bool) -> Script {
     let echo = ActivationDecl {
         id: "echo".to_string(),
         label: "The next Spell you play this turn gains Echo".to_string(),
@@ -51,7 +53,7 @@ fn twinspell(stays: bool) -> Script {
         run: hook(move |ctx| {
             let mut effects = vec![next_spell_echoes(ctx)];
             let left = ctx.live_self().and_then(|card| durability_left(&*ctx.state, card));
-            if !stays && left.is_none_or(|left| left <= DURABILITY_SPENT_OUT) {
+            if !stays && (!reads_durability || left.is_none_or(|left| left <= DURABILITY_SPENT_OUT)) {
                 effects.push(send_to_graveyard(json_as(json!({ "target": { "of": "self" } }))));
             }
             effects
@@ -65,10 +67,11 @@ fn twinspell(stays: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: twinspell(false),
-        radiant: twinspell(true),
+        base: twinspell(false, true),
+        radiant: twinspell(true, true),
     }
 }
+
 
 /// R767000, R30, R209: through v0.5.11r Twinspell was a lasting grant. The engine reads the amount off
 /// the face the card wears when a Spell takes it, as its declared `echoGain` (R386), and buries the

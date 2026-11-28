@@ -133,17 +133,16 @@ mod tests {
         crate::query::query(&books()).into_iter().map(|def| def.id.clone()).collect()
     }
 
+    /// The set ships since wave 1's release (#5222, R5222000), so its own Books are among the shipped ones.
     #[test]
     fn r5253003_its_books_are_every_shipped_sets_and_the_sets_own_once_it_ships() {
         crate::register_all();
+        assert!(set_ships(SetName::FelinorsVsHumans));
         let own: Vec<String> = (23..=29).map(|n| format!("felinorsvshumans-0{n}")).collect();
-        let held = pool();
-        assert!(held.len() > 5, "{held:?}");
-        assert!(held.iter().all(|def_id| is_book(def_id)), "{held:?}");
-        assert!(!held.iter().any(|def_id| own.contains(def_id)), "{held:?}");
-        assert!(!crate::card_def(ID).tags.contains(&Tag::Book));
-        let _preview = preview_sets(&[SetName::FelinorsVsHumans]);
         let shipped = pool();
+        assert!(shipped.len() > own.len(), "{shipped:?}");
+        assert!(shipped.iter().all(|def_id| is_book(def_id)), "{shipped:?}");
+        assert!(!crate::card_def(ID).tags.contains(&Tag::Book));
         assert!(!shipped.contains(&ID.to_string()));
         for def_id in nonempty(own, "the set's Books") {
             assert!(shipped.contains(&def_id), "{def_id}");
@@ -153,7 +152,6 @@ mod tests {
     #[test]
     fn r5253003_once_the_set_ships_its_books_cast_whole() {
         crate::register_all();
-        let _preview = preview_sets(&[SetName::FelinorsVsHumans]);
         let mut own: Vec<String> = Vec::new();
         for seed in seeds() {
             let mut s = holding(false, &seed);

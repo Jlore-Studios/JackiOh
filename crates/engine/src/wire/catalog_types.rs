@@ -368,8 +368,8 @@ macro_rules! set_table {
             /// Training Grounds (issue #2193, R2194000; released by #2204) and Stinkyscape+ (issue #3535,
             /// R3535000; released by #3573) ship; Boss and Boss-X are reserved; the Infinite Assault
             /// (tracker #4576, R4577000) is a single-player set, held while it was built and open since
-            /// its release (#4597); Felinors vs Humans (tracker #5220, R5235000) is held while it is
-            /// built.
+            /// its release (#4597); Felinors vs Humans (tracker #5220, R5235000; released by #5222,
+            /// R5222000) ships.
             pub enum SetName { $( $variant = $name ),+ }
         }
 
@@ -437,8 +437,8 @@ const HELD_SINGLE_PLAYER_STAGES: &[SetStage] = &[SetStage::HeldSinglePlayer];
 /// Meditative+ follows Meditative (issue #1173, R1178000), and the Stinkyscape set follows
 /// Meditative+ (issue #1857, R1857000; shipped by issue #1884), and the Training Grounds set
 /// follows Stinkyscape (issue #2194, R2194000; shipped by issue #2204), and the Stinkyscape+
-/// set follows Training Grounds (issue #3535, R3535000), and the held Felinors vs Humans set
-/// follows Stinkyscape+ (issue #5235, R5235000). The set table's
+/// set follows Training Grounds (issue #3535, R3535000), and the Felinors vs Humans set follows
+/// Stinkyscape+ (issue #5235, R5235000; shipped by issue #5222, R5222000). The set table's
 /// `Shipped` and `Held` rows, in its order (R3114000).
 pub const CATALOG_SETS: [SetName; count_in(CATALOG_STAGES)] = sets_in(CATALOG_STAGES);
 
@@ -509,7 +509,7 @@ set_table![
     BossX = "Boss-X" { stage: SinglePlayer, segment: "bossx", abbreviation: None, shadow_ban_share: None },
     StinkyscapePlus = "Stinkyscape+" { stage: Shipped, segment: "stinkyscapeplus", abbreviation: Some("S+"), shadow_ban_share: Some((1, 5)) },
     InfiniteAssault = "Infinite Assault" { stage: SinglePlayer, segment: "infiniteassault", abbreviation: Some("IA"), shadow_ban_share: None },
-    FelinorsVsHumans = "Felinors vs Humans" { stage: Held, segment: "felinorsvshumans", abbreviation: Some("FvH"), shadow_ban_share: Some((1, 5)) },
+    FelinorsVsHumans = "Felinors vs Humans" { stage: Shipped, segment: "felinorsvshumans", abbreviation: Some("FvH"), shadow_ban_share: Some((1, 5)) },
 ];
 
 /// R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): the newest

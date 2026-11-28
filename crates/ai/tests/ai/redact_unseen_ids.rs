@@ -23,8 +23,9 @@ const SEED: &str = "audit-fuzz:smoothie:9";
 /// The seat that decides: the Smoothie is the other seat's.
 const SEAT: PlayerId = PlayerId::P2;
 
-/// A deck of `handicap`'s size dealt from every card (no shadow ban, no gated set), as a player's
-/// random deck is.
+/// A deck of `handicap`'s size dealt from every card (no shadow ban), as a player's random deck is, but
+/// for the Felinors vs Humans set: the scene was dealt before its release (#5222, R5222000), and a gate
+/// deals what the draw dealt before it (R1390).
 fn deck(seed: &str, seat: PlayerId, handicap: &Handicap, lean: Option<SetName>) -> Vec<String> {
     build_ai_deck(
         &mut Rng::new(&format!("{seed}:deck:{}", seat.as_str()), 0),
@@ -32,7 +33,7 @@ fn deck(seed: &str, seat: PlayerId, handicap: &Handicap, lean: Option<SetName>) 
         &AiDeckOptions {
             mana_cap: Some(handicap.mana_cap),
             banned: Some(Vec::new()),
-            gated_sets: Some(Vec::new()),
+            gated_sets: Some(vec![SetName::FelinorsVsHumans]),
             lean_set: lean,
             ..AiDeckOptions::default()
         },
