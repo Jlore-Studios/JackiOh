@@ -244,6 +244,22 @@ export const MODE_TEXT: Readonly<Record<string, Readonly<Record<string, ModeText
     friendly: { label: "Chain friendly Units", detail: "When one takes damage, it is split between all allies, rounded down." },
   },
   // S+ #132 Great Paperclip Theory II.
+  // FvH #41 Icecream Vender's Activate.
+  "felinorsvshumans-041": {
+    "Vanilla a Unit": { label: "Vanilla", detail: "Vanilla a Unit: it loses its text." },
+    "Freeze a Unit": { label: "Freeze", detail: "Freeze a Unit." },
+  },
+  // FvH #60 Toolmaster Luna's Cry: the Field Spell it summons.
+  "felinorsvshumans-060": {
+    "Summon the Tools of Creation": {
+      label: "Tools of Creation",
+      detail: "Summon the Tools of Creation: after you play the rightmost card in your hand, draw cards.",
+    },
+    "Summon the Tools of Cremation": {
+      label: "Tools of Cremation",
+      detail: "Summon the Tools of Cremation: after you play the leftmost card in your hand, give random cards in your graveyard Flashback.",
+    },
+  },
   "stinkyscapeplus-132": {
     α: { label: "α", detail: "Add a Dagger to your hand. The first time you play each Automa-α cost card, add the next cost one to your hand." },
     β: { label: "β", detail: "Add a Flare to your hand. The first time you play each Automa-β cost card, add the next cost one to your hand." },

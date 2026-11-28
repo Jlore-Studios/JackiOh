@@ -3166,8 +3166,9 @@ describe("R265 the practice mulligan: the human and the AI answer in either orde
       );
 
     // Human first leaves no pending AI step after both mulligans. (Issue #3996's costs re-dealt `r658-reload`'s
-    // random decks into a game whose AI moves before the snapshot, so the seed moved on.)
-    visit("?seed=r658-reload-2&difficulty=medium&deck=random&seat=p1");
+    // random decks into a game whose AI moves before the snapshot, so the seed moved on, and again when the
+    // Felinors vs Humans release, #5222, re-dealt `r658-reload-2`'s.)
+    visit("?seed=r658-reload-4&difficulty=medium&deck=random&seat=p1");
     route();
     await mulliganPicker();
     fireEvent.click(screen.getByTestId("prompt-submit"));

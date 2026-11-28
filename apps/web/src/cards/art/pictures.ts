@@ -40,6 +40,8 @@ export const SHOWCASE_FAMILIES: Readonly<Record<string, ShowcaseFamily>> = {
   Stinkyscape: "stinkyscape",
   "Training Grounds": "training-grounds",
   "Stinkyscape+": "stinkyscape",
+  // Since its release (#5222): Core's two tribes at war, drawn in Core's look.
+  "Felinors vs Humans": "core",
 };
 
 /** R2943001: the Set showcase look of a card of `set`, or null for a set with none (no set, a boss's). */

@@ -170,6 +170,8 @@ describe("#1307 setCompletions", () => {
       [0, 0],
       // So does Stinkyscape+ (#3573).
       [0, 0],
+      // And Felinors vs Humans (#5222).
+      [0, 0],
     ]);
     expect(sets[0]?.cards.map((card) => [card.def.id, card.owned])).toEqual([
       ["core-001", true],

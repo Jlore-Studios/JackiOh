@@ -28,12 +28,17 @@ function ringed(frame: GifFrame): boolean {
   return frame.items.some((item) => item.kind === "rect" && item.fill === null && item.stroke !== null && item.line > 1 && item.w > 0 && item.stroke === "#ffd24a");
 }
 
-/** The first turn of at least three steps whose plan rings something: the clip these tests use. */
+/**
+ * The first turn of at least three steps whose plan rings something and draws a card: the clip these tests use.
+ * The folded game is a seed search's (`foldedReplaySteps`), so which turn that is moves with the pools (#5222).
+ */
 function clipWithEntries(): ReplayStep[] {
   const turns = [...new Set(steps.map((step) => step.turn))];
   for (const turn of turns) {
     const clip = steps.filter((step) => step.turn === turn);
-    if (clip.length >= 3 && planFrames(clip, OPTS).frames.some(ringed)) return clip;
+    if (clip.length < 3) continue;
+    const frames = planFrames(clip, OPTS).frames;
+    if (frames.some(ringed) && frames.some((frame) => frame.items.some((item) => item.kind === "card"))) return clip;
   }
   throw new Error("no turn of the folded game has an animation entry to ring");
 }

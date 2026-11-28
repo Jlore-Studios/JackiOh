@@ -12,7 +12,8 @@
 // #4353's costs and keyword rules (Legacy: Speciesist (3) 7/1 in the AI's deck), on which Call to Chaos
 // went unplayed there, "-22" was; since #4783's balance (Stinkyscape+ Balance Changes VIII), whose cards
 // move what Goetzmann Game Design's random effects find and on which Call to Chaos went unplayed there,
-// "-37" is, every Legendary and Mythic played.
+// "-37" was; since the Felinors vs Humans release (#5222), whose cards join those random effects' pools and
+// on which Call to Chaos went unplayed there, "-38" is, every Legendary and Mythic played.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -22,7 +23,7 @@ export const lesson: TutorialLesson = {
   title: "The final exam",
   summary: "Legendary and Mythic cards, random effects, Quickdraw and copies: everything at once.",
   discoveries: ["quickdraw", "legendary", "random", "copying"],
-  seed: "tg-finale-37",
+  seed: "tg-finale-38",
   humanSeat: "p1",
   poolHold: false,
   humanDeck: [

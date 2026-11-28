@@ -100,6 +100,16 @@
   --pack-crimp-b: var(--pal-brass-950);
 }
 
+/* Felinors vs Humans (#5222): its mark's two halves, a Felinor's ember orange against a Human's blue, gold
+   lightning between them. */
+.pack-object[data-pack="Felinors vs Humans"] {
+  --pack-foil-a: var(--pal-blue-600);
+  --pack-foil-b: var(--pal-blue-800);
+  --pack-accent: var(--pal-gold-300);
+  --pack-crimp-a: var(--pal-ember-500);
+  --pack-crimp-b: var(--pal-copper-400);
+}
+
 .pack-object[data-pack="global"] {
   --pack-foil-a: #5b3fa0;
   --pack-foil-b: var(--pal-slate-900);

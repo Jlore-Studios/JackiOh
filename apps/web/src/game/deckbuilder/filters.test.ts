@@ -793,6 +793,8 @@ describe("the Jlockeed tag (R278)", () => {
     const trainingGrounds = setShips("Training Grounds") ? ["traininggrounds-045", "traininggrounds-048"] : [];
     // Re-pinned for the Stinkyscape+ release (#3573): its #21 and #26 (T-AI-3 and T-AI-4 are tokens).
     const stinkyscapePlus = setShips("Stinkyscape+") ? ["stinkyscapeplus-021", "stinkyscapeplus-026"] : [];
+    // Re-pinned for the Felinors vs Humans release (#5222): its #17 and #80.
+    const felinorsVsHumans = setShips("Felinors vs Humans") ? ["felinorsvshumans-017", "felinorsvshumans-080"] : [];
     expect([...kept].sort()).toEqual([
       "classic-004",
       "classicplus-048",
@@ -800,6 +802,7 @@ describe("the Jlockeed tag (R278)", () => {
       "classicplus-052",
       "core-013",
       "core-014",
+      ...felinorsVsHumans,
       ...meditative,
       ...meditativePlus,
       ...stinkyscape,

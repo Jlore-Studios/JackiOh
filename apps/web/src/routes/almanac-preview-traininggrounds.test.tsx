@@ -101,7 +101,7 @@ describe("the Almanac with the Training Grounds set previewed (R2202001)", () =>
 
     render(<FilterBar filter={DEFAULT_FILTER} onFilter={() => {}} sort={DEFAULT_SORT} onSort={() => {}} count={pool.length} />);
     expect(chips("Set")).toEqual([...FILTER_SETS]);
-    // The newer set's chip follows it since Stinkyscape+ shipped (#3573).
-    expect(chips("Set").indexOf("Training Grounds")).toBe(chips("Set").length - 2);
+    // The newer sets' chips follow it since Stinkyscape+ (#3573) and Felinors vs Humans (#5222) shipped.
+    expect(chips("Set").indexOf("Training Grounds")).toBe(chips("Set").length - 3);
   });
 });
