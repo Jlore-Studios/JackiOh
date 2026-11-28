@@ -21967,9 +21967,11 @@
     "what": "suggestions (client) on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-28T08:34:38Z",
+    "at": "2026-11-28T08:41:25Z",
     "notes": [
-      "delivered review #5280 on claude-6 (run 46124740816): approved"
+      "delivered suggest on claude-1 (run 46125512918): interrupted",
+      "started suggest on claude-6 (run 46127077939)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22675,7 +22677,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T08:34:38Z",
+  "loop_tick": "2026-11-28T08:41:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
