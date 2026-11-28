@@ -4371,3 +4371,8 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-28T08:48:46Z,46122096099,claude-8,sonnet+opus,build,5284,medium,built,,17.2,40,10188,1247682,0.4361,67,70,,,8.6,claude-8,fresh,,1
 2026-11-28T08:53:53Z,46127077939,claude-6,opus,suggest,,,interrupted,5-hour cap,7.3,0,0,0,,7,50,,,,,none,,1
 2026-11-28T09:02:20Z,46126371126,claude-4,opus,plan,5289,hard,planned,,24.5,244,150465,21993806,9.7895,5,24,,,1.1,,fresh,,1
+2026-11-28T09:32:25Z,46130425778,claude-6,opus,suggest,,,interrupted,5-hour cap,3,0,0,0,,51,71,,,,,none,,1
+2026-11-28T09:32:25Z,46130387758,claude-6,opus,suggest,,,interrupted,5-hour cap,3.3,0,0,0,,51,70,,,,,none,,1
+2026-11-28T09:37:23Z,46130348177,claude-4,opus,suggest,,,interrupted,5-hour cap,9,4,14,94676,11.8047,40,70,,,,,none,,1
+2026-11-28T09:37:39Z,46129295945,claude-4,opus,build,5289,hard,interrupted,5-hour cap,21.8,0,0,0,,25,70,,,38.2,claude-4,fresh,,1
+2026-11-28T09:59:00Z,46127754826,claude-8,sonnet+opus,review,5292,medium,interrupted,5-hour cap,15.8,43,12211,1535701,1.1668,72,85,,,0.7,,fresh,,3
