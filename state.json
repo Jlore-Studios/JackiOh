@@ -20819,19 +20819,12 @@
         "reason": "`claude-6` stops mid-call: 5-hour usage is 50%, at or over its 50% cap outside its hours; it resets at 2026-11-28T02:30:00Z",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -50; cat spec/rulings/R0501.md; cat spec/pending/5188.md; git show cefa23e20e --stat | head; git show cefa23e20e -- spec/rulings/R0501.md\", \"descript\u2026\n- said: The finding holds: R501's title and last paragraph stop at 24 MiB, and each earlier raise updated both.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R0501.md'\\ns=open(p).read()\\na='24 MiB since R3596000)'\\nb='[[R1884000]] raises it to 16 MiB for the Stinkyscape set\\\\'s lines, and [[R3596000]] to 24 \u2026\n- said: `spec/INDEX.md` is written on `main` by the daily fold, so I'm leaving it alone. Now I'll run spec check to confirm the edited title passes.\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -5\", \"description\": \"Run the spec check on rulings\", \"timeout\": 900000}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"## State\\\\n\\\",\\\"## State\\\\n\\\\n- Pass 2 (fix, opus), 2026-11-28: the reviewer's one finding held (R501's title and la\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: card sound hooks for triggered effects (turn, Whenever, Activate, hurt, hit), line pools, effect sequences and a 32 MiB voice budget\"} --> Closes #5188 Part 1 of #5187. Cards can now carry sounds for six new hooks (`startOfTurn`, `endOfTurn`, `whenever`\u2026"
       },
-      "hold": {
-        "ends": "2026-11-28T03:17:03Z",
-        "lifted": "2026-11-28T01:31:40Z",
-        "owner": "claude-6",
-        "since": "2026-11-28T01:17:03Z",
-        "until": "2026-11-28T01:30:00Z",
-        "why": "5-hour usage is 50%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)"
-      },
       "issue": 5188,
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-27T23:57:08Z",
+        "claimed": true,
+        "claimed_at": "2026-11-28T01:32:17Z",
         "from_run": "46073140574",
         "gates": [
           {
@@ -20927,7 +20920,7 @@
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-27T23:56:25Z",
-      "run_id": "46085270071",
+      "run_id": "pending:85aef3c8-1795829519",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -20947,7 +20940,7 @@
         "provider": "claude-6",
         "run": "46085270071"
       },
-      "started_at": "2026-11-27T23:57:08Z",
+      "started_at": "2026-11-28T01:32:17Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -21280,9 +21273,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T01:25:12Z",
+    "at": "2026-11-28T01:32:17Z",
     "url": "",
-    "what": "build #5228 on claude-3"
+    "what": "review #5218 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-28T01:23:34Z",
