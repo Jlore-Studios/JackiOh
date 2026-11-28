@@ -20964,15 +20964,8 @@
       "waiting_comment": 7231555988
     },
     "5226": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46090415158",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-28T01:14:53Z",
-        "until": "2026-11-28T01:44:53Z"
-      },
       "difficulty_by": {
         "at": "2026-11-28T01:14:44Z",
         "difficulty": "hard",
@@ -20991,10 +20984,9 @@
         "reason": "planned on opus",
         "trail": "s | grep -n 'tun' | head\", \"description\": \"Confirm layers read tuning a\u2026\n- Bash: {\"command\": \"sed -n 20p spec/06-keywords/6.1-unit-keywords.md | cut -c1-2500; echo; grep -n 'Flashback' spec/06-keywords/6.1-unit-keywords.md | cut -c1-300 | head -5\", \"description\": \"Read \\u00a76.1 \u2026\n- Bash: {\"command\": \"sed -n 129p spec/06-keywords/6.3-actions-and-verbs.md | cut -c1-1500; echo; grep -n '^| 37 ' spec/08-catalog/8.6-classic.md | cut -c1-2500\", \"description\": \"Read \\u00a76.3 Keyword for go\u2026\n- Bash: {\"command\": \"grep -rn 'never stopped a grant\\\\|Immutable never stop\\\\|grant Immutable never' --include=*.rs --include=*.md --include=*.ts . 2>/dev/null | grep -v node_modules | grep -v '^./spec/histo\u2026\n- Bash: {\"command\": \"grep -rl 'classic-037' --include=*.json --include=*.jsonl . 2>/dev/null | grep -v node_modules | grep -v 'catalog.json\\\\|patches/' | head\", \"description\": \"Find recorded games holding La\u2026\n- Bash: {\"command\": \"grep -rn 'perf-corpus' crates/tools/src crates/tools/tests scripts 2>/dev/null | head -5; grep -rln 'golden' crates/engine/tests/*.rs crates/tools/tests/*.rs 2>/dev/null | head\", \"descri\u2026\n- Bash: {\"command\": \"grep -n 'golden' crates/tools/README.md | cut -c1-400 | head -8; ls crates/tools/perf-corpus/ | head; sed -n 1,30p crates/tools/perf-corpus/README.md 2>/dev/null | cut -c1-400\", \"descrip\u2026\n- Bash: {\"command\": \"grep -n 'fn readable\\\\|PLAYER_LINE\\\\|const .*LINE.*: usize\\\\|fn player_line' crates/tools/src/patches.rs | head -10\", \"description\": \"Find player-note readability rules\"}\n- Bash: {\"command\": \"sed -n 725,800p crates/tools/src/patches.rs\", \"description\": \"Read the player note checks\"}\n- Bash: {\"command\": \"grep -n 'head' crates/tools/src/classify.rs | grep -in 'default\\\\|working\\\\|worktree\\\\|None =>' | head -10\", \"description\": \"Check classify head default (working tree vs HEAD)\"}\n- Bash: {\"command\": \"grep -n '\\\"--head\\\"\\\\|head:\\\\|fn run_classify\\\\|pub fn classify' crates/tools/src/classify.rs crates/tools/src/main.rs 2>/dev/null | head -10; grep -n 'working tree\\\\|uncommitted\\\\|workt\u2026\n- Bash: {\"command\": \"sed -n 130,150p crates/tools/src/classify.rs; sed -n 1406,1460p crates/tools/src/classify.rs\", \"description\": \"Read classify args and load\"}\n- Bash: {\"command\": \"git show --stat --format='%h %s' 868487421c9ce33fbad54bf0663fd3bc18516307 | head -60\", \"description\": \"List files #5113's commit changed\"}\n- Bash: {\"command\": \"grep -n -i '\\\"immutable\\\"' -A 3 crates/shared/data/glossary.json | head -10\", \"description\": \"Read the Immutable glossary entry\"}\n- Bash: {\"command\": \"grep -rn 'gainKeywordForGood\\\\|gain_keyword_for_good' --include=*.md --include=*.ts . 2>/dev/null | grep -v node_modules | grep -v '^./spec/history\\\\|^./.bot' | cut -c1-200 | head\", \"des\u2026\n- Bash: {\"command\": \"grep -rln 'GainKeywordForGoodArgs' apps/web/src 2>/dev/null | head -3\", \"description\": \"Check if the args type is exported to the web\"}\n- Bash: {\"command\": \"grep -rn '\\\"fx-1\\\"' crates/engine/tests/rules/fixtures/harness.rs crates/engine/src/testkit/*.rs 2>/dev/null | head -5\", \"description\": \"Find the fx-1 fixture definition\"}\n- Bash: {\"command\": \"grep -rn 'fx-1' crates/engine/tests/rules/fixtures/*.rs crates/engine/src/testkit/ 2>/dev/null | grep -v 'put(\\\\|one(' | head -5\", \"description\": \"Find where fx-1 def is created\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5226/.bot-plan.md\", \"content\": \"# Draft plan #5226 (opus planner, run 2)\\n\\nStatus: verified the sonnet plan against the code; writing the final.\\n\\nF\u2026\n- Bash: {\"command\": \"grep -n 'pub fn find_instance(' -A 25 crates/engine/src/state.rs | head -35\", \"description\": \"Check find_instance searches every zone\"}\n- Bash: {\"command\": \"grep -rn 'pub fn find_instance\\\\b\\\\|pub fn find_instance<\\\\|pub fn find_instance(' crates/engine/src | head; \", \"description\": \"Locate find_instance\"}\n- Bash: {\"command\": \"sed -n 3480,3520p crates/engine/src/state.rs\", \"description\": \"Read find_instance body\"}\n- Bash: {\"command\": \"cat rustfmt.toml .rustfmt.toml 2>/dev/null; ls crates/cards/rustfmt.toml crates/engine/rustfmt.toml 2>/dev/null\", \"description\": \"Check rustfmt configuration\"}\n- tool error: Exit code 2 max_width = 110 edition = \"2024\"\n- Bash: {\"command\": \"sed -n 59p spec/06-keywords/6.1-unit-keywords.md\", \"description\": \"Read \\u00a76.1 Flashback row fully\"}\n- Bash: {\"command\": \"grep -n '^#\\\\+ ' docs/ADDING_CARDS.md | head -40\", \"description\": \"Outline docs/ADDING_CARDS.md\"}\n- Bash: {\"command\": \"sed -n 193,250p docs/ADDING_CARDS.md\", \"description\": \"Read ADDING_CARDS patch section\"}\n- Bash: {\"command\": \"sed -n 1556,1620p crates/engine/src/zones.rs | grep -n 'tuning\\\\|reset\\\\|granted' \", \"description\": \"Check move_to_zone resets on graveyard\"}\n- Bash: {\"command\": \"grep -n 'pub fn reset_instance' -A 30 crates/engine/src/zones.rs | grep -n 'tuning\\\\|granted' | head\", \"description\": \"Check reset_instance keeps tuning\"}\n- Bash: {\"command\": \"grep -rn 'classic-037\\\\|last_hurrah\\\\|LAST_HURRAH' crates/ai crates/engine/src crates/shared crates/run 2>/dev/null | head; grep -rn 'Keyword::Lucky\\\\b\\\\|Lucky {' crates/engine/src/wire/\u2026\n- Bash: {\"command\": \"head -1 spec/08-catalog/8.6-classic.md; head -1 spec/06-keywords/6.3-actions-and-verbs.md; head -1 spec/06-keywords/6.1-unit-keywords.md; grep -c '\\\\[\\\\[\\u00a78.6\\\\]\\\\]' -r spec/rulings \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5226/.bot-plan.md\", \"content\": \"# Draft plan #5226 (opus planner, run 2): final written below in the run's answer\\n\\nVerified the sonnet plan against \u2026\n- Bash: {\"command\": \"sed -n 112,135p crates/engine/tests/rules/fixtures/harness.rs; sed -n 306,335p crates/engine/tests/rules/fixtures/harness.rs\", \"description\": \"Read set_library and run_with_targets bodie\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 1, engine rules: it changes how `gain_keyword_for_good` in crates/engine/src/effects/tune.rs resolves against Immutable\"} --> ## Goal Immutable keeps a keyword that another card gives for good off a card, as R5113000 already does for every other keyword\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-28T00:34:18Z",
       "owner_why": "it plans it",
@@ -21007,9 +20999,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-28T00:33:26Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46090415158",
+      "run_id": "pending:35f0a7db-1795828607",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T00:54:49Z",
+      "started_at": "2026-11-28T01:17:15Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -21306,9 +21298,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T01:07:52Z",
+    "at": "2026-11-28T01:17:15Z",
     "url": "",
-    "what": "plan #5229 on claude-4"
+    "what": "build #5226 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-28T01:02:37Z",
