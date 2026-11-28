@@ -43,8 +43,49 @@ pub fn is_spell_source(state: &GameState, source: Option<&CardInstance>) -> bool
 }
 
 /// E35: "a Spell can't target it and doesn't affect it", for an immune `card` and a Spell `source`.
+/// R5237010: and "Immune to <tag>" the same, for a `source` carrying the tag (`tag_cannot_reach`).
 pub fn spell_cannot_reach(state: &GameState, source: Option<&CardInstance>, card: &CardInstance) -> bool {
-    is_spell_source(state, source) && immune_to_spells(state, card)
+    (is_spell_source(state, source) && immune_to_spells(state, card)) || tag_cannot_reach(state, source, card)
+}
+
+/// R5237010 (FvH #100.1 "Immune to Humans", #100.2 "Immune to Felinors"): whether `source` may neither
+/// target, affect nor damage `card` because `card`, acting on the field, is immune to a tag `source`
+/// carries (`StaticFlags.immune_to_tag`, read through `query::tags_of`, granted tags included). A card's
+/// own effects still reach it, and no source (a Burn tick, fatigue) is no tag. Asked where Immune to
+/// Spells is (`spell_cannot_reach`, `unaffected_by`, `spell_damage_cannot_reach`), so it bars a pick,
+/// an effect's reach and a hit, combat's included; it bars no attack declaration.
+pub fn tag_cannot_reach(state: &GameState, source: Option<&CardInstance>, card: &CardInstance) -> bool {
+    let Some(source) = source else {
+        return false;
+    };
+    if source.id == card.id || !matches!(card.zone, Zone::Field { .. }) {
+        return false;
+    }
+    let Some(tag) = crate::scripts::flags_of(state, card).immune_to_tag else {
+        return false;
+    };
+    crate::query::tags_of(state, source).contains(&tag)
+}
+
+/// R5237010: `tag_cannot_reach` for a running effect list: its card as it stands, else (a continuation
+/// re-entered once the card has gone, R127) the printed tags of the definition it runs.
+fn tag_keeps_effect_off(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
+    // The card's own flag first: most cards hold none, and the walks ask this of every card they meet.
+    if !matches!(card.zone, Zone::Field { .. })
+        || crate::scripts::flags_of(ctx.sink.state, card).immune_to_tag.is_none()
+    {
+        return false;
+    }
+    if let Some(source) = ctx.live_self() {
+        return tag_cannot_reach(ctx.sink.state, Some(source), card);
+    }
+    let Some(def_id) = ctx.def_id.as_deref().filter(|def_id| !def_id.is_empty()) else {
+        return false;
+    };
+    let Some(tag) = crate::scripts::flags_of(ctx.sink.state, card).immune_to_tag else {
+        return false;
+    };
+    crate::catalog::find_def(Some(&*ctx.sink.state), def_id).is_some_and(|def| def.tags.contains(&tag))
 }
 
 /// E35: whether the effect list running in `ctx` is a Spell's. Its card says so while it is there; a
@@ -67,6 +108,10 @@ pub fn effect_is_from_spell(ctx: &EffectContext<'_>) -> bool {
 /// its source, passes a Dormant card by; only `effects::awaken` names it.
 pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     if crate::slumber::is_slumbering(card) {
+        return true;
+    }
+    // R5237010: an effect whose card carries a tag the card is immune to passes it by too.
+    if tag_keeps_effect_off(ctx, card) {
         return true;
     }
     matches!(card.zone, Zone::Field { .. })
@@ -132,12 +177,17 @@ pub fn immune_to_tribal_hate(state: &GameState, card: &CardInstance) -> bool {
 /// MD-B1, R940: whether a harmful effect naming a tribal tag (`TRIBAL_TAGS`) in its card
 /// filter's `tags` or `not_tags` can neither pick nor reach `card`, when it holds the immunity.
 /// Scopes without a tribal tag and helpful effects (the caller passes the aim) still reach it.
+/// R5237009: and whether one whose `tags` name a tag the card's harm passes by
+/// (`StaticFlags.harm_ignores_tags`, FvH #88 Cattail's Felinor) can, in any zone.
 pub fn tribal_hate_cannot_reach(
     state: &GameState,
     card: &CardInstance,
     tags: Option<&[crate::wire::Tag]>,
     not_tags: Option<&[crate::wire::Tag]>,
 ) -> bool {
+    if harm_ignores_tag_in(state, card, tags) {
+        return true;
+    }
     if !immune_to_tribal_hate(state, card) {
         return false;
     }
@@ -145,6 +195,16 @@ pub fn tribal_hate_cannot_reach(
         list.is_some_and(|list| list.iter().any(|tag| crate::config::TRIBAL_TAGS.contains(tag)))
     };
     names_tribal(tags) || names_tribal(not_tags)
+}
+
+/// R5237009: whether a harmful filter's `tags` name one the card's harm passes by.
+fn harm_ignores_tag_in(state: &GameState, card: &CardInstance, tags: Option<&[crate::wire::Tag]>) -> bool {
+    let Some(named) = tags.filter(|named| !named.is_empty()) else {
+        return false;
+    };
+    crate::scripts::flags_of(state, card)
+        .harm_ignores_tags
+        .is_some_and(|ignored| named.iter().any(|tag| ignored.contains(tag)))
 }
 
 /// Whether any card acting on either side (§3.2; a face-down card's text asleep, R1487000, a Dormant
@@ -165,9 +225,11 @@ pub fn spell_damage_cannot_reach(
     source: Option<&CardInstance>,
     unit: &CardInstance,
 ) -> bool {
-    matches!(unit.zone, Zone::Field { .. })
+    (matches!(unit.zone, Zone::Field { .. })
         && is_spell_source(state, source)
-        && crate::scripts::flags_of(state, unit).immune_to_spell_damage == Some(true)
+        && crate::scripts::flags_of(state, unit).immune_to_spell_damage == Some(true))
+        // R5237010: no hit from a card carrying a tag the Unit is immune to is a damage instance.
+        || tag_cannot_reach(state, source, unit)
 }
 
 /// R1849005: whether a Gauntlet acts on the field now (Stinkyscape #157).

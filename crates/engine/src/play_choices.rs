@@ -567,6 +567,7 @@ pub fn legal_equip_zones_for(
         .map(|slot| ZoneChoice {
             row: slot.row,
             lane: slot.lane,
+            player: None,
         })
         .collect()
 }
@@ -598,6 +599,7 @@ pub fn legal_zones_for(
             .map(|slot| ZoneChoice {
                 row: slot.row,
                 lane: slot.lane,
+                player: None,
             })
             .collect();
     }
@@ -636,6 +638,7 @@ pub fn legal_zones_for(
         .map(|slot| ZoneChoice {
             row: slot.row,
             lane: slot.lane,
+            player: None,
         })
         .collect()
 }
@@ -2300,6 +2303,7 @@ fn why_unplayable(
             .map(|slot| ZoneChoice {
                 row: slot.row,
                 lane: slot.lane,
+                player: None,
             })
         } else {
             None

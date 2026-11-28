@@ -3740,10 +3740,12 @@ pub fn unlisted_accepted(state: &GameState, player: PlayerId, legal: &[ActionBod
                 .map(|lane| ZoneChoice {
                     row: Row::Units,
                     lane,
+                    player: None,
                 })
                 .chain((1..=BACKROW_ZONES).map(|lane| ZoneChoice {
                     row: Row::Backrow,
                     lane,
+                    player: None,
                 }));
             for lane in lanes {
                 if zones.contains(&lane) {
@@ -4009,6 +4011,7 @@ pub fn malformed_actions(
                 zone: Some(ZoneChoice {
                     row: play.zone.map_or(Row::Units, |zone| zone.row),
                     lane: UNOFFERED_LANE,
+                    player: None,
                 }),
                 ..play.clone()
             },

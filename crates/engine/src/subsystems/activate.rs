@@ -372,8 +372,8 @@ pub fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
 
 // Durability (R5236000 to R5236006)
 
-/// R5236000, R5236005: the card's Durability X: the sum of its Durability entries (a fused card's are
-/// one counter), printed as tuning leaves them or granted (`layers::card_keywords`), never lent by an
+/// R5236000, R5236005: the card's Durability X, one counter (a fused card's first Durability entry, as
+/// `layers::card_keywords` keeps one of a kind), printed as tuning leaves it or granted, never lent by an
 /// aura; `None` without the keyword.
 fn durability_of(state: &GameState, card: &CardInstance) -> Option<i32> {
     crate::tuning::numbered_sum(&crate::layers::card_keywords(state, card), KeywordKind::Durability)

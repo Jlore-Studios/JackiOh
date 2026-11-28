@@ -20,6 +20,11 @@ use crate::wire::string_union;
 pub struct ZoneChoice {
     pub row: Row,
     pub lane: i32,
+    /// R5238002: whose side the zone is on; absent is the playing player's own. Another side is accepted
+    /// only for a card that plays on either side (`StaticFlags.plays_on_either_side`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub player: Option<PlayerId>,
 }
 
 /// One selection inside a play: an instance, a hero, or a zone (R81).
@@ -446,6 +451,7 @@ mod tests {
                 zone: Some(ZoneChoice {
                     row: Row::Units,
                     lane: 2,
+                    player: None,
                 }),
                 x: None,
                 embiggen: None,

@@ -866,6 +866,11 @@ pub fn run_engine_delayed(sink: &mut EngineSink<'_>, effect: &DelayedEffect) -> 
             }
             true
         }
+        // R5238013: an `untilEndOfTurn` hand swap's return.
+        crate::effects::swap::DELAYED_SWAP_BACK_HOOK => {
+            crate::effects::swap::swap_back(&mut ctx, effect);
+            true
+        }
         DELAYED_KILL_DEADLINE_HOOK => {
             if let Some(instance_id) = data.get("instanceId").and_then(Value::as_str) {
                 let target = TargetSpec::Instance {

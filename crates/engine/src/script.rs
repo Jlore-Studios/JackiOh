@@ -510,6 +510,10 @@ pub struct StaticFlags {
     /// face: "Summon this for your opponent").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summon_for_opponent: Option<bool>,
+    /// R5238002: its play may name an open zone of the opponent's side of its row (`ZoneChoice.player`),
+    /// where it lands in the opponent's control, as well as its own side's (FvH #42's "either side").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plays_on_either_side: Option<bool>,
     /// Anti-oneshot Armor: caps each hit on this player's hero at ANTI_ONESHOT_CAP (§4.4 step 3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anti_oneshot: Option<bool>,

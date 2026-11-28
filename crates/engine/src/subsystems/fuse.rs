@@ -1090,6 +1090,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 tribute_enemies: flags(|f| f.tribute_enemies),
                 enemy_tribute_hands_over: flags(|f| f.enemy_tribute_hands_over),
                 summon_for_opponent: flags(|f| f.summon_for_opponent),
+                // R5238002.
+                plays_on_either_side: flags(|f| f.plays_on_either_side),
                 anti_oneshot: flags(|f| f.anti_oneshot),
                 hero_armor: summed_count(defined.iter().map(|f| f.hero_armor)),
                 counts_plays: flags(|f| f.counts_plays),

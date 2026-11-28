@@ -2955,8 +2955,13 @@
     ],
     "loc": 6,
     "base": {
-      "keywords": [],
-      "text": "Activate: The next Spell you play this turn gains Echo +{echoGain}. Then this goes to the graveyard."
+      "keywords": [
+        {
+          "kind": "Durability",
+          "n": 1
+        }
+      ],
+      "text": "Durability 1\nActivate: The next Spell you play this turn gains Echo +{echoGain}."
     },
     "radiant": {
       "keywords": [],

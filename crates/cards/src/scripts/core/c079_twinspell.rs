@@ -1,7 +1,7 @@
-//! #79 Twinspell (SPEC §8.3 row 79; §2.2, §6.2 Echo, §10.5 step 6, R384, R3044000). (1) Field Spell
-//! ((2) until issue #3996), Rare.
-//!   Base:    "Activate: The next Spell you play this turn gains Echo +{echoGain}. Then this goes to the
-//!            graveyard." — 1
+//! #79 Twinspell (SPEC §8.3 row 79; §2.2, §6.2 Echo, §10.5 step 6, R384, R3044000, R5236006). (1) Field
+//! Spell ((2) until issue #3996), Rare.
+//!   Base:    "Durability 1\nActivate: The next Spell you play this turn gains Echo +{echoGain}." — 1 (until
+//!            issue #5236 "Activate: … Then this goes to the graveyard.", which Durability 1 says)
 //!   Radiant: "Activate: The next Spell you play this turn gains Echo +{echoGain}." — 1; it stays on the
 //!            field, so it serves once each turn.
 //!   Through v0.5.11r: a lasting grant with no Activate, "Your next Spell gains Echo +{echoGain}. Then this
@@ -10,7 +10,10 @@
 //!   Engine:  "An Activate, once a turn (R384). Its effect puts a this-turn `echoNextSpell` rider with no
 //!            source on its controller, which grants its own amount to the next Spell they play, a cast
 //!            included (R70), and which this turn's cleanup ends unused (§2.2). The base face then goes to
-//!            the graveyard by a plain move, no death (R3044000). Tunes: Echo gained 1 ↑."
+//!            the graveyard by a plain move, no death (R3044000), once its Durability is spent
+//!            (R5236006): its own list moves it as it always did, so it plays as before under every
+//!            catalog, the older ones that print no Durability included. Tunes: Echo gained 1 ↑,
+//!            Durability 1 ↑ (R5236005)."
 
 use jackioh_engine::prelude::*;
 
@@ -31,7 +34,10 @@ fn next_spell_echoes(ctx: &EffectContext<'_>) -> Effect {
 }
 
 /// The one Activate both faces print (R384); the base face then sends itself to the graveyard, a plain
-/// move and not a death (R3044000), while the Radiant one stays to be used again next turn.
+/// move and not a death (R3044000), while the Radiant one stays to be used again next turn. R5236006:
+/// the base face's Durability 1 is that move: its list makes it the moment the use spends the last of
+/// it, as the words "Then this goes to the graveyard" always did, and a card printing no Durability (an
+/// older catalog's, R767000) makes it after every use. A Buff's Durability 2 keeps it for a second use.
 fn twinspell(stays: bool) -> Script {
     let echo = ActivationDecl {
         id: "echo".to_string(),
@@ -44,7 +50,8 @@ fn twinspell(stays: bool) -> Script {
         has: None,
         run: hook(move |ctx| {
             let mut effects = vec![next_spell_echoes(ctx)];
-            if !stays {
+            let left = ctx.live_self().and_then(|card| durability_left(&*ctx.state, card));
+            if !stays && left.is_none_or(|left| left <= DURABILITY_SPENT_OUT) {
                 effects.push(send_to_graveyard(json_as(json!({ "target": { "of": "self" } }))));
             }
             effects

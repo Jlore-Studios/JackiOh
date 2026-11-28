@@ -358,7 +358,8 @@ pub(crate) fn swap_back(ctx: &mut EffectContext<'_>, effect: &crate::state::Dela
             pairs
                 .iter()
                 .filter_map(|pair| {
-                    let id = pair.get(0)?.as_str()?;
+                    let pair = pair.as_array()?;
+                    let id = pair.first()?.as_str()?;
                     let seat = pair.get(1)?.as_str()?;
                     let seat = crate::wire::PLAYER_IDS
                         .into_iter()
