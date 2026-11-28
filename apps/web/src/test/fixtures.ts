@@ -166,6 +166,10 @@ const ALL_KEYWORDS: Keyword[] = [
   { kind: "Frenzy" },
   { kind: "Evasive" },
   { kind: "Woozy", n: 2 },
+  // The Felinors vs Humans kinds (R5236031, R5264500).
+  { kind: "Durability", n: 2 },
+  { kind: "Fragile" },
+  { kind: "Unlucky", n: 1 },
 ];
 
 export function baseView(over: Partial<PlayerView> = {}): PlayerView {
