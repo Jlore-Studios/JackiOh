@@ -42,7 +42,8 @@ struct CardText {
 }
 
 /// A card's voice lines by hook, a trigger's a list (R1088), and since R5188000 the recurring hooks'
-/// (`apps/web/src/audio/constants.ts` CARD_HOOKS), any hook's a pool when it is a list.
+/// (`apps/web/src/audio/constants.ts` CARD_HOOKS), any hook's a pool when it is a list; since R5189001
+/// those of the hooks R5189000 marks, each by its `hookResolving` name.
 #[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 struct Voice {
@@ -68,6 +69,24 @@ struct Voice {
     hurt: Option<Line>,
     #[serde(skip_serializing_if = "Option::is_none")]
     hit: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    on_play_hook: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    when_attacks: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    after_attack: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    after_attacked: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ally_attacked: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ally_attack: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    start_of_game: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    enters_hand: Option<Line>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    delayed: Option<Line>,
 }
 
 /// R5188000: a hook's words: one line, or a pool of them that the client picks one of each time.
@@ -307,6 +326,18 @@ fn r5188000_a_voice_takes_a_pool_on_any_hook_and_the_new_hooks() {
     assert!(
         error.contains("core-001") && error.contains("unknown field `whenevr`"),
         "R5188000: a misspelled hook is refused: {error}"
+    );
+}
+
+#[test]
+fn r5189001_a_voice_takes_each_marked_hook_by_its_name() {
+    let yaml = "onPlayHook: a\nwhenAttacks: b\nafterAttack: c\nafterAttacked: d\nallyAttacked: e\nallyAttack: f\nstartOfGame: g\nentersHand: h\ndelayed: [i, j]\n";
+    let voice: Voice = yaml_serde::from_str(yaml)
+        .unwrap_or_else(|error| panic!("R5189001: every marked hook parses by its name: {error}"));
+    assert_eq!(
+        serde_json::to_string(&voice).unwrap_or_default(),
+        r#"{"onPlayHook":"a","whenAttacks":"b","afterAttack":"c","afterAttacked":"d","allyAttacked":"e","allyAttack":"f","startOfGame":"g","entersHand":"h","delayed":["i","j"]}"#,
+        "R5189001: each keeps its name and a pool stays a list"
     );
 }
 

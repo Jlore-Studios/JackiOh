@@ -3,7 +3,8 @@
 //! An *interaction* is what starts a resolution loop: an action a seat takes (`reduce`), each answer a
 //! `timeout` gives and the End turn it takes (R79), each autopilot (R1183002) or AI (R44) action, a turn
 //! the engine ends for a seat (R82, R456), and the setup and a Glitch's reset (R676), which are no seat's.
-//! Each one starts a count of the events emitted since (`begin_interaction`), every `GameEvent` counted.
+//! Each one starts a count of the events emitted since (`begin_interaction`), every `GameEvent` counted,
+//! but R5189000's markers (`leave_uncounted`).
 //! When the count reaches `RESOLUTION_EVENT_CAP`, or one loop goes round that many times (the `passes` of
 //! `halted`, for a loop that could spin without an event), the cap trips (`trip`):
 //!  - the trigger queue and every event not yet offered are dropped;
@@ -45,6 +46,12 @@ pub fn begin_interaction(sink: &mut EngineSink<'_>, by: Option<(PlayerId, Action
 pub fn skip_nested(sink: &mut EngineSink<'_>) {
     let from = sink.events.len();
     sink.frontier.get_mut().interaction_from = from;
+}
+
+/// R5189000: the event just pushed, a marker of a hook R5189000 marks, takes no room in the
+/// interaction's count, so the cap trips where it did before that hook was marked.
+pub fn leave_uncounted(sink: &mut EngineSink<'_>) {
+    sink.frontier.get_mut().interaction_from += 1;
 }
 
 /// The last interaction of a `reduce` closes.

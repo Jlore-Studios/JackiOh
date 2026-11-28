@@ -7,22 +7,47 @@
 //! Activate is marked once, just before its effects, whatever they then do (a hook that fizzles is
 //! marked too); a continuation after a prompt is the same run and has none. A card set face-down by
 //! its Cloaked, its text inert (R1040), marks nothing, though the play pipeline runs its Cry.
+//!
+//! R5189000 marks the rest the same way: an `onPlayHook`, a start-of-game clause and a "When this enters
+//! your hand" clause by their names here, an attack's five hooks as `combat::run_engine_hook` runs each,
+//! and a delayed effect at its R62 point through `ResumeOptions.mark` (`turn::run_resume_for`). Those
+//! markers take no room in the loop cap's count either (`loop_cap::leave_uncounted`), so a capped loop
+//! trips where it did before they were marked.
 
 use crate::script::{ACTIVATION_HOOK_PREFIX, EngineSink};
 use crate::state::{CardInstance, find_instance};
 use crate::wire::{GameEvent, HookKind, PlayerId};
 
-/// The marker's kind for a hook a `Resume` names, or `None` for a hook no marker reports (a delayed
-/// effect, `onPlayHook`, an attack's hooks, a step a prompt's answer re-enters, …).
+/// The marker's kind for a hook a `Resume` names, or `None` for a hook no marker reports by its name (a
+/// step a prompt's answer re-enters, `revealed`, `evolve`, …). R5189000: an attack's hooks are marked by
+/// `combat::run_engine_hook`, which runs them with no `Resume`, and a delayed effect, whose `Resume`
+/// names its step's hook (`delayed`, `resume`, …), through `ResumeOptions.mark`.
 pub fn hook_kind_of(hook: &str) -> Option<HookKind> {
     match hook {
         "cry" => Some(HookKind::Cry),
         "death" => Some(HookKind::Death),
         "startOfTurn" | "startOfOpponentTurn" => Some(HookKind::StartOfTurn),
         "endOfTurn" => Some(HookKind::EndOfTurn),
+        "onPlayHook" => Some(HookKind::OnPlayHook),
+        "startOfGame" => Some(HookKind::StartOfGame),
+        "entersHand" => Some(HookKind::EntersHand),
         _ if hook.starts_with(ACTIVATION_HOOK_PREFIX) => Some(HookKind::Activate),
         _ => None,
     }
+}
+
+/// R5189000: whether `hook` is one R2783000 marked first, whose markers the loop cap counts as it always
+/// did; the markers of the hooks R5189000 added take no room in its count (`loop_cap::leave_uncounted`).
+pub fn first_marked(hook: HookKind) -> bool {
+    matches!(
+        hook,
+        HookKind::Cry
+            | HookKind::Death
+            | HookKind::StartOfTurn
+            | HookKind::EndOfTurn
+            | HookKind::Whenever
+            | HookKind::Activate
+    )
 }
 
 /// Emit `card`'s marker for `hook`, run by `controller`. The card is read as it stands now (as it
@@ -89,6 +114,10 @@ fn push_marker(
     // R2783000: nothing answers it, so the frontier never takes it (R1361's way, as `rolled`'s).
     let at = sink.events.len() - 1;
     crate::triggers::withhold_report(sink, at);
+    // R5189000: and a marker of a hook it added leaves the loop cap's count as it was.
+    if !first_marked(hook) {
+        crate::loop_cap::leave_uncounted(sink);
+    }
 }
 
 #[cfg(test)]
@@ -106,15 +135,33 @@ mod tests {
             hook_kind_of(&crate::script::activation_hook("power#2")),
             Some(HookKind::Activate)
         );
+        for other in ["delayed", "afterAttack", "resume", ""] {
+            assert_eq!(hook_kind_of(other), None, "{other}");
+        }
+    }
+
+    /// R5189000: the three hooks a `Resume` runs by name are marked by it; an attack's hooks and a
+    /// delayed effect are marked where they run, and only R2783000's six are counted by the loop cap.
+    #[test]
+    fn r5189000_names_the_hooks_a_resume_marks() {
+        assert_eq!(hook_kind_of("onPlayHook"), Some(HookKind::OnPlayHook));
+        assert_eq!(hook_kind_of("startOfGame"), Some(HookKind::StartOfGame));
+        assert_eq!(hook_kind_of("entersHand"), Some(HookKind::EntersHand));
         for other in [
-            "delayed",
-            "onPlayHook",
+            "whenAttacks",
             "afterAttack",
-            "resume",
-            "startOfGame",
-            "",
+            "afterAttacked",
+            "allyAttacked",
+            "allyAttack",
+            "delayed",
         ] {
             assert_eq!(hook_kind_of(other), None, "{other}");
         }
+        let first: Vec<HookKind> = HookKind::ALL
+            .iter()
+            .copied()
+            .filter(|kind| first_marked(*kind))
+            .collect();
+        assert_eq!(first, HookKind::ALL[..6]);
     }
 }

@@ -3,6 +3,9 @@
 /**
  * R2783000: which of a card's hooks a `hookResolving` marks (`hookResolving.hook`): its Cry (a
  * Spell's effect is one), its Death, a start-of-turn hook (its own turn's or the opponent's), an
- * end-of-turn hook, a Whenever trigger or an Activate ability.
+ * end-of-turn hook, a Whenever trigger or an Activate ability. R5189000 adds the rest, each named
+ * as its `Script` hook is: an `onPlayHook`, an attack's hooks (`whenAttacks`, `afterAttack`,
+ * `afterAttacked`) and the ally hooks (`allyAttacked`, `allyAttack`), a start-of-game clause, a
+ * "When this enters your hand" clause and a delayed effect at its R62 point (`delayed`).
  */
-export type HookKind = "cry" | "death" | "startOfTurn" | "endOfTurn" | "whenever" | "activate";
+export type HookKind = "cry" | "death" | "startOfTurn" | "endOfTurn" | "whenever" | "activate" | "onPlayHook" | "whenAttacks" | "afterAttack" | "afterAttacked" | "allyAttacked" | "allyAttack" | "startOfGame" | "entersHand" | "delayed";

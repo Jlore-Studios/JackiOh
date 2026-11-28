@@ -48,6 +48,16 @@ export const LINE_LABELS: Readonly<Record<VoiceLineKind, string>> = {
   activate: "Activate",
   hurt: "Hurt",
   hit: "Hit",
+  // R5189001: the hooks R5189000 marks.
+  onPlayHook: "On any play",
+  whenAttacks: "When this attacks",
+  afterAttack: "After this attacks",
+  afterAttacked: "After this is attacked",
+  allyAttacked: "When an ally is attacked",
+  allyAttack: "After an ally attacks",
+  startOfGame: "Start of game",
+  entersHand: "Enters your hand",
+  delayed: "Delayed effect",
 };
 
 export function VoicePreview({ defId }: { defId: string }): ReactElement | null {

@@ -30,12 +30,17 @@ use crate::work::engine_resume;
 /// names it as turns are owed and the last is taken, and the view lists it while any is owed (R169).
 pub const EXTRA_TURN_MODIFIER_ID: &str = "extraTurns";
 
+/// R62's delayed stage: a delayed effect's step (one `effects::delay::run_engine_delayed` declined) or a
+/// rest-of-game effect (R458), re-entered as `controller`. R5189000: each is a run of its own, marked
+/// `delayed` before its effects; a rest-of-game effect has no card, so its marker names its definition
+/// alone (`sourceId` `""`). The engine's own delayed kinds never come here, so they are never marked.
 fn run_resume_for(sink: &mut EngineSink, resume: &Resume, controller: PlayerId) {
     let _ = crate::prompts::run_resume(
         sink,
         resume,
         crate::prompts::ResumeOptions {
             controller: Some(controller),
+            mark: Some(crate::wire::HookKind::Delayed),
             ..Default::default()
         },
     );

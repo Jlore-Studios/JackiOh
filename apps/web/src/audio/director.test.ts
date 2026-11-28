@@ -1131,6 +1131,74 @@ describe("R5188000 a recurring hook's effect every time, its line the first time
   });
 });
 
+describe("R5189001 an attack's own hooks sound for both seats as the attack happens, by the recurring rule", () => {
+  /** #91 with "When this attacks" and "After this attacks", each a line and an effect. */
+  const HOOKED = "core-091";
+  const ATTACK_LINES: CardAudioTable = {
+    voices: LINES.voices,
+    effects: { puff: { sfx: "poof", pitch: 0.7, gain: 1 }, tick: { sfx: "clockTick", pitch: 1, gain: 1 } },
+    cards: {
+      ...LINES.cards,
+      [HOOKED]: {
+        kind: "unit",
+        attack: { voice: "guard", text: "Charge." },
+        whenAttacks: { voice: "guard", text: "Here I come.", effect: "puff" },
+        afterAttack: { voice: "guard", text: "Done.", effect: "tick" },
+      },
+    },
+    emotes: {},
+  };
+  const marker = (hook: "whenAttacks" | "afterAttack"): GameEvent => ({ type: "hookResolving", sourceId: "ub", defId: HOOKED, controller: "p2", hook });
+  const declared: GameEvent = { type: "attackDeclared", attackerId: "ub", targetId: "hero-p1", forced: false };
+  const struck: GameEvent = { type: "damage", sourceId: "ub", targetId: "hero-p1", amount: 2, combat: true };
+  /** The other seat's #91 (`ub`), which attacks this seat's hero. */
+  const boardView = (): PlayerView =>
+    baseView({
+      you: emptySide("p1", {}),
+      opponent: emptySide("p2", { hand: { count: 4 }, units: [unit("p2", { instanceId: "ub", defId: HOOKED }), null, null, null, null] }),
+    });
+
+  /** A director over ATTACK_LINES whose cosmetic rng hands out 0.99 (a silent draw), counting each draw. */
+  function recRig(): { sink: Recorder; director: SoundDirector; drawn: () => number } {
+    const sink = recorder();
+    let count = 0;
+    const rng = (): number => {
+      count += 1;
+      return 0.99;
+    };
+    return { sink, director: createSoundDirector(sink, ATTACK_LINES, undefined, undefined, rng), drawn: () => count };
+  }
+
+  /** Feeds one action's view (its events after a distinct marker of its own) and flushes it at idle. */
+  function step(director: SoundDirector, n: number, events: GameEvent[]): void {
+    director.onView(withEvents(boardView(), [mana("p2", n), ...events]));
+    director.onIdle();
+  }
+
+  it("R5189001 an attack's whenAttacks and afterAttack sound for the seat watching the other's card, effect every time, line by the recurring rule", () => {
+    const { sink, director, drawn } = recRig();
+    director.onView(boardView());
+    const effects = (hook: string): number => sink.sent.filter((c) => c.kind === "effect" && c.hook === hook).length;
+    const said = (): string[] => linesSent(sink).filter((line) => line.startsWith(HOOKED));
+    const recurring = String(VOICE_PRIORITY.recurring);
+
+    // The attack is declared and its "When this attacks" begins: its first time, so it speaks.
+    step(director, 1, [declared, marker("whenAttacks")]);
+    expect(said()).toEqual([`${HOOKED}/whenAttacks!${recurring}`]);
+    expect([effects("whenAttacks"), drawn()]).toEqual([1, 0]);
+    // The combat lands and its "After this attacks" begins: that hook's first time speaks too.
+    step(director, 2, [struck, marker("afterAttack")]);
+    expect(said()).toEqual([`${HOOKED}/whenAttacks!${recurring}`, `${HOOKED}/afterAttack!${recurring}`]);
+    expect([effects("afterAttack"), drawn()]).toEqual([1, 0]);
+    // Its next attack this turn: the card has spoken this turn, so the effect plays alone, drawing nothing.
+    step(director, 3, [declared, marker("whenAttacks")]);
+    expect(said()).toHaveLength(2);
+    expect([effects("whenAttacks"), drawn()]).toEqual([2, 0]);
+    // The attack hook stays the viewer's own pick-up (R655): no event of the other seat's attack plays it.
+    expect(sink.sent.filter((c) => (c.kind === "voice" && c.line === "attack") || (c.kind === "effect" && c.hook === "attack"))).toEqual([]);
+  });
+});
+
 // #3347: a deck riffles once per action, however many cards went in
 describe("#3347 one riffle sounds per action", () => {
   const shuffled = (n: number, player: PlayerId = "p1"): GameEvent => ({

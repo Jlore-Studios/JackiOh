@@ -1444,7 +1444,9 @@ Every card's sounds are in `src/audio/card-audio.json5` (R655), a JSON5 file edi
 header explains it: a `voices` bank, an `effects` bank (a procedural recipe from `sfx.ts` at its own
 `pitch` and `gain`, which renders nothing), and `cards`, in catalog order with each card's name in a
 comment beside its id, where each hook (`play`, `attack`, `death`, `cast`, `trigger`, and R5188000's
-recurring `startOfTurn`, `endOfTurn`, `whenever`, `activate`, `hurt` and `hit`; `CARD_HOOKS` in
+recurring `startOfTurn`, `endOfTurn`, `whenever`, `activate`, `hurt` and `hit`, and R5189001's
+recurring `onPlayHook`, `whenAttacks`, `afterAttack`, `afterAttacked`, `allyAttacked`, `allyAttack`,
+`startOfGame`, `entersHand` and `delayed`, each sounding at its `hookResolving`; `CARD_HOOKS` in
 `constants.ts`) gives a voice line (its `voice`), an `effect` (or a list of effects, played in order,
 each `EFFECT_SEQUENCE_GAP_MS` after the last ends), or both — a `trigger` (R1088) gives a voice for a
 non-empty list of lines, one of which plays when the runner starts the `summoned` entry the card

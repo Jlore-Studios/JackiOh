@@ -112,6 +112,15 @@ describe("audio constants", () => {
       "activate",
       "hurt",
       "hit",
+      "onPlayHook",
+      "whenAttacks",
+      "afterAttack",
+      "afterAttacked",
+      "allyAttacked",
+      "allyAttack",
+      "startOfGame",
+      "entersHand",
+      "delayed",
     ]);
     expect(CARD_HOOKS.play).toEqual({ kinds: ["unit"] });
     expect(CARD_HOOKS.attack).toEqual({ kinds: ["unit"] });
@@ -125,8 +134,19 @@ describe("audio constants", () => {
     expect(CARD_HOOKS.hurt).toEqual({ kinds: ["unit"] });
   });
 
+  it("R5189001 names the nine marked hooks after R5188000's, recurring, Unit-only where only a Unit attacks or is attacked, four words each", () => {
+    const marked = ["onPlayHook", "whenAttacks", "afterAttack", "afterAttacked", "allyAttacked", "allyAttack", "startOfGame", "entersHand", "delayed"] as const;
+    expect(CARD_HOOK_NAMES.slice(CARD_HOOK_NAMES.indexOf("hit") + 1)).toEqual(marked);
+    for (const hook of marked) {
+      expect(RECURRING_HOOKS.has(hook), hook).toBe(true);
+      expect(VOICE_MAX_WORDS[hook], hook).toBe(4);
+      const unitOnly = hook === "whenAttacks" || hook === "afterAttack" || hook === "afterAttacked";
+      expect(CARD_HOOKS[hook], hook).toEqual({ kinds: unitOnly ? ["unit"] : ["unit", "spell", "trap"] });
+    }
+  });
+
   it("R5188000 pins the recurring rule's constants", () => {
-    expect([...RECURRING_HOOKS]).toEqual(["startOfTurn", "endOfTurn", "whenever", "activate", "hurt", "hit"]);
+    expect([...RECURRING_HOOKS].slice(0, 6)).toEqual(["startOfTurn", "endOfTurn", "whenever", "activate", "hurt", "hit"]);
     expect(TRIGGER_LINE_CHANCE).toBe(1 / 3);
     expect(EFFECT_SEQUENCE_GAP_MS).toBe(60);
     // R204's lowest: level with a summon's line, below every line that may cut in.
@@ -195,6 +215,15 @@ describe("audio constants", () => {
       activate: 4,
       hurt: 4,
       hit: 4,
+      onPlayHook: 4,
+      whenAttacks: 4,
+      afterAttack: 4,
+      afterAttacked: 4,
+      allyAttacked: 4,
+      allyAttack: 4,
+      startOfGame: 4,
+      entersHand: 4,
+      delayed: 4,
     });
   });
 

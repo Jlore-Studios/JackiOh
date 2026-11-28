@@ -204,7 +204,10 @@ string_union! {
 string_union! {
     /// R2783000: which of a card's hooks a `hookResolving` marks (`hookResolving.hook`): its Cry (a
     /// Spell's effect is one), its Death, a start-of-turn hook (its own turn's or the opponent's), an
-    /// end-of-turn hook, a Whenever trigger or an Activate ability.
+    /// end-of-turn hook, a Whenever trigger or an Activate ability. R5189000 adds the rest, each named
+    /// as its `Script` hook is: an `onPlayHook`, an attack's hooks (`whenAttacks`, `afterAttack`,
+    /// `afterAttacked`) and the ally hooks (`allyAttacked`, `allyAttack`), a start-of-game clause, a
+    /// "When this enters your hand" clause and a delayed effect at its R62 point (`delayed`).
     pub enum HookKind {
         Cry = "cry",
         Death = "death",
@@ -212,6 +215,15 @@ string_union! {
         EndOfTurn = "endOfTurn",
         Whenever = "whenever",
         Activate = "activate",
+        OnPlayHook = "onPlayHook",
+        WhenAttacks = "whenAttacks",
+        AfterAttack = "afterAttack",
+        AfterAttacked = "afterAttacked",
+        AllyAttacked = "allyAttacked",
+        AllyAttack = "allyAttack",
+        StartOfGame = "startOfGame",
+        EntersHand = "entersHand",
+        Delayed = "delayed",
     }
 }
 
@@ -2095,9 +2107,35 @@ mod tests {
         );
         let names: Vec<&str> = HookKind::ALL.iter().map(|kind| kind.as_str()).collect();
         assert_eq!(
-            names,
-            vec!["cry", "death", "startOfTurn", "endOfTurn", "whenever", "activate"]
+            names[..6],
+            ["cry", "death", "startOfTurn", "endOfTurn", "whenever", "activate"]
         );
+    }
+
+    /// R5189000: each hook the ruling marks is named as its `Script` hook is, after R2783000's six, so
+    /// the client keys its sounds on the hook's own name.
+    #[test]
+    fn r5189000_hook_kind_names_each_new_hook_as_its_script_hook() {
+        let names: Vec<&str> = HookKind::ALL.iter().map(|kind| kind.as_str()).collect();
+        assert_eq!(
+            names[6..],
+            [
+                "onPlayHook",
+                "whenAttacks",
+                "afterAttack",
+                "afterAttacked",
+                "allyAttacked",
+                "allyAttack",
+                "startOfGame",
+                "entersHand",
+                "delayed",
+            ]
+        );
+        for kind in &HookKind::ALL[6..] {
+            let json = serde_json::to_string(kind).unwrap();
+            assert_eq!(json, format!("\"{}\"", kind.as_str()));
+            assert_eq!(serde_json::from_str::<HookKind>(&json).unwrap(), *kind);
+        }
     }
 
     /// R2783001: `via` is on the wire only when set, so an event no keyword caused reads as it did, and

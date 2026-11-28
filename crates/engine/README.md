@@ -63,7 +63,10 @@ Poisonous and First Strike's unanswered kill on the `destroyed` through `Frontie
 Reborn in `state_check.rs` (R2783001). `hook_marks.rs` emits `hookResolving` just before each first run
 of a Cry, Death, turn hook, Whenever trigger or Activate (`prompts::run_resume`,
 `state_check::run_death_pass`, `triggers::run_queued_trigger`), withheld from the trigger loop, and
-`view_for` keeps it from a seat that could not read the card (R2783000). `GameEvent::as_rules_read`
+`view_for` keeps it from a seat that could not read the card (R2783000); since R5189000 also of an
+`onPlayHook`, a start-of-game and an enters-hand clause (`prompts::run_resume`, by name), an attack's
+five hooks (`combat::run_engine_hook`) and a delayed effect (`turn::run_resume_for`), whose markers
+take no room in the loop cap's count (`loop_cap::leave_uncounted`). `GameEvent::as_rules_read`
 drops `via`, so neither moves a hash. `effects::gain_hero_armor` reports `armorGained`, withheld the
 same way (R3857000), and so does `damage::spend_pool` each pool's soak, `damageNullified` (R5045000),
 and `damage::wear_hero_armor` each wear of a hero's own Armor, `armorWorn` (R5183000).

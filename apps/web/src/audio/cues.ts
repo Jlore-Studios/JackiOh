@@ -231,7 +231,8 @@ type HookKind = Extract<GameEvent, { type: "hookResolving" }>["hook"];
 
 /**
  * R5188000: the card hook each marked hook plays. A Cry and a Death have none: `play`, `cast` and
- * `death` already sound at R204's moments (`cardPlayed`, `trapFired`, `destroyed`).
+ * `death` already sound at R204's moments (`cardPlayed`, `trapFired`, `destroyed`). R5189001: each hook
+ * R5189000 marks plays the card hook of its own name.
  */
 const MARKED_HOOKS: Readonly<Record<HookKind, CardHook | null>> = {
   cry: null,
@@ -240,6 +241,15 @@ const MARKED_HOOKS: Readonly<Record<HookKind, CardHook | null>> = {
   endOfTurn: "endOfTurn",
   whenever: "whenever",
   activate: "activate",
+  onPlayHook: "onPlayHook",
+  whenAttacks: "whenAttacks",
+  afterAttack: "afterAttack",
+  afterAttacked: "afterAttacked",
+  allyAttacked: "allyAttacked",
+  allyAttack: "allyAttack",
+  startOfGame: "startOfGame",
+  entersHand: "entersHand",
+  delayed: "delayed",
 };
 
 /**
@@ -783,12 +793,13 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
 
   // ---- Issue #2783: the event stream says why (R2783000) ----
   // R5188000: a turn hook's, a Whenever's or an Activate's card plays that hook's sounds as the hook
-  // begins; the seat never sees the marker of a card it could not read (R2783000), and a sentinel plays
-  // nothing (R203).
+  // begins, and R5189001: so does each hook R5189000 marks (an attack's, an ally's, a play's, an
+  // arrival's, a delayed effect's); the seat never sees the marker of a card it could not read
+  // (R2783000), and a sentinel plays nothing (R203).
   hookResolving: {
     sfx: null,
     silentBecause:
-      "a marker with no sound of its own: its card's turn, Whenever or Activate hook sounds (R5188000); a Cry and a Death at R204's moments",
+      "a marker with no sound of its own: its card's hook of the same name sounds (R5188000, R5189001); a Cry and a Death at R204's moments",
     cues: (event, ctx) => {
       // Widened: a kind this build has never seen (issue #769) has no row, so it sounds nothing.
       const hook = (MARKED_HOOKS as Partial<Record<string, CardHook | null>>)[event.hook] ?? null;

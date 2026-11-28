@@ -2,8 +2,13 @@
 //! end-of-turn hook, Whenever trigger and Activate emits just before its effects (§10.3), a hook that
 //! fizzles included, and who reads it (§10.8): a seat that could not read the card where it stood as the
 //! hook began never sees it, and a marker takes no room in R168's floor.
+//!
+//! R5189000: the hooks it marks beyond those: an `onPlayHook`, an attack's hooks and the ally hooks, a
+//! start-of-game clause, a "When this enters your hand" clause and a delayed effect at its R62 point,
+//! each marked as R2783000's are, whose markers take no room in the loop cap's count either.
 
 use jackioh_engine::hook_marks::mark_hook;
+use jackioh_engine::loop_cap::{begin_interaction, events_since};
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::golden::{events_text, view_texts};
 use jackioh_engine::testkit::*;
@@ -123,8 +128,65 @@ fn spent() -> CardDef {
     )
 }
 
+/// R5189000: a Unit whose "When this attacks" and "After this attacks" each hit the enemy hero for 1.
+fn charger() -> CardDef {
+    unit("charger", 27845)
+}
+/// R5189000: a Unit whose "After this is attacked" hits the enemy hero for 1.
+fn bulwark() -> CardDef {
+    unit("bulwark", 27846)
+}
+/// R5189000: "When one of your Units is attacked" and "After one of your Units attacks", each a hit on
+/// the enemy hero for 1.
+fn rallier() -> CardDef {
+    def("rallier", 27847, "Field Spell", json!({}))
+}
+/// R5189000: a Unit with Frenzy and no "After this attacks" of its own (R3543003).
+fn frenzied() -> CardDef {
+    def(
+        "frenzied",
+        27848,
+        "Unit",
+        json!({
+            "base": { "attack": 5, "health": 4, "keywords": [{ "kind": "Frenzy" }], "text": "frenzied" },
+            "radiant": { "attack": 5, "health": 8, "keywords": [{ "kind": "Frenzy" }], "text": "frenzied" },
+        }),
+    )
+}
+/// R5189000: an `onPlayHook` (§10.5 step 3) that hits the enemy hero for 1.
+fn opener() -> CardDef {
+    def("opener", 27849, "Field Spell", json!({}))
+}
+/// R5189000: an empty start-of-game clause (R151) and a "When this enters your hand" (R925) that hits
+/// the enemy hero for 1.
+fn herald() -> CardDef {
+    unit("herald", 27850)
+}
+/// R5189000: a Cry that delays a hit on the enemy hero to the start of its controller's next turn (R62).
+fn waiter() -> CardDef {
+    unit("waiter", 27851)
+}
+/// R5189000: a Cry that hits the enemy hero at the start of each of its controller's turns, for the rest
+/// of the game (R458).
+fn forever() -> CardDef {
+    unit("forever", 27852)
+}
+/// R5189000: a "When this attacks" that asks its controller first, then hits the enemy hero (R113).
+fn stalling() -> CardDef {
+    unit("stalling", 27853)
+}
+
 fn defs() -> Vec<CardDef> {
     vec![
+        charger(),
+        bulwark(),
+        rallier(),
+        frenzied(),
+        opener(),
+        herald(),
+        waiter(),
+        forever(),
+        stalling(),
         crier(),
         fizzler(),
         asker(),
@@ -307,6 +369,79 @@ fn scripts() -> Vec<(String, CardScripts)> {
                 ..Script::default()
             }),
         ),
+        (
+            charger().id,
+            both(Script {
+                when_attacks: Some(hook(|_ctx| vec![hit_enemy_hero()])),
+                after_attack: Some(hook(|_ctx| vec![hit_enemy_hero()])),
+                ..Script::default()
+            }),
+        ),
+        (
+            bulwark().id,
+            both(Script {
+                after_attacked: Some(hook(|_ctx| vec![hit_enemy_hero()])),
+                ..Script::default()
+            }),
+        ),
+        (
+            rallier().id,
+            both(Script {
+                ally_attacked: Some(hook(|_ctx| vec![hit_enemy_hero()])),
+                ally_attack: Some(hook(|_ctx| vec![hit_enemy_hero()])),
+                ..Script::default()
+            }),
+        ),
+        (frenzied().id, both(Script::default())),
+        (
+            opener().id,
+            both(Script {
+                on_play_hook: Some(hook(|_ctx| vec![hit_enemy_hero()])),
+                ..Script::default()
+            }),
+        ),
+        (
+            herald().id,
+            both(Script {
+                start_of_game: Some(hook(|_ctx| Vec::new())),
+                enters_hand: Some(hook(|_ctx| vec![hit_enemy_hero()])),
+                ..Script::default()
+            }),
+        ),
+        (
+            waiter().id,
+            both(Script {
+                cry: Some(hook(|_ctx| {
+                    vec![effects::delay(json_as(json!({
+                        "at": { "phase": "start", "player": "self" },
+                        "step": "later",
+                    })))]
+                })),
+                delayed: Some(hook(|_ctx| vec![hit_enemy_hero()])),
+                ..Script::default()
+            }),
+        ),
+        (
+            forever().id,
+            both(Script {
+                cry: Some(hook(|_ctx| {
+                    vec![effects::for_rest_of_game(json_as(json!({
+                        "step": "each",
+                        "label": "forever",
+                    })))]
+                })),
+                delayed: Some(hook(|_ctx| vec![hit_enemy_hero()])),
+                ..Script::default()
+            }),
+        ),
+        (
+            stalling().id,
+            both(Script {
+                when_attacks: Some(hook(|_ctx| vec![ask_controller(), hit_enemy_hero()])),
+                resume: [("asked", hook(|_ctx| Vec::new()))].into_iter().collect(),
+                ..Script::default()
+            }),
+        ),
     ]
 }
 
@@ -384,6 +519,34 @@ fn hit_at(events: &[GameEvent], source_id: &str) -> usize {
         .iter()
         .position(|event| matches!(event, GameEvent::Damage { source_id: Some(id), .. } if id == source_id))
         .unwrap_or_else(|| panic!("no hit from {source_id}"))
+}
+
+/// R5189000: where the first hit `source_id`'s hook dealt stands in `events`, past its combat's.
+fn hook_hit_at(events: &[GameEvent], source_id: &str) -> usize {
+    events
+        .iter()
+        .position(|event| {
+            matches!(event, GameEvent::Damage { source_id: Some(id), combat: false, .. } if id == source_id)
+        })
+        .unwrap_or_else(|| panic!("no hook's hit from {source_id}"))
+}
+
+/// R5189000: where `source_id`'s marker of `hook` stands in `events`.
+fn marker_of(events: &[GameEvent], source_id: &str, kind: HookKind) -> usize {
+    events
+        .iter()
+        .position(|event| {
+            matches!(event, GameEvent::HookResolving { source_id: id, hook, .. } if id == source_id && *hook == kind)
+        })
+        .unwrap_or_else(|| panic!("no {kind:?} marker of {source_id}"))
+}
+
+/// R5189000: p1 attacks `target_id` with `attacker_id`.
+fn attack(state: &GameState, attacker_id: &str, target_id: &str) -> ReduceResult {
+    act_ok(
+        state,
+        json!({ "type": "attack", "attackerId": attacker_id, "targetId": target_id, "playerId": "p1" }),
+    )
 }
 
 fn view_events(state: &GameState, viewer: PlayerId) -> Vec<Value> {
@@ -1002,4 +1165,296 @@ fn r3182000_an_activate_whose_cost_took_its_card_out_of_the_game_still_names_tha
             ]
         );
     }
+}
+
+// R5189000: the hooks marked beyond R2783000's.
+
+#[test]
+fn r5189000_an_attackers_when_attacks_and_after_attack_are_marked_around_its_combat() {
+    let mut state = playing("charge");
+    let card = put(&mut state, &charger().id, slot(P1, Row::Units, 1), json!({}));
+    let attacked = attack(&state, &card.id, "hero-p2");
+    assert_eq!(
+        markers(&attacked.events),
+        vec![
+            (card.id.clone(), charger().id, P1, HookKind::WhenAttacks),
+            (card.id.clone(), charger().id, P1, HookKind::AfterAttack),
+        ]
+    );
+    let declared = attacked
+        .events
+        .iter()
+        .position(|event| matches!(event, GameEvent::AttackDeclared { .. }))
+        .expect("an attackDeclared");
+    let when = marker_of(&attacked.events, &card.id, HookKind::WhenAttacks);
+    let after = marker_of(&attacked.events, &card.id, HookKind::AfterAttack);
+    let combat = attacked
+        .events
+        .iter()
+        .position(|event| matches!(event, GameEvent::Damage { combat: true, .. }))
+        .expect("the combat's hit");
+    let hook_hits: Vec<usize> = attacked
+        .events
+        .iter()
+        .enumerate()
+        .filter(|(_, event)| {
+            matches!(event, GameEvent::Damage { source_id: Some(id), combat: false, .. } if *id == card.id)
+        })
+        .map(|(at, _)| at)
+        .collect();
+    assert_eq!(hook_hits.len(), 2);
+    assert!(declared < when && when < hook_hits[0] && hook_hits[0] < combat);
+    assert!(combat < after && after < hook_hits[1]);
+    assert_eq!(
+        attacked.state.players.p2.hero.health,
+        HERO_HEALTH - 2 - charger().base.attack.unwrap_or_default()
+    );
+    // Both seats read a public card's markers.
+    for viewer in [P1, P2] {
+        let hooks: Vec<Value> = view_markers(&attacked.state, viewer)
+            .into_iter()
+            .map(|marker| marker["hook"].clone())
+            .collect();
+        assert_eq!(hooks, vec![json!("whenAttacks"), json!("afterAttack")]);
+    }
+}
+
+#[test]
+fn r5189000_a_defenders_after_attacked_is_marked_after_its_combat() {
+    let mut state = playing("bulwark");
+    let attacker = put(&mut state, &body().id, slot(P1, Row::Units, 1), json!({}));
+    let defender = put(&mut state, &bulwark().id, slot(P2, Row::Units, 1), json!({}));
+    let attacked = attack(&state, &attacker.id, &defender.id);
+    assert_eq!(
+        markers(&attacked.events),
+        vec![(defender.id.clone(), bulwark().id, P2, HookKind::AfterAttacked)]
+    );
+    let combat = attacked
+        .events
+        .iter()
+        .rposition(|event| matches!(event, GameEvent::Damage { combat: true, .. }))
+        .expect("the combat's hits");
+    let at = marker_at(&attacked.events, &defender.id);
+    assert!(combat < at && at < hook_hit_at(&attacked.events, &defender.id));
+}
+
+#[test]
+fn r5189000_the_ally_hooks_are_marked_for_each_side() {
+    let mut state = playing("rally");
+    let mine = put(&mut state, &rallier().id, slot(P1, Row::Backrow, 1), json!({}));
+    let theirs = put(&mut state, &rallier().id, slot(P2, Row::Backrow, 1), json!({}));
+    let attacker = put(&mut state, &body().id, slot(P1, Row::Units, 1), json!({}));
+    let defender = put(&mut state, &body().id, slot(P2, Row::Units, 1), json!({}));
+    let attacked = attack(&state, &attacker.id, &defender.id);
+    assert_eq!(
+        markers(&attacked.events),
+        vec![
+            (theirs.id.clone(), rallier().id, P2, HookKind::AllyAttacked),
+            (mine.id.clone(), rallier().id, P1, HookKind::AllyAttack),
+        ]
+    );
+    assert!(marker_at(&attacked.events, &theirs.id) < hook_hit_at(&attacked.events, &theirs.id));
+    assert!(marker_at(&attacked.events, &mine.id) < hook_hit_at(&attacked.events, &mine.id));
+}
+
+#[test]
+fn r5189000_frenzy_alone_marks_no_after_attack() {
+    let mut state = playing("frenzy");
+    let attacker = put(&mut state, &frenzied().id, slot(P1, Row::Units, 1), json!({}));
+    let defender = put(&mut state, &body().id, slot(P2, Row::Units, 1), json!({}));
+    let attacked = attack(&state, &attacker.id, &defender.id);
+    assert!(find_instance(&attacked.state, &defender.id).is_none_or(|card| card.zone.z() != ZoneName::Field));
+    // Frenzy's step ran (the kill freed another attack), and no hook of the card's ran with it.
+    let live = find_instance(&attacked.state, &attacker.id).expect("the attacker survived");
+    assert!(!live.exertion.attacked);
+    assert_eq!(markers(&attacked.events), vec![]);
+}
+
+#[test]
+fn r5189000_a_when_attacks_paused_by_its_prompt_is_marked_once() {
+    let mut state = playing("stalling");
+    let card = put(&mut state, &stalling().id, slot(P1, Row::Units, 1), json!({}));
+    let attacked = attack(&state, &card.id, "hero-p2");
+    assert_eq!(
+        markers(&attacked.events),
+        vec![(card.id.clone(), stalling().id, P1, HookKind::WhenAttacks)]
+    );
+    let pending = attacked.state.pending.as_ref().expect("the hook asks");
+    let answered = act_ok(
+        &attacked.state,
+        ActionInput {
+            body: ActionBody::Answer {
+                choice_id: pending.id.clone(),
+                selection: vec![Selection::None],
+            },
+            player_id: P1,
+        },
+    );
+    // The parked rest is the same run continued: no second marker, and its hit lands.
+    assert_eq!(markers(&answered.events), vec![]);
+    hook_hit_at(&answered.events, &card.id);
+}
+
+#[test]
+fn r5189000_an_on_play_hook_is_marked_before_the_played_card_is_announced() {
+    let mut state = playing("on-play");
+    let holder = put(&mut state, &opener().id, slot(P1, Row::Backrow, 1), json!({}));
+    let card = in_hand(&mut state, &body().id, P1);
+    let played = play_unit(&state, &card.id, 1);
+    assert_eq!(
+        markers(&played.events),
+        vec![(holder.id.clone(), opener().id, P1, HookKind::OnPlayHook)]
+    );
+    let at = marker_at(&played.events, &holder.id);
+    let announced = played
+        .events
+        .iter()
+        .position(|event| matches!(event, GameEvent::CardAnnounced { .. }))
+        .expect("a cardAnnounced");
+    assert!(at < announced);
+    assert!(at < hit_at(&played.events, &holder.id));
+}
+
+#[test]
+fn r5189000_a_drawn_cards_start_of_game_and_enters_hand_are_marked_for_its_owner_alone() {
+    let mut state = playing("herald");
+    let mut library = state.players.p2.library.clone();
+    let card = new_dealt_instance(&mut state, &herald().id, P2, Zone::Library { player: P2 });
+    library.insert(0, card.clone());
+    state.players.p2.library = library;
+    let ended = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+    assert_eq!(
+        markers(&ended.events),
+        vec![
+            (card.id.clone(), herald().id, P2, HookKind::StartOfGame),
+            (card.id.clone(), herald().id, P2, HookKind::EntersHand),
+        ]
+    );
+    let drawn = ended
+        .events
+        .iter()
+        .position(|event| matches!(event, GameEvent::Drawn { instance_id, .. } if *instance_id == card.id))
+        .expect("its drawn");
+    let start = marker_of(&ended.events, &card.id, HookKind::StartOfGame);
+    let enters = marker_of(&ended.events, &card.id, HookKind::EntersHand);
+    assert!(drawn < start && start < enters && enters < hit_at(&ended.events, &card.id));
+    for at in [start, enters] {
+        assert!(matches!(
+            &ended.events[at],
+            GameEvent::HookResolving { hidden_from: Some(hidden), .. } if *hidden == vec![P1]
+        ));
+    }
+    let hooks: Vec<Value> = view_markers(&ended.state, P2)
+        .into_iter()
+        .filter(|marker| marker["sourceId"] == json!(card.id))
+        .map(|marker| marker["hook"].clone())
+        .collect();
+    assert_eq!(hooks, vec![json!("startOfGame"), json!("entersHand")]);
+    let theirs = view_events(&ended.state, P1);
+    assert!(view_markers(&ended.state, P1).is_empty());
+    assert!(!names_anywhere(&theirs, &card.id));
+    assert!(!names_anywhere(&theirs, &herald().id));
+}
+
+#[test]
+fn r5189000_a_delayed_effect_is_marked_at_its_r62_point() {
+    let mut state = playing("delayed");
+    let card = in_hand(&mut state, &waiter().id, P1);
+    let played = play_unit(&state, &card.id, 1);
+    assert_eq!(
+        markers(&played.events),
+        vec![(card.id.clone(), waiter().id, P1, HookKind::Cry)]
+    );
+    let theirs = act(&played.state, json!({ "type": "endTurn", "playerId": "p1" }));
+    let back = act_ok(&theirs, json!({ "type": "endTurn", "playerId": "p2" }));
+    assert_eq!(
+        markers(&back.events),
+        vec![(card.id.clone(), waiter().id, P1, HookKind::Delayed)]
+    );
+    let started = back
+        .events
+        .iter()
+        .position(|event| matches!(event, GameEvent::TurnStarted { player: P1, .. }))
+        .expect("p1's turn starts");
+    let at = marker_at(&back.events, &card.id);
+    assert!(started < at && at < hit_at(&back.events, &card.id));
+}
+
+#[test]
+fn r5189000_a_rest_of_game_effect_is_marked_with_no_card() {
+    let mut state = playing("forever");
+    let card = in_hand(&mut state, &forever().id, P1);
+    let played = play_unit(&state, &card.id, 1);
+    let theirs = act(&played.state, json!({ "type": "endTurn", "playerId": "p1" }));
+    let back = act_ok(&theirs, json!({ "type": "endTurn", "playerId": "p2" }));
+    assert_eq!(
+        markers(&back.events),
+        vec![(String::new(), forever().id, P1, HookKind::Delayed)]
+    );
+    assert_eq!(back.state.players.p2.hero.health, HERO_HEALTH - 1);
+    // It names its definition alone, to both seats, as its badge names its words to both.
+    for viewer in [P1, P2] {
+        let delayed: Vec<Value> = view_markers(&back.state, viewer)
+            .into_iter()
+            .filter(|marker| marker["hook"] == "delayed")
+            .collect();
+        assert_eq!(
+            delayed,
+            vec![
+                json!({ "type": "hookResolving", "sourceId": "", "defId": forever().id, "controller": "p1", "hook": "delayed" })
+            ]
+        );
+    }
+}
+
+#[test]
+fn r5189000_a_new_marker_takes_no_room_in_the_loop_caps_count() {
+    let mut state = playing("cap");
+    let card = put(&mut state, &charger().id, slot(P1, Row::Units, 1), json!({}));
+    let (counts, events) = run_on_sink(&mut state, |sink| {
+        begin_interaction(sink, None);
+        mark_hook(sink, &card, P1, HookKind::WhenAttacks);
+        let after_new = events_since(sink);
+        mark_hook(sink, &card, P1, HookKind::Cry);
+        (after_new, events_since(sink))
+    });
+    assert_eq!(markers(&events).len(), 2);
+    assert_eq!(counts, (0, 1));
+}
+
+#[test]
+fn r5189000_a_new_marker_replays_from_a_round_trip_and_takes_no_number() {
+    let mut state = playing("round-trip-attack");
+    let mut bare = state.clone();
+    let card = put(&mut state, &charger().id, slot(P1, Row::Units, 1), json!({}));
+    let plain = put(&mut bare, &body().id, slot(P1, Row::Units, 1), json!({}));
+    let copy: GameState = serde_json::from_value(json_of(&state)).expect("a state reads back");
+
+    let live = attack(&state, &card.id, "hero-p2");
+    let replayed = attack(&copy, &card.id, "hero-p2");
+    assert_eq!(markers(&live.events).len(), 2);
+    assert_eq!(live.events, replayed.events);
+    assert_eq!(hash_state(&live.state), hash_state(&replayed.state));
+    // The hooks' hits take their numbers (R68's one counter), and their markers none: the same
+    // attack from a body with no hooks numbers its own events the same.
+    let hits = |events: &[GameEvent]| {
+        events
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Damage { combat: false, .. }))
+            .count()
+    };
+    let unhooked = attack(&bare, &plain.id, "hero-p2");
+    assert_eq!(hits(&live.events), 2);
+    assert_eq!(hits(&unhooked.events), 0);
+    let numbered = |result: &ReduceResult| {
+        result
+            .events
+            .iter()
+            .filter(|event| !matches!(event, GameEvent::HookResolving { .. }))
+            .count()
+    };
+    assert_eq!(
+        live.state.next_seq - unhooked.state.next_seq,
+        u32::try_from(numbered(&live) - numbered(&unhooked)).expect("a small count")
+    );
 }

@@ -1213,7 +1213,8 @@ fn reached_ids(event: &GameEvent) -> Vec<&str> {
 ///   R1852000, R3539004); an Equip's (R2260000) or any other fuse onto it is not;
 /// - an `exiled` inside a `BOARD_SWEEPS` card's run, or a copier's running one's text (`copies_a_sweep`),
 ///   from its `hookResolving` (or the prompt its answer continues) to the next marker, trap or turn edge
-///   (R3539002, R3554002, R3567000), and again once a card whose marker came after it resolves
+///   (R3539002, R3554002, R3567000; R5189000's markers are read through, as before they were marked),
+///   and again once a card whose marker came after it resolves
 ///   (`cardResolved`, R4604013: a Spell its Cry played);
 /// - a `controlChanged` or a `bounced` after a board `swapped` or a `rotated`, in the same window: the
 ///   board move carries the card whole (R4454000; the bounce is R73's and R14's at a Locked, reserved or
@@ -1255,8 +1256,11 @@ fn slumber_reach_findings(step: &SlumberStep, events: &[GameEvent], after: &Game
     for (at, event) in events.iter().enumerate() {
         match event {
             GameEvent::HookResolving {
-                source_id, def_id, ..
-            } => {
+                source_id,
+                def_id,
+                hook,
+                ..
+            } if crate::hook_marks::first_marked(*hook) => {
                 running = Some(def_id);
                 sweeping = is_board_sweep(after, def_id)
                     || copies_a_sweep(after, source_id)
@@ -1266,6 +1270,8 @@ fn slumber_reach_findings(step: &SlumberStep, events: &[GameEvent], after: &Game
                 opened.push((source_id.as_str(), def_id.as_str(), sweeping));
                 continue;
             }
+            // R5189000: the markers of the hooks it added open no run here, as before they were marked.
+            GameEvent::HookResolving { .. } => continue,
             // R4604013: a Spell a sweep's Cry played (a fused Call to Chaos and A Glimpse into the Endless
             // Sea, R43) resolved, and the sweep's run goes on.
             GameEvent::CardResolved { instance_id, .. }
@@ -1636,8 +1642,10 @@ fn killed_by_a_tick(before: &[GameEvent], id: &str) -> bool {
         .take_while(|event| {
             !matches!(
                 event,
-                GameEvent::HookResolving { .. }
-                    | GameEvent::TrapFired { .. }
+                GameEvent::HookResolving { hook, .. } if crate::hook_marks::first_marked(*hook)
+            ) && !matches!(
+                event,
+                GameEvent::TrapFired { .. }
                     | GameEvent::TurnEnded { .. }
                     | GameEvent::TurnStarted { .. }
                     | GameEvent::AutopilotEngaged { .. }
@@ -1769,7 +1777,9 @@ fn pulled_into_the_hole(
 /// A Unit is judged only when it is still on the field and still immune after the step (an aura that
 /// dropped mid-step, or a step that first took its immunity away, makes no finding), or when it is gone
 /// from the field and its own keywords held the immunity. A Spell's delayed effect, and its run after a
-/// nested marker, carry no marker of the Spell's, so I21 cannot see them. Draws nothing.
+/// nested marker, carry no marker of the Spell's, so I21 cannot see them. R5189000's markers (a delayed
+/// effect's among them) open no run here: the walk reads through them as it did before they were marked.
+/// Draws nothing.
 fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameState) -> Vec<String> {
     let mut found: Vec<String> = Vec::new();
     if step.marks.is_empty() {
@@ -1837,7 +1847,7 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 def_id,
                 hook,
                 ..
-            } => {
+            } if crate::hook_marks::first_marked(*hook) => {
                 // R4599007: from a turn's end to the next turn's start, a standing trigger opens no Spell's
                 // run: R62's tail (the end-of-turn delayed effects, the Burn tick, the Black Hole's pull,
                 // cleanup) follows the triggers that answer the `turnEnded` with no marker of its own.
@@ -1852,6 +1862,8 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 };
                 continue;
             }
+            // R5189000: the markers of the hooks it added open no run here, as before they were marked.
+            GameEvent::HookResolving { .. } => continue,
             // R4599002: a card announced face-down in the step runs as a Trap, under the id it is
             // played as too (a set Spell that resolves as it is set may be gone by the step's end).
             GameEvent::CardAnnounced {
@@ -4288,8 +4300,9 @@ fn card_label(state: &GameState, id: &str) -> String {
 /// - the attacker's "When this attacks" (R2285000) or "After this attacks" (R2285001), or the Unit
 ///   target's "After this is attacked" (MD-C26);
 /// - a card acting for the attacker's side with "After one of your Units attacks" (R2199000), or for
-///   the target's side with "When one of your Units is attacked" (R1849008). `hook_marks.rs` marks none
-///   of these attack hooks with a `hookResolving`, so `plain_combat` cannot see them run;
+///   the target's side with "When one of your Units is attacked" (R1849008). R5189000 marks these attack
+///   hooks with a `hookResolving`, but `plain_combat` reads through those markers, as it read past these
+///   hooks before they were marked, so the board check above keeps deciding them;
 /// - for a Unit target, a card acting for its side that reflects an attacker's strike back onto it
 ///   (Stinkyscape #104 Reflective Plating's Radiant face, §4.4 step 8a, R1849003): the forecast's
 ///   `taken` is the strike back alone (fuzz seed 1298), until the forecast projects it;
@@ -4451,8 +4464,8 @@ fn plain_combat(events: &[GameEvent], state: &GameState, entry: &crate::query::A
                 }
                 declared += 1;
             }
-            GameEvent::HookResolving { .. }
-            | GameEvent::TrapFired { .. }
+            GameEvent::HookResolving { hook, .. } if crate::hook_marks::first_marked(*hook) => return false,
+            GameEvent::TrapFired { .. }
             | GameEvent::AttackCancelled { .. }
             | GameEvent::Redirected { .. }
             | GameEvent::TurnEnded { .. }

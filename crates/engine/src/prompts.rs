@@ -21,7 +21,7 @@ use crate::script::{Effect, EffectContext, EffectPart, EngineSink, Hook, Memo, S
 use crate::state::{
     CardInstance, EngineError, GameState, PendingChoice, PromptOption, Resume, find_instance,
 };
-use crate::wire::{ActionBody, GameEvent, PlayerId, PromptKind, Row, Selection, TargetAim, ZoneName};
+use crate::wire::{ActionBody, GameEvent, HookKind, PlayerId, PromptKind, Row, Selection, TargetAim, ZoneName};
 use crate::work::{
     PausedStep, RUN_MARKS_KEY, RunMarks, WorkPlan, begin_work_cascade, card_data, drain_work, park_work,
     paused_of, run_marks_of, script_step_for,
@@ -186,6 +186,9 @@ pub struct ResumeOptions {
     /// marker names: a Unit's Cry triggered out of its graveyard (R467). `None` leaves the marker the
     /// resume's own `instance_id`. Never stored, so no state carries it.
     pub hook_card: Option<String>,
+    /// R5189000: the kind a run no hook name marks is marked with (a delayed effect's step, which its
+    /// `Resume` names by the step); never stored.
+    pub mark: Option<HookKind>,
 }
 
 // The stored records
@@ -628,6 +631,7 @@ pub fn continue_answer(sink: &mut EngineSink<'_>, pending: &PendingChoice, picks
             // R174, §10.6: the picks as the prompt offered them, on the stays they stand on now.
             chosen_from: Some(chosen_from),
             hook_card: None,
+            mark: None,
         },
     );
     drain_work(sink);
@@ -1067,9 +1071,14 @@ fn run_resume_now(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOpt
 
     // R2783000: a hook's first run is marked before any of its effects, outside its run's R136 window
     // (`make_context` opens it after). A parked tail or a named step is the same run continued: none.
+    // R5189000: but a delayed effect's step, re-entered at its R62 point, is a run of its own (`mark`).
+    let kind = match options.mark {
+        Some(kind) => Some(kind),
+        None if resume.step.is_empty() => crate::hook_marks::hook_kind_of(&resume.hook),
+        None => None,
+    };
     if paused.is_none()
-        && resume.step.is_empty()
-        && let Some(kind) = crate::hook_marks::hook_kind_of(&resume.hook)
+        && let Some(kind) = kind
     {
         match instance.as_ref() {
             Some(card) => {
@@ -1214,6 +1223,7 @@ pub fn run_hook_resumable(
             modes: options.modes,
             chosen_from: None,
             hook_card: None,
+            mark: None,
         },
     )
 }
@@ -1459,6 +1469,7 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
             modes: None,
             chosen_from: Some(chosen_from),
             hook_card: None,
+            mark: None,
         },
     );
 }

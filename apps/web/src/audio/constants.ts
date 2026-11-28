@@ -32,12 +32,30 @@ export const CARD_HOOKS = {
   hurt: { kinds: ["unit"] },
   /** R5188000: damage the card is the source of lands: its Spell's, its effect's or its attack's (`damage`'s `sourceId`). */
   hit: { kinds: ["unit", "spell", "trap"] },
+  /** R5189001: the card's `onPlayHook` answers a card's play (`hookResolving`, R5189000). */
+  onPlayHook: { kinds: ["unit", "spell", "trap"] },
+  /** R5189001: the Unit's "When this attacks" begins, as the attack happens, for both seats (not `attack`, the pick-up). */
+  whenAttacks: { kinds: ["unit"] },
+  /** R5189001: the Unit's "After this attacks" begins, once its combat is over. */
+  afterAttack: { kinds: ["unit"] },
+  /** R5189001: the Unit's "After this is attacked" begins, once the combat it was attacked in is over. */
+  afterAttacked: { kinds: ["unit"] },
+  /** R5189001: the card's "When one of your Units is attacked" begins. */
+  allyAttacked: { kinds: ["unit", "spell", "trap"] },
+  /** R5189001: the card's "After one of your Units attacks" begins. */
+  allyAttack: { kinds: ["unit", "spell", "trap"] },
+  /** R5189001: the card's start-of-game clause begins, at the start of the game or as the card arrives. */
+  startOfGame: { kinds: ["unit", "spell", "trap"] },
+  /** R5189001: the card's "When this enters your hand" begins. */
+  entersHand: { kinds: ["unit", "spell", "trap"] },
+  /** R5189001: one of the card's delayed effects resolves, at the start or end of a turn. */
+  delayed: { kinds: ["unit", "spell", "trap"] },
 } as const satisfies Record<string, { kinds: readonly CardKind[] }>;
 export const CARD_HOOK_NAMES = Object.keys(CARD_HOOKS) as readonly CardHook[];
 /**
  * R5188000: the hooks that can fire every turn, or many times in one action. Each play sounds their
  * effect; their line speaks the first time the hook fires in a game, then at most once a turn per card
- * by TRIGGER_LINE_CHANCE, at VOICE_PRIORITY.recurring.
+ * by TRIGGER_LINE_CHANCE, at VOICE_PRIORITY.recurring. R5189001: and the nine R5189000 marks.
  */
 export const RECURRING_HOOKS: ReadonlySet<CardHook> = new Set<CardHook>([
   "startOfTurn",
@@ -46,6 +64,15 @@ export const RECURRING_HOOKS: ReadonlySet<CardHook> = new Set<CardHook>([
   "activate",
   "hurt",
   "hit",
+  "onPlayHook",
+  "whenAttacks",
+  "afterAttack",
+  "afterAttacked",
+  "allyAttacked",
+  "allyAttack",
+  "startOfGame",
+  "entersHand",
+  "delayed",
 ]);
 /** R5188000: the chance a recurring hook's line speaks after its first, at most once a turn per card (the cosmetic rng's draw). */
 export const TRIGGER_LINE_CHANCE = 1 / 3;
@@ -114,7 +141,7 @@ export const VOICE_BUDGET_BYTES = 32 * 1024 * 1024;
 export const VOICE_FILE_MAX_MS = 4000;   // longest rendered line (gen-voice.mjs MAX_SECONDS; B35)
 /**
  * An attack line can repeat while the player fiddles with the Unit (R655), so it is the shortest; so can
- * a recurring hook's (R5188000).
+ * a recurring hook's (R5188000, R5189001).
  */
 export const VOICE_MAX_WORDS = {
   play: 8,
@@ -128,6 +155,15 @@ export const VOICE_MAX_WORDS = {
   activate: 4,
   hurt: 4,
   hit: 4,
+  onPlayHook: 4,
+  whenAttacks: 4,
+  afterAttack: 4,
+  afterAttacked: 4,
+  allyAttacked: 4,
+  allyAttack: 4,
+  startOfGame: 4,
+  entersHand: 4,
+  delayed: 4,
 } as const satisfies Record<CardHook, number>;
 /**
  * R5188001: a line added since census-baseline.json, on any hook (a pool's added line on an old hook

@@ -26,7 +26,9 @@ const HIDDEN_ID = "hidden";
 
 /**
  * R2797000: the table hook a `hookResolving` marker opens an entry for: none for a Cry, which runs inside
- * its card's own play (a Spell's effect is one), so its play keys it by `cast` or `cry`.
+ * its card's own play (a Spell's effect is one), so its play keys it by `cast` or `cry`. R5189001: none
+ * for the hooks R5189000 marks either, which no effects table keys yet: a `trigger` motif would play a
+ * turn hook's look on an attack.
  */
 const HOOK_OF: Readonly<Record<Extract<GameEvent, { type: "hookResolving" }>["hook"], FxCardHook | null>> = {
   cry: null,
@@ -35,6 +37,15 @@ const HOOK_OF: Readonly<Record<Extract<GameEvent, { type: "hookResolving" }>["ho
   endOfTurn: "trigger",
   whenever: "trigger",
   activate: "activate",
+  onPlayHook: null,
+  whenAttacks: null,
+  afterAttack: null,
+  afterAttacked: null,
+  allyAttacked: null,
+  allyAttack: null,
+  startOfGame: null,
+  entersHand: null,
+  delayed: null,
 };
 
 /** R2797000: the events after which no hook entry still runs: an attack, a turn's end or start, the game's end. */

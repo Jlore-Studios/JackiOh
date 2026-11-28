@@ -1,0 +1,15 @@
+{
+  "title": "Card sound hooks for attacks, plays, arrivals and delayed effects",
+  "sources": "issue #5189",
+  "notes": "R5189000, R5189001: nine more marked hooks and their card-audio.json5 hooks, labelled in the voice preview; no card carries one yet and no card plays differently.",
+  "player": {
+    "title": "",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

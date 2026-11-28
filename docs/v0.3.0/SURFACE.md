@@ -494,7 +494,9 @@ engine's `damage.rs`, `combat.rs` and `state_check.rs` setting it where the keyw
 route rides `DamageFlags.via`, never serialized; a death's keyword `Frontier.death_via`, which dies
 with the action). `GameEvent::HookResolving { source_id, def_id, controller, hook: HookKind,
 hidden_from }` marks each first run of a Cry, Death, start-of-turn or end-of-turn hook, Whenever
-trigger and Activate just before its effects (`hook_marks.rs`). Neither reaches the trigger loop
+trigger and Activate just before its effects (`hook_marks.rs`), and since R5189000 of an `onPlayHook`,
+`whenAttacks`, `afterAttack`, `afterAttacked`, `allyAttacked`, `allyAttack`, `startOfGame`, `entersHand`
+and delayed effect (`delayed`), whose markers the loop cap does not count. Neither reaches the trigger loop
 (`as_rules_read`, `triggers::withhold_report`), so no rule reads them and no hash moves; `view_for`
 withholds a marker from a seat that could not read its card and never forwards `hiddenFrom`, and the
 golden texts leave both out (R2783000, R2783001). Since #3857 `GameEvent::ArmorGained { player, amount,

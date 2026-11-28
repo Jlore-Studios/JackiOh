@@ -23,7 +23,9 @@ use crate::state::{
     CardInstance, DeclaredAttack, EngineError, Exertion, GameState, Position, Resume, WorkItem,
     find_instance, find_instance_mut,
 };
-use crate::wire::{GameEvent, Keyword, KeywordKind, PLAYER_IDS, PlayerId, has_keyword, opponent_of};
+use crate::wire::{
+    GameEvent, HookKind, Keyword, KeywordKind, PLAYER_IDS, PlayerId, has_keyword, opponent_of,
+};
 use crate::work::{PausedStep, WorkPlan, engine_resume, owe, paused as is_paused, paused_of};
 use crate::zones::live_or;
 
@@ -126,6 +128,14 @@ fn note_first_strike_kill(sink: &mut EngineSink<'_>, id: &str) {
 trait OwedHook: Serialize + DeserializeOwned {
     const WORK: &'static str;
     const KEY: &'static str;
+    /// R5189000: the kind the hook's `hookResolving` marker reports, its `Script` hook's name.
+    const MARK: HookKind;
+
+    /// R5189000: whether the step runs a hook of the card's own, which is marked. Only an "After this
+    /// attacks" step can run none: Frenzy's "this may attack again" alone (R3543003).
+    fn runs_card_hook(&self, _state: &GameState) -> bool {
+        true
+    }
 }
 
 /// The `WORK` item holding `owed`: what a pause owes, and the plan a question in the hook parks under.
@@ -157,6 +167,11 @@ fn run_engine_hook<T: OwedHook>(
     facts: IndexMap<String, Value>,
     paused: Option<PausedStep>,
 ) -> crate::prompts::ListStatus {
+    // R5189000: a hook's first run is marked before its effects, outside its R136 window (the context
+    // below opens it); a split hook (`paused`) is the same run continued, and marks nothing again.
+    if paused.is_none() && owed.runs_card_hook(sink.state) {
+        crate::hook_marks::mark_hook(sink, card, controller, T::MARK);
+    }
     let plan = WorkPlan::new(hook_resume(owed), card.controller);
     let mut ctx = crate::resolve::make_context(
         sink,
@@ -2010,6 +2025,7 @@ const ATTACK_STAGE: &str = "attack";
 impl OwedHook for OwedWhenAttacks {
     const WORK: &'static str = WHEN_ATTACKS_WORK;
     const KEY: &'static str = WHEN_ATTACKS_KEY;
+    const MARK: HookKind = HookKind::WhenAttacks;
 }
 
 fn has_when_attacks(state: &GameState, card: &CardInstance) -> bool {
@@ -2210,6 +2226,15 @@ const AFTER_ATTACK_KEY: &str = "attack";
 impl OwedHook for OwedAfterAttack {
     const WORK: &'static str = AFTER_ATTACK_WORK;
     const KEY: &'static str = AFTER_ATTACK_KEY;
+    const MARK: HookKind = HookKind::AfterAttack;
+
+    /// The card's "After this attacks" as the snapshot it fought with holds it, which is the hook the
+    /// step runs (`run_after_attack`); a step that is Frenzy's alone runs none of the card's.
+    fn runs_card_hook(&self, state: &GameState) -> bool {
+        crate::scripts::script_of(state, &self.snapshot)
+            .after_attack
+            .is_some()
+    }
 }
 
 /// R113: the `resume.hook` of a combat's owed Radiant copies (MD-D20, R1123) — the fresh copies a
@@ -2648,6 +2673,7 @@ const AFTER_ATTACKED_KEY: &str = "attacked";
 impl OwedHook for OwedAfterAttacked {
     const WORK: &'static str = AFTER_ATTACKED_WORK;
     const KEY: &'static str = AFTER_ATTACKED_KEY;
+    const MARK: HookKind = HookKind::AfterAttacked;
 }
 
 /// Whether this card is still on the field on the stay it fought from: live, acting, and not left
@@ -2767,6 +2793,7 @@ const ALLY_ATTACKED_KEY: &str = "allyAttacked";
 impl OwedHook for OwedAllyAttacked {
     const WORK: &'static str = ALLY_ATTACKED_WORK;
     const KEY: &'static str = ALLY_ATTACKED_KEY;
+    const MARK: HookKind = HookKind::AllyAttacked;
 }
 
 /// R1849008: the cards that answer this declaration, every card acting on the attacked Unit's side
@@ -2942,6 +2969,7 @@ const ALLY_ATTACK_KEY: &str = "allyAttack";
 impl OwedHook for OwedAllyAttack {
     const WORK: &'static str = ALLY_ATTACK_WORK;
     const KEY: &'static str = ALLY_ATTACK_KEY;
+    const MARK: HookKind = HookKind::AllyAttack;
 }
 
 /// R2199000: the cards that answer a combat of `player`'s attacker — every card acting on that

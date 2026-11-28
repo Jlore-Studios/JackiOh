@@ -14,7 +14,9 @@
 #   voice    the card's spoken lines, each in letters, spaces and , . ' ! ? - only: a Unit's play,
 #            attack and death, anything else's cast, and for a card whose effect summons a trigger
 #            list (R1088). Since R5188000 also the recurring hooks' lines, under the hook's name:
-#            startOfTurn, endOfTurn, whenever, activate, hit, and a Unit's hurt. Any hook's line may
+#            startOfTurn, endOfTurn, whenever, activate, hit, and a Unit's hurt; since R5189001
+#            onPlayHook, allyAttacked, allyAttack, startOfGame, entersHand, delayed, and a Unit's
+#            whenAttacks, afterAttack and afterAttacked. Any hook's line may
 #            be a list, a pool the client picks one of each time ([first, second, ...]). A line added
 #            since R5188001 is four words at most. Each needs its hook, with the voice that speaks it,
 #            in card-audio.json5.

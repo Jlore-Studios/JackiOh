@@ -47,9 +47,29 @@ const KIND_OF_TYPE: Readonly<Record<string, EntryKind>> = {
 
 /** The hooks each kind may carry (constants.ts CARD_HOOKS), and the lines SPEC §10.11 requires of it. */
 const HOOKS_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
-  unit: ["play", "attack", "death", "trigger", "startOfTurn", "endOfTurn", "whenever", "activate", "hurt", "hit"],
-  spell: ["cast", "trigger", "startOfTurn", "endOfTurn", "whenever", "activate", "hit"],
-  trap: ["cast", "trigger", "startOfTurn", "endOfTurn", "whenever", "activate", "hit"],
+  unit: [
+    "play",
+    "attack",
+    "death",
+    "trigger",
+    "startOfTurn",
+    "endOfTurn",
+    "whenever",
+    "activate",
+    "hurt",
+    "hit",
+    "onPlayHook",
+    "whenAttacks",
+    "afterAttack",
+    "afterAttacked",
+    "allyAttacked",
+    "allyAttack",
+    "startOfGame",
+    "entersHand",
+    "delayed",
+  ],
+  spell: ["cast", "trigger", "startOfTurn", "endOfTurn", "whenever", "activate", "hit", "onPlayHook", "allyAttacked", "allyAttack", "startOfGame", "entersHand", "delayed"],
+  trap: ["cast", "trigger", "startOfTurn", "endOfTurn", "whenever", "activate", "hit", "onPlayHook", "allyAttacked", "allyAttack", "startOfGame", "entersHand", "delayed"],
 };
 const LINES_OF_KIND: Readonly<Record<EntryKind, readonly Hook[]>> = {
   unit: ["play", "attack", "death"],
@@ -308,6 +328,15 @@ describe("card-audio.json5 covers the catalog (B33)", () => {
       "activate",
       "hurt",
       "hit",
+      "onPlayHook",
+      "whenAttacks",
+      "afterAttack",
+      "afterAttacked",
+      "allyAttacked",
+      "allyAttack",
+      "startOfGame",
+      "entersHand",
+      "delayed",
     ]);
     const wrong: string[] = [];
     for (const { defId, key, hook, value } of allAssignments()) {
@@ -478,6 +507,15 @@ describe("every voice line is short, plain flavour (B34)", () => {
       activate: 4,
       hurt: 4,
       hit: 4,
+      onPlayHook: 4,
+      whenAttacks: 4,
+      afterAttack: 4,
+      afterAttacked: 4,
+      allyAttacked: 4,
+      allyAttack: 4,
+      startOfGame: 4,
+      entersHand: 4,
+      delayed: 4,
     });
     expect(wordCount("Too... slow...")).toBe(2);
     expect(wordCount("Oops - Surf's up!")).toBe(3);

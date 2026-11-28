@@ -124,4 +124,12 @@ describe("the sound tables' room (R5188001)", () => {
       }),
     ).toEqual(["fx:hit", "fx:play", "hurt", "play", "play2", "play3", "trigger1"]);
   });
+
+  it("R5189001 the census counts a line and an effect on the hooks R5189000 marks", () => {
+    expect(soundUnits({ kind: "unit", whenAttacks: { voice: "v", text: "Go.", effect: "e" }, delayed: { effect: "e" } })).toEqual([
+      "fx:delayed",
+      "fx:whenAttacks",
+      "whenAttacks",
+    ]);
+  });
 });

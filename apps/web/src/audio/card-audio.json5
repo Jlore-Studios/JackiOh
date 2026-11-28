@@ -36,6 +36,17 @@
 //   activate     one of its Activate abilities runs
 //   hurt         a Unit takes damage and is still on the field when that action ends
 //   hit          damage the card is the source of lands: its Spell's, its effect's or its attack's
+// and, since R5189001, one for each hook R5189000 marks, recurring too:
+//   onPlayHook     the card's "Whenever a card is played" answers a play
+//   whenAttacks    a Unit's "When this attacks" begins, as the attack happens, for both players
+//                  (not `attack`, which is your own pick-up)
+//   afterAttack    a Unit's "After this attacks" begins, once its combat is over
+//   afterAttacked  a Unit's "After this is attacked" begins, once that combat is over
+//   allyAttacked   its "When one of your Units is attacked" begins
+//   allyAttack     its "After one of your Units attacks" begins
+//   startOfGame    its start-of-game clause begins, at the start of the game or as the card arrives
+//   entersHand     its "When this enters your hand" begins
+//   delayed        one of its delayed effects resolves, at the start or end of a turn
 // A recurring hook's effect plays each time it fires (once per animation entry); its line speaks the
 // first time it fires in a game, then at most once a turn per card, about one time in three, and never
 // cuts in on another line.

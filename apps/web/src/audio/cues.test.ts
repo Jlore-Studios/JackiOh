@@ -1512,7 +1512,7 @@ describe("R5188000 the recurring hooks: a turn hook's, a Whenever's and an Activ
     for (const hook of ["cry", "death"] as const) expect(cuesFor(marker(hook, "c1", UNIT), hooked()), hook).toEqual([]);
     expect(SOUND_CUES.hookResolving.sfx).toBeNull();
     // A marked kind this build does not know (a tab left open on an older bundle, #769) sounds nothing.
-    const unknown = { ...marker("whenever"), hook: "afterAttack" } as unknown as GameEvent;
+    const unknown = { ...marker("whenever"), hook: "notAHook" } as unknown as GameEvent;
     expect(cuesFor(unknown, hooked())).toEqual([]);
     // A card with no such hook plays nothing.
     expect(cuesFor(marker("whenever", "c2", SPELL), hooked())).toEqual([]);
@@ -1606,6 +1606,73 @@ describe("R5188000 the recurring hooks: a turn hook's, a Whenever's and an Activ
     expect(ranked(played(UNIT), closed)).toEqual([`${UNIT}/play!${String(VOICE_PRIORITY.play)}`]);
     expect(asked).toEqual([]);
     expect(RECURRING.every((hook) => TABLE.cards[HOOKED]?.[hook] !== undefined)).toBe(true);
+  });
+});
+
+describe("R5189001 the hooks R5189000 marks: an attack's, an ally's, a play's, an arrival's and a delayed effect's", () => {
+  /** #91 Fed Fauci with all nine, each a line and an effect. */
+  const HOOKED = "core-091";
+  const MARKED = ["onPlayHook", "whenAttacks", "afterAttack", "afterAttacked", "allyAttacked", "allyAttack", "startOfGame", "entersHand", "delayed"] as const;
+  const TABLE: CardAudioTable = {
+    voices: LINES.voices,
+    effects: { puff: { sfx: "poof", pitch: 0.7, gain: 1 } },
+    cards: {
+      ...LINES.cards,
+      [HOOKED]: { kind: "unit", ...Object.fromEntries(MARKED.map((hook) => [hook, { voice: "hustler", text: "Go.", effect: "puff" }])) },
+    },
+    emotes: {},
+  };
+  type MarkedHook = Extract<GameEvent, { type: "hookResolving" }>["hook"];
+  const marker = (hook: MarkedHook, sourceId = "u1", defId = HOOKED, controller: PlayerId = "p1"): GameEvent => ({
+    type: "hookResolving",
+    sourceId,
+    defId,
+    controller,
+    hook,
+  });
+  /** Your #91 (`ua`) faces the other seat's (`ub`). */
+  const board = baseView({
+    you: emptySide("p1", { units: [unit("p1", { instanceId: "ua", defId: HOOKED }), null, null, null, null] }),
+    opponent: emptySide("p2", { hand: { count: 4 }, units: [unit("p2", { instanceId: "ub", defId: HOOKED }), null, null, null, null] }),
+  });
+  const hooked = (over: Partial<CueContext> = {}): CueContext => ctx({ lines: TABLE, view: board, ...over });
+
+  it("R5189001 hookResolving plays each of the nine hooks, effect then line at VOICE_PRIORITY.recurring, for either seat", () => {
+    for (const hook of MARKED) {
+      for (const [sourceId, controller] of [
+        ["ua", "p1"],
+        ["ub", "p2"],
+      ] as const) {
+        expect(cuesFor(marker(hook, sourceId, HOOKED, controller), hooked()), `${hook} for ${controller}`).toEqual([
+          { kind: "effect", defId: HOOKED, hook, delayMs: 0, priority: VOICE_PRIORITY.recurring },
+          { kind: "voice", defId: HOOKED, line: hook, delayMs: CARD_EFFECT_DELAY_MS, priority: VOICE_PRIORITY.recurring },
+        ]);
+      }
+      // A recurring hook: a closed gate keeps the effect, asked of the card's instance by the hook's name.
+      const asked: string[] = [];
+      const closed = hooked({
+        lineGate: (cardId, gated) => {
+          asked.push(`${cardId}|${gated}`);
+          return false;
+        },
+      });
+      expect(cuesFor(marker(hook, "ub", HOOKED, "p2"), closed), hook).toEqual([
+        { kind: "effect", defId: HOOKED, hook, delayMs: 0, priority: VOICE_PRIORITY.recurring },
+      ]);
+      expect(asked).toEqual([`ub|${hook}`]);
+      // R203: behind the sentinel it plays nothing.
+      expect(cuesFor(marker(hook, "h1", HIDDEN_DEF_ID, "p2"), hooked()), hook).toEqual([]);
+    }
+    // A delayed effect of a rest-of-game clause names no card: it sounds by its definition, gated by it.
+    const asked: string[] = [];
+    const gate = hooked({
+      lineGate: (cardId) => {
+        asked.push(cardId);
+        return true;
+      },
+    });
+    expect(cuesFor(marker("delayed", "", HOOKED), gate).map((c) => c.kind)).toEqual(["effect", "voice"]);
+    expect(asked).toEqual([HOOKED]);
   });
 });
 
