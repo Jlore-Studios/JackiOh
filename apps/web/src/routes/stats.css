@@ -393,7 +393,8 @@
   color: var(--pal-lacquer-400);
 }
 
-/* R5186000: the card statistics' load progress over the skeleton (stats/LoadProgress.tsx). */
+/* R5186000, R5219000: the card statistics' load progress over the skeleton (stats/LoadProgress.tsx); its fill
+   glides between the page's ticks, so it never stands still. */
 .stats-load {
   margin: var(--space-6) 0;
 }
@@ -408,7 +409,7 @@
 .stats-load__fill {
   height: 100%;
   background: var(--pal-gold-300);
-  transition: width var(--motion-slow) var(--ease-out);
+  transition: width var(--motion-base) linear;
 }
 
 .stats-load__words {
