@@ -22307,13 +22307,8 @@
     "what": "review #5281 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-28T06:49:58Z",
-    "notes": [
-      "delivered build #5265 on claude-8 (run 46114159305): built",
-      "started review #5281 on claude-8 (run 46118541606)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-28T06:57:39Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -23018,7 +23013,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T06:49:58Z",
+  "loop_tick": "2026-11-28T06:57:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
