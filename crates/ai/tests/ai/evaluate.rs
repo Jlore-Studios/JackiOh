@@ -402,15 +402,14 @@ mod face_threat_b13 {
         );
     }
 
+    /// Each hit meets the Armor, never the total (10 − 2 = 8): the 3 meets 2 and wears it to 1 (R5183000), so the
+    /// 7 meets 1: 1 + 6 = 7, as the engine deals. `GREEDY_EVAL`, which reads no wear, sets each hit against the
+    /// whole 2: 1 + 5 = 6 (R5228000).
     #[test]
     fn b13_hero_armor_is_subtracted_from_each_hit_not_from_the_total() {
-        assert_eq!(
-            face_threat(
-                &board(json!({ "p1": { "armor": 2 }, "p2": { "field": enemy() } })),
-                PlayerId::P2
-            ),
-            6
-        );
+        let state = board(json!({ "p1": { "armor": 2 }, "p2": { "field": enemy() } }));
+        assert_eq!(face_threat(&state, PlayerId::P2), 7);
+        assert_eq!(face_threat_with(&state, PlayerId::P2, &GREEDY_EVAL), 6);
     }
 
     #[test]
