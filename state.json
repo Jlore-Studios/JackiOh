@@ -20944,6 +20944,9 @@
       "requested_by": "jgoetzmann-bot",
       "stop_requested": false,
       "suggestion": true
+    },
+    "5227": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -44377,6 +44380,13 @@
         "at": "2026-11-28T00:33:22Z",
         "number": 5226,
         "title": "Patch: Immutable keeps Last Hurrah's Flashback off a card in the hand, and its random picks skip Immutable cards",
+        "verdict": "auto-approved",
+        "why": "approved by itself: no one voted on it"
+      },
+      {
+        "at": "2026-11-28T00:33:32Z",
+        "number": 5227,
+        "title": "Patch: a dungeon run's Economic relics say their effect counts for each level, as the run counts it",
         "verdict": "auto-approved",
         "why": "approved by itself: no one voted on it"
       }
