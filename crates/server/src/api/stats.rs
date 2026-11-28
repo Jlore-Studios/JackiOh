@@ -1416,9 +1416,37 @@ impl SnapshotSource {
         let totals = totals_in(&self.db, None, false, CardRows::Filed(filing.clone())).await?;
         ticket.step(LoadStep::Snapshot);
         // R5245000: the snapshot is kept from when its load finished, its totals read.
-        let snapshot = Arc::new(blocking(|| Snapshot::new(&history, totals, filing, now_ms())));
+        let mut snapshot = blocking(|| Snapshot::new(&history, totals, filing, now_ms()));
+        // R5271001: the window every first read asks for is cut here, inside the load and its last step, so a
+        // read that gave up before the snapshot landed leaves no cut for the next read to wait on.
+        let key = shared_key(&self.version);
+        if snapshot.holds(&key.patch) {
+            let window = blocking(|| {
+                window_over(
+                    &snapshot.totals,
+                    &history,
+                    &key.patch,
+                    key.source,
+                    key.pilot,
+                    key.mode,
+                )
+            });
+            snapshot.shared = Some((key, Arc::new(window)));
+        }
         ticket.done = true;
-        Ok(snapshot)
+        Ok(Arc::new(snapshot))
+    }
+}
+
+/// R5271001: the key of the window `/stats`'s first read (`?mode=all`), the patch list (`listed_patches`) and
+/// every match's win rates (`win_rate_snapshot`) ask for: the build's version, the default sources, both seats
+/// merged and every match type.
+fn shared_key(version: &str) -> ReportKey {
+    ReportKey {
+        patch: version.to_string(),
+        source: SourceParam::Default,
+        pilot: PublicStatsPilot::Merged,
+        mode: PublicStatsMode::All,
     }
 }
 
@@ -1726,6 +1754,9 @@ struct Snapshot {
     windows: Vec<PatchWindow>,
     /// R5245000: when its load finished, which it is kept `CARD_STATS_CACHE_TTL_SECONDS` from.
     loaded_at: i64,
+    /// R5271001: the window at `shared_key`, cut by the load itself; none for a version the snapshot does not
+    /// hold as filed, which a read cuts as before.
+    shared: Option<(ReportKey, Arc<KeptWindow>)>,
 }
 
 impl Snapshot {
@@ -1740,6 +1771,7 @@ impl Snapshot {
             filing,
             windows,
             loaded_at,
+            shared: None,
         }
     }
 
@@ -2065,6 +2097,14 @@ async fn shipped_window(
         CutFrom::Snapshot(snapshot) => snapshot,
         CutFrom::Held(window) => return Ok(window),
     };
+    // R5271001: the window the load cut fills its cell at once.
+    if let Some((shared, window)) = &snapshot.held.shared
+        && *shared == key
+    {
+        let window = Arc::clone(window);
+        let keep = app.card_stats.window_cell(key, snapshot.made_at);
+        return kept_value(keep, async move { Ok(window) }).await;
+    }
     let keep = app.card_stats.window_cell(key, snapshot.made_at);
     // R5225000: the cut runs on a task of its own, as the snapshot loads (R5186000), so a read that gives up
     // leaves it to finish for the next.
@@ -3202,6 +3242,38 @@ mod tests {
     async fn r5225000_a_one_thread_runtime_runs_the_work_in_place() {
         let asked = std::thread::current().id();
         assert_eq!(blocking(|| std::thread::current().id()), asked);
+    }
+
+    /// R5271001: the snapshot's load cuts the window every first read asks for, inside the load, so a read that
+    /// gave up before the snapshot landed leaves the next read no cut to wait on. The window it holds is the one
+    /// a cut of the same totals gives.
+    #[tokio::test(flavor = "current_thread")]
+    async fn r5271001_the_snapshots_load_cuts_the_shared_window() {
+        let history = patch_history();
+        let version = history.last().expect("a shipped patch").version.clone();
+        let source = SnapshotSource {
+            db: Db::fake(),
+            version: version.clone(),
+            load: Arc::default(),
+            folds: false,
+        };
+        let snapshot = source.load().await.expect("the snapshot loaded");
+        let (key, window) = snapshot.shared.as_ref().expect("the load cut no shared window");
+        assert_eq!(*key, shared_key(&version));
+        let cut = window_over(
+            &snapshot.totals,
+            &history,
+            &version,
+            key.source,
+            key.pilot,
+            key.mode,
+        );
+        assert_eq!(
+            win_rates_from_report(&window.report),
+            win_rates_from_report(&cut.report)
+        );
+        assert_eq!(window.live_games, cut.live_games);
+        assert_eq!(window.patches.len(), cut.patches.len());
     }
 
     /// R5245000: when the tests' snapshot finished loading, past the TTL from zero.
