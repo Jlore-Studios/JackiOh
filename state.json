@@ -20942,8 +20942,16 @@
     "what": "suggestions (tests) on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-28T00:03:53Z",
-    "notes": [],
+    "at": "2026-11-28T00:10:04Z",
+    "notes": [
+      "started suggest on claude-3 (run 46086506033)",
+      "started suggest on claude-8 (run 46086552799)",
+      "started suggest on claude-4 (run 46086599560)",
+      "started suggest on claude-8 (run 46086647937)",
+      "started suggest on claude-1 (run 46086689452)",
+      "nothing more to start: nothing is queued",
+      "pruned 5 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -21648,7 +21656,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T00:03:53Z",
+  "loop_tick": "2026-11-28T00:10:04Z",
   "machine_disk": {
     "issue": null,
     "reading": {
