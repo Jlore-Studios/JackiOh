@@ -4400,6 +4400,359 @@
     "felinorsvshumans-060-2": { // Tools of Cremation
       cast: { voice: "diva", effect: "fireWhoosh" },
     },
+    "felinorsvshumans-061": { // Devolve
+      cast: { voice: "sapi-mystic", effect: "morphRelease" },
+    },
+    "felinorsvshumans-062": { // Tubbs
+      play: { voice: "cat" },
+      attack: { voice: "cat", effect: "bigCatPounce" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-063": { // S-Tier Speciesist
+      play: { voice: "snob" },
+      attack: { voice: "snob" },
+      death: { voice: "snob" },
+    },
+    "felinorsvshumans-064": { // Fiender Artist
+      play: { voice: "posh" },
+      attack: { voice: "posh" },
+      death: { voice: "posh" },
+    },
+    "felinorsvshumans-065": { // Felinor Forager
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-066": { // Fuzzyfruit
+      cast: { voice: "sapi-fruit", effect: "squelch" },
+    },
+    "felinorsvshumans-067": { // Big Game Hunter
+      play: { voice: "guard" },
+      attack: { voice: "guard", effect: "sharpCrack" },
+      death: { voice: "guard" },
+    },
+    "felinorsvshumans-068": { // Closeted Commentator
+      play: { voice: "announcer" },
+      attack: { voice: "announcer" },
+      death: { voice: "announcer" },
+    },
+    "felinorsvshumans-069": { // Cosplayer
+      play: { voice: "zoomer" },
+      attack: { voice: "zoomer" },
+      death: { voice: "zoomer" },
+    },
+    "felinorsvshumans-070": { // Felinor Commander
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat", effect: "bigCatPounce" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-071": { // Felinor Reanimator
+      play: { voice: "cat" },
+      attack: { voice: "cat" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-072": { // Otherworldly Naturalism
+      cast: { voice: "narrator", effect: "drawRelease" },
+    },
+    "felinorsvshumans-072-1": { // Wild Growth
+      cast: { voice: "storyteller", effect: "manaRelease" },
+    },
+    "felinorsvshumans-072-2": { // Swipe
+      cast: { voice: "brute", effect: "physicalRelease" },
+    },
+    "felinorsvshumans-072-3": { // Savage Roar
+      cast: { voice: "brute", effect: "buffRelease" },
+    },
+    "felinorsvshumans-073": { // Bloodforged Crusader
+      play: { voice: "sapi-hero" },
+      attack: { voice: "sapi-hero", effect: "bladeSwish" },
+      death: { voice: "sapi-hero" },
+    },
+    "felinorsvshumans-074": { // Yile, Acceleration Supremist
+      play: { voice: "prof" },
+      attack: { voice: "prof" },
+      death: { voice: "prof" },
+    },
+    "felinorsvshumans-074-1": { // Yile, Acceleration Supremist Prime
+      play: { voice: "prof" },
+      attack: { voice: "prof" },
+      death: { voice: "prof" },
+    },
+    "felinorsvshumans-075": { // Illinois Jones
+      play: { voice: "hero" },
+      attack: { voice: "hero" },
+      death: { voice: "hero" },
+    },
+    "felinorsvshumans-076": { // Desecrator
+      play: { voice: "sapi-rasp" },
+      attack: { voice: "sapi-rasp" },
+      death: { voice: "sapi-rasp" },
+    },
+    "felinorsvshumans-077": { // Anaphylaxis
+      cast: { voice: "crone", effect: "shatterRelease" },
+    },
+    "felinorsvshumans-078": { // Human Harbinger
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "felinorsvshumans-078-1": { // Human Harbinger Prime
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "felinorsvshumans-079": { // Post Human Aesthetist
+      play: { voice: "posh" },
+      attack: { voice: "posh" },
+      death: { voice: "posh" },
+    },
+    "felinorsvshumans-080": { // Support Chinook
+      play: { voice: "robot", effect: "engineRev" },
+      attack: { voice: "robot", effect: "jetZoom" },
+      death: { voice: "robot", effect: "powerDown" },
+    },
+    "felinorsvshumans-081": { // Old-Timer Catboy
+      play: { voice: "elder" },
+      attack: { voice: "elder" },
+      death: { voice: "elder" },
+    },
+    "felinorsvshumans-082": { // The Last Meow
+      cast: { voice: "sapi-cat", effect: "catChirp" },
+    },
+    "felinorsvshumans-083": { // Maomao
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-084": { // 𓃠
+      play: { voice: "cat" },
+      attack: { voice: "cat", effect: "catChirp" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-085": { // Living Fire Potion
+      play: { voice: "sapi-critter" },
+      attack: { voice: "sapi-critter", effect: "fireWhoosh" },
+      death: { voice: "sapi-critter" },
+    },
+    "felinorsvshumans-086": { // Living Poison Potion
+      play: { voice: "sapi-critter" },
+      attack: { voice: "sapi-critter", effect: "hiss" },
+      death: { voice: "sapi-critter" },
+    },
+    "felinorsvshumans-087": { // Baku's Bingeing
+      cast: { voice: "sapi-cook", effect: "drawRelease" },
+    },
+    "felinorsvshumans-088": { // Cattail
+      play: { voice: "cat" },
+      attack: { voice: "cat" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-089": { // GIGA Felinor
+      play: { voice: "sapi-giant" },
+      attack: { voice: "sapi-giant", effect: "bigCatPounce" },
+      death: { voice: "sapi-giant" },
+    },
+    "felinorsvshumans-090": { // Lone Defender
+      play: { voice: "guard" },
+      attack: { voice: "guard" },
+      death: { voice: "guard" },
+    },
+    "felinorsvshumans-091": { // KY's Log Exp of the FFT
+      cast: { voice: "prof", effect: "arcaneRelease" },
+    },
+    "felinorsvshumans-092": { // KY's Patented Log 2 Utility
+      cast: { voice: "prof", effect: "dataBlips" },
+    },
+    "felinorsvshumans-093": { // Twin Tyrant
+      play: { voice: "brute" },
+      attack: { voice: "brute" },
+      death: { voice: "brute" },
+    },
+    "felinorsvshumans-094": { // Bad Luck Felinor
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-095": { // Platebreaker
+      play: { voice: "brute" },
+      attack: { voice: "brute", effect: "metalClank" },
+      death: { voice: "brute" },
+    },
+    "felinorsvshumans-096": { // Magic Inclined Felinor
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-097": { // Paltry Felinor
+      play: { voice: "cat" },
+      attack: { voice: "cat" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-098": { // Yarma
+      play: { voice: "cat" },
+      attack: { voice: "cat" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-098-1": { // Yarma Prime
+      play: { voice: "cat" },
+      attack: { voice: "cat" },
+      death: { voice: "cat" },
+    },
+    "felinorsvshumans-098-2": { // Dream Portal
+      cast: { voice: "whisper", effect: "summonRelease" },
+    },
+    "felinorsvshumans-099": { // Jlorewalker Cho
+      play: { voice: "elder" },
+      attack: { voice: "elder" },
+      death: { voice: "elder" },
+    },
+    "felinorsvshumans-100": { // Call to Chaos (Felinors vs. Humans Edition)
+      cast: { voice: "announcer", effect: "slotSpin" },
+    },
+    "felinorsvshumans-100-1": { // Felinor Golem
+      play: { voice: "brute-golem" },
+      attack: { voice: "brute-golem", effect: "heavyStomp" },
+      death: { voice: "brute-golem" },
+    },
+    "felinorsvshumans-100-2": { // Human Golem
+      play: { voice: "brute-golem" },
+      attack: { voice: "brute-golem", effect: "heavyStomp" },
+      death: { voice: "brute-golem" },
+    },
+    "felinorsvshumans-101": { // Dangerous Variant
+      play: { voice: "sapi-trickster" },
+      attack: { voice: "sapi-trickster" },
+      death: { voice: "sapi-trickster" },
+    },
+    "felinorsvshumans-102": { // Diving Gryphon
+      play: { voice: "sapi-critter" },
+      attack: { voice: "sapi-critter", effect: "gust" },
+      death: { voice: "sapi-critter" },
+    },
+    "felinorsvshumans-103": { // Frantic Forager
+      play: { voice: "kid" },
+      attack: { voice: "kid" },
+      death: { voice: "kid" },
+    },
+    "felinorsvshumans-104": { // Dark Skies
+      cast: { voice: "sapi-villain", effect: "shadowRelease" },
+    },
+    "felinorsvshumans-105": { // Maddended Felinor
+      play: { voice: "sapi-cat" },
+      attack: { voice: "sapi-cat", effect: "bigCatPounce" },
+      death: { voice: "sapi-cat" },
+    },
+    "felinorsvshumans-106": { // Rock Addict
+      play: { voice: "plain" },
+      attack: { voice: "plain" },
+      death: { voice: "plain" },
+    },
+    "felinorsvshumans-107": { // KY, Himself
+      play: { voice: "prof" },
+      attack: { voice: "prof" },
+      death: { voice: "prof" },
+    },
+    "felinorsvshumans-108": { // Rush Token Boss
+      play: { voice: "hustler" },
+      attack: { voice: "hustler" },
+      death: { voice: "hustler" },
+    },
+    "felinorsvshumans-109": { // Keymaster Kalabaster
+      play: { voice: "sapi-villain" },
+      attack: { voice: "sapi-villain" },
+      death: { voice: "sapi-villain" },
+    },
+    "felinorsvshumans-110": { // Lord Jakrov
+      play: { voice: "snob" },
+      attack: { voice: "snob" },
+      death: { voice: "snob" },
+    },
+    "felinorsvshumans-111": { // Vicious Fledgeling
+      play: { voice: "sapi-critter" },
+      attack: { voice: "sapi-critter" },
+      death: { voice: "sapi-critter" },
+    },
+    "felinorsvshumans-112": { // Jilliax Deluxe
+      play: { voice: "robot", effect: "servoWhirr" },
+      attack: { voice: "robot" },
+      death: { voice: "robot", effect: "powerDown" },
+    },
+    "felinorsvshumans-112-1": { // Recursion Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-2": { // Durability Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-3": { // Haywire Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-4": { // Starpiece Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-5": { // Pylon Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-6": { // Power Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-7": { // Heavy Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-8": { // Utility Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-9": { // Twin Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-10": { // Viral Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-11": { // Perfect Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-12": { // Debuff Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-112-13": { // Indestructible Module
+      play: { voice: "sapi-synth-deep" },
+      attack: { voice: "sapi-synth-deep" },
+      death: { voice: "sapi-synth-deep" },
+    },
+    "felinorsvshumans-113": { // Ball Knower
+      play: { voice: "announcer" },
+      attack: { voice: "announcer" },
+      death: { voice: "announcer" },
+    },
+    "felinorsvshumans-114": { // Kethspiracy
+      cast: { voice: "sapi-trickster", effect: "buffRelease" },
+    },
+    "felinorsvshumans-115": { // Call to Chaos Vending Machine
+      cast: { voice: "sapi-announcer", effect: "coinClink" },
+    },
     "infiniteassault-001": { // Seed Drone
       play: { voice: "robot" },
       attack: { voice: "robot" },

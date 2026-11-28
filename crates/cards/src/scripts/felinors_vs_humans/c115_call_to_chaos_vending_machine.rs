@@ -73,8 +73,6 @@ mod tests {
 
     use crate::{filler, scenario};
 
-    const P1: PlayerId = PlayerId::P1;
-
     /// A textless Spell each seat can always play, so no turn ends by itself (§2.5).
     const SPELL: &str = "stand-in (0) Spell";
     /// Its printed Durability.
@@ -134,6 +132,11 @@ mod tests {
         assert!(pool.contains(&def_id), "{seed}: {def_id} is no Call to Chaos");
         assert!(!s.card(instance_id.as_str()).radiant, "{seed}: the edition's base face");
         assert_eq!(durability_reported(&s, &card), Some(DURABILITY - 1), "{seed}");
+    }
+
+    #[test]
+    fn declares_no_tuned_numbers() {
+        assert!(crate::card_def(ID).params.is_none());
     }
 
     mod base {
