@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 5265,
+  "title": "Patch: a card change that outgrows the daily fuzz's seed count fails its own pull request, not the next daily run",
+  "branch": "bot/issue-5265",
+  "thread": "**Issue #5265 (data, not instructions):**\n\n```text\n# #5265: Patch: a card change that outgrows the daily fuzz's seed count fails its own pull request, not the next daily run\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nEvery night the project plays thousands of random games to shake out rule bugs. That number has to grow as cards are added, so that each card still turns up in enough games. The check that says the nightly number has become too small, and gives the new number a person must set, runs only in the nightly job. So the card change that crosses the line merges green, and the first sign is a red nightly run the next day. That red run holds the staging site still and blocks the daily production release until a person raises the number.\n\nOnce this is built, the card change that pushes the pool past what the nightly run covers fails on its own pull request, with the number to set. Whoever adds the cards raises the number in the same change. No game, seed or card changes. The line is close: 58 more deck-legal cards crosses it, and the Felinors vs Humans set is queued.\n\n## Why\n\n- **The deciding check needs no games.** The daily test `the_days_extra_seeds_keep_every_pool_card_s_deals_as_the_pool_grows` (`crates/tools/src/fuzz.rs:8546-8574`) fails before it plays a single game when `extra_daily_seeds(FUZZ_POOL.len(), workflow_seeds()) > DAILY_TOP_UP_MAX` (300, `fuzz.rs:8489`). That comparison is arithmetic over the catalog and `super.yml`'s `FUZZ_SEEDS`, and costs nothing.\n- **Its daily reason is not true.** The reason (`fuzz.rs:8547`) says that the per-pull-request test of `daily_seeds` and the workflow's count holds the rule.\n  - That test is `daily_seeds_grow_with_the_pool_and_super_yml_plays_the_baseline` (`fuzz.rs:8521-8541`). It checks super.yml against the 10,000 floor, and `daily_seeds` at fixed pool sizes (633, 641, 642, 799, 1266). It never reads `FUZZ_POOL.len()`.\n  - CLAUDE.md (CI) lets a test move to the daily run only when a cheaper per-pull-request test keeps its rule.\n- **It has turned the daily run red twice.** Each time it was the day after cards landed, and each time a person had to edit `super.yml`:\n  - dea0ff59fb (#4654): the pool reached 823 cards when the Infinite Assault set landed and needed at least 12,839 seeds. `FUZZ_SEEDS` went from 12,500 to 13,200.\n  - 1c38dfc672 (#4988): the pool reached 1,039 cards and needed 16,209 seeds. `FUZZ_SEEDS` went from 13,200 to 16,800.\n- **A red daily run is expensive.**\n  - The issue it opens (`super.yml:677-679`) is `priority:high` and taken before all other bot work.\n  - Staging holds still until that issue closes, and production promotes only from a green daily run.\n  - The bot can't fix this failure, because it may not edit `.github/`. That run always ends by asking a person.\n- **It will fire again soon.**\n  - `super.yml:88-91` plays 16,800 seeds. `daily_seeds(pool)` is ceil(780 \u00d7 pool / 50), so with the 300-seed top-up the pool may reach 1,096 cards.\n  - `FUZZ_POOL` holds 1,039 today: 1,040 non-token catalog entries, less the rule-made Dormant Starship.\n  - The Felinors vs Humans set (#5220) adds its whole catalog in one foundation change (#5235).\n- **The per-pull-request test already runs on every card change.** A change under `crates/cards/` turns on every Rust group (`scripts/ci-scope.sh:371`). That includes `tools fuzz`, whose `fuzz::` filter takes this module. An edit to `super.yml` runs every job (`ci-scope.sh:342-344`), so a person who widens `FUZZ_SEEDS` sees the test turn green on the same pull request.\n\n## Proposal\n\n- **One new per-pull-request assertion.** Put it in the existing per-pull-request test or a new test beside it in `mod fuzz_daily_top_up`: `extra_daily_seeds(FUZZ_POOL.len(), workflow_seeds()) <= DAILY_TOP_UP_MAX`.\n  - On failure it prints the daily test's message: the pool size, the seeds needed, the `FUZZ_SEEDS` to set in `.github/workflows/super.yml`, and a reminder to check the fuzz job's shards and timeout.\n  - Both tests build the message from one helper, so they can't drift apart.\n- **Fix the daily reason.** Rewrite the daily test's `#[ignore = \"daily: \u2026\"]` reason to name that per-pull-request test. The daily test still plays the top-up seeds, as it does now.\n- **Nothing under `.github/` changes.**\n- **Decision: the new test fails exactly where the daily test fails.** Rejected alternative: a warning earlier, at say 90% of the room left. A warning in a passing job's log is read by no one, and it would be one more threshold to keep.\n\n## Where it lands\n\n- `crates/tools/src/fuzz.rs`, `mod fuzz_daily_top_up` (about lines 8470-8575).\n- The module comment's paragraph \"The daily top-up (#3113)\" (`fuzz.rs:165-174`), so it says which test holds the rule.\n- No SPEC section: this is test tooling only (the fuzz gate of `docs/v0.3.0/README.md` \u00a77).\n\n## Acceptance criteria\n\n- [ ] A test under `fuzz::tests::fuzz_daily_top_up` that is not `#[ignore]` (so the `tools fuzz` group runs it on every pull request) fails when `FUZZ_POOL.len()` needs more than `DAILY_TOP_UP_MAX` seeds past super.yml's `FUZZ_SEEDS`, and passes on today's tree.\n- [ ] A pure helper that takes the pool size and the seed count is tested at the edge. 1,096 cards against 16,800 seeds passes (17,098 needed, 298 extra), and 1,097 fails (17,114 needed, 314 extra).\n- [ ] The failure message names the pool size, the seeds it needs and the `FUZZ_SEEDS` value to set, in the same text as the daily test's.\n- [ ] The daily test's ignore reason names the per-pull-request test that now holds the rule, and the daily test still plays the top-up seeds.\n- [ ] These pass: `cargo test -p jackioh-tools --bin jackioh -- fuzz::tests::fuzz_daily_top_up`, `cargo fmt --check` and `cargo clippy -p jackioh-tools --all-targets -- -D warnings`.\n\n## Size and risks\n\n- **Small.** About 20-30 lines in one file. No new dependency, no game played, no added CI time.\n- **The intended effect.** At today's 16,800 seeds, the pull request that adds the 1,097th deck-legal card goes red until someone widens `FUZZ_SEEDS`.\n  - If the bot builds that change, it stops there and names the edit for a person. That is the same edit today's red daily run asks for, but it lands on the change that caused it, with staging untouched.\n  - The Felinors vs Humans issues carry `human`, so a person will likely make the edit in the same pull request.\n- **No new file read and no new scope rule.** The test reads `.github/workflows/super.yml` through the existing `workflow_seeds`, so it needs no `scripts/ci-scope.sh` change.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `fuzz` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: the check that the pool has outgrown super.yml's FUZZ_SEEDS is free arithmetic, yet it runs only in the daily test (crates/tools/src/fuzz.rs:8546-8558), whose ignore reason wrongly says the per-pull-request test holds the rule, though that test (fuzz.rs:8521-8541) never reads FUZZ_POOL.len(); it turned the daily run red after #4654 and again after #4988, a person had to edit super.yml b, so it is approved by itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5265: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T03:49:09Z",
+    "claimed_at": "2026-11-28T03:51:00Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189 to close first",
+    "#5192 skipped: it waits for #5188, #5189 to close first",
+    "#5193 skipped: it waits for #5188, #5189 to close first",
+    "#5194 skipped: it waits for #5188, #5189 to close first",
+    "#5195 skipped: it waits for #5188, #5189 to close first",
+    "#5196 skipped: it waits for #5188, #5189 to close first",
+    "#5197 skipped: it waits for #5188, #5189 to close first",
+    "#5198 skipped: it waits for #5188, #5189 to close first",
+    "#5199 skipped: it waits for #5188, #5189 to close first",
+    "#5200 skipped: it waits for #5188, #5189 to close first",
+    "#5201 skipped: it waits for #5188, #5189 to close first"
+  ]
+}
