@@ -21907,10 +21907,9 @@
     "what": "review #5270 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-28T05:41:05Z",
+    "at": "2026-11-28T05:47:11Z",
     "notes": [
-      "#5265 is held for `claude-8` until 23:50 (5-hour usage is 80%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "runner gate: started 1 of 1 waiting run(s) (run 46112666241 on main)"
+      "#5265 is held for `claude-8` until 23:50 (5-hour usage is 80%, too close to its 85% cap to start a long run (it starts under 80%))"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22616,7 +22615,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T05:41:05Z",
+  "loop_tick": "2026-11-28T05:47:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
