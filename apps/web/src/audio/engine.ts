@@ -389,9 +389,9 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     buses.voice.gain.setTargetAtTime(levels.voice, t, GAIN_SMOOTHING_S);
     buses.music.gain.setTargetAtTime(levels.music, t, GAIN_SMOOTHING_S);
     // A line already speaking stops with the setting, speech fallback included: the bus gain
-    // cannot reach the browser's speech synthesis.
-    if (s.muted || !s.voiceOn) silenceVoice();
-    // Voice lines back on: the prefetch picks up where it paused.
+    // cannot reach the browser's speech synthesis. A voice or master level of 0 counts too (R5284000).
+    if (!voiceAudible(s)) silenceVoice();
+    // Voice lines back on, or the level back above 0: the prefetch picks up where it paused.
     else pumpPrefetch();
   }
 
@@ -596,7 +596,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
         // A field tap's short voices stay out of the gameplay polyphony budget.
         sfxEnds.push(t + delay + lengthMs);
       }
-      if (MUSIC_DUCK_SFX.includes(id)) duck(ctx.currentTime + delay / 1000, lengthMs / 1000);
+      if (MUSIC_DUCK_SFX.includes(id) && sfxHeard()) duck(ctx.currentTime + delay / 1000, lengthMs / 1000);
       later(delay + lengthMs + DISCONNECT_GRACE_MS, () => {
         cue.disconnect();
         extra?.disconnect();
@@ -652,7 +652,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
         lastEffectAt.set(name, t);
         sfxEnds.push(t + at + lengthMs);
-        duck(startAt, lengthMs / 1000);
+        if (sfxHeard()) duck(startAt, lengthMs / 1000);
         later(at + lengthMs + DISCONNECT_GRACE_MS, () => cue.disconnect());
         pushLog(logged(name, at));
         cues.push(cue);
@@ -691,7 +691,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       // R5188000: one line of an attack pool, by the engine's own cosmetic random (a single line draws nothing).
       const line = pickLine(loadedLines, defId, "attack", random) ?? "attack";
       const hasLine =
-        readAudioSettings().voiceOn &&
+        voiceWanted() &&
         (Object.hasOwn(loadedManifest.files, voiceKey(defId, line)) || lineFor(loadedLines, defId, line) !== null);
       if (!hasEffect && !hasLine) return false;
       const t = now();
@@ -762,9 +762,19 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     return pending;
   }
 
+  /** R5284000: a line is heard only unmuted, with Voice lines on and master × voice above 0. */
+  function voiceAudible(s: AudioSettings): boolean {
+    return !s.muted && s.voiceOn && s.master * s.voice > 0;
+  }
+
   function voiceWanted(): boolean {
+    return voiceAudible(readAudioSettings());
+  }
+
+  /** R5284000: an effects-bus sound is heard only unmuted, with master × sfx above 0. */
+  function sfxHeard(): boolean {
     const s = readAudioSettings();
-    return !s.muted && s.voiceOn;
+    return !s.muted && s.master * s.sfx > 0;
   }
 
   /** Background loading (the prefetch and preloads) runs only between bursts, and only for voice that can be heard (B58). */
@@ -896,7 +906,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
     const settings = readAudioSettings();
     const spoken = ch.line.spoken;
-    if (spoken === null || speech === null || settings.muted || !settings.voiceOn) {
+    if (spoken === null || speech === null || !voiceAudible(settings)) {
       finish(ch, "failed");
       return;
     }
@@ -1089,7 +1099,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   function playVoice(defId: string, lineKind: PlayableLineKind, delayMs?: number, priority?: VoicePriority): boolean {
     try {
       if (!accepting() || ctx === null) return false;
-      if (!readAudioSettings().voiceOn) return false;
+      if (!voiceWanted()) return false;
       if (defId === HIDDEN_DEF_ID) return false;
       const delay = delayMs ?? 0;
       const rank = priority ?? VOICE_PRIORITY.play;
