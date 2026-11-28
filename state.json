@@ -20960,6 +20960,13 @@
     "5227": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-28T00:41:53Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 1\u20135 don't hold: eight strings in crates/run/src/placeholder.json and one test in crates/run/src/tests.rs, in one crate, with no engine, AI, migration or cross-crate contract and about 2 files changed."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
