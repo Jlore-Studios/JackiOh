@@ -22148,10 +22148,13 @@
     "what": "build #5189 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-28T08:41:25Z",
+    "at": "2026-11-28T08:48:46Z",
     "notes": [
-      "delivered suggest on claude-1 (run 46125512918): interrupted",
-      "started suggest on claude-6 (run 46127077939)",
+      "delivered build #5189 on claude-1 (run 46124774042): interrupted",
+      "delivered revise #5270 on claude-8 (run 46122639092): approved",
+      "delivered build #5284 on claude-8 (run 46122096099): built",
+      "started review #5292 on claude-8 (run 46127754826)",
+      "started build #5189 on claude-8 (run 46127787048)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -22858,7 +22861,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T08:41:25Z",
+  "loop_tick": "2026-11-28T08:48:46Z",
   "machine_disk": {
     "issue": null,
     "reading": {
