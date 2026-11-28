@@ -43818,20 +43818,12 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {
-      "5226": {
-        "at": "2026-11-28T00:33:15Z",
-        "why": "Confirmed and offered exactly as #5157's rejection asked: `gain_keyword_for_good` (`crates/engine/src/effects/tune.rs:1390`-`:1411`) writes `tuning.add_keywords` with no `immutable_keeps_off` check, while `lose_keyword` beside it (`:429`) and every grant in `buff.rs` (`:252`, `:275`, `:581`) have one, so Last Hurrah (`c037_last_hurrah.rs:42`-`:50`, `:80`) gives an Immutable hand card Flashback aga"
-      },
-      "5227": {
-        "at": "2026-11-28T00:33:17Z",
-        "why": "Confirmed: `passive_total` (`crates/run/src/lib.rs:1355`-`:1368`) multiplies every held artifact's map effect by its level, as \u00a715 (`spec/15-dungeon-run.md:136`) says, but none of the eight Economic texts in `placeholder.json` (`:509`-`:613`) says so, and `PassiveChoice` (`RunDisplay.tsx:165`-`:171`) prints that text beside \"Level N\" in the shop's level-up rows; no zh-CN entry, fixture or other fi"
-      }
-    },
+    "auto": {},
     "auto_approved": [
-      "2026-11-26T23:19:32Z",
       "2026-11-27T03:08:24Z",
-      "2026-11-27T03:09:48Z"
+      "2026-11-27T03:09:48Z",
+      "2026-11-28T00:33:19Z",
+      "2026-11-28T00:33:19Z"
     ],
     "decided": [
       {
