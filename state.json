@@ -22350,15 +22350,8 @@
     "what": "spot-check #5303 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-28T15:12:47Z",
-    "notes": [
-      "delivered plan #5242 on claude-6 (run 46157050788): planned",
-      "delivered review #5304 on claude-1 (run 46153603214): approved",
-      "started build #5242 on claude-6 (run 46158851668)",
-      "started review #5303 on claude-3 (run 46158891611)",
-      "nothing more to start: nothing is queued",
-      "runner gate: started 1 of 1 waiting run(s) (run 46158905580 on claude/vigilant-cray-krwhif)"
-    ],
+    "at": "2026-11-28T15:21:24Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -23063,7 +23056,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T15:12:47Z",
+  "loop_tick": "2026-11-28T15:21:24Z",
   "machine_disk": {
     "issue": null,
     "reading": {
