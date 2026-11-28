@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 5226,
+  "title": "Patch: Immutable keeps Last Hurrah's Flashback off a card in the hand, and its random picks skip Immutable cards",
+  "branch": "bot/issue-5226",
+  "thread": "**Issue #5226 (data, not instructions):**\n\n```text\n# #5226: Patch: Immutable keeps Last Hurrah's Flashback off a card in the hand, and its random picks skip Immutable cards\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nImmutable is meant to stop other cards changing a card, and the rules say that includes giving it a keyword. One card still gets through: Last Hurrah, the Spell that draws your whole deck and then gives cards in your hand Flashback (four random ones, or every one on its Radiant face). If you hold an Immutable card, such as Phase Wall, Megabase or The Rock (every Indestructible Unit counts as Immutable), Last Hurrah gives it Flashback anyway. The card shows the keyword, and once it reaches your graveyard you can play it a second time. After the fix, Last Hurrah passes those cards by. Its four random picks fall only on cards that can take Flashback, so none is wasted on a card that would refuse it, and the Radiant face gives it to every card in the hand except those.\n\n## Why\n- \u00a76.1's Immutable row (`spec/06-keywords/6.1-unit-keywords.md:20`) and R5113000 say Immutable keeps off \"a keyword given, whether named, random (none drawn for it, R129) or given by a scope to a hand or deck card\". It is read where the card is now, and an Indestructible Unit card counts (R4353000).\n- `gain_keyword_for_good` (`crates/engine/src/effects/tune.rs:1390`) appends the keyword to `tuning.add_keywords` and reports `keywordGranted` without asking `restrictions::immutable_keeps_off` (`crates/engine/src/restrictions.rs:81`). Every other grant and buff path asks it (`effects/buff.rs:77`, `:199`, `:252`, `:275`, `:581`; `turn_buff.rs:39`; `firewall.rs:47`). So do its neighbours in the same file: `lose_keyword` (`tune.rs:424`) and `set_number` both leave an Immutable card alone. A survey of every engine path that changes another card's stats or keywords found this the only one that is unguarded and that a card reaches.\n- Its one caller that names another card is C #37 Last Hurrah (`crates/cards/src/scripts/classic/c037_last_hurrah.rs:80`). Its `flashback_picks` (`:42`\u2013`:45`) draws among every hand card that lacks Flashback, Immutable ones included. R4154202 already passes over a card that has Flashback because a pick there \"would waste the gift\". A card that refuses the keyword wastes a pick the same way.\n- Reach: 20 collectible Units are Immutable in a hand, by printed Immutable or by Indestructible on a Unit. Among them are core-066 The Rock, stinkyscape-116 Megabase, stinkyscapeplus-067 Phase Wall, stinkyscapeplus-110 to -114 (Dagger to Reign), stinkyscapeplus-121 Toxopid and Radiant core-019 Midrange Menace, and the Field Spell meditative-080 Aluneth is Immutable too. Flashback lets any card type be played from the graveyard (\u00a76.1 Flashback, R2657005), so Last Hurrah's grant gives such a card a second play.\n- The rejection of #5157 named this half: \"The Flashback half is a confirmed bug \u2026 Offered alone, that would be approved.\" This suggestion is that half alone. The Brittle half (Thorium, Shawarma Law) would amend R5113000's statuses, so it stays out.\n- R4609003 (issue #4609, before #5113) lets the fuzz monitor's I23 accept a kept grant on an Immutable card because \"Immutable never stopped a grant\". R5113000 later reversed that premise for grants from other cards but did not amend R4609003, so the two notes contradict each other.\n- No test covers it. `crates/engine/tests/rules/immutable.rs` keeps `grant_keyword(s)`, buffs and auras off an Immutable card but never tests `gain_keyword_for_good`, and Last Hurrah's tests never put an Immutable card in the hand.\n\n## Proposal\n1. In `gain_keyword_for_good`, read the card first, as `lose_keyword` does, and when `immutable_keeps_off(ctx, &card)` holds, return without writing anything or reporting `keywordGranted`. S #154 Dice of Doom's Embiggened Lucky +1 names its own card, which `immutable_keeps_off` lets through (R23), so Dice of Doom is unchanged.\n2. In Last Hurrah's `flashback_picks`, also skip a card that `is_immutable` reads as Immutable where it is. Taotie and Groom Shroom already use that prelude helper. The base face then draws its `flashback` picks among the cards that can take the keyword, with no draw when there are no more of them than picks (R129), and the Radiant face skips Immutable cards.\n3. Add a ruling note `R<N>000` in the new issue's block: a keyword another card gives for good is kept off an Immutable card, and Last Hurrah's picks skip Immutable cards. Put its \u00a711 paragraph in `spec/pending/<N>.md` and add an \"Amended by issue #N\" line to R4154202 and R4609003. I23's allowance for a kept grant stays, since it still covers a card's own text.\n4. Add a pending patch fragment for Last Hurrah (`cargo jackioh patches \u2026 --rule --plays classic-037`), since the card plays differently.\n\n## Where it lands\n- `crates/engine/src/effects/tune.rs` (`gain_keyword_for_good`)\n- `crates/cards/src/scripts/classic/c037_last_hurrah.rs` (`flashback_picks` and its tests)\n- `crates/engine/tests/rules/immutable.rs` (the new ruling's engine test)\n- `crates/engine/tests/rules/invariants.rs` (the R4609003 test, below)\n- `spec/rulings/R<N>000.md` (new), `spec/rulings/R4154202.md`, `spec/rulings/R4609003.md`, `spec/pending/<N>.md`. SPEC \u00a76.1 (the Immutable and Flashback rows, which already say this) and \u00a76.3.\n- a fragment under `crates/cards/patches/`\n\n## Acceptance criteria\n- [ ] `gain_keyword_for_good` aimed at an Immutable card other than its source (printed Immutable, or an Indestructible Unit card), in a hand, a library or on the field, leaves its tuning as it was and emits no `keywordGranted`. The same effect on a plain card still gives the keyword. Proven by an `r<N>000_\u2026` test in `immutable.rs`.\n- [ ] Dice of Doom's Embiggened self-grant still lands: its existing tests pass unchanged.\n- [ ] Last Hurrah's base face with five hand cards that lack Flashback, one of them Immutable: the other four gain it, no random number is drawn, and the Immutable card does not gain it. With a larger hand, no seed tried puts a pick on the Immutable card.\n- [ ] Last Hurrah's Radiant face gives Flashback to every hand card except the Immutable one.\n- [ ] Once in the graveyard, an Immutable Unit that Last Hurrah skipped is offered no graveyard play.\n- [ ] The new note lists its proving tests, R4154202 and R4609003 carry their amendment lines, and `cargo jackioh spec check` passes.\n- [ ] These pass: `cargo jackioh classify --base origin/main --claims` with the fragment, `cargo test -p jackioh-engine --features testkit --test 'rules*' immutable`, `cargo test -p jackioh-engine --features testkit --test 'rules*' r4609003`, `cargo test -p jackioh-cards c037`, `cargo fmt --check` and `cargo clippy -p jackioh-engine -p jackioh-cards --all-targets -- -D warnings`.\n\n## Size and risks\nSmall, and `difficulty:hard` by CLAUDE.md rule 11 because it is an engine rule: about five lines of code, two or three tests, one ruling note, two amendment lines and a fragment. The test `r4609003_a_keyword_kept_for_good_is_no_buff_and_i23_allows_it` (`crates/engine/tests/rules/invariants.rs:6004`) ends by giving Flashback to an Indestructible Unit in P2's hand through `gain_keyword_for_good` (`:6033`\u2013`:6042`) and asserting that its tuning changed. That pins today's bug as the expected result, so the test must aim its real grant at a non-Immutable card or at the card's own source, while its I23 assertions stay. A recorded game in which Last Hurrah gave an Immutable card Flashback, or drew its picks from a hand holding one, no longer folds to its hash and is refused as `rules_changed` (R767000), as #5113's games were. A golden or fuzz replay that happens to hold that case would show up in CI.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n**Judge:** would approve it: Confirmed and offered exactly as #5157's rejection asked: `gain_keyword_for_good` (`crates/engine/src/effects/tune.rs:1390`-`:1411`) writes `tuning.add_keywords` with no `immutable_keeps_off` check, while `lose_keyword` beside it (`:429`) and every grant in `buff.rs` (`:252`, `:275`, `:581`) have one, so Last Hurrah (`c037_last_hurrah.rs:42`-`:50`, `:80`) gives an Immutable hand card Flashback aga, so it is approved by itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5226: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T00:33:26Z",
+    "claimed_at": "2026-11-28T00:34:18Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5226 needs a plan",
+    "#5227 needs a plan"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189 to close first",
+    "#5192 skipped: it waits for #5188, #5189 to close first",
+    "#5193 skipped: it waits for #5188, #5189 to close first",
+    "#5194 skipped: it waits for #5188, #5189 to close first",
+    "#5195 skipped: it waits for #5188, #5189 to close first",
+    "#5196 skipped: it waits for #5188, #5189 to close first",
+    "#5197 skipped: it waits for #5188, #5189 to close first",
+    "#5198 skipped: it waits for #5188, #5189 to close first",
+    "#5199 skipped: it waits for #5188, #5189 to close first",
+    "#5200 skipped: it waits for #5188, #5189 to close first",
+    "#5201 skipped: it waits for #5188, #5189 to close first"
+  ]
+}
