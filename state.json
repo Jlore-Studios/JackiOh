@@ -21976,24 +21976,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
         "built_by": "claude-6",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-6",
-            "run": "46115344747",
-            "tier": "strong"
-          }
-        ],
-        "sha": "2e23c10c011a26469467f64880b02ff86a9b76a9",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "ebe7f3fb17c2055262a88777b9ab200652aa118f",
+        "tiers": {}
       }
     },
     "5281": {
