@@ -10,9 +10,9 @@
 //! Felinor Units, of the sets that ship (R5235000); a Unit with both tags may be offered in either, and
 //! repeats across the Discovers are allowed (R60). The last answer fuses the four into one hand card
 //! (`fuse_cards` to its controller's hand, R77), the ingredients on their Radiant faces on the Radiant
-//! face (R469), the product itself not Radiant; then its price is set to `setCost` (`set_cost_override`
-//! on the card the fusion put into the hand, read with `added_to_hand_so_far`, R5239000). A full hand
-//! burns it and no price is set (R4).
+//! face, and so the product is Radiant there too (R469, as R1183001's); then its price is set to
+//! `setCost` (`set_cost_override` on the card the fusion put into the hand, read with
+//! `added_to_hand_so_far`, R5239000). A full hand burns it and no price is set (R4).
 
 use jackioh_engine::prelude::*;
 
@@ -213,7 +213,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn the_ingredients_go_in_radiant_and_the_product_is_not() {
+        fn the_ingredients_go_in_radiant_and_so_the_product_is_radiant() {
             let (s, _picks, card) = crafted(true);
             let specs = nonempty(
                 must(fused_id_specs(Some(s.state()), &card.def_id), "a fused card"),
@@ -223,7 +223,8 @@ mod tests {
             for spec in &specs {
                 assert_eq!(spec.radiant, Some(true), "{}", spec.def_id);
             }
-            assert!(!card.radiant);
+            // R469: no kept card and every ingredient Radiant, so the result is Radiant (as R1183001's).
+            assert!(card.radiant);
             assert_eq!(s.card(&card).cost_override, Some(2));
         }
 

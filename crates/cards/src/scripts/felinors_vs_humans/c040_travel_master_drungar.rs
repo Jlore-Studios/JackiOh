@@ -38,8 +38,10 @@ fn drungar(radiant: bool) -> Script {
             ..StaticFlags::default()
         }),
         cry: Some(hook(move |ctx| {
-            let mut effects: Vec<Effect> =
-                SHIPPED_SETS.iter().map(|set| recruit_from(*set, radiant)).collect();
+            let mut effects: Vec<Effect> = SHIPPED_SETS
+                .iter()
+                .map(|set| recruit_from(*set, radiant))
+                .collect();
             // R4353021: the Overload is the Cry's, paid whatever the Recruits find.
             effects.push(next_turn_mana(json_as(json!({ "amount": -param(ctx, "mana") }))));
             effects
@@ -94,11 +96,17 @@ mod tests {
     }
 
     fn on_field(s: &Scenario, def_id: &str) -> Vec<CardInstance> {
-        (1..=UNIT_ZONES).filter_map(|lane| s.unit(P1, lane)).filter(|unit| unit.def_id == def_id).collect()
+        (1..=UNIT_ZONES)
+            .filter_map(|lane| s.unit(P1, lane))
+            .filter(|unit| unit.def_id == def_id)
+            .collect()
     }
 
     fn in_library(s: &Scenario, def_id: &str) -> usize {
-        s.pile(P1, "library").iter().filter(|card| card.def_id == def_id).count()
+        s.pile(P1, "library")
+            .iter()
+            .filter(|card| card.def_id == def_id)
+            .count()
     }
 
     #[test]
@@ -112,7 +120,11 @@ mod tests {
     #[test]
     fn r4353021_a_summoned_drungar_runs_no_cry_and_loses_nothing() {
         let mut s = board(false, json!([CORE_UNIT, TG_UNIT, FILLER]));
-        crate::run_as(&mut s, jackioh_engine::effects::summon(json_as(json!({ "defId": ID }))), P1);
+        crate::run_as(
+            &mut s,
+            jackioh_engine::effects::summon(json_as(json!({ "defId": ID }))),
+            P1,
+        );
         assert_eq!(s.state().players.p1.mana.next_turn_mod, 0);
         assert_eq!(in_library(&s, CORE_UNIT), 1, "no Recruit");
     }
@@ -136,7 +148,12 @@ mod tests {
         fn r129_a_deck_with_no_unit_recruits_nothing() {
             let mut s = board(false, json!([FILLER, FILLER]));
             play(&mut s);
-            assert!(s.unit(P1, 2).is_none());
+            // R64, R391: Drungar takes the leftmost open zone (lane 2), so it is the only Unit standing.
+            let standing: Vec<String> = (1..=UNIT_ZONES)
+                .filter_map(|lane| s.unit(P1, lane))
+                .map(|unit| unit.def_id)
+                .collect();
+            assert_eq!(standing, [ID], "nothing is recruited beside it");
             assert_eq!(in_library(&s, FILLER), 2);
         }
 

@@ -81,12 +81,18 @@ mod tests {
         s
     }
 
-    /// The Units p1 summoned in the last step, by `summoned`.
+    /// The Units p1 summoned in the last step, by `summoned`: the Commander's own arrival as it is played
+    /// is a `Summoned` too, left out.
     fn summoned(s: &Scenario) -> Vec<CardInstance> {
+        let commander = commander_of(s).id;
         s.last_events_of(GameEventType::Summoned)
             .into_iter()
             .filter_map(|event| match event {
-                GameEvent::Summoned { player: P1, instance_id, .. } => Some(s.card(instance_id.as_str()).clone()),
+                GameEvent::Summoned {
+                    player: P1,
+                    instance_id,
+                    ..
+                } if instance_id != commander => Some(s.card(instance_id.as_str()).clone()),
                 _ => None,
             })
             .collect()
@@ -109,7 +115,11 @@ mod tests {
     fn fills_the_board_with_felinor_units(radiant: bool) {
         let s = played(radiant, json!([]));
         let units = nonempty(summoned(&s), "the Felinors the fill summoned");
-        assert_eq!(units.len(), usize::try_from(UNIT_ZONES - 1).unwrap_or(0), "every open zone but its own");
+        assert_eq!(
+            units.len(),
+            usize::try_from(UNIT_ZONES - 1).unwrap_or(0),
+            "every open zone but its own"
+        );
         for unit in &units {
             let def = def_of(Some(s.state()), &unit.def_id);
             assert_eq!(def.type_, CardType::Unit);

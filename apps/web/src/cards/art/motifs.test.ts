@@ -403,6 +403,11 @@ describe("R503 one distinct picture per catalog entry", () => {
     // R1857000: the Stinkyscape set draws from its own, so none of its cards repeats another set's one.
     expect(varietySalt("stinkyscape-071")).not.toBe(varietySalt("meditativeplus-001"));
     expect(varietySalt("stinkyscape-t-ai-01")).toBe(varietySalt("stinkyscape-071"));
+    // R5264000: so does the held Felinors vs Humans set, and a card its redraw table names is moved on from it.
+    expect(varietySalt("felinorsvshumans-001")).not.toBe(varietySalt("core-001"));
+    expect(varietySalt("felinorsvshumans-001")).not.toBe(varietySalt("stinkyscapeplus-001"));
+    expect(varietySalt("felinorsvshumans-t-01")).toBe(varietySalt("felinorsvshumans-001"));
+    expect(varietySalt("felinorsvshumans-012")).not.toBe(varietySalt("felinorsvshumans-001"));
   });
 });
 

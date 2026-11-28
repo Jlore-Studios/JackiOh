@@ -71,18 +71,21 @@ mod tests {
 
     /// p1's backrow, lane by lane: each card's def id and whether it is Radiant.
     fn backrow(s: &Scenario) -> Vec<Option<(String, bool)>> {
-        (1..=5).map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant))).collect()
+        (1..=5)
+            .map(|lane| s.backrow(P1, lane).map(|card| (card.def_id, card.radiant)))
+            .collect()
     }
 
     fn tools(def_id: &str, radiant: bool) -> Option<(String, bool)> {
         Some((def_id.to_string(), radiant))
     }
 
+    /// The cards its Cry summoned: Luna's own arrival as it is played is a `Summoned` too, left out.
     fn summoned(s: &Scenario) -> Vec<String> {
         s.last_events()
             .iter()
             .filter_map(|event| match event {
-                GameEvent::Summoned { def_id, .. } => Some(def_id.clone()),
+                GameEvent::Summoned { def_id, .. } if def_id != ID => Some(def_id.clone()),
                 _ => None,
             })
             .collect()
@@ -125,7 +128,11 @@ mod tests {
         fn r129_a_full_backrow_summons_nothing() {
             let s = luna_played(false, CREATION_MODE, json!([FIELD, FIELD, FIELD, FIELD, FIELD]));
             assert!(summoned(&s).is_empty());
-            assert!(backrow(&s).iter().all(|card| card.as_ref().is_some_and(|(def, _)| def == FIELD)));
+            assert!(
+                backrow(&s)
+                    .iter()
+                    .all(|card| card.as_ref().is_some_and(|(def, _)| def == FIELD))
+            );
         }
     }
 

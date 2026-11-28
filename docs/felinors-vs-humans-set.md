@@ -145,7 +145,7 @@ fill anything not listed (CLAUDE.md rule 3).
 | 105 | Attacks every other Unit (Radiant: every enemy Unit) one at a time, in a random order (the owner's call of 2026-11-28); it stops when it dies or leaves the field. |
 | 107 | At the end of your turn every swapped card still in a hand goes back. |
 | 111 | Endless Evolve (FV2 above). |
-| 112 | X Unit 0/0 plus its two modules; the module offer is the 4 dearest affordable, never the same module twice. |
+| 112 | X Unit 0/1 on both faces plus its two modules (the designer's 0/0 given 1 Health so a state check before its Cry leaves it standing, R5262001); the module offer is the 4 dearest affordable, never the same module twice. |
 | 114 | "simple" = a script of at most 10 code lines (`SIMPLE_CODE_LINES`). |
 
 **Data kept as the designer wrote it:** #74's Radiant face keeps 2/6; #89's Radiant is 48/48.

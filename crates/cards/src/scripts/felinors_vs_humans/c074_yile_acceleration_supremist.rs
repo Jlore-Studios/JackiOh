@@ -58,7 +58,7 @@ mod tests {
 
     fn yile_game(radiant: bool, library: Value) -> Scenario {
         scenario(json!({
-            "p1": { "hand": [{ "def": ID, "radiant": radiant }, KILL, FILLER], "library": library },
+            "p1": { "hand": [{ "def": ID, "radiant": radiant }, KILL, FILLER], "library": library, "mana": 10 },
             "p2": { "hand": [FILLER] },
         }))
     }

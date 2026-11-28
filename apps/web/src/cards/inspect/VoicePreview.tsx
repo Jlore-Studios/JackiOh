@@ -40,6 +40,8 @@ const LINE_LABELS: Record<VoiceLineKind, string> = {
   cast: "Cast",
   // R1088: the trigger's numbered lines (`trigger<n>`) preview through `playVoice` like the rest.
   trigger: "Trigger",
+  // R5264500: FvH #59's End of turn line.
+  endOfTurn: "End of turn",
 };
 
 export function VoicePreview({ defId }: { defId: string }): ReactElement | null {

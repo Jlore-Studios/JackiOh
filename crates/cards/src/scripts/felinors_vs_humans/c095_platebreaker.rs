@@ -59,6 +59,7 @@ mod tests {
                 "hand": [{ "def": ID, "radiant": radiant }, ALLY, KILL, FILLER],
                 "field": [ALLY],
                 "backrow": [FIELD_SPELL],
+                "mana": 10,
             },
             "p2": { "hand": [FILLER], "field": [ALLY], "armor": 5 },
         }))

@@ -38138,7 +38138,7 @@
     "loc": 47,
     "base": {
       "keywords": [],
-      "text": "Give a Unit +{buff}/+{buff} and\"Death: Add a Scandalous Top Hat to your hand.\"",
+      "text": "Give a Unit +{buff}/+{buff} and \"Death: Add a Scandalous Top Hat to your hand.\"",
       "grants": {
         "hatDeath": "Death: Add a Scandalous Top Hat to your hand."
       }
@@ -39039,7 +39039,7 @@
       "attack": 3,
       "health": 3,
       "keywords": [],
-      "text": ""
+      "text": "Cry: Make this Radiant."
     }
   },
   "felinorsvshumans-048": {
@@ -39146,7 +39146,7 @@
           "n": 3
         }
       ],
-      "text": "Pierce, Durability 3\nActivate: Deal {damage} damage to an enemy."
+      "text": "Durability 3, Pierce\nActivate: Deal {damage} damage to an enemy."
     },
     "radiant": {
       "keywords": [
@@ -39158,7 +39158,7 @@
           "n": 3
         }
       ],
-      "text": "Pierce, Durability 3\nActivate: Deal {damage} damage to an enemy."
+      "text": "Durability 3, Pierce\nActivate: Deal {damage} damage to an enemy."
     }
   },
   "felinorsvshumans-050": {
@@ -39203,7 +39203,7 @@
           "n": 2
         }
       ],
-      "text": "Pierce, Durability 2\nActivate: Deal {damage} damage to an enemy. Summon a random Radiant (1) or (2) Cost Trap."
+      "text": "Durability 2, Pierce\nActivate: Deal {damage} damage to an enemy. Summon a random Radiant (1) or (2) Cost Trap."
     }
   },
   "felinorsvshumans-051": {
@@ -39983,7 +39983,7 @@
       {
         "key": "stats",
         "base": 1,
-        "radiant": 1,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1
@@ -40756,7 +40756,7 @@
           "n": 3
         }
       ],
-      "text": "Flying, Ranged, Durability 3\nActivate: Draw {draw|card|cards} and gain {mana} mana.\nActivate: Summon a random (2) Cost Human."
+      "text": "Durability 3, Flying, Ranged\nActivate: Draw {draw|card|cards} and gain {mana} mana.\nActivate: Summon a random (2) Cost Human."
     },
     "radiant": {
       "attack": 4,
@@ -40773,7 +40773,7 @@
           "n": 6
         }
       ],
-      "text": "Flying, Ranged, Durability 6\nActivate: Draw {draw|card|cards} and gain {mana} mana.\nActivate: Summon a random Radiant (2) Cost Human."
+      "text": "Durability 6, Flying, Ranged\nActivate: Draw {draw|card|cards} and gain {mana} mana.\nActivate: Summon a random Radiant (2) Cost Human."
     }
   },
   "felinorsvshumans-081": {
@@ -42088,13 +42088,13 @@
     "loc": 1,
     "base": {
       "attack": 0,
-      "health": 0,
+      "health": 1,
       "keywords": [],
       "text": "Cry: Discover one of the four dearest (X) Cost or less Modules, then another. Fuse both into this.\nThe Modules: Recursion Module, Durability Module, Haywire Module, Starpiece Module, Pylon Module, Power Module, Heavy Module, Utility Module, Twin Module, Viral Module, Perfect Module, Debuff Module and Indestructible Module."
     },
     "radiant": {
       "attack": 0,
-      "health": 0,
+      "health": 1,
       "keywords": [],
       "text": "Cry: Discover one of the four dearest Radiant (X) Cost or less Modules, then another. Fuse both into this.\nThe Modules: Recursion Module, Durability Module, Haywire Module, Starpiece Module, Pylon Module, Power Module, Heavy Module, Utility Module, Twin Module, Viral Module, Perfect Module, Debuff Module and Indestructible Module."
     }

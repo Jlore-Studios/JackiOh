@@ -1,5 +1,5 @@
 //! FvH #112 Jilliax Deluxe (SPEC §8.14 row 112, FV2 #112; §6.3 Discover and Fuse, R77, R348, R352, R387,
-//! R469, R5239005, R5262001, R5262002): (X) Unit, Mythic, 0/0 → 0/0, of the held Felinors vs Humans set.
+//! R469, R5239005, R5262001, R5262002): (X) Unit, Mythic, 0/1 → 0/1, of the held Felinors vs Humans set.
 //!   Base:    "Cry: Discover one of the four dearest (X) Cost or less Modules, then another. Fuse both into
 //!            this."
 //!   Radiant: "Cry: Discover one of the four dearest Radiant (X) Cost or less Modules, then another. Fuse
@@ -10,9 +10,9 @@
 //! drawn by the match rng, never a module already picked or already fused in. X is the X paid as the Cry
 //! runs, carried in the prompt's data, so the second offer reads the same X. Then one `fuse_cards` of both
 //! into this (R77), Radiant modules on the Radiant face (R469), so a Radiant Viral Module's Immutable lands
-//! only once both are in. A second offer with nothing left fuses the one pick. The 0/0 body stands while
-//! the Discovers are open: no state check runs while a prompt is open on a play (a trigger resolving in
-//! §10.5's step-4 window, before the Cry, runs one, which collects it). After the fusion, from
+//! only once both are in. A second offer with nothing left fuses the one pick. The body stands while the
+//! Discovers are open: no state check runs while a prompt is open on a play, and its 1 Health lives through
+//! the one a trigger resolving in §10.5's step-4 window, before the Cry, runs. After the fusion, from
 //! the picks alone: Starpiece's Starship Piece is granted to the fused card (which R1852001 keeps), and Twin
 //! summons copies of the whole fused card, one (Radiant two), no Cry (R1). R5262002: the fused card costs
 //! R77's min(X + the modules' costs, 4) and is no X card, so a Radiant Recursion Module's Flashback replay
@@ -114,7 +114,10 @@ fn discover(radiant: bool, x: i32, picks: &[String], fused: &[String]) -> Effect
 /// A list of ids a paused Cry carries in its prompt's data.
 fn ids_at(ctx: &EffectContext<'_>, key: &str) -> Vec<String> {
     match ctx.data.get(key).and_then(Value::as_array) {
-        Some(stored) => stored.iter().filter_map(|id| id.as_str().map(str::to_string)).collect(),
+        Some(stored) => stored
+            .iter()
+            .filter_map(|id| id.as_str().map(str::to_string))
+            .collect(),
         None => Vec::new(),
     }
 }
@@ -168,7 +171,11 @@ fn jilliax(radiant: bool) -> Script {
                 let mut picks = ids_at(ctx, PICKS_KEY);
                 picks.push(picked);
                 let fused = ids_at(ctx, FUSED_KEY);
-                let x = ctx.data.get(X_KEY).and_then(Value::as_i64).map_or(0, |paid| paid as i32);
+                let x = ctx
+                    .data
+                    .get(X_KEY)
+                    .and_then(Value::as_i64)
+                    .map_or(0, |paid| paid as i32);
                 if picks.len() < PICKS {
                     let left = query(&json_as(module_query(x, &excluded_by(&picks, &fused))));
                     if !left.is_empty() {
@@ -259,10 +266,15 @@ mod tests {
     /// p1's lane-1 card destroyed by Hit Job, then played again from the graveyard by its Flashback.
     fn flashed_back(s: &mut Scenario) {
         let fused = s.unit_at(P1, 1);
-        s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": fused.id }] }));
+        s.play(
+            HIT_JOB,
+            json!({ "targets": [{ "pick": "instance", "instanceId": fused.id }] }),
+        );
         assert!(s.unit(P1, 1).is_none(), "Hit Job destroyed it");
         let in_graveyard = must(
-            s.pile(P1, "graveyard").into_iter().find(|card| card.def_id == fused.def_id),
+            s.pile(P1, "graveyard")
+                .into_iter()
+                .find(|card| card.def_id == fused.def_id),
             "the fused card in the graveyard",
         );
         s.state_mut().players.p1.mana.current = MANA;
@@ -302,7 +314,10 @@ mod tests {
                 let s = played(&format!("jilliax-tie-{n}"), false, 4);
                 seen.push(s.prompt_modes()[3].clone());
             }
-            assert!(seen.iter().any(|id| id == HEAVY) && seen.iter().any(|id| id == UTILITY), "{seen:?}");
+            assert!(
+                seen.iter().any(|id| id == HEAVY) && seen.iter().any(|id| id == UTILITY),
+                "{seen:?}"
+            );
         }
 
         #[test]
@@ -315,7 +330,10 @@ mod tests {
         #[test]
         fn r5262001_x_1_offers_the_four_cheapest_modules() {
             let s = played("jilliax-x1", false, 1);
-            assert_eq!(sorted(s.prompt_modes()), set_of(&[RECURSION, DURABILITY, HAYWIRE, STARPIECE]));
+            assert_eq!(
+                sorted(s.prompt_modes()),
+                set_of(&[RECURSION, DURABILITY, HAYWIRE, STARPIECE])
+            );
         }
 
         #[test]
@@ -326,39 +344,43 @@ mod tests {
         }
 
         #[test]
-        fn r5262001_the_0_0_body_stands_while_its_discovers_are_open() {
+        fn r5262001_the_0_1_body_stands_while_its_discovers_are_open() {
             let mut s = played("jilliax-body", false, 3);
             let jilliax = must(s.unit(P1, 1), "Jilliax on the field");
-            s.expect_stats(jilliax.id.as_str(), json!({ "attack": 0, "health": 0 }));
+            s.expect_stats(jilliax.id.as_str(), json!({ "attack": 0, "health": 1 }));
             s.answer(json!(HEAVY));
             assert!(s.unit(P1, 1).is_some(), "it stands between the Discovers");
             s.answer(json!(UTILITY));
             let fused = s.unit_at(P1, 1);
             assert_eq!(fused.id, jilliax.id, "R77: the same instance");
-            // 0/0 + Heavy 5/5 + Utility 3/1.
-            s.expect_stats(fused.id.as_str(), json!({ "attack": 8, "health": 6 }));
+            // 0/1 + Heavy 5/5 + Utility 3/1.
+            s.expect_stats(fused.id.as_str(), json!({ "attack": 8, "health": 7 }));
         }
 
         /// §10.5's step-4 window runs §4.5's check once a trigger resolves there: an enemy Kwzka's Allure of a
-        /// cheaper Unit played is one, so the 0/0 body is collected before its Cry fuses anything.
+        /// cheaper Unit played is one, which a 0/0 body would not live through; the 0/1 body does, so its Cry
+        /// fuses both picks.
         #[test]
-        fn r5262001_a_trigger_resolving_before_its_cry_collects_the_0_0_body() {
+        fn r5262001_a_trigger_resolving_before_its_cry_runs_the_check_and_the_0_1_body_lives_to_fuse() {
             let mut s = scenario(json!({
                 "p1": { "hand": [ID, FILLER], "library": filler(6), "mana": MANA },
                 "p2": { "hand": [FILLER], "field": [{ "def": KWZKA, "lane": 1 }], "library": filler(6) },
             }));
             s.play(ID, json!({ "zone": 1, "x": 1 }));
             for _ in 0..PICKS {
-                if s.state().pending.is_none() {
-                    break;
-                }
-                let pick = s.prompt_modes().first().cloned().unwrap_or_default();
+                assert!(s.state().pending.is_some(), "its Cry's Discover is open");
+                let pick = must(s.prompt_modes().first().cloned(), "a module offered");
                 s.answer(json!(pick));
             }
-            assert!(s.unit(P1, 1).is_none(), "the 0/0 body was collected");
+            assert!(s.state().pending.is_none(), "both picks made");
+            assert_eq!(
+                modules_at(&s, 1).len(),
+                PICKS,
+                "the body lived to fuse both picks"
+            );
             assert!(
-                s.pile(P1, "graveyard").iter().any(|card| card.def_id == ID),
-                "an unfused Jilliax in the graveyard"
+                !s.pile(P1, "graveyard").iter().any(|card| card.def_id == ID),
+                "no Jilliax in the graveyard"
             );
         }
 
@@ -379,7 +401,10 @@ mod tests {
             let s = fused_with("jilliax-twin", false, 4, TWIN, HEAVY);
             let fused = s.unit_at(P1, 1);
             let copy = must(s.unit(P1, 2), "the Twin's copy");
-            assert_eq!(copy.def_id, fused.def_id, "a copy of the card with both modules in");
+            assert_eq!(
+                copy.def_id, fused.def_id,
+                "a copy of the card with both modules in"
+            );
             assert!(s.unit(P1, 3).is_none(), "one copy");
             assert_eq!(modules_at(&s, 2), set_of(&[TWIN, HEAVY]));
         }
@@ -388,7 +413,10 @@ mod tests {
         fn r1852001_r5262001_starpiece_is_granted_once_fused() {
             let s = fused_with("jilliax-starpiece", false, 1, STARPIECE, HAYWIRE);
             let fused = s.unit_at(P1, 1);
-            assert!(has_keyword(&s.stats(fused.id.as_str()).keywords, KeywordKind::StarshipPiece));
+            assert!(has_keyword(
+                &s.stats(fused.id.as_str()).keywords,
+                KeywordKind::StarshipPiece
+            ));
             assert_eq!(modules_at(&s, 1), set_of(&[STARPIECE, HAYWIRE]));
         }
 
@@ -397,7 +425,10 @@ mod tests {
             let mut s = fused_with("jilliax-quiet", false, 1, RECURSION, DURABILITY);
             flashed_back(&mut s);
             assert!(s.state().pending.is_none(), "no Discover opens");
-            let back = must(s.unit(P1, 1).or_else(|| s.unit(P1, 2)), "the replayed card on the field");
+            let back = must(
+                s.unit(P1, 1).or_else(|| s.unit(P1, 2)),
+                "the replayed card on the field",
+            );
             assert_eq!(modules_at_card(&s, &back), set_of(&[RECURSION, DURABILITY]));
         }
     }
@@ -415,9 +446,9 @@ mod tests {
             let s = fused_with("jilliax-radiant", true, 3, HEAVY, UTILITY);
             let fused = s.unit_at(P1, 1);
             assert!(fused.radiant);
-            // 0/0 + Radiant Heavy 15/15 + Radiant Utility 6/2, Deft added.
+            // 0/1 + Radiant Heavy 15/15 + Radiant Utility 6/2, Deft added.
             let view = s.stats(fused.id.as_str());
-            assert_eq!((view.attack, view.health), (21, 17));
+            assert_eq!((view.attack, view.health), (21, 18));
             assert!(has_keyword(&view.keywords, KeywordKind::Deft));
         }
 
@@ -452,8 +483,14 @@ mod tests {
             assert_eq!(s.prompt_modes(), vec![DURABILITY.to_string()]);
             s.answer(json!(DURABILITY));
             assert!(s.state().pending.is_none(), "nothing is left for a second offer");
-            let back = must(s.unit(P1, 1).or_else(|| s.unit(P1, 2)), "the replayed card on the field");
-            assert_eq!(modules_at_card(&s, &back), set_of(&[RECURSION, HAYWIRE, DURABILITY]));
+            let back = must(
+                s.unit(P1, 1).or_else(|| s.unit(P1, 2)),
+                "the replayed card on the field",
+            );
+            assert_eq!(
+                modules_at_card(&s, &back),
+                set_of(&[RECURSION, HAYWIRE, DURABILITY])
+            );
         }
     }
 }

@@ -58,6 +58,10 @@ const EDWIN: &str = "stinkyscapeplus-162"; // Edwin Van’Spacechief: Combo gain
 /// R280 formula cards from Stinkyscape+, each proved in its own script file.
 const STINKYSCAPE_PLUS_R280: [&str; 1] = [EDWIN];
 
+const KYS_FFT: &str = "felinorsvshumans-091"; // KY's Log Exp of the FFT: X√(log₂X) at the mana held
+/// R280 formula cards of the held Felinors vs Humans set (R5235000), each proved in its own script file.
+const FELINORS_VS_HUMANS_R280: [&str; 1] = [KYS_FFT];
+
 /// Meditative cards that declare one, each proved in its own script file: #8, and #40 Feng Shui's
 /// last-element lines (R280, R982).
 const MEDITATIVE_PREVIEWED: [&str; 2] = ["meditative-008", "meditative-040"];
@@ -302,6 +306,7 @@ mod r280_the_core_cards_that_declare_preview {
             .chain(AUDITS.iter())
             .chain(REMEMBERED.iter())
             .chain(STINKYSCAPE_PLUS_R280.iter())
+            .chain(FELINORS_VS_HUMANS_R280.iter())
             .map(|id| (*id).to_string())
             .collect();
         expected.sort();
@@ -327,7 +332,11 @@ mod r280_the_core_cards_that_declare_preview {
     #[test]
     fn r280_each_label_is_an_exact_substring_of_the_running_faces_catalog_text_on_both_faces() {
         jackioh_cards::register_all();
-        for id in PREVIEWED.into_iter().chain(STINKYSCAPE_PLUS_R280) {
+        for id in PREVIEWED
+            .into_iter()
+            .chain(STINKYSCAPE_PLUS_R280)
+            .chain(FELINORS_VS_HUMANS_R280)
+        {
             for face in FACES {
                 let s = scenario(
                     json!({ "p1": { "hand": [{ "def": id, "radiant": radiant_of(face) }, RAPID_REPLENISH] } }),

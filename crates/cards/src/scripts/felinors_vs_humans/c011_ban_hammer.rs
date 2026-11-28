@@ -83,15 +83,17 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1086_equipped_onto_a_unit_it_fuses_two_two_rush_and_poisonous_into_the_host() {
+        fn r1086_equipped_onto_a_base_unit_it_fuses_by_the_hosts_face() {
+            // R1086: the fused card wears its host's face, so a Radiant Hammer on a base host fuses
+            // its base face's +1/+1 and Poisonous, not its Radiant face's Rush.
             let mut s = holding(true, json!([HOST]));
             let host = s.unit_at(P1, 1);
             s.play(ID, json!({ "zone": 1, "equip": true }));
             let fused = s.unit_at(P1, 1);
             assert_eq!(fused.id, host.id, "the host keeps its zone");
-            s.expect_stats(&fused, json!({ "attack": 5, "health": 5 }));
+            s.expect_stats(&fused, json!({ "attack": 4, "health": 4 }));
             assert!(has(&s, 1, KeywordKind::Poisonous));
-            assert!(has(&s, 1, KeywordKind::Rush));
+            assert!(!has(&s, 1, KeywordKind::Rush));
         }
 
         #[test]

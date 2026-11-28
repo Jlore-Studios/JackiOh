@@ -1242,7 +1242,7 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | felinorsvshumans-044 | Felinor Converter | Meets | Stats double 5/4 → 10/8 with Rush on both faces, and the Cry summons a copy of this instead of transforming another friendly Unit into one: a body more instead of a swap. |
 | felinorsvshumans-045 | Subject 9 | Meets | Stats double 5/5 → 10/10, and the same five Traps are Recruited (put on the field) instead of drawn, the shortfall summoned too: a broader effect for no mana. |
 | felinorsvshumans-046 | Manifestor | Meets | Stats double 2/1 → 4/2, and the two (2) Cost Units are Radiant ones (twice the stats each): about 2×. |
-| felinorsvshumans-047 | Blazing Battlemage | Designer's word (effect half) | The base Cry makes it Radiant, and the Radiant face is that result, a 3/3 with no text: stats triple 1/1 → 3/3 but the text is blank. R276 refuses a blank Radiant text on a card whose base face has one, so the face needs a ruling or a line before release. |
+| felinorsvshumans-047 | Blazing Battlemage | Meets | The base Cry makes it Radiant, and the Radiant face is that result: stats triple 1/1 → 3/3. The designer left that face blank; it prints the same Cry (R5263001), which finds it Radiant already and does nothing, so it plays as his 3/3 with no ability and R276's blank-text refusal is met. |
 | felinorsvshumans-048 | Toxic Timmy | Meets | Stats double 3/4 → 6/8, the Radiant face adds Rush to Poisonous, and the Discovered card is a Radiant one. |
 | felinorsvshumans-049 | Candle Master | Meets | Stats double 2/1 → 4/2, and the Candle Shot it summons is a Radiant one (twice the damage per use). |
 | felinorsvshumans-049-1 | Candle Shot | Meets | The same Pierce and Durability 3, and each Activate's damage rises 1 → 2 (2×). |
@@ -1270,7 +1270,7 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | felinorsvshumans-063 | S-Tier Speciesist | Meets | Stats double 10/1 → 20/2 with the same Overload (2), and the Cry destroys only enemy non-Human cards instead of every one on the field: a lighter drawback. |
 | felinorsvshumans-064 | Fiender Artist | Meets | Stats double 3/4 → 6/8, and the Discovered (3)+ Cost Unit is a Radiant one: a rider-level raise. |
 | felinorsvshumans-065 | Felinor Forager | Meets | Stats double 2/1 → 4/2, and the Radiant face adds Reborn, so its Death's random Fruit comes twice: about 2×. |
-| felinorsvshumans-066 | Fuzzyfruit | Designer's word (effect half) | The text is the same on both faces (a random (1) Cost Felinor with +1/+1) and it prints no stats, so the Radiant face changes nothing. R276 refuses such a card, so the face needs a Radiant change before release. |
+| felinorsvshumans-066 | Fuzzyfruit | Meets | The same random (1) Cost Felinor, which the Radiant face gives +2/+2 for the base face's +1/+1 (R5263001): the buff doubled, 2×. The designer's two faces were alike, which R276 refuses. |
 | felinorsvshumans-067 | Big Game Hunter | Meets | Stats double 4/2 → 8/4, and the Cry destroys every enemy Unit with 7 or more Attack instead of one: a broader scope. |
 | felinorsvshumans-068 | Closeted Commentator | Meets | Stats double 3/1 → 6/2, and it evolves at once instead of waiting for a card to transform: the same Allure of every enemy Unit, sure to happen. |
 | felinorsvshumans-069 | Cosplayer | Meets | Stats double 2/2 → 4/4, the gain per other Felinor or Human rises +1/+1 → +2/+2 (2×), and the Radiant face adds Rush. |
@@ -1325,7 +1325,7 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | felinorsvshumans-109 | Keymaster Kalabaster | Meets | Stats double 6/8 → 12/16, and each copy of the opponent's draws costs (0) instead of (1): a cheaper copy on every draw. |
 | felinorsvshumans-110 | Lord Jakrov | Meets | Stats double 3/2 → 6/4, the Cry's Fragile spares your own Units, and its Death casts a Radiant Whirlwind: a lighter drawback and a stronger rider. |
 | felinorsvshumans-111 | Vicious Fledgeling | Meets | Stats double 3/3 → 6/6, and each Endless Evolve Discovers two combat keywords instead of one (2×). |
-| felinorsvshumans-112 | Jilliax Deluxe | Meets | An X Unit printed 0/0 on both faces (its stats are its Modules'), and the two Modules it Discovers are Radiant ones (twice the stats or a keyword more each): about 2×. |
+| felinorsvshumans-112 | Jilliax Deluxe | Meets | An X Unit printed 0/1 on both faces so it lives to its Cry (R5262001; its stats are its Modules', the stat half's named exception, R5263000), and the two Modules it Discovers are Radiant ones (twice the stats or a keyword more each): about 2×. |
 | felinorsvshumans-112-1 | Recursion Module | Meets | Stats double 1/1 → 2/2 with Flashback on both faces, and the Radiant face drops the line that keeps a Flashback play from running its Cry: a lighter drawback. |
 | felinorsvshumans-112-2 | Durability Module | Meets | 0 attack stays 0, health doubles 1 → 2, and Armor rises 1 → 2 (2×). |
 | felinorsvshumans-112-3 | Haywire Module | Designer's word (effect half) | Stats double 2/2 → 4/4, but the End of turn's 3 damage to your hero is the same on both faces: the drawback is no lighter. |
@@ -1391,7 +1391,7 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | felinorsvshumans-162 | Plagiarized: Revenant Process | Meets | Stats double 4/2 → 8/4 with Reborn on both, and the Reborn return's gain rises +3/+3 → +6/+6 (2×), so both halves meet R275. |
 | felinorsvshumans-163 | Plagiarized: Scrape the Graveyard | Meets | It adds copies of three random cards in the opponent's graveyard instead of two: one more full card, so it meets R275. |
 | felinorsvshumans-164 | Plagiarized: Shadow Library | Meets | The same copy of a random card the opponent played last turn each start of turn, two copies instead of one (2×). |
-| felinorsvshumans-165 | Plagiarized: Synthetic Data | Meets | The same full hand of Temporary Infinite Assault cards, which the Radiant face makes cost (1) less: a tangential rider on every card it makes. |
+| felinorsvshumans-165 | Plagiarized: Synthetic Data | Meets | The same full hand of Temporary Plagiarized cards, which the Radiant face makes cost (1) less: a tangential rider on every card it makes. |
 | felinorsvshumans-166 | Plagiarized: Thought Accelerator | Meets | Stats double 2/4 → 4/8, and the Cry that awakens your Dormant Units also gives them +2/+2 on Radiant: an added rider, so it meets R275. |
 | felinorsvshumans-167 | Plagiarized: Thermal Throttler | Meets | Stats double 3/6 → 6/12, and the Start of turn counts missing Health in 5s instead of 10s (2× the mana at any deficit) for the same 1 per step, so it meets R275. |
 | felinorsvshumans-168 | Plagiarized: Undo | Meets | The bounce taxes (1) more on the base face and (2) more on Radiant, which also draws a card: a heavier tax plus a rider, so it meets R275. |

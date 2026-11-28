@@ -321,6 +321,16 @@ mod tests {
             for n in 0..GAMES {
                 let s = chaos_seeded(&format!("{SEED}-{entry}-{n}"), entry);
                 for lane in 1..=UNIT_ZONES {
+                    if s.unit(P1, lane).is_none() || s.unit(P2, lane).is_none() {
+                        eprintln!("DBG100 game {n} lane {lane}");
+                        for event in s.events() {
+                            let line = format!("{event:?}");
+                            eprintln!("DBG100   {}", line.chars().take(260).collect::<String>());
+                        }
+                        break;
+                    }
+                }
+                for lane in 1..=UNIT_ZONES {
                     assert!(s.unit(P1, lane).is_some(), "game {n}: your lane {lane} is filled");
                     assert!(s.unit(P2, lane).is_some(), "game {n}: their lane {lane} is filled");
                 }

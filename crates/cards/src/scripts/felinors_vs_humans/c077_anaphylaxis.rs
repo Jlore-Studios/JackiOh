@@ -122,7 +122,8 @@ mod tests {
             assert_eq!(price(&s, &copies[1].id), 2);
             let felinor = s.unit_at(P1, 1).id;
             s.play(&copies[0], pick::targets(pick::id(&felinor)));
-            s.expect_in_zone(&felinor, "graveyard");
+            // A token that dies ceases to exist.
+            s.expect_in_zone(&felinor, "gone");
             assert_eq!(price(&s, &copies[1].id), 4, "no Felinor, no discount");
             assert_eq!(price(&s, &copies[0].id), 4, "in the graveyard with no Flashback: no play, its printed cost");
         }

@@ -1,12 +1,13 @@
 //! SPEC §8.14 FvH #66 Fuzzyfruit ((1) Spell, Fruit, Common), a card of the held Felinors vs Humans set
 //! (R5235000).
 //!   Base:    "Summon a random (1) Cost Felinor and give it +{stats}/+{stats}." (stats 1)
-//!   Radiant: the same text, the same number.
+//!   Radiant: the same words (stats 2, R5263001).
 //!
 //! `summon_random` of one non-token Unit printed at (1) whose catalog tags hold Felinor, of the sets that ship,
 //! into the leftmost open unit zone (R64), running no Cry (R1); then a permanent `buff` of +stats/+stats on
 //! what it summoned (`summoned_so_far`, M #58's shape). A full row summons nothing and nothing is buffed
-//! (R129). Both faces print the same text and the summon is not Radiant, as the designer wrote. The (1) is a
+//! (R129). Both faces print the same words and the summon is not Radiant, as the designer wrote; the
+//! designer's two faces were alike, so the Radiant face's buff is +2/+2 (R276, R5263001). The (1) is a
 //! price, no declared number. Built by S07 (#5257).
 
 use jackioh_engine::prelude::*;
@@ -38,7 +39,7 @@ pub fn script() -> CardScripts {
         })),
         ..Script::default()
     };
-    // The same script: both faces print the same text and the same number.
+    // The same script: both faces print the same words, each face its own `stats`.
     let radiant = base.clone();
     CardScripts { base, radiant }
 }
@@ -68,13 +69,18 @@ mod tests {
         s.last_events_of(GameEventType::Summoned)
             .into_iter()
             .filter_map(|event| match event {
-                GameEvent::Summoned { player: P1, instance_id, .. } => Some(s.card(instance_id.as_str()).clone()),
+                GameEvent::Summoned {
+                    player: P1,
+                    instance_id,
+                    ..
+                } => Some(s.card(instance_id.as_str()).clone()),
                 _ => None,
             })
             .collect()
     }
 
-    fn summons_a_one_cost_felinor_with_one_one(radiant: bool) {
+    /// The face's `stats`: 1 on the base face, 2 on the Radiant (R5263001).
+    fn summons_a_one_cost_felinor_with_its_buff(radiant: bool, stats: i32) {
         for seed in ["fuzzyfruit-a", "fuzzyfruit-b", "fuzzyfruit-c"] {
             let mut s = board(radiant, seed, json!([]));
             s.play(ID, json!({}));
@@ -84,11 +90,19 @@ mod tests {
                 let def = def_of(Some(s.state()), &unit.def_id);
                 assert_eq!(def.type_, CardType::Unit);
                 assert_eq!(query_cost(def), FELINOR_COST, "{} is printed at (1)", def.id);
-                assert!(def.tags.contains(&Tag::Felinor), "{} prints the Felinor tag", def.id);
+                assert!(
+                    def.tags.contains(&Tag::Felinor),
+                    "{} prints the Felinor tag",
+                    def.id
+                );
                 assert!(!def.token, "{} is no token", def.id);
                 assert!(!unit.radiant, "the summon is not Radiant on either face");
                 let buffs = s.card(unit).buffs;
-                assert_eq!((buffs.attack, buffs.health), (1, 1), "a permanent +1/+1");
+                assert_eq!(
+                    (buffs.attack, buffs.health),
+                    (stats, stats),
+                    "a permanent +{stats}/+{stats}"
+                );
             }
         }
     }
@@ -98,7 +112,7 @@ mod tests {
 
         #[test]
         fn summons_a_random_1_cost_felinor_and_gives_it_plus_1_plus_1() {
-            summons_a_one_cost_felinor_with_one_one(false);
+            summons_a_one_cost_felinor_with_its_buff(false, 1);
         }
 
         #[test]
@@ -115,8 +129,8 @@ mod tests {
         use super::*;
 
         #[test]
-        fn summons_a_random_1_cost_felinor_not_radiant_and_gives_it_plus_1_plus_1() {
-            summons_a_one_cost_felinor_with_one_one(true);
+        fn r5263001_summons_a_random_1_cost_felinor_not_radiant_and_gives_it_plus_2_plus_2() {
+            summons_a_one_cost_felinor_with_its_buff(true, 2);
         }
     }
 }

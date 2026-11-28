@@ -404,8 +404,8 @@ describe("every voice line is short, plain flavour (B34)", () => {
     expect(wrong, "lines outside /^[A-Za-z ,.'!?-]+$/").toEqual([]);
   });
 
-  it("B34 keeps every line within VOICE_MAX_WORDS for its hook (play 8, attack 4, death 6, cast 8, trigger 8)", () => {
-    expect(VOICE_MAX_WORDS, "the limits the Surface fixes").toEqual({ play: 8, attack: 4, death: 6, cast: 8, trigger: 8 });
+  it("B34 keeps every line within VOICE_MAX_WORDS for its hook (play 8, attack 4, death 6, cast 8, trigger 8, endOfTurn 8)", () => {
+    expect(VOICE_MAX_WORDS, "the limits the Surface fixes").toEqual({ play: 8, attack: 4, death: 6, cast: 8, trigger: 8, endOfTurn: 8 });
     expect(wordCount("Too... slow...")).toBe(2);
     expect(wordCount("Oops - Surf's up!")).toBe(3);
 

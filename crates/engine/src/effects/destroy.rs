@@ -179,9 +179,31 @@ pub fn crush(args: CrushArgs) -> Effect {
             if crate::restrictions::unaffected_by(ctx, &card) {
                 continue;
             }
+            if beneath.is_some() {
+                crush_dormant(ctx, card);
+                continue;
+            }
             mark_destroyed(&mut *ctx.state, &card);
         }
     })
+}
+
+/// R5238003: a card beneath the running card lies dormant there, off the field for §4.5 (R13), so no
+/// state check would collect a mark on it while the running card stands on top: it goes to its owner's
+/// graveyard at once, by `send_to_graveyard`'s plain move, its text dormant so no Death runs. An
+/// Indestructible one stays (R46).
+fn crush_dormant(ctx: &mut crate::script::EffectContext<'_>, mut card: CardInstance) {
+    if crate::layers::unit_has(ctx.state, &card, crate::wire::KeywordKind::Indestructible) {
+        return;
+    }
+    let moved = crate::zones::move_to_zone(
+        ctx.state,
+        &mut card,
+        crate::zones::OffFieldZone::Graveyard,
+        Default::default(),
+    );
+    let landed = find_instance(ctx.state, &card.id).cloned().unwrap_or(card);
+    crate::zones::report_graveyard_landing(ctx, &landed, moved);
 }
 
 /// `sacrifice`'s arguments (TS's inline object).

@@ -50,6 +50,8 @@ const AURA_FLAGS: &[&str] = &[
     "randomOpponentSpellTargets",
     "opponentAttackLimit",
     "revealsOpponentsHand",
+    // R5235000: FvH #92 KY's Patented Log 2 Utility's numbers counted in binary digits, every card's.
+    "log2Utility",
 ];
 
 const KEYWORD: &str = "a keyword or play-time rule, printed as one (§6)";
@@ -71,6 +73,8 @@ const NOT_AURA_FLAGS: &[(&str, &str)] = &[
     ("noHandLaunch", KEYWORD),
     ("starshipYard", KEYWORD),
     ("revealChance", KEYWORD),
+    // R5238002: FvH #42 Big Billy's "Can be played on either side.", a play-time rule.
+    ("playsOnEitherSide", KEYWORD),
     ("tributeEnemies", OWN),
     ("enemyTributeHandsOver", OWN),
     ("tributeCheap", OWN),
@@ -98,6 +102,11 @@ const NOT_AURA_FLAGS: &[(&str, &str)] = &[
     ("sweepAdjacent", OWN),
     ("attacksOnlyAcross", OWN),
     ("immuneToToxic", OWN),
+    // R5235000: the held Felinors vs Humans set's: #88 Cattail's mistaken tag, #100.1 and #100.2's
+    // immunity to a tribe and #112.12 Debuff Module's Radiant Toxic, each its own card's.
+    ("harmIgnoresTags", OWN),
+    ("immuneToTag", OWN),
+    ("damageAlsoToxic", OWN),
     ("healToDamage", TRAP),
     ("ownTurnRedirect", TRAP),
     ("countersRanged", TRAP),
@@ -108,12 +117,16 @@ const NOT_AURA_FLAGS: &[(&str, &str)] = &[
     ("exilesOnDamage", TRIGGER),
     ("infiniteMana", TRIGGER),
     ("creditLapses", TRIGGER),
+    // FvH #111 Vicious Fledgeling's "Endless Evolve:", an Evolve its own line times.
+    ("endlessEvolve", TRIGGER),
     ("countsPlays", ELSEWHERE),
     ("returnKeepsPrice", ELSEWHERE),
     ("copiesLastSpell", ELSEWHERE),
     ("copyFallback", ELSEWHERE),
     ("paysCredits", ELSEWHERE),
     ("answersTargetedSpells", ELSEWHERE),
+    // R5239006: FvH #112.1 Recursion Module's graveyard play by Flashback, which runs no Cry.
+    ("flashbackWithoutCry", ELSEWHERE),
 ];
 
 /// Cards whose script sets a standing hook while no line of the face starts "Aura:".
@@ -142,6 +155,14 @@ const SCRIPTED_BARE: &[(&str, &str)] = &[
         "stinkyscapeplus-163",
         "Accelerationist's aura raises its own stats (R5039000)",
     ),
+    (
+        "felinorsvshumans-016-2",
+        "Travertine Golem's aura sets its own Attack and Armor from last turn's Float (R5039000)",
+    ),
+    (
+        "felinorsvshumans-069",
+        "Cosplayer's aura raises its own stats (R5039000)",
+    ),
 ];
 
 /// Cards that print "Aura:" while their script sets no standing hook.
@@ -162,6 +183,10 @@ const PRINTED_UNSCRIPTED: &[(&str, &str)] = &[
     (
         "stinkyscape-148",
         "the engine gives Alteran Reach's travel (R1847001)",
+    ),
+    (
+        "felinorsvshumans-037",
+        "Old Grum's Aura is its own summoning sickness, Script.stays_sick (R5237004)",
     ),
 ];
 

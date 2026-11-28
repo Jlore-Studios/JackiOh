@@ -13357,8 +13357,9 @@ const FELINORS_VS_HUMANS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Mythic,
-        st(0, 0),
-        st(0, 0),
+        // R5262001: the designer's 0/0 with 1 Health, so a state check before its Cry leaves it standing.
+        st(0, 1),
+        st(0, 1),
     ),
     row(
         "112.1",
@@ -15533,8 +15534,9 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         assert_eq!(printed, expected);
         // §7 prints a designer rarity on the Meditative tokens too (the next test, keyed apart: their indices
         // repeat Classic+ ones), on the Stinkyscape set's (R1857000) and on Training Grounds' #39.1 Golem,
-        // the designer's Legendary (R2194000), and on the Stinkyscape+ set's (R3535000): every printed rarity
-        // is a token's, never a card's.
+        // the designer's Legendary (R2194000), on the Stinkyscape+ set's (R3535000) and on the held Felinors
+        // vs Humans set's, each the rarity its list gives the token (R5235000): every printed rarity is a
+        // token's, never a card's.
         assert!(
             entries()
                 .into_iter()
@@ -15545,7 +15547,8 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
                         || entry.set == SetName::MeditativePlus
                         || entry.set == SetName::Stinkyscape
                         || entry.set == SetName::TrainingGrounds
-                        || entry.set == SetName::StinkyscapePlus))
+                        || entry.set == SetName::StinkyscapePlus
+                        || entry.set == SetName::FelinorsVsHumans))
         );
     }
 
@@ -15926,11 +15929,12 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
                 "classicplus-052",
                 "core-013",
                 "core-014",
-                "meditative-087",
-                "meditative-097",
-                "meditative-097-9",
             ])
             .into_iter()
+            // R5235000: the held Felinors vs Humans set's two, #17 Jlockeed Shredder-14 and #80 Support
+            // Chinook (ids sort after Core's and before the Meditative set's).
+            .chain(landed(&["felinorsvshumans-017", "felinorsvshumans-080"]))
+            .chain(strings(&["meditative-087", "meditative-097", "meditative-097-9"]))
             .chain(landed(&["meditativeplus-004"]))
             // R1857000: the Stinkyscape set's seven, #124 to #130, each named for the faction.
             .chain(landed(&[
@@ -15966,10 +15970,11 @@ mod the_jlockeed_tag_spec_5_8_r278_b2_4 {
             .collect();
         named.sort();
         // Meditative+ #4, the designer's "Jlockheed" Spell, is Jlockeed's Supply Drop (#1828), so it names
-        // the faction.
+        // the faction. R5235000: FvH #80 Support Chinook is the designer's Jlockeed Unit under a name of its
+        // own, as Palantir is.
         let expected: Vec<String> = tagged
             .into_iter()
-            .filter(|id| id != "classic-004" && id != "meditative-087")
+            .filter(|id| id != "classic-004" && id != "meditative-087" && id != "felinorsvshumans-080")
             .collect();
         assert_eq!(named, expected, "entries whose name names Jlockeed");
     }
@@ -16028,13 +16033,15 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
         assert_eq!(
             tagged(Tag::Catalyst),
             [
-                strings(&[
-                    "classicplus-038",
-                    "classicplus-046",
-                    "meditative-045",
-                    "meditative-049",
-                    "meditative-091"
+                strings(&["classicplus-038", "classicplus-046"]),
+                // R5235000: the held Felinors vs Humans set's #74 Yile, Acceleration Supremist, #78 Human
+                // Harbinger and #98 Yarma, each with its Prime (ids sort after Classic+'s).
+                landed(&[
+                    "felinorsvshumans-074",
+                    "felinorsvshumans-078",
+                    "felinorsvshumans-098"
                 ]),
+                strings(&["meditative-045", "meditative-049", "meditative-091"]),
                 landed(&["meditativeplus-016"]),
                 // R1857000: Stinkyscape #147 IN33DH3.
                 landed(&["stinkyscape-147"]),
@@ -16051,13 +16058,14 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
         assert_eq!(
             tagged(Tag::Prime),
             [
-                strings(&[
-                    "classicplus-038-1",
-                    "classicplus-046-1",
-                    "meditative-045-1",
-                    "meditative-049-1",
-                    "meditative-091-1"
+                strings(&["classicplus-038-1", "classicplus-046-1"]),
+                // R5235000: the held Felinors vs Humans set's #74.1, #78.1 and #98.1.
+                landed(&[
+                    "felinorsvshumans-074-1",
+                    "felinorsvshumans-078-1",
+                    "felinorsvshumans-098-1"
                 ]),
+                strings(&["meditative-045-1", "meditative-049-1", "meditative-091-1"]),
                 landed(&["meditativeplus-016-1"]),
                 // R1857000: Stinkyscape #147.1 IN33DH3 Prime.
                 landed(&["stinkyscape-147-1"]),
@@ -16126,12 +16134,15 @@ mod the_catalyst_prime_and_acclaimed_tags_spec_5_7_8_6_8_7_patch_v0_2_y {
         assert_eq!(
             tagged(Tag::Acclaimed),
             [
-                strings(&[
-                    "classic-080",
-                    "classicplus-037",
-                    "meditative-049",
-                    "meditative-049-1",
+                strings(&["classic-080", "classicplus-037"]),
+                // R5235000: the held Felinors vs Humans set's #74 Yile, Acceleration Supremist, its #74.1
+                // Prime and #107 KY, Himself (ids sort after Classic+'s).
+                landed(&[
+                    "felinorsvshumans-074",
+                    "felinorsvshumans-074-1",
+                    "felinorsvshumans-107"
                 ]),
+                strings(&["meditative-049", "meditative-049-1"]),
                 // R1857000: the Stinkyscape set's nine.
                 landed(&[
                     "stinkyscape-006",
@@ -16171,6 +16182,15 @@ mod the_tags_issue_1837_moves_r1837000 {
         ids
     }
 
+    /// FvH #57.3 Felinor Companion, the Other-Origins Spell of #57 that summons the three below.
+    const FELINOR_COMPANION: &str = "felinorsvshumans-057-3";
+    /// FvH #57.4 Wide, #57.5 Narrow and #57.6 Square Felinor, Other-Origins tokens Felinor Companion makes.
+    const FELINOR_COMPANION_SUMMONS: [&str; 3] = [
+        "felinorsvshumans-057-4",
+        "felinorsvshumans-057-5",
+        "felinorsvshumans-057-6",
+    ];
+
     #[test]
     fn r1837000_tags_core_100_terminus_classic_90_quest_classic_plus_32_otherworldly_its_three_tokens_other_origins_and_core_26_to_29_jelly_bean_and_no_other_entry()
      {
@@ -16180,6 +16200,8 @@ mod the_tags_issue_1837_moves_r1837000 {
             tagged(Tag::Terminus),
             [
                 strings(&["core-100"]),
+                // R5235000: the held Felinors vs Humans set's #82 The Last Meow.
+                landed(&["felinorsvshumans-082"]),
                 landed(&[
                     "stinkyscape-004-1",
                     "stinkyscape-004-2",
@@ -16216,6 +16238,9 @@ mod the_tags_issue_1837_moves_r1837000 {
             tagged(Tag::Otherworldly),
             [
                 strings(&["classicplus-032"]),
+                // R5235000: the held Felinors vs Humans set's #57 Otherworldly Hunting and #72 Otherworldly
+                // Naturalism.
+                landed(&["felinorsvshumans-057", "felinorsvshumans-072"]),
                 landed(&["stinkyscape-010", "stinkyscape-011", "stinkyscape-012"])
             ]
             .concat()
@@ -16224,6 +16249,19 @@ mod the_tags_issue_1837_moves_r1837000 {
             tagged(Tag::OtherOrigins),
             [
                 strings(&["classicplus-032-1", "classicplus-032-2", "classicplus-032-3"]),
+                // R5235000: #57's three and the three Felinors its #57.3 Felinor Companion summons, and #72's
+                // three.
+                landed(&[
+                    "felinorsvshumans-057-1",
+                    "felinorsvshumans-057-2",
+                    "felinorsvshumans-057-3",
+                    "felinorsvshumans-057-4",
+                    "felinorsvshumans-057-5",
+                    "felinorsvshumans-057-6",
+                    "felinorsvshumans-072-1",
+                    "felinorsvshumans-072-2",
+                    "felinorsvshumans-072-3",
+                ]),
                 landed(&[
                     "stinkyscape-010-1",
                     "stinkyscape-010-2",
@@ -16271,10 +16309,31 @@ mod the_tags_issue_1837_moves_r1837000 {
                 Some(true),
                 "{id}"
             );
-            let maker_id = id.rsplit_once('-').map_or(id.as_str(), |(maker, _)| maker);
-            let maker = CATALOG.get(maker_id).expect("an Other-Origins token's maker");
-            assert!(maker.tags.contains(&Tag::Otherworldly), "{maker_id}");
+            let number_of = |id: &str| {
+                id.rsplit_once('-')
+                    .map_or(id.to_string(), |(maker, _)| maker.to_string())
+            };
+            // R5235000: FvH #57.4 to #57.6 are the Felinors #57.3 Felinor Companion summons, so it names them,
+            // and #57, the Otherworldly card, names it.
+            let maker_id = if FELINOR_COMPANION_SUMMONS.contains(&id.as_str()) {
+                FELINOR_COMPANION.to_string()
+            } else {
+                number_of(&id)
+            };
+            let maker = CATALOG
+                .get(maker_id.as_str())
+                .expect("an Other-Origins token's maker");
             assert!(maker.refs.as_ref().is_some_and(|refs| refs.contains(&id)), "{id}");
+            let otherworldly_id = if maker.tags.contains(&Tag::OtherOrigins) {
+                number_of(&maker_id)
+            } else {
+                maker_id.clone()
+            };
+            let otherworldly = CATALOG.get(otherworldly_id.as_str());
+            assert!(
+                otherworldly.is_some_and(|entry| entry.tags.contains(&Tag::Otherworldly)),
+                "{otherworldly_id}"
+            );
         }
         assert_eq!(
             CATALOG.get("classic-090").map(|entry| entry.tags.clone()),

@@ -84,6 +84,7 @@ mod tests {
                 "hand": [{ "def": ID, "radiant": radiant }, KILL, FILLER],
                 "field": [HUMAN, OTHER],
                 "library": [FILLER],
+                "mana": 10,
             },
             "p2": { "hand": [FILLER], "field": [HUMAN] },
         }))
@@ -155,7 +156,7 @@ mod tests {
         fn a_full_deck_turns_the_prime_away() {
             let full: Vec<&str> = vec![FILLER; LIBRARY_CAP as usize];
             let mut s = scenario(json!({
-                "p1": { "hand": [ID, KILL, FILLER], "library": full },
+                "p1": { "hand": [ID, KILL, FILLER], "library": full, "mana": 10 },
                 "p2": { "hand": [FILLER] },
             }));
             s.play(ID, json!({}));

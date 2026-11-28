@@ -9361,7 +9361,7 @@ felinorsvshumans-047: # Blazing Battlemage
   zh:
     name: 炽燃战斗法师
     base: 战吼：使此单位变为光辉。
-    radiant: ""
+    radiant: 战吼：使此单位变为光辉。
 felinorsvshumans-048: # Toxic Timmy
   flavour: Timmy is allergic to cats, and the cats have been told it is personal.
   voice:
@@ -9388,8 +9388,8 @@ felinorsvshumans-049-1: # Candle Shot
     cast: Make a wish!
   zh:
     name: 蜡烛射击
-    base: "穿透，耐久3\n激活：对一个敌人造成{damage}点伤害。"
-    radiant: "穿透，耐久3\n激活：对一个敌人造成{damage}点伤害。"
+    base: "耐久3，穿透\n激活：对一个敌人造成{damage}点伤害。"
+    radiant: "耐久3，穿透\n激活：对一个敌人造成{damage}点伤害。"
 felinorsvshumans-050: # Field Kit
   flavour: Everything a hunter needs, folded neatly into a box that bites.
   voice:
@@ -9397,7 +9397,7 @@ felinorsvshumans-050: # Field Kit
   zh:
     name: 野外工具包
     base: "耐久2\n激活：对一个敌人造成{damage}点伤害。召唤一张法力值消耗为(1)或(2)的随机陷阱。"
-    radiant: "穿透，耐久2\n激活：对一个敌人造成{damage}点伤害。召唤一张法力值消耗为(1)或(2)的随机光辉陷阱。"
+    radiant: "耐久2，穿透\n激活：对一个敌人造成{damage}点伤害。召唤一张法力值消耗为(1)或(2)的随机光辉陷阱。"
 felinorsvshumans-051: # Scavengers Ingenuity
   flavour: One cardboard box, two bottle caps and a very determined cat.
   voice:
@@ -9793,8 +9793,8 @@ felinorsvshumans-080: # Support Chinook
     death: Going down!
   zh:
     name: 支援支奴干
-    base: "飞行，远程，耐久3\n激活：抽{draw}张牌并获得{mana}点法力值。\n激活：召唤一个法力值消耗为(2)的随机人类。"
-    radiant: "飞行，远程，耐久6\n激活：抽{draw}张牌并获得{mana}点法力值。\n激活：召唤一个法力值消耗为(2)的随机光辉人类。"
+    base: "耐久3，飞行，远程\n激活：抽{draw}张牌并获得{mana}点法力值。\n激活：召唤一个法力值消耗为(2)的随机人类。"
+    radiant: "耐久6，飞行，远程\n激活：抽{draw}张牌并获得{mana}点法力值。\n激活：召唤一个法力值消耗为(2)的随机光辉人类。"
 felinorsvshumans-081: # Old-Timer Catboy
   flavour: He has seen every trick in the book, and he wrote half of them on bar napkins.
   voice:

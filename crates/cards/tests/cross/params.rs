@@ -576,6 +576,8 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
 
     const FIXED: &[(&str, &str)] = &[
         ("core-023", KEYWORD),
+        // R5236006: Core #79 Twinspell's base face prints Durability 1 since issue #5236.
+        ("core-079", KEYWORD),
         // R2195003: the snapshot of Core #23, TG #49 (TG #50's numbers are declared since issue #4665).
         ("traininggrounds-049", KEYWORD),
         ("classic-023", KEYWORD),

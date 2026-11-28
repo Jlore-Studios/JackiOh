@@ -100,6 +100,7 @@ mod tests {
                 "field": [OTHER, HUMAN],
                 "library": [OTHER, HUMAN],
                 "graveyard": [OTHER],
+                "mana": 10,
             },
             "p2": { "hand": [OTHER, FILLER], "field": [OTHER, HUMAN] },
         }))

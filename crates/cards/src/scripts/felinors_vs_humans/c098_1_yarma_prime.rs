@@ -107,7 +107,8 @@ mod tests {
         );
         let prime = s.unit_at(P1, 1);
         s.play(HIT_JOB, pick::targets(pick::instance(&prime)));
-        s.expect_in_zone(&prime, "graveyard");
+        // The Prime is a token: it dies out of the game.
+        s.expect_in_zone(&prime, "gone");
         s
     }
 

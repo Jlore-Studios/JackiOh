@@ -51,6 +51,9 @@ mod tests {
     const FILLER: &str = "core-005";
     /// Midrange Menace: the Unit each side stands in lane 1.
     const MENACE: &str = "core-019";
+    /// 4-mana 7/7, p2's lane 2 on its Radiant face (Armor 7, Reborn). Not Midrange Menace's Radiant face,
+    /// which is Immutable and so stays (R23).
+    const RADIANT_FOE: &str = "core-025";
 
     /// A card's printed price, the one the pool of a cost-step Transform reads (R3557004, R5238010).
     fn printed(def_id: &str) -> i32 {
@@ -61,7 +64,7 @@ mod tests {
         scenario(json!({
             "seed": "devolve",
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "field": [MENACE], "library": filler(4) },
-            "p2": { "hand": [FILLER], "field": [MENACE, { "def": MENACE, "radiant": true }], "library": filler(4) },
+            "p2": { "hand": [FILLER], "field": [MENACE, { "def": RADIANT_FOE, "radiant": true }], "library": filler(4) },
         }))
     }
 
@@ -82,7 +85,11 @@ mod tests {
         for (lane, (old, cost, face)) in [1, 2].into_iter().zip(before) {
             let new = s.unit_at(P2, lane);
             assert_ne!(new.id, old, "replaced in place");
-            assert_eq!(printed(&new.def_id), cost - less, "a Unit that costs ({less}) less");
+            assert_eq!(
+                printed(&new.def_id),
+                cost - less,
+                "a Unit that costs ({less}) less"
+            );
             assert_eq!(card_type_of(s.state(), &new), CardType::Unit);
             assert_eq!(new.radiant, face, "its face is kept");
         }
@@ -97,5 +104,22 @@ mod tests {
     #[test]
     fn r5238010_radiant_transforms_each_enemy_unit_into_one_that_costs_2_less() {
         devolves_by(true, 2);
+    }
+
+    #[test]
+    fn r23_an_immutable_enemy_unit_stays() {
+        let mut s = scenario(json!({
+            "seed": "devolve-immutable",
+            "p1": { "hand": [ID, FILLER], "library": filler(4) },
+            "p2": { "hand": [FILLER], "field": [{ "def": MENACE, "radiant": true }], "library": filler(4) },
+        }));
+        let immutable = s.unit_at(P2, 1);
+        s.play(ID, json!({}));
+        let after = s.unit_at(P2, 1);
+        assert_eq!(
+            (after.id, after.def_id),
+            (immutable.id, immutable.def_id),
+            "Radiant Menace is Immutable"
+        );
     }
 }
