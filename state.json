@@ -21372,20 +21372,18 @@
     "what": "plan #5229 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-28T00:50:23Z",
+    "at": "2026-11-28T01:02:37Z",
     "notes": [
-      "delivered plan #5226 on claude-3 (run 46088602169): planned",
-      "delivered suggest on claude-8 (run 46086647937): suggested",
-      "delivered build #5217 on claude-3 (run 46085309840): built",
-      "delivered revise #5211 on claude-7 (run 46083814019): approved",
-      "started review #5232 on claude-3 (run 46090375584)",
-      "started plan #5226 on claude-3 (run 46090415158)",
-      "started build #5227 on claude-7 (run 46090463664)",
-      "started plan #5230 on claude-7 (run 46090507495)",
-      "started plan #5231 on claude-8 (run 46090549862)",
+      "delivered plan #5231 on claude-8 (run 46090549862): planned",
+      "delivered plan #5230 on claude-7 (run 46090507495): planned",
+      "delivered plan #5229 on claude-3 (run 46089476946): planned",
+      "delivered plan #5228 on claude-3 (run 46089429254): planned",
+      "started build #5230 on claude-7 (run 46091396529)",
+      "started build #5231 on claude-8 (run 46091439662)",
+      "started plan #5228 on claude-4 (run 46091487232)",
+      "started plan #5229 on claude-4 (run 46091533368)",
       "nothing more to start: nothing is queued",
-      "#5231: typed it Task",
-      "#5230: typed it Task"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22091,7 +22089,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T00:50:23Z",
+  "loop_tick": "2026-11-28T01:02:37Z",
   "machine_disk": {
     "issue": null,
     "reading": {
