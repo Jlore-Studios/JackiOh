@@ -1094,8 +1094,11 @@ fn offer_to_summon_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<
     let Some((player, instance_id)) = placed else {
         return Vec::new();
     };
-    let is_unit = find_instance(sink.state, &instance_id)
-        .is_some_and(|card| crate::faces::card_type_of(sink.state, card) == crate::wire::CardType::Unit);
+    let is_unit = {
+        let state: &GameState = sink.state;
+        find_instance(state, &instance_id)
+            .is_some_and(|card| crate::faces::card_type_of(state, card) == crate::wire::CardType::Unit)
+    };
     let answers: Vec<(String, Resume)> = sink.state.players[player]
         .mods
         .iter()

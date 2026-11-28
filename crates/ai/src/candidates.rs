@@ -92,6 +92,8 @@ fn zone_part(state: &GameState, slot: ZoneSlot) -> String {
 /// lane's four zones (§3.1): the play's own, the seat's other one, and the enemy's unit and backrow zones
 /// opposite. Two lanes with the same key are the same placement.
 fn placement_key(state: &GameState, seat: PlayerId, zone: &ZoneChoice) -> String {
+    // R5238002: a zone on the other side is read from that side.
+    let seat = zone.player.unwrap_or(seat);
     let other_row = if zone.row == Row::Units {
         Row::Backrow
     } else {

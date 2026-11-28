@@ -8,7 +8,8 @@
 //! (R4577002) and the player-turn it died on.
 //!
 //! It is kept only while the game holds an Infinite Assault card (`kept`): either side's log is
-//! already `Some`, or `every_instance` holds a card whose definition is of the set. Games of
+//! already `Some`, or `every_instance` holds a card whose definition is of the set or (R5237013)
+//! carries a tag of `RECURSION_LOG_TAGS`, Felinors vs Humans' Plagiarized reprints. Games of
 //! shipped sets never hold one, so no recorded game's hash moves (D14, R768). It is not gated on
 //! `set_is_open`, which is never true for a single-player set, so the log would stay off in the
 //! real Assault. Only public facts are logged, so no view redacts it. It is the one game history

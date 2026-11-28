@@ -446,22 +446,28 @@ pub fn with_durability_left(keywords: &[Keyword], card: &CardInstance) -> Vec<Ke
 /// R5236002: the settled state check's Durability step. Every card on the field that is no Unit (a
 /// Field Spell, a face-up Trap or Field Trap) whose Durability is spent goes to its owner's graveyard by
 /// `send_to_graveyard`'s plain move (R3044000): no `destroyed`, no Death, and Indestructible does not
-/// hold it. A Unit at 0 stays, with no Activate it may use (R5236001). A card whose activation is still
-/// owed on `state.work` (a cost that paused, R113) waits until that effect has run. True when a card
-/// moved, so the check starts over.
+/// hold it. A Unit at 0 stays, with no Activate it may use (R5236001). Nothing moves while a prompt is
+/// open, and a card a paused sequence on `state.work` names (an owed activation, R113, or the parked
+/// tail of its ability's list) waits until it has run, so the last activation resolves with the card on
+/// the field. True when a card left the field, so the check starts over.
 pub fn send_spent_out_to_graveyard(sink: &mut EngineSink<'_>) -> bool {
+    if sink.state.pending.is_some() {
+        return false;
+    }
     let spent: Vec<CardInstance> = crate::state_check::permanents_in_play(sink.state)
         .into_iter()
         .filter(|card| card.zone.z() == ZoneName::Field)
         .filter(|card| crate::faces::card_type_of(sink.state, card) != CardType::Unit)
         .filter(|card| durability_left(sink.state, card).is_some_and(|left| left <= DURABILITY_SPENT_OUT))
         .filter(|card| {
-            !sink.state.work.iter().any(|item| {
-                item.resume.hook == ACTIVATION_WORK
-                    && item.resume.instance_id.as_deref() == Some(card.id.as_str())
-            })
+            !sink
+                .state
+                .work
+                .iter()
+                .any(|item| item.resume.instance_id.as_deref() == Some(card.id.as_str()))
         })
         .collect();
+    let mut left_the_field = false;
     for card in &spent {
         let mut moving = card.clone();
         let moved = crate::zones::move_to_zone(
@@ -471,9 +477,10 @@ pub fn send_spent_out_to_graveyard(sink: &mut EngineSink<'_>) -> bool {
             Default::default(),
         );
         let landed = find_instance(sink.state, &moving.id).cloned().unwrap_or(moving);
+        left_the_field |= landed.zone.z() != ZoneName::Field;
         crate::zones::report_graveyard_landing(sink, &landed, moved);
     }
-    !spent.is_empty()
+    left_the_field
 }
 
 /// R1841000: the ability "has an extra turn cooldown".

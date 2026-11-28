@@ -354,6 +354,8 @@ pub fn modifier_is_live(state: &GameState, modifier: &PlayerModifier) -> bool {
             | ModifierKind::HeroImmune
             | ModifierKind::UnitsImmune
             | ModifierKind::UnitsAttack { .. }
+            // R5237007: a stat lend holds from the moment it is made until its expiry, as the Attack one.
+            | ModifierKind::UnitsStats { .. }
     ) {
         return true;
     }

@@ -170,7 +170,8 @@ pub fn crush(args: CrushArgs) -> Effect {
             lane: args.lane,
         };
         // R5238003: with `beneath_only`, the running card and whatever lies above it stand.
-        let beneath: Option<Vec<String>> = (args.beneath_only == Some(true)).then(|| beneath_running(ctx, slot));
+        let beneath: Option<Vec<String>> =
+            (args.beneath_only == Some(true)).then(|| beneath_running(ctx, slot));
         for card in crushed_in(ctx.state, slot) {
             if beneath.as_ref().is_some_and(|ids| !ids.contains(&card.id)) {
                 continue;

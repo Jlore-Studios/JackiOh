@@ -1691,8 +1691,8 @@ pub struct PlayerState {
     pub game_log: Option<GameLog>,
     /// R4589000: what this player's plays and deaths leave for the Recursion cards to read back
     /// (`recursion_log.rs`): every face-up play this game and every Unit that died under them.
-    /// Absent until the game holds an Infinite Assault card, so a game without one hashes as it did
-    /// before this field existed (D14).
+    /// Absent until the game holds an Infinite Assault card (or, R5237013, a Plagiarized one), so a game
+    /// without one hashes as it did before this field existed (D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub recursion: Option<RecursionLog>,

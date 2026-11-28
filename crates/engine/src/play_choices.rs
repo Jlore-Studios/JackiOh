@@ -655,7 +655,10 @@ pub fn plays_on_either_side(state: &GameState, card: &CardInstance) -> bool {
 /// and none for any other card. `legal_actions` lists them after the own side's; `refuse_other_side` and
 /// play_steps' landing read the same list and the zone's side.
 pub fn other_side_zones_for(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<ZoneChoice> {
-    if !plays_on_either_side(state, card) || !needs_zone(state, card) || crate::giga::enters_giga(state, card) {
+    if !plays_on_either_side(state, card)
+        || !needs_zone(state, card)
+        || crate::giga::enters_giga(state, card)
+    {
         return Vec::new();
     }
     let side = crate::wire::opponent_of(player);
