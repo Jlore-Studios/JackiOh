@@ -25,8 +25,8 @@
 //! 3. Only while it is summoning sick (`combat::is_sick`), or has a Reborn of its own that would bring
 //!    it back sick (R83).
 //! 4. Only while it has never awoken (`awakened`, R3039000).
-//! 5. Only while it has not evolved (`evolved`, R3536000), or always with Endless Evolve (R5236030); an
-//!    Evolve reaches a graveyard card where it lies (`evolution::evolve_now`).
+//! 5. Only while it has not evolved (`evolved`, R3536000); an Evolve reaches a graveyard card where it
+//!    lies (`evolution::evolve_now`).
 //! 6. Never on a unit token (`zones::is_unit_token`), which no graveyard keeps (R11).
 //!
 //! Each row keeps its own conditions besides (types, bounds, R65, Vanilla, Immutable). Pure reads.
@@ -191,10 +191,7 @@ pub fn is_live(state: &GameState, card: &CardInstance, zone: TuneZone, acts: Tun
                     Field | Exile => false,
                 }
         }
-        // R5236030: an Endless Evolve card's Evolve text is read again at each evolution.
-        TuneActs::OnEvolve => {
-            (card.evolved != Some(true) || crate::evolution::evolves_endlessly(state, card)) && zone != Exile
-        }
+        TuneActs::OnEvolve => card.evolved != Some(true) && zone != Exile,
         TuneActs::Lasting => match zone {
             Graveyard => from_graveyard(),
             Exile => false,

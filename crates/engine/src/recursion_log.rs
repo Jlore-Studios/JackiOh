@@ -96,6 +96,17 @@ pub fn kept(state: &GameState) -> bool {
     })
 }
 
+/// R5237002, R5237005: whether the game keeps the records only Felinors vs Humans cards read
+/// (`PlayerState.last_float`, `cardPlayed.fromHand`): it holds a card of `FVH_KEPT_SET` anywhere, either
+/// side's, in any zone (hands, libraries and piles included), as `kept` scans. No recorded game holds
+/// one, so no other game's hash moves (D14, R768).
+pub fn fvh_kept(state: &GameState) -> bool {
+    crate::state::every_instance(state).any(|card| {
+        crate::catalog::find_def(Some(state), &card.def_id)
+            .is_some_and(|def| def.set == crate::config::FVH_KEPT_SET)
+    })
+}
+
 /// The first write opens the log on both sides at once, so the two reads agree.
 fn open(state: &mut GameState) {
     if state.players.p1.recursion.is_none() {

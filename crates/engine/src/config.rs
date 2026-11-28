@@ -2678,6 +2678,11 @@ pub const SINCE_LAST_TURN: i32 = 1;
 /// scripts that read it back.
 pub const RECURSION_LOG_TAGS: &[Tag] = &[Tag::Plagiarized];
 
+/// R5237002, R5237005: the set whose cards, held anywhere in a game, make it keep the records only its
+/// cards read (`recursion_log::fvh_kept`): the Float last turn and a played card's hand place. No
+/// recorded game holds one, so no other game's hash moves (D14).
+pub const FVH_KEPT_SET: SetName = SetName::FelinorsVsHumans;
+
 #[cfg(test)]
 mod tests {
     use super::*;
