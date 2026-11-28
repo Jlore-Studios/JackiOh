@@ -45026,12 +45026,7 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {
-      "5302": {
-        "at": "2026-11-28T12:48:39Z",
-        "why": "Confirmed on main: #5277 added `#[cfg(test)] mod snapshot_fold;` at `crates/cards/src/lib.rs:66`, and `script_code` stops at the first `#[cfg(test)]` (`crates/cards/src/code_lines.rs:129-134`), so `code_lines_with_uses` (`crates/tools/src/catalog.rs:1624`) no longer reads `register_all` (:163), `never_defense_kept` (:188) or `stats_as_it_died` (:203), which 17 card scripts call, and `classify` wou"
-      }
-    },
+    "auto": {},
     "auto_approved": [
       "2026-11-28T00:33:19Z",
       "2026-11-28T00:33:19Z",
@@ -45042,7 +45037,8 @@
       "2026-11-28T02:36:22Z",
       "2026-11-28T02:36:22Z",
       "2026-11-28T03:49:05Z",
-      "2026-11-28T07:29:09Z"
+      "2026-11-28T07:29:09Z",
+      "2026-11-28T12:48:41Z"
     ],
     "decided": [
       {
