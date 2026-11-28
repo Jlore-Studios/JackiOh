@@ -21487,6 +21487,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-28T03:08:36Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
       "verdict_rounds": 2
