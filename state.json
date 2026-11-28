@@ -45345,7 +45345,12 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {},
+    "auto": {
+      "5242": {
+        "at": "2026-11-28T14:20:46Z",
+        "why": "Confirmed on main: the \u00a710.7 scorer adds up each attacker's hit against the hero's whole Armor (`hero_hit` \u2192 `damage::hero_hit_amount`, `scorer.rs:97-127`, summed with the Charge candidate at `:795-802` and read by the dry run at `:448` and `autopilot.rs:219`), so since R5183000 Zephrys, Zephrys Zealotism and the autopilot miss a lethal that two or more hits through wearing Armor deal; separately,"
+      }
+    },
     "auto_approved": [
       "2026-11-28T00:33:19Z",
       "2026-11-28T00:33:19Z",
