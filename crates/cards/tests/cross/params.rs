@@ -405,6 +405,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                 && !entry.starts_with("stinkyscape-")
                 && !entry.starts_with("traininggrounds-")
                 && !entry.starts_with("stinkyscapeplus-")
+                && !entry.starts_with("felinorsvshumans-")
         });
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
@@ -500,6 +501,7 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                     || entry.starts_with("traininggrounds-")
                     || entry.starts_with("stinkyscapeplus-")
                     || entry.starts_with("infiniteassault-")
+                    || entry.starts_with("felinorsvshumans-")
             })
             .count();
         // #2657's Anti-oneshot Armor `armor`, its Radiant face's "Your hero has Armor 1", and less
@@ -761,6 +763,30 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscape-095", CARD_NAME),
         ("stinkyscape-159", CARD_NAME),
         ("stinkyscape-160", CARD_NAME),
+        // R5235000: the held Felinors vs Humans set's fixed numbers (issue #5235): prices, numbered-keyword
+        // counts, formula terms and an engine table its stage A entries print (docs/felinors-vs-humans-set.md).
+        ("felinorsvshumans-016", PRICE),
+        ("felinorsvshumans-031", PRICE),
+        ("felinorsvshumans-032", KEYWORD),
+        ("felinorsvshumans-034", ENGINE),
+        ("felinorsvshumans-049-1", KEYWORD),
+        ("felinorsvshumans-050", KEYWORD),
+        ("felinorsvshumans-050", PRICE),
+        ("felinorsvshumans-055", KEYWORD),
+        ("felinorsvshumans-061", PRICE),
+        ("felinorsvshumans-066", PRICE),
+        ("felinorsvshumans-087", PRICE),
+        ("felinorsvshumans-091", FORMULA),
+        ("felinorsvshumans-115", KEYWORD),
+        ("felinorsvshumans-115", PRICE),
+        ("felinorsvshumans-126", PRICE),
+        ("felinorsvshumans-168", PRICE),
+        ("felinorsvshumans-176", PRICE),
+        ("felinorsvshumans-123", KEYWORD),
+        ("felinorsvshumans-143", KEYWORD),
+        ("felinorsvshumans-187", KEYWORD),
+        ("felinorsvshumans-186", KEYWORD),
+        ("felinorsvshumans-161", KEYWORD),
     ];
 
     fn literal(text: &str) -> String {

@@ -1393,7 +1393,8 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
             return;
         };
         // R5237006: a granted End of turn runs on a card whose own text has none.
-        if holder.script.hook_named(hook.as_str()).is_none() && !granted_end_of_turn(hook, holder.zone, &card) {
+        if holder.script.hook_named(hook.as_str()).is_none() && !granted_end_of_turn(hook, holder.zone, &card)
+        {
             return;
         }
         // R153, re-read as a trigger is: a card now in a hand or a graveyard no longer registers it.

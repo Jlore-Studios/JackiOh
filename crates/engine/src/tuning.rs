@@ -38,7 +38,10 @@ pub const LAYERED_NUMBERED_KEYWORDS: &[KeywordKind] = &[
 /// R5236020, R5236021: the kinds whose entries sum across their sources rather than count once (§6.1,
 /// §10.4): Armor and Lucky, and Unlucky, which a Lucky offsets.
 pub fn sums_across_sources(kind: KeywordKind) -> bool {
-    matches!(kind, KeywordKind::Armor | KeywordKind::Lucky | KeywordKind::Unlucky)
+    matches!(
+        kind,
+        KeywordKind::Armor | KeywordKind::Lucky | KeywordKind::Unlucky
+    )
 }
 
 /// R5236021: a card's Unlucky now: what it prints (or KY's Constant set) moved by its tuning steps, where

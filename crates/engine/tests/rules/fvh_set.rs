@@ -166,18 +166,27 @@ mod r5235000_a_held_set {
         serde_json::from_value(json!(name)).ok()
     }
 
+    /// Where `set` stands in `sets`.
+    fn place(sets: &[SetName], set: SetName) -> Option<usize> {
+        sets.iter().position(|listed| *listed == set)
+    }
+
     #[test]
-    fn r5235000_its_row_closes_the_set_table_and_the_catalog_order() {
-        assert_eq!(SET_TABLE.last().map(|row| row.set), Some(FVH));
-        assert_eq!(CATALOG_SETS.last(), Some(&FVH));
+    fn r5235000_its_row_follows_the_infinite_assaults_and_it_follows_stinkyscape_plus_in_the_catalog_order() {
+        let table: Vec<SetName> = SET_TABLE.iter().map(|row| row.set).collect();
+        assert_eq!(
+            place(&table, FVH),
+            place(&table, SetName::InfiniteAssault).map(|at| at + 1)
+        );
+        assert_eq!(
+            place(&CATALOG_SETS, FVH),
+            place(&CATALOG_SETS, SetName::StinkyscapePlus).map(|at| at + 1)
+        );
     }
 
     #[test]
     fn r5235000_its_shadow_ban_holds_at_most_a_fifth_of_its_197_cards() {
-        assert_eq!(
-            shadow_ban_ceiling(FVH, NON_TOKEN_CARDS),
-            Some(SHADOW_BAN_CEILING)
-        );
+        assert_eq!(shadow_ban_ceiling(FVH, NON_TOKEN_CARDS), Some(SHADOW_BAN_CEILING));
     }
 
     #[test]
@@ -192,7 +201,10 @@ mod r5235000_a_held_set {
     fn r5235000_a_pool_that_names_no_set_never_draws_its_cards() {
         register();
         let ids = pool_ids(json!({}));
-        assert!(ids.contains(&CORE_FELINOR.to_string()), "setup: the pool draws shipped cards");
+        assert!(
+            ids.contains(&CORE_FELINOR.to_string()),
+            "setup: the pool draws shipped cards"
+        );
         assert_eq!(of_the_set(&ids), Vec::<String>::new());
     }
 
@@ -209,7 +221,10 @@ mod r5235000_a_held_set {
     fn r5235000_a_tag_pool_never_draws_its_cards() {
         register();
         let ids = pool_ids(json!({ "tags": ["Felinor"] }));
-        assert!(ids.contains(&CORE_FELINOR.to_string()), "setup: the tag pool draws");
+        assert!(
+            ids.contains(&CORE_FELINOR.to_string()),
+            "setup: the tag pool draws"
+        );
         assert_eq!(of_the_set(&ids), Vec::<String>::new());
     }
 
@@ -239,7 +254,10 @@ mod r5235000_a_held_set {
         let mut deck: Vec<String> = (1..=DECK_FILL).map(|n| format!("fx-{n}")).collect();
         deck.push(CORE_FELINOR.to_string());
         let size = deck.len() as i32;
-        assert!(validate_deck(&deck, &catalog, "p1", size).is_ok(), "setup: the shipped deck passes");
+        assert!(
+            validate_deck(&deck, &catalog, "p1", size).is_ok(),
+            "setup: the shipped deck passes"
+        );
         deck.pop();
         deck.push(FVH_CARD.to_string());
         let refused = validate_deck(&deck, &catalog, "p1", size).expect_err("refused");
@@ -273,10 +291,7 @@ mod r5235000_a_held_set {
         let catalog = real_catalog();
         let entries = of_set(&catalog, FVH);
         assert_eq!(entries.len(), CATALOG_ENTRIES);
-        assert_eq!(
-            entries.iter().filter(|def| !def.token).count(),
-            NON_TOKEN_CARDS
-        );
+        assert_eq!(entries.iter().filter(|def| !def.token).count(), NON_TOKEN_CARDS);
         let strays: Vec<&str> = entries
             .iter()
             .filter(|def| !def.id.starts_with(&format!("{SEGMENT}-")))
@@ -302,10 +317,12 @@ mod r5235001_the_plagiarized_reprints {
         for def in &reprinted {
             let number: u32 = def.index.parse().expect("a reprint's index is its number");
             assert_eq!(def.id, format!("{SEGMENT}-{number:03}"));
-            let ia_name = def
-                .name
-                .strip_prefix(PLAGIARIZED_PREFIX)
-                .unwrap_or_else(|| panic!("{} is named {:?}, not \"Plagiarized: <IA name>\"", def.id, def.name));
+            let ia_name = def.name.strip_prefix(PLAGIARIZED_PREFIX).unwrap_or_else(|| {
+                panic!(
+                    "{} is named {:?}, not \"Plagiarized: <IA name>\"",
+                    def.id, def.name
+                )
+            });
             let copied = catalog
                 .values()
                 .find(|other| other.set == SetName::InfiniteAssault && other.name == ia_name);

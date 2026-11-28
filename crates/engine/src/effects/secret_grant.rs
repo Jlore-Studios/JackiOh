@@ -109,7 +109,11 @@ pub fn believe_secret_grants(state: &mut GameState, viewer: PlayerId) {
             continue;
         }
         for keyword in shown {
-            if !card.granted_keywords.iter().any(|held| held.kind() == keyword.kind()) {
+            if !card
+                .granted_keywords
+                .iter()
+                .any(|held| held.kind() == keyword.kind())
+            {
                 card.granted_keywords.push(keyword);
             }
         }

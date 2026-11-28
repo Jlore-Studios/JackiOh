@@ -1347,7 +1347,9 @@ fn combine_objects(records: &[Script]) -> Script {
             if holds.is_empty() {
                 None
             } else {
-                Some(read_hook(move |args: HookArgs<'_>| holds.iter().any(|hold| hold(args))))
+                Some(read_hook(move |args: HookArgs<'_>| {
+                    holds.iter().any(|hold| hold(args))
+                }))
             }
         },
         // R1487000, R767000: a fusion's text works face-down when any ingredient's did.

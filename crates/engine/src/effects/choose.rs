@@ -1455,12 +1455,8 @@ pub fn discover_keyword(args: DiscoverKeywordArgs) -> Effect {
             candidates.push(keyword);
         }
         let count = args.count.unwrap_or(DISCOVER_OPTIONS).max(0) as usize;
-        let offered: Vec<crate::wire::Keyword> = ctx
-            .rng
-            .shuffle(&candidates)
-            .into_iter()
-            .take(count)
-            .collect();
+        let offered: Vec<crate::wire::Keyword> =
+            ctx.rng.shuffle(&candidates).into_iter().take(count).collect();
         if offered.is_empty() {
             return;
         }

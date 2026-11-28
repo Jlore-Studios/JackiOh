@@ -376,7 +376,10 @@ pub fn mark_use(state: &mut GameState, card_id: &str, ability: &str) {
 /// `layers::card_keywords` keeps one of a kind), printed as tuning leaves it or granted, never lent by an
 /// aura; `None` without the keyword.
 fn durability_of(state: &GameState, card: &CardInstance) -> Option<i32> {
-    crate::tuning::numbered_sum(&crate::layers::card_keywords(state, card), KeywordKind::Durability)
+    crate::tuning::numbered_sum(
+        &crate::layers::card_keywords(state, card),
+        KeywordKind::Durability,
+    )
 }
 
 /// R5236000: the Durability the card has left: its Durability X (a Buff's or a Nerf's steps included,

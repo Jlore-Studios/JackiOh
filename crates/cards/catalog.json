@@ -37248,6 +37248,8113 @@
       "health": 4
     }
   },
+  "felinorsvshumans-001": {
+    "id": "felinorsvshumans-001",
+    "index": "1",
+    "name": "NGMI Joe",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "End of turn: Nerf this."
+    },
+    "radiant": {
+      "attack": 16,
+      "health": 16,
+      "keywords": [],
+      "text": "Start of turn: Nerf this."
+    }
+  },
+  "felinorsvshumans-002": {
+    "id": "felinorsvshumans-002",
+    "index": "2",
+    "name": "M.O.T.H.E.R",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "discount",
+        "base": 3,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 9,
+      "health": 7,
+      "keywords": [],
+      "text": "Tribute 2\nCry: Reduce the Cost of a card in your hand by ({discount}), and of the cards outward from it on both sides by (1) less at each step."
+    },
+    "radiant": {
+      "attack": 18,
+      "health": 14,
+      "keywords": [],
+      "text": "Tribute 2\nCry: Reduce the Cost of a card in your hand by ({discount}), and of the cards outward from it on both sides by (1) less at each step."
+    }
+  },
+  "felinorsvshumans-003": {
+    "id": "felinorsvshumans-003",
+    "index": "3",
+    "name": "KY's Pocket Galaxy",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "KY"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Hustle",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Every card in your hand and deck now costs ({setCost})."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Every card in your hand and deck now costs ({setCost}). Replenish your mana."
+    }
+  },
+  "felinorsvshumans-004": {
+    "id": "felinorsvshumans-004",
+    "index": "4",
+    "name": "KY's Unification Mandate",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "KY"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Holy",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "stats",
+        "base": 5,
+        "radiant": 8,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Set the Attack and Health of your Units to {stats}/{stats}. For the rest of the game, whenever you summon a Unit, set its Attack and Health to {stats}/{stats}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Set the Attack and Health of your Units to {stats}/{stats}. For the rest of the game, whenever you summon a Unit, set its Attack and Health to {stats}/{stats}."
+    }
+  },
+  "felinorsvshumans-005": {
+    "id": "felinorsvshumans-005",
+    "index": "5",
+    "name": "Reanimator",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Epic",
+    "flavor": "Dark",
+    "token": false,
+    "cost": 3,
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Summon a random Unit with a Death. Trigger its Death."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Discover a Radiant Unit with a Death. Summon it and trigger its Death."
+    }
+  },
+  "felinorsvshumans-006": {
+    "id": "felinorsvshumans-006",
+    "index": "6",
+    "name": "Overpaid Intern",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nCry: Destroy an enemy backrow card."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nCry: Steal an enemy backrow card."
+    }
+  },
+  "felinorsvshumans-007": {
+    "id": "felinorsvshumans-007",
+    "index": "7",
+    "name": "Whimsy!",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "flavor": "Holy",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "turns",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Give a Unit Immune to Spells and Indestructible for {turns|turn|turns}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give a Unit Immune to Spells and Indestructible for {turns|turn|turns}."
+    }
+  },
+  "felinorsvshumans-008": {
+    "id": "felinorsvshumans-008",
+    "index": "8",
+    "name": "Joy!",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "flavor": "Holy",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "turns",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Give a Unit Cleave, Lifesteal and Pierce for {turns|turn|turns}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give a Unit Cleave, Lifesteal and Pierce for {turns|turn|turns}."
+    }
+  },
+  "felinorsvshumans-009": {
+    "id": "felinorsvshumans-009",
+    "index": "9",
+    "name": "Whimsy and Joy!",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "flavor": "Holy",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "felinorsvshumans-007",
+      "felinorsvshumans-008"
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Add a Whimsy! and a Joy! to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add a Radiant Whimsy! and a Radiant Joy! to your hand."
+    }
+  },
+  "felinorsvshumans-010": {
+    "id": "felinorsvshumans-010",
+    "index": "10",
+    "name": "Shadow Judge",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Epic",
+    "flavor": "Dark",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "turns",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 4,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Make a permanent Dormant for {turns|turn|turns}."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Make a permanent and the permanents adjacent to it Dormant for {turns|turn|turns}."
+    }
+  },
+  "felinorsvshumans-011": {
+    "id": "felinorsvshumans-011",
+    "index": "11",
+    "name": "Ban Hammer",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Equip"
+        },
+        {
+          "kind": "Poisonous"
+        }
+      ],
+      "text": "Equip, Poisonous"
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Equip"
+        },
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Poisonous"
+        }
+      ],
+      "text": "Equip, Rush, Poisonous"
+    }
+  },
+  "felinorsvshumans-012": {
+    "id": "felinorsvshumans-012",
+    "index": "12",
+    "name": "Mr. Big",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 0,
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 3,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 9,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "felinorsvshumans-013": {
+    "id": "felinorsvshumans-013",
+    "index": "13",
+    "name": "Mr. Small",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 5,
+    "loc": 1,
+    "base": {
+      "attack": 20,
+      "health": 20,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 60,
+      "health": 60,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "felinorsvshumans-014": {
+    "id": "felinorsvshumans-014",
+    "index": "14",
+    "name": "Direwolf",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 4,
+    "loc": 1,
+    "base": {
+      "attack": 7,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Frenzy"
+        },
+        {
+          "kind": "First Strike"
+        }
+      ],
+      "text": "Rush, Frenzy, First Strike"
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Frenzy"
+        },
+        {
+          "kind": "First Strike"
+        }
+      ],
+      "text": "Rush, Frenzy, First Strike"
+    }
+  },
+  "felinorsvshumans-015": {
+    "id": "felinorsvshumans-015",
+    "index": "15",
+    "name": "Unstable Magma-Cell",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Fire",
+    "token": false,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "attack": 5,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Brittle",
+          "n": 2
+        }
+      ],
+      "text": "Brittle 2"
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Brittle",
+          "n": 3
+        }
+      ],
+      "text": "Brittle 3"
+    }
+  },
+  "felinorsvshumans-016": {
+    "id": "felinorsvshumans-016",
+    "index": "16",
+    "name": "Travertine",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Legendary",
+    "flavor": "Brute",
+    "token": false,
+    "cost": {
+      "base": 1,
+      "embiggen": 4
+    },
+    "refs": [
+      "felinorsvshumans-016",
+      "felinorsvshumans-016-1"
+    ],
+    "params": [
+      {
+        "key": "stacks",
+        "base": 6,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Add a Travertine Stack with Temporary 2 to your hand.\nEmbiggened (+3): Add {stacks} instead, with Temporary 1 to {stacks}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add a Radiant Travertine Stack with Temporary 2 to your hand.\nEmbiggened (+3): Add {stacks} instead, with Temporary 1 to {stacks}."
+    }
+  },
+  "felinorsvshumans-016-1": {
+    "id": "felinorsvshumans-016-1",
+    "index": "16.1",
+    "name": "Travertine Stack",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "flavor": "Brute",
+    "token": true,
+    "cost": 9999,
+    "refs": [
+      "felinorsvshumans-016",
+      "felinorsvshumans-016-2"
+    ],
+    "params": [
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "credits",
+        "base": 15,
+        "radiant": 30,
+        "better": "up",
+        "step": 5,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "When you play or discard this: Gain {mana} mana and {credits} Credits, and summon a Travertine Golem."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "When you play or discard this: Gain {mana} mana and {credits} Credits, and summon a Radiant Travertine Golem."
+    }
+  },
+  "felinorsvshumans-016-2": {
+    "id": "felinorsvshumans-016-2",
+    "index": "16.2",
+    "name": "Travertine Golem",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "flavor": "Brute",
+    "token": true,
+    "cost": 3,
+    "params": [
+      {
+        "key": "cap",
+        "base": 15,
+        "radiant": 15,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 0,
+      "health": 5,
+      "keywords": [],
+      "text": "Has Attack and Armor equal to your Float last turn, at most {cap}."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 5,
+      "keywords": [],
+      "text": "Has Attack and Armor equal to three times your Float last turn, at most {cap}."
+    }
+  },
+  "felinorsvshumans-017": {
+    "id": "felinorsvshumans-017",
+    "index": "17",
+    "name": "Jlockeed Shredder-14",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Jlockeed"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 8,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 16,
+      "health": 22,
+      "keywords": [],
+      "text": "Float reduces cost.\nEnd of turn: Deal {damage} damage to all enemies, four times."
+    },
+    "radiant": {
+      "attack": 32,
+      "health": 44,
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nFloat reduces cost.\nEnd of turn: Deal {damage} damage to all enemies, four times."
+    }
+  },
+  "felinorsvshumans-018": {
+    "id": "felinorsvshumans-018",
+    "index": "18",
+    "name": "Villa-D Moneybags",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Epic",
+    "flavor": "Hustle",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "cap",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      },
+      {
+        "key": "cards",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Raise your max mana's cap by {cap} for the rest of the game. Add {cards|random card|random cards} of (5) Cost or more to your hand."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Raise your max mana's cap by {cap} for the rest of the game. Add {cards|random Radiant card|random Radiant cards} of (5) Cost or more to your hand."
+    }
+  },
+  "felinorsvshumans-019": {
+    "id": "felinorsvshumans-019",
+    "index": "19",
+    "name": "Trowel",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Roblox-Tool"
+    ],
+    "rarity": "Common",
+    "flavor": "Brute",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "felinorsvshumans-019-1"
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Activate: Summon a Wall of Bricks."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Activate: Summon a Radiant Wall of Bricks."
+    }
+  },
+  "felinorsvshumans-019-1": {
+    "id": "felinorsvshumans-019-1",
+    "index": "19.1",
+    "name": "Wall of Bricks",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "flavor": "Brute",
+    "token": true,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "attack": 0,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        },
+        {
+          "kind": "Brittle",
+          "n": 1
+        },
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Can't attack, Brittle 1, Taunt"
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        },
+        {
+          "kind": "Brittle",
+          "n": 2
+        },
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Can't attack, Brittle 2, Taunt"
+    }
+  },
+  "felinorsvshumans-020": {
+    "id": "felinorsvshumans-020",
+    "index": "20",
+    "name": "Bomb",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Roblox-Tool"
+    ],
+    "rarity": "Common",
+    "flavor": "Fire",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "felinorsvshumans-020",
+      "felinorsvshumans-020-1"
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Activate: Summon a Ticking Time Bomb."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Activate: Summon a Radiant Ticking Time Bomb."
+    }
+  },
+  "felinorsvshumans-020-1": {
+    "id": "felinorsvshumans-020-1",
+    "index": "20.1",
+    "name": "Ticking Time Bomb",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "flavor": "Fire",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 0,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        },
+        {
+          "kind": "Brittle",
+          "n": 2
+        }
+      ],
+      "text": "Can't Defend, Brittle 2\nActivate: Tribute this.\nDeath: Deal {damage} damage to both heroes and all Units."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Can't Defend"
+        },
+        {
+          "kind": "Brittle",
+          "n": 3
+        }
+      ],
+      "text": "Can't Defend, Brittle 3\nActivate: Tribute this.\nDeath: Deal {damage} damage to all enemies."
+    }
+  },
+  "felinorsvshumans-021": {
+    "id": "felinorsvshumans-021",
+    "index": "21",
+    "name": "Scandalous Top Hat",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "flavor": "Holy",
+    "token": false,
+    "cost": 0,
+    "refs": [
+      "felinorsvshumans-021"
+    ],
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Give a Unit +{buff}/+{buff} and \"Death: Add a Scandalous Top Hat to your hand.\"",
+      "grants": {
+        "hatDeath": "Death: Add a Scandalous Top Hat to your hand."
+      }
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give a Unit +{buff}/+{buff} and \"Death: Add a Radiant Scandalous Top Hat to your hand.\"",
+      "grants": {
+        "hatDeath": "Death: Add a Radiant Scandalous Top Hat to your hand."
+      }
+    }
+  },
+  "felinorsvshumans-022": {
+    "id": "felinorsvshumans-022",
+    "index": "22",
+    "name": "The Mad Hatter",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Epic",
+    "flavor": "Chaos",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "felinorsvshumans-021"
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Cast a Scandalous Top Hat at each Unit."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Cast a Radiant Scandalous Top Hat at each of your Units."
+    }
+  },
+  "felinorsvshumans-023": {
+    "id": "felinorsvshumans-023",
+    "index": "23",
+    "name": "Book of Excavation",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Book"
+    ],
+    "rarity": "Epic",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "resources",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Add {resources|random Stinkyscape Resource|random Stinkyscape Resources} to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add {resources|random Radiant Stinkyscape Resource|random Radiant Stinkyscape Resources} to your hand."
+    }
+  },
+  "felinorsvshumans-024": {
+    "id": "felinorsvshumans-024",
+    "index": "24",
+    "name": "Book of Starflight",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Book"
+    ],
+    "rarity": "Epic",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "stinkyscape-t-dormant-starship"
+    ],
+    "params": [
+      {
+        "key": "pieces",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Summon a Dormant Starship with {pieces|random Starship Piece|random Starship Pieces} fused into it."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a Dormant Starship with {pieces|random Radiant Starship Piece|random Radiant Starship Pieces} fused into it."
+    }
+  },
+  "felinorsvshumans-025": {
+    "id": "felinorsvshumans-025",
+    "index": "25",
+    "name": "Book of Jade",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Book"
+    ],
+    "rarity": "Epic",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "meditative-039-1"
+    ],
+    "params": [
+      {
+        "key": "chance",
+        "base": 66,
+        "radiant": 66,
+        "better": "up",
+        "step": 6,
+        "min": 1,
+        "max": 100
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Add an Auspicious Rock to your hand. {chance}% chance: Add another."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add a Radiant Auspicious Rock to your hand. {chance}% chance: Add another."
+    }
+  },
+  "felinorsvshumans-026": {
+    "id": "felinorsvshumans-026",
+    "index": "26",
+    "name": "Book of Entropy",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Book"
+    ],
+    "rarity": "Epic",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "core-095",
+      "classicplus-073",
+      "meditative-095",
+      "stinkyscape-150",
+      "stinkyscape-151",
+      "traininggrounds-039",
+      "stinkyscapeplus-142",
+      "felinorsvshumans-100"
+    ],
+    "params": [
+      {
+        "key": "cards",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Add {cards|random Call to Chaos card|random Call to Chaos cards} to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add {cards|random Radiant Call to Chaos card|random Radiant Call to Chaos cards} to your hand."
+    }
+  },
+  "felinorsvshumans-027": {
+    "id": "felinorsvshumans-027",
+    "index": "27",
+    "name": "Book of Monstruo",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Book"
+    ],
+    "rarity": "Epic",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "core-095-1"
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Add a random Chaos Golem to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add a random Radiant Chaos Golem to your hand."
+    }
+  },
+  "felinorsvshumans-028": {
+    "id": "felinorsvshumans-028",
+    "index": "28",
+    "name": "Book of Design Principles",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Book"
+    ],
+    "rarity": "Epic",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "traininggrounds-040"
+    ],
+    "params": [
+      {
+        "key": "cards",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Add {cards|Goetzmann Game Design|Goetzmann Game Designs} to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add {cards|Radiant Goetzmann Game Design|Radiant Goetzmann Game Designs} to your hand."
+    }
+  },
+  "felinorsvshumans-029": {
+    "id": "felinorsvshumans-029",
+    "index": "29",
+    "name": "Book of Legends",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Book"
+    ],
+    "rarity": "Epic",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "cards",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Add {cards|random Radiant Acclaimed card|random Radiant Acclaimed cards} to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add {cards|random Radiant Acclaimed card|random Radiant Acclaimed cards} to your hand."
+    }
+  },
+  "felinorsvshumans-030": {
+    "id": "felinorsvshumans-030",
+    "index": "30",
+    "name": "Big Book",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "casts",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Cast {casts|random Book|random Books}, with random targets."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Cast {casts|random Radiant Book|random Radiant Books}. Each aims at enemies when it harms and at your side when it helps."
+    }
+  },
+  "felinorsvshumans-031": {
+    "id": "felinorsvshumans-031",
+    "index": "31",
+    "name": "Desperate Plea",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Legendary",
+    "flavor": "Holy",
+    "token": false,
+    "cost": 9,
+    "params": [
+      {
+        "key": "heal",
+        "base": 30,
+        "radiant": 60,
+        "better": "up",
+        "step": 8,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Float reduces cost.\nCosts (0) while your hero has exactly 1 health.\nHeal your hero {heal}. Fill your board with random Legendary Units."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Float reduces cost.\nCosts (0) while your hero has exactly 1 health.\nHeal your hero {heal}. Fill your board with random Radiant Legendary Units."
+    }
+  },
+  "felinorsvshumans-032": {
+    "id": "felinorsvshumans-032",
+    "index": "32",
+    "name": "Refreshable Shop",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "flavor": "Hustle",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Durability",
+          "n": 3
+        }
+      ],
+      "text": "Durability 3\nActivate: Replace each card in your hand with a different random card. Make one of them Radiant."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Durability",
+          "n": 3
+        }
+      ],
+      "text": "Durability 3\nActivate: Replace each card in your hand with a different random Radiant card."
+    }
+  },
+  "felinorsvshumans-033": {
+    "id": "felinorsvshumans-033",
+    "index": "33",
+    "name": "Unstoppable Force",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Epic",
+    "flavor": "Brute",
+    "token": false,
+    "cost": 10,
+    "loc": 1,
+    "base": {
+      "attack": 50,
+      "health": 50,
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Immune to Spells"
+        }
+      ],
+      "text": "Indestructible, Immune to Spells\nFloat reduces cost."
+    },
+    "radiant": {
+      "attack": 100,
+      "health": 100,
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        },
+        {
+          "kind": "Immune to Spells"
+        },
+        {
+          "kind": "Windfury"
+        }
+      ],
+      "text": "Indestructible, Immune to Spells, Windfury\nFloat reduces cost."
+    }
+  },
+  "felinorsvshumans-034": {
+    "id": "felinorsvshumans-034",
+    "index": "34",
+    "name": "Half-True Craft a Card",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Mythic",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 4,
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Discover 2 cards. Fuse them and add the result to your hand. It costs (0)."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Discover 3 cards. Fuse them and add the result to your hand. It costs (0)."
+    }
+  },
+  "felinorsvshumans-035": {
+    "id": "felinorsvshumans-035",
+    "index": "35",
+    "name": "Looksmaxxer",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Clout",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Set this Unit's Attack to the highest Attack and its Health to the highest Health among Units."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Set this Unit's Attack to the highest Attack and its Health to the highest Health among Units. Then Buff this twice."
+    }
+  },
+  "felinorsvshumans-036": {
+    "id": "felinorsvshumans-036",
+    "index": "36",
+    "name": "Heartrock",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "flavor": "Brute",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: If you spent all your mana this turn, summon a random Asteroid."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: If you spent all your mana this turn, summon a random Radiant Asteroid."
+    }
+  },
+  "felinorsvshumans-037": {
+    "id": "felinorsvshumans-037",
+    "index": "37",
+    "name": "Old Grum",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Legendary",
+    "flavor": "Brute",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 20,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "GIGA"
+        },
+        {
+          "kind": "Untributable"
+        },
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "GIGA, Untributable, Reborn\nAura: This is summoning sick until it is Reborn."
+    },
+    "radiant": {
+      "attack": 40,
+      "health": 40,
+      "keywords": [
+        {
+          "kind": "GIGA"
+        },
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "GIGA, Reborn\nAura: This is summoning sick until it is Reborn."
+    }
+  },
+  "felinorsvshumans-038": {
+    "id": "felinorsvshumans-038",
+    "index": "38",
+    "name": "Short Term Loan",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "flavor": "Hustle",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "mana",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "loss",
+        "base": 4,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Gain {mana} mana. Overload ({loss})."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Gain {mana} mana. Overload ({loss})."
+    }
+  },
+  "felinorsvshumans-039": {
+    "id": "felinorsvshumans-039",
+    "index": "39",
+    "name": "Whisperer of KY",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "KY"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "copies",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 5,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Shuffle {copies|copy|copies} of each Spell in your deck into your deck, with Cast on draw."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 16,
+      "keywords": [],
+      "text": "Cry: Shuffle {copies|copy|copies} of each Spell in your deck into your deck, with Cast on draw."
+    }
+  },
+  "felinorsvshumans-040": {
+    "id": "felinorsvshumans-040",
+    "index": "40",
+    "name": "Travel Master Drungar",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "mana",
+        "base": 4,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Tribute 1\nCry: Recruit a Unit from each set. Overload ({mana})."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Tribute 1\nCry: Recruit a Unit from each set and make them Radiant. Overload ({mana})."
+    }
+  },
+  "felinorsvshumans-041": {
+    "id": "felinorsvshumans-041",
+    "index": "41",
+    "name": "Icecream Vender",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "flavor": "Snack",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Durability",
+          "n": 2
+        }
+      ],
+      "text": "Durability 2\nActivate: Choose one: Vanilla a Unit, or Freeze a Unit."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Durability",
+          "n": 4
+        }
+      ],
+      "text": "Durability 4\nActivate 2: Choose one: Vanilla a Unit, or Freeze a Unit."
+    }
+  },
+  "felinorsvshumans-042": {
+    "id": "felinorsvshumans-042",
+    "index": "42",
+    "name": "Big Billy",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "flavor": "Brute",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "stats",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base",
+        "read": "cry"
+      },
+      {
+        "key": "shrink",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant",
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Stack"
+        }
+      ],
+      "text": "Stack\nCan be played on either side.\nCry: If you played this on your side, it becomes a {stats}/{stats}. Destroy the Units beneath this."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Stack"
+        }
+      ],
+      "text": "Stack\nCan be played on either side.\nCry: If you played this on your opponent's side, it becomes a {shrink}/{shrink}. Destroy the Units beneath this."
+    }
+  },
+  "felinorsvshumans-043": {
+    "id": "felinorsvshumans-043",
+    "index": "43",
+    "name": "Dragons Bain",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Epic",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 5,
+      "keywords": [],
+      "text": "End of turn: Deal {damage} damage to a random enemy."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nEnd of turn: Deal {damage} damage to a random enemy, twice."
+    }
+  },
+  "felinorsvshumans-044": {
+    "id": "felinorsvshumans-044",
+    "index": "44",
+    "name": "Felinor Converter",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 5,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nCry: Transform another friendly Unit into a copy of this."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nCry: Summon a copy of this."
+    }
+  },
+  "felinorsvshumans-045": {
+    "id": "felinorsvshumans-045",
+    "index": "45",
+    "name": "Subject 9",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "traps",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 5,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Draw {traps|Trap|Traps} from your deck. If your deck has fewer, add random Traps to your hand to make up the rest."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Recruit {traps|Trap|Traps}. If your deck has fewer, summon random Traps to make up the rest."
+    }
+  },
+  "felinorsvshumans-046": {
+    "id": "felinorsvshumans-046",
+    "index": "46",
+    "name": "Manifestor",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Legendary",
+    "flavor": "Chaos",
+    "token": false,
+    "cost": 3,
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Summon a random (2) Cost Unit to the left of this and one to the right. Secretly choose one of them to gain Fragile. Your opponent sees Fragile on both."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Summon a random Radiant (2) Cost Unit to the left of this and one to the right. Secretly choose one of them to gain Fragile. Your opponent sees Fragile on both."
+    }
+  },
+  "felinorsvshumans-047": {
+    "id": "felinorsvshumans-047",
+    "index": "47",
+    "name": "Blazing Battlemage",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Fire",
+    "token": false,
+    "cost": 0,
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Make this Radiant."
+    },
+    "radiant": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "felinorsvshumans-048": {
+    "id": "felinorsvshumans-048",
+    "index": "48",
+    "name": "Toxic Timmy",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "flavor": "Toxic",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Poisonous"
+        }
+      ],
+      "text": "Poisonous\nCry: Discover a Felinors vs Humans card."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Poisonous"
+        }
+      ],
+      "text": "Rush, Poisonous\nCry: Discover a Radiant Felinors vs Humans card."
+    }
+  },
+  "felinorsvshumans-049": {
+    "id": "felinorsvshumans-049",
+    "index": "49",
+    "name": "Candle Master",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Fire",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "felinorsvshumans-049-1"
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Summon a Candle Shot."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Summon a Radiant Candle Shot."
+    }
+  },
+  "felinorsvshumans-049-1": {
+    "id": "felinorsvshumans-049-1",
+    "index": "49.1",
+    "name": "Candle Shot",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Common",
+    "flavor": "Fire",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 1,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        },
+        {
+          "kind": "Durability",
+          "n": 3
+        }
+      ],
+      "text": "Pierce, Durability 3\nActivate: Deal {damage} damage to an enemy."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        },
+        {
+          "kind": "Durability",
+          "n": 3
+        }
+      ],
+      "text": "Pierce, Durability 3\nActivate: Deal {damage} damage to an enemy."
+    }
+  },
+  "felinorsvshumans-050": {
+    "id": "felinorsvshumans-050",
+    "index": "50",
+    "name": "Field Kit",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Legendary",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 1,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Durability",
+          "n": 2
+        }
+      ],
+      "text": "Durability 2\nActivate: Deal {damage} damage to an enemy. Summon a random (1) or (2) Cost Trap."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        },
+        {
+          "kind": "Durability",
+          "n": 2
+        }
+      ],
+      "text": "Pierce, Durability 2\nActivate: Deal {damage} damage to an enemy. Summon a random Radiant (1) or (2) Cost Trap."
+    }
+  },
+  "felinorsvshumans-051": {
+    "id": "felinorsvshumans-051",
+    "index": "51",
+    "name": "Scavengers Ingenuity",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "buff",
+        "base": 3,
+        "radiant": 9,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Draw a Felinor from your deck. Give it +{buff}/+{buff}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Draw a Felinor from your deck. Give it +{buff}/+{buff}."
+    }
+  },
+  "felinorsvshumans-052": {
+    "id": "felinorsvshumans-052",
+    "index": "52",
+    "name": "Ace Hunter Jay",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Epic",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "bonus",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Aura: Your Units have Ranged, and +{bonus} Attack while attacking a Felinor."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Aura: Your Units have Ranged and Rush, and +{bonus} Attack while attacking a Felinor."
+    }
+  },
+  "felinorsvshumans-053": {
+    "id": "felinorsvshumans-053",
+    "index": "53",
+    "name": "Jay Sharp Shooter",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 4,
+      "keywords": [],
+      "text": "Activate: Pay (1) to deal {damage} Pierce damage."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 8,
+      "keywords": [],
+      "text": "Activate: Pay (1) to deal {damage} Pierce damage."
+    }
+  },
+  "felinorsvshumans-054": {
+    "id": "felinorsvshumans-054",
+    "index": "54",
+    "name": "Intrepid initiate",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "attack",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 3,
+      "keywords": [],
+      "text": "The first time you play a Spell, gain +{attack} Attack and Divine Shield."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "After you play a Spell, gain +{attack} Attack and Divine Shield."
+    }
+  },
+  "felinorsvshumans-055": {
+    "id": "felinorsvshumans-055",
+    "index": "55",
+    "name": "Adorable Infestation",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 0,
+    "refs": [
+      "core-t-felinor"
+    ],
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Give a Unit +{buff}/+{buff}. Summon a Felinor Token and add a Felinor Token to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Echo 1\nGive a Unit +{buff}/+{buff}. Summon a Felinor Token and add a Felinor Token to your hand."
+    }
+  },
+  "felinorsvshumans-056": {
+    "id": "felinorsvshumans-056",
+    "index": "56",
+    "name": "Pressure Plate",
+    "set": "Felinors vs Humans",
+    "type": "Trap",
+    "tags": [],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell while they control a Unit: Destroy a random enemy Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell while they control a Unit: Destroy a random enemy Unit and the Units adjacent to it."
+    }
+  },
+  "felinorsvshumans-057": {
+    "id": "felinorsvshumans-057",
+    "index": "57",
+    "name": "Otherworldly Hunting",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Otherworldly"
+    ],
+    "rarity": "Epic",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "felinorsvshumans-057-1",
+      "felinorsvshumans-057-2",
+      "felinorsvshumans-057-3"
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Add a Kill Command, a Tackling and a Felinor Companion to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add a Radiant Kill Command, a Radiant Tackling and a Radiant Felinor Companion to your hand."
+    }
+  },
+  "felinorsvshumans-057-1": {
+    "id": "felinorsvshumans-057-1",
+    "index": "57.1",
+    "name": "Kill Command",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Other-Origins",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "flavor": "Fire",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "felinorDamage",
+        "base": 5,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Deal {damage} damage, or {felinorDamage} if you control a Felinor."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Deal {damage} damage, or {felinorDamage} if you control a Felinor."
+    }
+  },
+  "felinorsvshumans-057-2": {
+    "id": "felinorsvshumans-057-2",
+    "index": "57.2",
+    "name": "Tackling",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Other-Origins",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "flavor": "Nerd",
+    "token": true,
+    "cost": 0,
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Look at the top three cards of your deck. Add one of them to your hand and discard the others."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Look at the top three cards of your deck. Add one of them to your hand and make it Radiant. Discard the others."
+    }
+  },
+  "felinorsvshumans-057-3": {
+    "id": "felinorsvshumans-057-3",
+    "index": "57.3",
+    "name": "Felinor Companion",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Other-Origins",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "flavor": "Beast",
+    "token": true,
+    "cost": 1,
+    "refs": [
+      "felinorsvshumans-057-4",
+      "felinorsvshumans-057-5",
+      "felinorsvshumans-057-6"
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Summon a random Wide Felinor, Narrow Felinor or Square Felinor."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a random Radiant Wide Felinor, Narrow Felinor or Square Felinor."
+    }
+  },
+  "felinorsvshumans-057-4": {
+    "id": "felinorsvshumans-057-4",
+    "index": "57.4",
+    "name": "Wide Felinor",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor",
+      "Other-Origins",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "flavor": "Beast",
+    "token": true,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt"
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt"
+    }
+  },
+  "felinorsvshumans-057-5": {
+    "id": "felinorsvshumans-057-5",
+    "index": "57.5",
+    "name": "Narrow Felinor",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor",
+      "Other-Origins",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "flavor": "Beast",
+    "token": true,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Charge"
+        }
+      ],
+      "text": "Charge"
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Charge"
+        }
+      ],
+      "text": "Charge"
+    }
+  },
+  "felinorsvshumans-057-6": {
+    "id": "felinorsvshumans-057-6",
+    "index": "57.6",
+    "name": "Square Felinor",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor",
+      "Other-Origins",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "flavor": "Beast",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "attack",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Aura: Your other Units have +{attack} Attack."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Aura: Your other Units have +{attack} Attack."
+    }
+  },
+  "felinorsvshumans-058": {
+    "id": "felinorsvshumans-058",
+    "index": "58",
+    "name": "Call of the Shaped Felinors",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "felinorsvshumans-057-4",
+      "felinorsvshumans-057-5",
+      "felinorsvshumans-057-6"
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Summon a Wide Felinor, a Narrow Felinor and a Square Felinor."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a Radiant Wide Felinor, a Radiant Narrow Felinor and a Radiant Square Felinor."
+    }
+  },
+  "felinorsvshumans-059": {
+    "id": "felinorsvshumans-059",
+    "index": "59",
+    "name": "Voracious Reader",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "cards",
+        "base": 3,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 3,
+      "keywords": [],
+      "text": "End of turn: Draw until you have {cards|card|cards} in hand."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield\nEnd of turn: Draw until you have {cards|card|cards} in hand."
+    }
+  },
+  "felinorsvshumans-060": {
+    "id": "felinorsvshumans-060",
+    "index": "60",
+    "name": "Toolmaster Luna",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "felinorsvshumans-060-1",
+      "felinorsvshumans-060-2"
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Choose one: Summon the Tools of Creation, or the Tools of Cremation."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Choose one: Summon the Radiant Tools of Creation, or the Radiant Tools of Cremation."
+    }
+  },
+  "felinorsvshumans-060-1": {
+    "id": "felinorsvshumans-060-1",
+    "index": "60.1",
+    "name": "Tools of Creation",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "flavor": "Nerd",
+    "token": true,
+    "cost": 2,
+    "params": [
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "After you play the rightmost card in your hand, draw {draw}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "After you play the rightmost card in your hand, draw {draw}."
+    }
+  },
+  "felinorsvshumans-060-2": {
+    "id": "felinorsvshumans-060-2",
+    "index": "60.2",
+    "name": "Tools of Cremation",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "flavor": "Fire",
+    "token": true,
+    "cost": 2,
+    "params": [
+      {
+        "key": "cards",
+        "base": 1,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "After you play the leftmost card in your hand, give {cards|random card|random cards} in your graveyard Flashback."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "After you play the leftmost card in your hand, give {cards|random card|random cards} in your graveyard Flashback."
+    }
+  },
+  "felinorsvshumans-061": {
+    "id": "felinorsvshumans-061",
+    "index": "61",
+    "name": "Devolve",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Rare",
+    "flavor": "Chaos",
+    "token": false,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Transform all enemy Units into ones that cost (1) less."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Transform all enemy Units into ones that cost (2) less."
+    }
+  },
+  "felinorsvshumans-062": {
+    "id": "felinorsvshumans-062",
+    "index": "62",
+    "name": "Tubbs",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Common",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "dormant",
+        "base": 3,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [],
+      "text": "Dormant for {dormant|turn|turns}."
+    },
+    "radiant": {
+      "attack": 24,
+      "health": 24,
+      "keywords": [],
+      "text": "Dormant for {dormant|turn|turns}."
+    }
+  },
+  "felinorsvshumans-063": {
+    "id": "felinorsvshumans-063",
+    "index": "63",
+    "name": "S-Tier Speciesist",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 10,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Destroy every non-Human card on the field. Overload ({mana})."
+    },
+    "radiant": {
+      "attack": 20,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Destroy every enemy non-Human card on the field. Overload ({mana})."
+    }
+  },
+  "felinorsvshumans-064": {
+    "id": "felinorsvshumans-064",
+    "index": "64",
+    "name": "Fiender Artist",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Discover a (3)+ Cost Unit. Give it the Felinor tag and cat ears."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Discover a Radiant (3)+ Cost Unit. Give it the Felinor tag and cat ears."
+    }
+  },
+  "felinorsvshumans-065": {
+    "id": "felinorsvshumans-065",
+    "index": "65",
+    "name": "Felinor Forager",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Common",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [],
+      "text": "Death: Add a random Fruit to your hand."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nDeath: Add a random Fruit to your hand."
+    }
+  },
+  "felinorsvshumans-066": {
+    "id": "felinorsvshumans-066",
+    "index": "66",
+    "name": "Fuzzyfruit",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Fruit"
+    ],
+    "rarity": "Common",
+    "flavor": "Snack",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "stats",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Summon a random (1) Cost Felinor and give it +{stats}/+{stats}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a random (1) Cost Felinor and give it +{stats}/+{stats}."
+    }
+  },
+  "felinorsvshumans-067": {
+    "id": "felinorsvshumans-067",
+    "index": "67",
+    "name": "Big Game Hunter",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Epic",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "attack",
+        "base": 7,
+        "radiant": 7,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Destroy an enemy Unit with {attack} or more Attack."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Destroy every enemy Unit with {attack} or more Attack."
+    }
+  },
+  "felinorsvshumans-068": {
+    "id": "felinorsvshumans-068",
+    "index": "68",
+    "name": "Closeted Commentator",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "flavor": "Clout",
+    "token": false,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 1,
+      "keywords": [],
+      "text": "Evolves when a card transforms.\nEvolve: Gain the Felinor tag and Allure every enemy Unit."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 2,
+      "keywords": [],
+      "text": "Evolves immediately.\nEvolve: Gain the Felinor tag and Allure every enemy Unit."
+    }
+  },
+  "felinorsvshumans-069": {
+    "id": "felinorsvshumans-069",
+    "index": "69",
+    "name": "Cosplayer",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "stats",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Has +{stats}/+{stats} for each other Felinor or Human on the field."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nHas +{stats}/+{stats} for each other Felinor or Human on the field."
+    }
+  },
+  "felinorsvshumans-070": {
+    "id": "felinorsvshumans-070",
+    "index": "70",
+    "name": "Felinor Commander",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "mana",
+        "base": 4,
+        "radiant": 4,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      },
+      {
+        "key": "aura",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 7,
+      "health": 7,
+      "keywords": [],
+      "text": "Cry: Fill your board with random Felinor Units. Overload ({mana}).\nAura: Your Felinors have +{aura}/+{aura}."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 14,
+      "keywords": [],
+      "text": "Cry: Fill your board with random Radiant Felinor Units. Overload ({mana}).\nAura: Your Felinors have +{aura}/+{aura}."
+    }
+  },
+  "felinorsvshumans-071": {
+    "id": "felinorsvshumans-071",
+    "index": "71",
+    "name": "Felinor Reanimator",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Epic",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 3,
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "End of turn: Summon a random Felinor Unit from your graveyard."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "End of turn: Summon a random Felinor Unit from your graveyard and make it Radiant. If there is none, summon a random Radiant Felinor Unit instead."
+    }
+  },
+  "felinorsvshumans-072": {
+    "id": "felinorsvshumans-072",
+    "index": "72",
+    "name": "Otherworldly Naturalism",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Otherworldly"
+    ],
+    "rarity": "Epic",
+    "flavor": "Nature",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "felinorsvshumans-072-1",
+      "felinorsvshumans-072-2",
+      "felinorsvshumans-072-3"
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Add a Wild Growth, a Swipe and a Savage Roar to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add a Radiant Wild Growth, a Radiant Swipe and a Radiant Savage Roar to your hand."
+    }
+  },
+  "felinorsvshumans-072-1": {
+    "id": "felinorsvshumans-072-1",
+    "index": "72.1",
+    "name": "Wild Growth",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Other-Origins",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "flavor": "Nature",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "crystals",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Gain {crystals|mana crystal|mana crystals}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Gain {crystals|mana crystal|mana crystals}."
+    }
+  },
+  "felinorsvshumans-072-2": {
+    "id": "felinorsvshumans-072-2",
+    "index": "72.2",
+    "name": "Swipe",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Other-Origins",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "flavor": "Beast",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 4,
+        "radiant": 8,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "splash",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 1,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nDeal {damage} damage to an enemy and {splash} damage to all other enemies."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nDeal {damage} damage to an enemy and {splash} damage to all other enemies."
+    }
+  },
+  "felinorsvshumans-072-3": {
+    "id": "felinorsvshumans-072-3",
+    "index": "72.3",
+    "name": "Savage Roar",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Other-Origins",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Epic",
+    "flavor": "Beast",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "attack",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Give your Units +{attack} Attack and Deft this turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give your Units +{attack} Attack and Deft this turn."
+    }
+  },
+  "felinorsvshumans-073": {
+    "id": "felinorsvshumans-073",
+    "index": "73",
+    "name": "Bloodforged Crusader",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Quickdraw"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "stats",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      },
+      {
+        "key": "humans",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Exile every non-Human Unit on your board and in your hand, deck and graveyard. For the rest of the game, your Humans have +{stats}/+{stats}. Shuffle {humans|random Human Unit|random Human Units} into your deck."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Exile every non-Human Unit on your board and in your hand, deck and graveyard. For the rest of the game, your Humans have +{stats}/+{stats}. Shuffle {humans|random Radiant Human Unit|random Radiant Human Units} into your deck."
+    }
+  },
+  "felinorsvshumans-074": {
+    "id": "felinorsvshumans-074",
+    "index": "74",
+    "name": "Yile, Acceleration Supremist",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Catalyst",
+      "Acclaimed"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "felinorsvshumans-074",
+      "felinorsvshumans-074-1",
+      "felinorsvshumans-079"
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Add a Post Human Aesthetist to your hand.\nDeath: Shuffle a Yile, Acceleration Supremist Prime into your deck."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Add a Radiant Post Human Aesthetist to your hand.\nDeath: Shuffle a Radiant Yile, Acceleration Supremist Prime into your deck."
+    }
+  },
+  "felinorsvshumans-074-1": {
+    "id": "felinorsvshumans-074-1",
+    "index": "74.1",
+    "name": "Yile, Acceleration Supremist Prime",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Prime",
+      "Acclaimed",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 2,
+    "params": [
+      {
+        "key": "mana",
+        "base": 4,
+        "radiant": 4,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      },
+      {
+        "key": "setCost",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 0,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 9,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: Overload ({mana}). Discover 2 Human Units and 2 Felinor Units. Fuse the four and add the result to your hand. It costs ({setCost})."
+    },
+    "radiant": {
+      "attack": 18,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Overload ({mana}). Discover 2 Radiant Human Units and 2 Radiant Felinor Units. Fuse the four and add the result to your hand. It costs ({setCost})."
+    }
+  },
+  "felinorsvshumans-075": {
+    "id": "felinorsvshumans-075",
+    "index": "75",
+    "name": "Illinois Jones",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 5,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Destroy an enemy Field Spell. Draw cards equal to its cost."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Steal an enemy Field Spell. Draw cards equal to its cost."
+    }
+  },
+  "felinorsvshumans-076": {
+    "id": "felinorsvshumans-076",
+    "index": "76",
+    "name": "Desecrator",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Dark",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "stats",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Crater"
+        }
+      ],
+      "text": "Crater\nCry: Exile your graveyard. Gain +{stats}/+{stats} for each card exiled."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Crater"
+        }
+      ],
+      "text": "Crater\nCry: Exile your graveyard. Gain +{stats}/+{stats} for each card exiled."
+    }
+  },
+  "felinorsvshumans-077": {
+    "id": "felinorsvshumans-077",
+    "index": "77",
+    "name": "Anaphylaxis",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Common",
+    "flavor": "Toxic",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "discount",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Destroy a Unit. Costs ({discount}) less if you control a Felinor."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Flashback\nDestroy a Unit. Costs ({discount}) less if you control a Felinor."
+    }
+  },
+  "felinorsvshumans-078": {
+    "id": "felinorsvshumans-078",
+    "index": "78",
+    "name": "Human Harbinger",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Catalyst"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "felinorsvshumans-078",
+      "felinorsvshumans-078-1"
+    ],
+    "params": [
+      {
+        "key": "aura",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAura: Your other Humans have +{aura}/+{aura}.\nDeath: Shuffle a Human Harbinger Prime into your deck."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAura: Your other Humans have +{aura}/+{aura}.\nDeath: Shuffle a Radiant Human Harbinger Prime into your deck."
+    }
+  },
+  "felinorsvshumans-078-1": {
+    "id": "felinorsvshumans-078-1",
+    "index": "78.1",
+    "name": "Human Harbinger Prime",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Prime",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "flavor": "Physical",
+    "token": true,
+    "cost": 3,
+    "params": [
+      {
+        "key": "aura",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nCry: Fill your board with copies of this.\nAura: Your other Humans have +{aura}/+{aura}."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nCry: Fill your board with copies of this.\nAura: Your other Humans have +{aura}/+{aura}."
+    }
+  },
+  "felinorsvshumans-079": {
+    "id": "felinorsvshumans-079",
+    "index": "79",
+    "name": "Post Human Aesthetist",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Clout",
+    "token": false,
+    "cost": 4,
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nCry: Give a Human the Felinor tag and \"End of turn: Allure a random enemy Unit.\"",
+      "grants": {
+        "endOfTurn": "End of turn: Allure a random enemy Unit."
+      }
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nCry: Give a Human the Felinor tag and \"End of turn: Steal a random enemy Unit.\"",
+      "grants": {
+        "endOfTurn": "End of turn: Steal a random enemy Unit."
+      }
+    }
+  },
+  "felinorsvshumans-080": {
+    "id": "felinorsvshumans-080",
+    "index": "80",
+    "name": "Support Chinook",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Jlockeed"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 7,
+      "keywords": [
+        {
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
+        },
+        {
+          "kind": "Durability",
+          "n": 3
+        }
+      ],
+      "text": "Flying, Ranged, Durability 3\nActivate: Draw {draw|card|cards} and gain {mana} mana.\nActivate: Summon a random (2) Cost Human."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 14,
+      "keywords": [
+        {
+          "kind": "Flying"
+        },
+        {
+          "kind": "Ranged"
+        },
+        {
+          "kind": "Durability",
+          "n": 6
+        }
+      ],
+      "text": "Flying, Ranged, Durability 6\nActivate: Draw {draw|card|cards} and gain {mana} mana.\nActivate: Summon a random Radiant (2) Cost Human."
+    }
+  },
+  "felinorsvshumans-081": {
+    "id": "felinorsvshumans-081",
+    "index": "81",
+    "name": "Old-Timer Catboy",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Common",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 7,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Discover a combat keyword to gain. Add 1~3 to your Woozy counter."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 12,
+      "keywords": [],
+      "text": "Cry: Discover a pair of combat keywords to gain. Add 1~3 to your Woozy counter."
+    }
+  },
+  "felinorsvshumans-082": {
+    "id": "felinorsvshumans-082",
+    "index": "82",
+    "name": "The Last Meow",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Terminus"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "meditative-094"
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Exile your hand and board. Fill your board with Shrinking Felinors. When the last one dies, you lose the game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Exile your hand and board. Fill your board with Radiant Shrinking Felinors. When the last one dies, you lose the game."
+    }
+  },
+  "felinorsvshumans-083": {
+    "id": "felinorsvshumans-083",
+    "index": "83",
+    "name": "Maomao",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Felinor",
+      "CN"
+    ],
+    "rarity": "Rare",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [],
+      "text": "Damage dealt is Toxic.\nCry: Add a random Potion to your hand."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [],
+      "text": "Damage dealt is Toxic.\nCry: Add a random Radiant Potion to your hand."
+    }
+  },
+  "felinorsvshumans-084": {
+    "id": "felinorsvshumans-084",
+    "index": "84",
+    "name": "𓃠",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Common",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "meditative-039-2"
+    ],
+    "params": [
+      {
+        "key": "jade",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nDeath: Gain {jade} Jade."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Flashback"
+        },
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Flashback, Reborn\nDeath: Gain {jade} Jade."
+    }
+  },
+  "felinorsvshumans-085": {
+    "id": "felinorsvshumans-085",
+    "index": "85",
+    "name": "Living Fire Potion",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Potion"
+    ],
+    "rarity": "Rare",
+    "flavor": "Snack",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "burn",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [],
+      "text": "Activate: Tribute this. Burn {burn} all enemies."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 4,
+      "keywords": [],
+      "text": "Activate: Burn {burn} all enemies."
+    }
+  },
+  "felinorsvshumans-086": {
+    "id": "felinorsvshumans-086",
+    "index": "86",
+    "name": "Living Poison Potion",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Potion"
+    ],
+    "rarity": "Rare",
+    "flavor": "Snack",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "toxic",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [],
+      "text": "Activate: Tribute this. Toxic {toxic} all enemy Units."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 4,
+      "keywords": [],
+      "text": "Activate: Toxic {toxic} all enemy Units."
+    }
+  },
+  "felinorsvshumans-087": {
+    "id": "felinorsvshumans-087",
+    "index": "87",
+    "name": "Baku's Bingeing",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "flavor": "Hustle",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Draw every (1) Cost card from your deck. Exile every even Cost card in your deck, hand and graveyard, except X Cost cards. Gain {mana} mana."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Draw every (1) Cost card from your deck. Exile every even Cost card in your deck, hand and graveyard, except X Cost cards. Gain {mana} mana."
+    }
+  },
+  "felinorsvshumans-088": {
+    "id": "felinorsvshumans-088",
+    "index": "88",
+    "name": "Cattail",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Common",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 5,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Flexible"
+        },
+        {
+          "kind": "Ranged"
+        },
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Flexible, Ranged, Pierce\nCan only be mistaken for a Felinor when beneficial."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Flexible"
+        },
+        {
+          "kind": "Ranged"
+        },
+        {
+          "kind": "Pierce"
+        },
+        {
+          "kind": "Cleave"
+        }
+      ],
+      "text": "Flexible, Ranged, Pierce, Cleave\nCan only be mistaken for a Felinor when beneficial."
+    }
+  },
+  "felinorsvshumans-089": {
+    "id": "felinorsvshumans-089",
+    "index": "89",
+    "name": "GIGA Felinor",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Common",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 4,
+    "loc": 1,
+    "base": {
+      "attack": 16,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "GIGA"
+        }
+      ],
+      "text": "GIGA"
+    },
+    "radiant": {
+      "attack": 48,
+      "health": 48,
+      "keywords": [
+        {
+          "kind": "GIGA"
+        }
+      ],
+      "text": "GIGA"
+    }
+  },
+  "felinorsvshumans-090": {
+    "id": "felinorsvshumans-090",
+    "index": "90",
+    "name": "Lone Defender",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 5,
+      "keywords": [],
+      "text": "Cry: If you control no other Units, gain Taunt, Divine Shield, Lifesteal and Pierce."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: If you control no other Units, gain Taunt, Divine Shield, Lifesteal and Pierce."
+    }
+  },
+  "felinorsvshumans-091": {
+    "id": "felinorsvshumans-091",
+    "index": "91",
+    "name": "KY's Log Exp of the FFT",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "KY"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": "X",
+    "dealsDamage": true,
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Deal X√(log₂X) damage, rounded down, to an enemy. If X is a power of 2, deal it to every enemy instead."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "X rounds up to a power of 2, at least 2. Deal X√(log₂X) damage, rounded down, to every enemy."
+    }
+  },
+  "felinorsvshumans-092": {
+    "id": "felinorsvshumans-092",
+    "index": "92",
+    "name": "KY's Patented Log 2 Utility",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "KY"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Every card's Attack, Health and Cost count as the number of digits they have in binary."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Your cards' Costs and your opponent's cards' Attack and Health count as the number of digits they have in binary."
+    }
+  },
+  "felinorsvshumans-093": {
+    "id": "felinorsvshumans-093",
+    "index": "93",
+    "name": "Twin Tyrant",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "damage",
+        "base": 4,
+        "radiant": 8,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 4,
+      "health": 10,
+      "keywords": [],
+      "text": "Cry: Deal {damage} damage to two different random enemies."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Lucky",
+          "n": 1
+        }
+      ],
+      "text": "Lucky 1\nCry: Deal {damage} damage to two different random enemies."
+    }
+  },
+  "felinorsvshumans-094": {
+    "id": "felinorsvshumans-094",
+    "index": "94",
+    "name": "Bad Luck Felinor",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Common",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "core-t-felinor"
+    ],
+    "params": [
+      {
+        "key": "tokens",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 4,
+      "health": 3,
+      "keywords": [],
+      "text": "Death: Shuffle {tokens|Felinor Token|Felinor Tokens} into your opponent's deck."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nDeath: Shuffle {tokens|Felinor Token|Felinor Tokens} into your opponent's deck."
+    }
+  },
+  "felinorsvshumans-095": {
+    "id": "felinorsvshumans-095",
+    "index": "95",
+    "name": "Platebreaker",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Brute",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Aura: Your cards have Pierce."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [],
+      "text": "Cry: For the rest of the game, your cards have Pierce."
+    }
+  },
+  "felinorsvshumans-096": {
+    "id": "felinorsvshumans-096",
+    "index": "96",
+    "name": "Magic Inclined Felinor",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "spells",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Spell Damage",
+          "n": 1
+        }
+      ],
+      "text": "Spell Damage +1\nCry: Add {spells|random (1) Cost Spell|random (1) Cost Spells} to your hand."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Spell Damage",
+          "n": 2
+        }
+      ],
+      "text": "Spell Damage +2\nCry: Add {spells|random Radiant (1) Cost Spell|random Radiant (1) Cost Spells} to your hand."
+    }
+  },
+  "felinorsvshumans-097": {
+    "id": "felinorsvshumans-097",
+    "index": "97",
+    "name": "Paltry Felinor",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Rare",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "dormant",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Death: Summon a random (3) Cost Unit. It is Dormant for {dormant|turn|turns}."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Death: Summon a random (4) Cost Unit. It is Dormant for {dormant|turn|turns}."
+    }
+  },
+  "felinorsvshumans-098": {
+    "id": "felinorsvshumans-098",
+    "index": "98",
+    "name": "Yarma",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor",
+      "Catalyst"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "felinorsvshumans-098",
+      "felinorsvshumans-098-1",
+      "felinorsvshumans-098-2"
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Shuffle a Dream Portal into your deck.\nDeath: Shuffle a Yarma Prime into your deck."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Shuffle a Radiant Dream Portal into your deck.\nDeath: Shuffle a Radiant Yarma Prime into your deck."
+    }
+  },
+  "felinorsvshumans-098-1": {
+    "id": "felinorsvshumans-098-1",
+    "index": "98.1",
+    "name": "Yarma Prime",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor",
+      "Prime",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "flavor": "Beast",
+    "token": true,
+    "cost": 3,
+    "refs": [
+      "felinorsvshumans-098-2"
+    ],
+    "params": [
+      {
+        "key": "portals",
+        "base": 7,
+        "radiant": 7,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      },
+      {
+        "key": "draw",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 4,
+      "health": 12,
+      "keywords": [],
+      "text": "Cry: Shuffle {portals|Dream Portal|Dream Portals} into your deck.\nDeath: Draw {draw|card|cards}."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 24,
+      "keywords": [],
+      "text": "Cry: Shuffle {portals|Radiant Dream Portal|Radiant Dream Portals} into your deck.\nDeath: Draw {draw|Dream Portal|Dream Portals} from your deck."
+    }
+  },
+  "felinorsvshumans-098-2": {
+    "id": "felinorsvshumans-098-2",
+    "index": "98.2",
+    "name": "Dream Portal",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "flavor": "Beast",
+    "token": true,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Cast on draw: Summon a random Felinor."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Cast on draw: Summon a random Radiant Felinor."
+    }
+  },
+  "felinorsvshumans-099": {
+    "id": "felinorsvshumans-099",
+    "index": "99",
+    "name": "Jlorewalker Cho",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Legendary",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 0,
+      "health": 4,
+      "keywords": [],
+      "text": "Whenever a player casts a Spell, shuffle a copy of it with Cast on draw into your deck."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 8,
+      "keywords": [],
+      "text": "Whenever a player casts a Spell, shuffle a Radiant copy of it with Cast on draw into your deck."
+    }
+  },
+  "felinorsvshumans-100": {
+    "id": "felinorsvshumans-100",
+    "index": "100",
+    "name": "Call to Chaos (Felinors vs. Humans Edition)",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Call to Chaos"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Chaos",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "classicplus-073",
+      "core-095",
+      "felinorsvshumans-100",
+      "felinorsvshumans-100-1",
+      "felinorsvshumans-100-2",
+      "felinorsvshumans-115",
+      "meditative-095",
+      "stinkyscape-150",
+      "stinkyscape-151",
+      "stinkyscapeplus-142",
+      "traininggrounds-039"
+    ],
+    "params": [
+      {
+        "key": "felinors",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "humans",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "plagiarized",
+        "base": 5,
+        "radiant": 5,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "One random effect: Summon {felinors|random Felinor with Death or Reborn|random Felinors with Death or Reborn}; summon {humans|random Human with an Aura|random Humans with an Aura}; give enemy Units on the field, in their hand and in their deck Fragile; cast {plagiarized|random Plagiarized card|random Plagiarized cards}; fill your board with random Radiant Felinors and your opponent's with random Humans; fill your board with random Radiant Humans and your opponent's with random Felinors; make enemy Units and Field Spells in their hand, deck and graveyard GIGA; summon a Radiant Call to Chaos Vending Machine; summon a Felinor Golem and a Human Golem; cast a random Call to Chaos."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Three different random effects, resolved in the order listed: Summon {felinors|random Felinor with Death or Reborn|random Felinors with Death or Reborn}; summon {humans|random Human with an Aura|random Humans with an Aura}; give enemy Units on the field, in their hand and in their deck Fragile; cast {plagiarized|random Plagiarized card|random Plagiarized cards}; fill your board with random Radiant Felinors and your opponent's with random Humans; fill your board with random Radiant Humans and your opponent's with random Felinors; make enemy Units and Field Spells in their hand, deck and graveyard GIGA; summon a Radiant Call to Chaos Vending Machine; summon a Felinor Golem and a Human Golem; cast a random Call to Chaos."
+    }
+  },
+  "felinorsvshumans-100-1": {
+    "id": "felinorsvshumans-100-1",
+    "index": "100.1",
+    "name": "Felinor Golem",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor",
+      "Golem",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "flavor": "Beast",
+    "token": true,
+    "cost": 4,
+    "loc": 1,
+    "base": {
+      "attack": 5,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Rush, Reborn\nImmune to Humans.\nAllure every Unit this is in combat with."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Cleave"
+        },
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Rush, Cleave, Reborn\nImmune to Humans.\nAllure every Unit this is in combat with."
+    }
+  },
+  "felinorsvshumans-100-2": {
+    "id": "felinorsvshumans-100-2",
+    "index": "100.2",
+    "name": "Human Golem",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "Golem",
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Legendary",
+    "flavor": "Brute",
+    "token": true,
+    "cost": 4,
+    "params": [
+      {
+        "key": "buff",
+        "base": 5,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 5,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Rush, Taunt\nImmune to Felinors.\nAura: Your other Humans have +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Rush, Taunt\nImmune to Felinors.\nAura: Your other Humans have +{buff}/+{buff}."
+    }
+  },
+  "felinorsvshumans-101": {
+    "id": "felinorsvshumans-101",
+    "index": "101",
+    "name": "Dangerous Variant",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Start of turn: Transform this into a random (4) Cost Unit."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Divine Shield\nStart of turn: Transform this into a random Radiant (4) Cost Unit."
+    }
+  },
+  "felinorsvshumans-102": {
+    "id": "felinorsvshumans-102",
+    "index": "102",
+    "name": "Diving Gryphon",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Rare",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nDeath: Draw a random Rush card from your deck."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nDeath: Draw a random Rush card from your deck. Make it Radiant."
+    }
+  },
+  "felinorsvshumans-103": {
+    "id": "felinorsvshumans-103",
+    "index": "103",
+    "name": "Frantic Forager",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "temporary",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Add a random Spell you can afford to your hand. Give it Temporary {temporary}."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Add a random Radiant Spell you can afford to your hand. Give it Temporary {temporary}."
+    }
+  },
+  "felinorsvshumans-104": {
+    "id": "felinorsvshumans-104",
+    "index": "104",
+    "name": "Dark Skies",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Epic",
+    "flavor": "Dark",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "repeat",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "draw",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "combo"
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 1,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nDeal {damage} damage to a random Unit. Repeat this {repeat|time|times} for each card in your hand.\nCombo: Draw {draw|card|cards}."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Pierce"
+        }
+      ],
+      "text": "Pierce\nDeal {damage} damage to a random Unit. Repeat this {repeat|time|times} for each card in your hand.\nCombo: Draw {draw|card|cards}."
+    }
+  },
+  "felinorsvshumans-105": {
+    "id": "felinorsvshumans-105",
+    "index": "105",
+    "name": "Maddended Felinor",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Felinor"
+    ],
+    "rarity": "Epic",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 3,
+    "loc": 1,
+    "base": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [],
+      "text": "Cry: This attacks each other Unit, one at a time in a random order."
+    },
+    "radiant": {
+      "attack": 24,
+      "health": 24,
+      "keywords": [],
+      "text": "Cry: This attacks each enemy Unit, one at a time in a random order."
+    }
+  },
+  "felinorsvshumans-106": {
+    "id": "felinorsvshumans-106",
+    "index": "106",
+    "name": "Rock Addict",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Common",
+    "flavor": "Hustle",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "meditative-039-1",
+      "meditative-039-3"
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Add a Dud to your hand."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Add a Dud and an Auspicious Rock to your hand."
+    }
+  },
+  "felinorsvshumans-107": {
+    "id": "felinorsvshumans-107",
+    "index": "107",
+    "name": "KY, Himself",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human",
+      "KY",
+      "Acclaimed"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Nerd",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant",
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Swap hands with your opponent until the end of this turn."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Swap hands with your opponent until the end of this turn. The cards you get cost ({discount}) less until then."
+    }
+  },
+  "felinorsvshumans-108": {
+    "id": "felinorsvshumans-108",
+    "index": "108",
+    "name": "Rush Token Boss",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Rare",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 4,
+    "refs": [
+      "core-t-rush"
+    ],
+    "params": [
+      {
+        "key": "tokens",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 8,
+      "health": 10,
+      "keywords": [],
+      "text": "End of turn: Summon {tokens|Rush Token|Rush Tokens}. Each attacks a random enemy."
+    },
+    "radiant": {
+      "attack": 16,
+      "health": 20,
+      "keywords": [],
+      "text": "End of turn: Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}. Each attacks a random enemy."
+    }
+  },
+  "felinorsvshumans-109": {
+    "id": "felinorsvshumans-109",
+    "index": "109",
+    "name": "Keymaster Kalabaster",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 1,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Whenever your opponent draws a card, add a copy of it to your hand. It costs ({setCost})."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 16,
+      "keywords": [],
+      "text": "Whenever your opponent draws a card, add a copy of it to your hand. It costs ({setCost})."
+    }
+  },
+  "felinorsvshumans-110": {
+    "id": "felinorsvshumans-110",
+    "index": "110",
+    "name": "Lord Jakrov",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Physical",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "classicplus-021"
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Give every other Unit Fragile.\nDeath: Cast Whirlwind."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Give every enemy Unit Fragile.\nDeath: Cast a Radiant Whirlwind."
+    }
+  },
+  "felinorsvshumans-111": {
+    "id": "felinorsvshumans-111",
+    "index": "111",
+    "name": "Vicious Fledgeling",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Swarm"
+    ],
+    "rarity": "Rare",
+    "flavor": "Beast",
+    "token": false,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "Evolves after this attacks the enemy hero.\nEndless Evolve: Discover a combat keyword to gain."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Evolves after this attacks the enemy hero.\nEndless Evolve: Discover a combat keyword to gain, then another."
+    }
+  },
+  "felinorsvshumans-112": {
+    "id": "felinorsvshumans-112",
+    "index": "112",
+    "name": "Jilliax Deluxe",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": "X",
+    "refs": [
+      "felinorsvshumans-112-1",
+      "felinorsvshumans-112-10",
+      "felinorsvshumans-112-11",
+      "felinorsvshumans-112-12",
+      "felinorsvshumans-112-13",
+      "felinorsvshumans-112-2",
+      "felinorsvshumans-112-3",
+      "felinorsvshumans-112-4",
+      "felinorsvshumans-112-5",
+      "felinorsvshumans-112-6",
+      "felinorsvshumans-112-7",
+      "felinorsvshumans-112-8",
+      "felinorsvshumans-112-9"
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 0,
+      "health": 0,
+      "keywords": [],
+      "text": "Cry: Discover one of the four dearest (X) Cost or less Modules, then another. Fuse both into this.\nThe Modules: Recursion Module, Durability Module, Haywire Module, Starpiece Module, Pylon Module, Power Module, Heavy Module, Utility Module, Twin Module, Viral Module, Perfect Module, Debuff Module and Indestructible Module."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 0,
+      "keywords": [],
+      "text": "Cry: Discover one of the four dearest Radiant (X) Cost or less Modules, then another. Fuse both into this.\nThe Modules: Recursion Module, Durability Module, Haywire Module, Starpiece Module, Pylon Module, Power Module, Heavy Module, Utility Module, Twin Module, Viral Module, Perfect Module, Debuff Module and Indestructible Module."
+    }
+  },
+  "felinorsvshumans-112-1": {
+    "id": "felinorsvshumans-112-1",
+    "index": "112.1",
+    "name": "Recursion Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 0,
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Flashback\nPlayed from the graveyard by Flashback, this runs no Cry."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Flashback"
+    }
+  },
+  "felinorsvshumans-112-2": {
+    "id": "felinorsvshumans-112-2",
+    "index": "112.2",
+    "name": "Durability Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 0,
+    "loc": 1,
+    "base": {
+      "attack": 0,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 1
+        }
+      ],
+      "text": "Armor 1"
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Armor",
+          "n": 2
+        }
+      ],
+      "text": "Armor 2"
+    }
+  },
+  "felinorsvshumans-112-3": {
+    "id": "felinorsvshumans-112-3",
+    "index": "112.3",
+    "name": "Haywire Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 3,
+        "radiant": 3,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "End of turn: Deal {damage} damage to your hero."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "End of turn: Deal {damage} damage to your hero."
+    }
+  },
+  "felinorsvshumans-112-4": {
+    "id": "felinorsvshumans-112-4",
+    "index": "112.4",
+    "name": "Starpiece Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 1,
+    "loc": 1,
+    "base": {
+      "attack": 0,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Starship Piece"
+        }
+      ],
+      "text": "Starship Piece"
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 3,
+      "keywords": [
+        {
+          "kind": "Starship Piece"
+        }
+      ],
+      "text": "Starship Piece"
+    }
+  },
+  "felinorsvshumans-112-5": {
+    "id": "felinorsvshumans-112-5",
+    "index": "112.5",
+    "name": "Pylon Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Aura: Your other Units have +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Aura: Your other Units have +{buff}/+{buff}."
+    }
+  },
+  "felinorsvshumans-112-6": {
+    "id": "felinorsvshumans-112-6",
+    "index": "112.6",
+    "name": "Power Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 2,
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 3,
+      "keywords": [],
+      "text": "Start of turn: Double this's Attack."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "Start of turn: Double this's Attack."
+    }
+  },
+  "felinorsvshumans-112-7": {
+    "id": "felinorsvshumans-112-7",
+    "index": "112.7",
+    "name": "Heavy Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 3,
+    "loc": 1,
+    "base": {
+      "attack": 5,
+      "health": 5,
+      "keywords": [],
+      "text": ""
+    },
+    "radiant": {
+      "attack": 15,
+      "health": 15,
+      "keywords": [],
+      "text": ""
+    }
+  },
+  "felinorsvshumans-112-8": {
+    "id": "felinorsvshumans-112-8",
+    "index": "112.8",
+    "name": "Utility Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 3,
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Pierce"
+        },
+        {
+          "kind": "Cleave"
+        }
+      ],
+      "text": "Pierce, Cleave"
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Deft"
+        },
+        {
+          "kind": "Pierce"
+        },
+        {
+          "kind": "Cleave"
+        }
+      ],
+      "text": "Deft, Pierce, Cleave"
+    }
+  },
+  "felinorsvshumans-112-9": {
+    "id": "felinorsvshumans-112-9",
+    "index": "112.9",
+    "name": "Twin Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 4,
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 3,
+      "keywords": [],
+      "text": "When this is fused, summon a copy of the fused card."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "When this is fused, summon two copies of the fused card."
+    }
+  },
+  "felinorsvshumans-112-10": {
+    "id": "felinorsvshumans-112-10",
+    "index": "112.10",
+    "name": "Viral Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 4,
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Immune to Spells"
+        },
+        {
+          "kind": "Poisonous"
+        }
+      ],
+      "text": "Immune to Spells, Poisonous"
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Immutable"
+        },
+        {
+          "kind": "Immune to Spells"
+        },
+        {
+          "kind": "Poisonous"
+        }
+      ],
+      "text": "Immutable, Immune to Spells, Poisonous"
+    }
+  },
+  "felinorsvshumans-112-11": {
+    "id": "felinorsvshumans-112-11",
+    "index": "112.11",
+    "name": "Perfect Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 4,
+    "loc": 1,
+    "base": {
+      "attack": 3,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Lifesteal"
+        },
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "Rush, Taunt, Lifesteal, Divine Shield"
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Rush"
+        },
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Lifesteal"
+        },
+        {
+          "kind": "Divine Shield"
+        },
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Rush, Taunt, Lifesteal, Divine Shield, Reborn"
+    }
+  },
+  "felinorsvshumans-112-12": {
+    "id": "felinorsvshumans-112-12",
+    "index": "112.12",
+    "name": "Debuff Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 5,
+    "loc": 1,
+    "base": {
+      "attack": 6,
+      "health": 2,
+      "keywords": [],
+      "text": "Damage dealt also Burns."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 4,
+      "keywords": [],
+      "text": "Damage dealt also applies Toxic."
+    }
+  },
+  "felinorsvshumans-112-13": {
+    "id": "felinorsvshumans-112-13",
+    "index": "112.13",
+    "name": "Indestructible Module",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Token"
+    ],
+    "rarity": "Token",
+    "printedRarity": "Mythic",
+    "flavor": "Tech",
+    "token": true,
+    "cost": 6,
+    "loc": 1,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        }
+      ],
+      "text": "Indestructible"
+    },
+    "radiant": {
+      "attack": 20,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Indestructible"
+        }
+      ],
+      "text": "Indestructible"
+    }
+  },
+  "felinorsvshumans-113": {
+    "id": "felinorsvshumans-113",
+    "index": "113",
+    "name": "Ball Knower",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Human"
+    ],
+    "rarity": "Epic",
+    "flavor": "Clout",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "buff",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "attack": 1,
+      "health": 1,
+      "keywords": [],
+      "text": "Cry: Discover a Unit, one of them from the past. If you pick that one, this gains +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Discover a Radiant Unit, one of them from the past. If you pick that one, this gains +{buff}/+{buff}."
+    }
+  },
+  "felinorsvshumans-114": {
+    "id": "felinorsvshumans-114",
+    "index": "114",
+    "name": "Kethspiracy",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [],
+    "rarity": "Legendary",
+    "flavor": "Hustle",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [],
+      "text": "Give every simple Human and Felinor card on your field, in your hand and in your deck Starship Piece."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give every simple Human and Felinor card on your field, in your hand and in your deck Starship Piece. They cost ({discount}) less."
+    }
+  },
+  "felinorsvshumans-115": {
+    "id": "felinorsvshumans-115",
+    "index": "115",
+    "name": "Call to Chaos Vending Machine",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "classicplus-073",
+      "core-095",
+      "felinorsvshumans-100",
+      "meditative-095",
+      "stinkyscape-150",
+      "stinkyscape-151",
+      "stinkyscapeplus-142",
+      "traininggrounds-039"
+    ],
+    "loc": 1,
+    "base": {
+      "keywords": [
+        {
+          "kind": "Durability",
+          "n": 3
+        }
+      ],
+      "text": "Durability 3\nActivate: Pay (2) to cast a random Call to Chaos."
+    },
+    "radiant": {
+      "keywords": [
+        {
+          "kind": "Durability",
+          "n": 3
+        }
+      ],
+      "text": "Durability 3\nActivate: Cast a random Call to Chaos."
+    }
+  },
+  "felinorsvshumans-116": {
+    "id": "felinorsvshumans-116",
+    "index": "116",
+    "name": "Plagiarized: Spark Plug",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 11,
+    "base": {
+      "attack": 2,
+      "health": 1,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nDeath: Gain {mana} mana this turn."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Rush"
+        }
+      ],
+      "text": "Rush\nDeath: Gain {mana} mana this turn."
+    }
+  },
+  "felinorsvshumans-117": {
+    "id": "felinorsvshumans-117",
+    "index": "117",
+    "name": "Plagiarized: Backdoor",
+    "set": "Felinors vs Humans",
+    "type": "Trap",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 30,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell: Steal a random card from their hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Spell: Steal two random cards from their hand."
+    }
+  },
+  "felinorsvshumans-118": {
+    "id": "felinorsvshumans-118",
+    "index": "118",
+    "name": "Plagiarized: Benchmark Run",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 42,
+    "base": {
+      "keywords": [],
+      "text": "Set a friendly Unit's Attack to the highest Attack and its Health to the highest Health among enemy Units."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Set a friendly Unit's Attack to the highest Attack and its Health to the highest Health among enemy Units, and give it Rush."
+    }
+  },
+  "felinorsvshumans-119": {
+    "id": "felinorsvshumans-119",
+    "index": "119",
+    "name": "Plagiarized: Scrap Prototype",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 0,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 28,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Death: Shuffle a copy of this with +{buff}/+{buff} into your deck."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Death: Shuffle two copies of this with +{buff}/+{buff} into your deck."
+    }
+  },
+  "felinorsvshumans-120": {
+    "id": "felinorsvshumans-120",
+    "index": "120",
+    "name": "Plagiarized: Crash Test Dummy",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 5,
+        "radiant": 10,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 13,
+    "base": {
+      "attack": 1,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nDeath: Deal {damage} damage to the enemy hero."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nDeath: Deal {damage} damage to the enemy hero."
+    }
+  },
+  "felinorsvshumans-121": {
+    "id": "felinorsvshumans-121",
+    "index": "121",
+    "name": "Plagiarized: Compute Shard",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 41,
+    "base": {
+      "attack": 0,
+      "health": 3,
+      "keywords": [],
+      "text": "End of turn: The most expensive card in your hand costs ({discount}) less."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 6,
+      "keywords": [],
+      "text": "End of turn: The most expensive card in your hand costs ({discount}) less."
+    }
+  },
+  "felinorsvshumans-122": {
+    "id": "felinorsvshumans-122",
+    "index": "122",
+    "name": "Plagiarized: Data Point",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 57,
+    "base": {
+      "keywords": [],
+      "text": "Discover a card from your opponent's deck."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Discover two cards from your opponent's deck."
+    }
+  },
+  "felinorsvshumans-123": {
+    "id": "felinorsvshumans-123",
+    "index": "123",
+    "name": "Plagiarized: Doppelganger Protocol",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 49,
+    "base": {
+      "keywords": [],
+      "text": "Summon a copy of a random enemy Unit. It has Brittle 1."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a copy of a random enemy Unit. It has Brittle 3."
+    }
+  },
+  "felinorsvshumans-124": {
+    "id": "felinorsvshumans-124",
+    "index": "124",
+    "name": "Plagiarized: False Positive",
+    "set": "Felinors vs Humans",
+    "type": "Trap",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "infiniteassault-025-1"
+    ],
+    "loc": 47,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Cancel the attack and Freeze the attacker."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Cancel the attack and Freeze the attacker. Then set a Figment."
+    }
+  },
+  "felinorsvshumans-125": {
+    "id": "felinorsvshumans-125",
+    "index": "125",
+    "name": "Plagiarized: Fingerprinter",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 43,
+    "base": {
+      "attack": 1,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Add a copy of a random Spell in your opponent's hand to your hand."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Look at your opponent's hand. Add a copy of a card of your choice in it to your hand."
+    }
+  },
+  "felinorsvshumans-126": {
+    "id": "felinorsvshumans-126",
+    "index": "126",
+    "name": "Plagiarized: Generated Filler",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "setCost",
+        "base": 0,
+        "radiant": 0,
+        "better": "down",
+        "step": 1,
+        "min": 0,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 26,
+    "base": {
+      "keywords": [],
+      "text": "Add two random (1) Cost Plagiarized Units to your hand. They're Temporary."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add two random (1) Cost Plagiarized Units to your hand. They cost ({setCost}) and are Temporary."
+    }
+  },
+  "felinorsvshumans-127": {
+    "id": "felinorsvshumans-127",
+    "index": "127",
+    "name": "Plagiarized: Glitch Specter",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 19,
+    "base": {
+      "attack": 3,
+      "health": 1,
+      "keywords": [],
+      "text": "Evasive while you have a face-down card."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Lifesteal"
+        }
+      ],
+      "text": "Lifesteal\nEvasive while you have a face-down card."
+    }
+  },
+  "felinorsvshumans-128": {
+    "id": "felinorsvshumans-128",
+    "index": "128",
+    "name": "Plagiarized: Moore's Law",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 32,
+    "base": {
+      "keywords": [],
+      "text": "The Units in your hand cost ({discount}) less."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "The cards in your hand cost ({discount}) less."
+    }
+  },
+  "felinorsvshumans-129": {
+    "id": "felinorsvshumans-129",
+    "index": "129",
+    "name": "Plagiarized: Overflow Error",
+    "set": "Felinors vs Humans",
+    "type": "Trap",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 39,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays their third card in a turn: Deal {damage} damage to their hero. They discard a random card."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays their third card in a turn: Deal {damage} damage to their hero. They discard two random cards."
+    }
+  },
+  "felinorsvshumans-130": {
+    "id": "felinorsvshumans-130",
+    "index": "130",
+    "name": "Plagiarized: Packet Sniffer",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 0,
+    "loc": 35,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Look at your opponent's hand."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Look at your opponent's hand. Then Nerf a random card in it."
+    }
+  },
+  "felinorsvshumans-131": {
+    "id": "felinorsvshumans-131",
+    "index": "131",
+    "name": "Plagiarized: Pattern Recognition",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 121,
+    "base": {
+      "keywords": [],
+      "text": "Look at the top three cards of your opponent's deck. Add a copy of one to your hand and exile another."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Look at the top three cards of your opponent's deck. Add copies of two to your hand and exile another."
+    }
+  },
+  "felinorsvshumans-132": {
+    "id": "felinorsvshumans-132",
+    "index": "132",
+    "name": "Plagiarized: Pit Crew",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 2,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
+      }
+    ],
+    "loc": 20,
+    "base": {
+      "attack": 2,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Your next Unit this turn costs ({discount}) less."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Your next Unit this turn costs ({discount}) less."
+    }
+  },
+  "felinorsvshumans-133": {
+    "id": "felinorsvshumans-133",
+    "index": "133",
+    "name": "Plagiarized: Redundant Copy",
+    "set": "Felinors vs Humans",
+    "type": "Trap",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "buff",
+        "min": 1,
+        "radiant": 2,
+        "step": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 47,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when a friendly Unit dies: Summon a copy of it."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when a friendly Unit dies: Summon a copy of it with +{buff}/+{buff}."
+    }
+  },
+  "felinorsvshumans-134": {
+    "id": "felinorsvshumans-134",
+    "index": "134",
+    "name": "Plagiarized: Second Draft",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 26,
+    "base": {
+      "keywords": [],
+      "text": "Discard your hand. Draw that many cards, plus one."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Discard your hand. Draw that many cards, plus two."
+    }
+  },
+  "felinorsvshumans-135": {
+    "id": "felinorsvshumans-135",
+    "index": "135",
+    "name": "Plagiarized: Seedling Mind",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 21,
+    "base": {
+      "attack": 1,
+      "health": 2,
+      "keywords": [],
+      "text": "End of turn: Gain +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "End of turn: Gain +{buff}/+{buff}."
+    }
+  },
+  "felinorsvshumans-136": {
+    "id": "felinorsvshumans-136",
+    "index": "136",
+    "name": "Plagiarized: Swarm Shield",
+    "set": "Felinors vs Humans",
+    "type": "Trap",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "refs": [
+      "infiniteassault-078-1"
+    ],
+    "loc": 43,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Summon three Workers. Give them Taunt."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Summon three Radiant Workers. Give them Taunt."
+    }
+  },
+  "felinorsvshumans-137": {
+    "id": "felinorsvshumans-137",
+    "index": "137",
+    "name": "Plagiarized: Compute Cluster",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 17,
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Your Units gain +{buff}/+{buff}."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Your Units gain +{buff}/+{buff}."
+    }
+  },
+  "felinorsvshumans-138": {
+    "id": "felinorsvshumans-138",
+    "index": "138",
+    "name": "Plagiarized: Burning Ambition",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 16,
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Deal {damage} damage to your hero and gain {mana} mana this turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Deal {damage} damage to your hero and gain {mana} mana this turn."
+    }
+  },
+  "felinorsvshumans-139": {
+    "id": "felinorsvshumans-139",
+    "index": "139",
+    "name": "Plagiarized: Callback",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 31,
+    "base": {
+      "attack": 3,
+      "health": 4,
+      "keywords": [],
+      "text": "Death: Add a copy of the last Spell you played to your hand."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 8,
+      "keywords": [],
+      "text": "Death: Add two copies of the last Spell you played to your hand."
+    }
+  },
+  "felinorsvshumans-140": {
+    "id": "felinorsvshumans-140",
+    "index": "140",
+    "name": "Plagiarized: Cluster Drone",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 11,
+    "base": {
+      "attack": 3,
+      "health": 2,
+      "keywords": [],
+      "text": "Death: Deal {damage} damage to every enemy Unit."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 4,
+      "keywords": [],
+      "text": "Death: Deal {damage} damage to every enemy Unit."
+    }
+  },
+  "felinorsvshumans-141": {
+    "id": "felinorsvshumans-141",
+    "index": "141",
+    "name": "Plagiarized: Copycat Drone",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 32,
+    "base": {
+      "attack": 2,
+      "health": 3,
+      "keywords": [],
+      "text": "Cry: Transform this into a copy of the last Unit your opponent played."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Transform this into a Radiant copy of the last Unit your opponent played."
+    }
+  },
+  "felinorsvshumans-142": {
+    "id": "felinorsvshumans-142",
+    "index": "142",
+    "name": "Plagiarized: Core Dump",
+    "set": "Felinors vs Humans",
+    "type": "Field Trap",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 34,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when a friendly Unit dies: Shuffle a copy of it into your deck."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when a friendly Unit dies: Shuffle a Radiant copy of it into your deck."
+    }
+  },
+  "felinorsvshumans-143": {
+    "id": "felinorsvshumans-143",
+    "index": "143",
+    "name": "Plagiarized: Deepfake",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 35,
+    "base": {
+      "keywords": [],
+      "text": "Choose an enemy Unit. Summon a copy of it for yourself with Brittle 2."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Choose an enemy Unit. Summon a copy of it for yourself."
+    }
+  },
+  "felinorsvshumans-144": {
+    "id": "felinorsvshumans-144",
+    "index": "144",
+    "name": "Plagiarized: Doomsday Clock",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "turns",
+        "base": 4,
+        "radiant": 4,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "damage",
+        "base": 20,
+        "radiant": 40,
+        "better": "up",
+        "step": 2,
+        "min": 1
+      }
+    ],
+    "loc": 46,
+    "base": {
+      "attack": 0,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nIn {turns|turn|turns}: Deal {damage} damage to the enemy hero."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nIn {turns|turn|turns}: Deal {damage} damage to the enemy hero."
+    }
+  },
+  "felinorsvshumans-145": {
+    "id": "felinorsvshumans-145",
+    "index": "145",
+    "name": "Plagiarized: Evolutionary Loop",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "buff",
+        "min": 1,
+        "radiant": 4,
+        "read": "evolve",
+        "step": 1
+      }
+    ],
+    "loc": 69,
+    "base": {
+      "attack": 2,
+      "health": 3,
+      "keywords": [],
+      "text": "Evolves when a friendly Unit dies.\nEvolve: Gain +{buff}/+{buff} and Reborn."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Evolves when a friendly Unit dies.\nEvolve: Gain +{buff}/+{buff} and Reborn."
+    }
+  },
+  "felinorsvshumans-146": {
+    "id": "felinorsvshumans-146",
+    "index": "146",
+    "name": "Plagiarized: Emergent Behavior",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 29,
+    "base": {
+      "keywords": [],
+      "text": "Give a friendly Unit +{buff}/+{buff} for each turn you've started this game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Give a friendly Unit +{buff}/+{buff} for each turn you've started this game."
+    }
+  },
+  "felinorsvshumans-147": {
+    "id": "felinorsvshumans-147",
+    "index": "147",
+    "name": "Plagiarized: Ground Truth",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "surcharge",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 31,
+    "base": {
+      "attack": 3,
+      "health": 5,
+      "keywords": [],
+      "text": "Aura: Your opponent plays with their hand revealed to you."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [],
+      "text": "Aura: Your opponent plays with their hand revealed to you, and their cards cost ({surcharge}) more."
+    }
+  },
+  "felinorsvshumans-148": {
+    "id": "felinorsvshumans-148",
+    "index": "148",
+    "name": "Plagiarized: Honeypot Protocol",
+    "set": "Felinors vs Humans",
+    "type": "Trap",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "refs": [
+      "infiniteassault-154-1"
+    ],
+    "loc": 45,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Summon a Decoy Server. Redirect the attack to it."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when an enemy Unit attacks: Summon a Radiant Decoy Server. Redirect the attack to it."
+    }
+  },
+  "felinorsvshumans-149": {
+    "id": "felinorsvshumans-149",
+    "index": "149",
+    "name": "Plagiarized: Inevitable",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 23,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: Give your Units +{buff}/+{buff} for each turn this has been on the field."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: Give your Units +{buff}/+{buff} for each turn this has been on the field."
+    }
+  },
+  "felinorsvshumans-150": {
+    "id": "felinorsvshumans-150",
+    "index": "150",
+    "name": "Plagiarized: Merge Conflict",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 41,
+    "base": {
+      "keywords": [],
+      "text": "Fuse two friendly Units."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Fuse two friendly Units. The result has Rush and Divine Shield."
+    }
+  },
+  "felinorsvshumans-151": {
+    "id": "felinorsvshumans-151",
+    "index": "151",
+    "name": "Plagiarized: Logic Bomb",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 3,
+        "better": "down",
+        "key": "turns",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      }
+    ],
+    "loc": 46,
+    "base": {
+      "attack": 0,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nIn {turns|turn|turns}: Destroy every enemy Unit."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Can't attack"
+        }
+      ],
+      "text": "Can't attack\nIn {turns|turn|turns}: Destroy every enemy Unit."
+    }
+  },
+  "felinorsvshumans-152": {
+    "id": "felinorsvshumans-152",
+    "index": "152",
+    "name": "Plagiarized: Mana Leech",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 17,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Steal one of your opponent's mana crystals."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Cry: Steal two of your opponent's mana crystals."
+    }
+  },
+  "felinorsvshumans-153": {
+    "id": "felinorsvshumans-153",
+    "index": "153",
+    "name": "Plagiarized: Overclocked Core",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "attack",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      },
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 46,
+    "base": {
+      "attack": 1,
+      "health": 5,
+      "keywords": [],
+      "text": "Aura: Your Spells cost ({discount}) less.\nEnd of turn: Deal {damage} damage to your hero."
+    },
+    "radiant": {
+      "attack": 2,
+      "health": 10,
+      "keywords": [],
+      "text": "Aura: Your Spells cost ({discount}) less and your Units have +{attack} Attack.\nEnd of turn: Deal {damage} damage to your hero."
+    }
+  },
+  "felinorsvshumans-154": {
+    "id": "felinorsvshumans-154",
+    "index": "154",
+    "name": "Plagiarized: Patch Tuesday Exploit",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 20,
+    "base": {
+      "keywords": [],
+      "text": "Nerf every card in your opponent's hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Nerf every card in your opponent's hand twice."
+    }
+  },
+  "felinorsvshumans-155": {
+    "id": "felinorsvshumans-155",
+    "index": "155",
+    "name": "Plagiarized: Patient Machine",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "damage",
+        "base": 4,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant",
+        "read": "awaken"
+      }
+    ],
+    "loc": 30,
+    "base": {
+      "attack": 5,
+      "health": 6,
+      "keywords": [],
+      "text": "Dormant for 1 turn."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 12,
+      "keywords": [],
+      "text": "Dormant for 1 turn.\nWhen this awakens, deal {damage} damage to a random enemy."
+    }
+  },
+  "felinorsvshumans-156": {
+    "id": "felinorsvshumans-156",
+    "index": "156",
+    "name": "Plagiarized: Prompt Engineer",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 44,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [],
+      "text": "Aura: Your Created cards cost ({discount}) less, but not less than (1)."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [],
+      "text": "Aura: Your Created cards cost ({discount}) less, but not less than (1), and your Created Units have +{buff}/+{buff}."
+    }
+  },
+  "felinorsvshumans-157": {
+    "id": "felinorsvshumans-157",
+    "index": "157",
+    "name": "Plagiarized: Prompt Injection",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 20,
+    "base": {
+      "keywords": [],
+      "text": "Your opponent's next Spell has its targets chosen randomly."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Your opponent's next two Spells have their targets chosen randomly."
+    }
+  },
+  "felinorsvshumans-158": {
+    "id": "felinorsvshumans-158",
+    "index": "158",
+    "name": "Plagiarized: Quickgen Turret",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "damage",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 27,
+    "base": {
+      "attack": 2,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Ranged"
+        }
+      ],
+      "text": "Ranged\nStart of turn: Deal {damage} damage to a random enemy for each Created card in your hand."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Ranged"
+        }
+      ],
+      "text": "Ranged\nStart of turn: Deal {damage} damage to a random enemy for each Created card in your hand."
+    }
+  },
+  "felinorsvshumans-159": {
+    "id": "felinorsvshumans-159",
+    "index": "159",
+    "name": "Plagiarized: Ransomware",
+    "set": "Felinors vs Humans",
+    "type": "Trap",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 1,
+        "better": "up",
+        "key": "mana",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      }
+    ],
+    "loc": 34,
+    "base": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Unit: Freeze it. They lose ({mana}) mana next turn."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Reveals when your opponent plays a Unit: Freeze it. They lose ({mana}) mana next turn."
+    }
+  },
+  "felinorsvshumans-160": {
+    "id": "felinorsvshumans-160",
+    "index": "160",
+    "name": "Plagiarized: Rate Limiter",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 18,
+    "base": {
+      "attack": 3,
+      "health": 5,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAura: Your opponent can't attack with more than three Units each turn."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAura: Your opponent can't attack with more than two Units each turn."
+    }
+  },
+  "felinorsvshumans-161": {
+    "id": "felinorsvshumans-161",
+    "index": "161",
+    "name": "Plagiarized: Replica Hatchery",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 34,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: Summon a copy of your cheapest Unit. Give it Brittle 1."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: Summon a copy of your cheapest Unit."
+    }
+  },
+  "felinorsvshumans-162": {
+    "id": "felinorsvshumans-162",
+    "index": "162",
+    "name": "Plagiarized: Revenant Process",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 3,
+        "better": "up",
+        "key": "buff",
+        "min": 1,
+        "radiant": 6,
+        "step": 1
+      }
+    ],
+    "loc": 42,
+    "base": {
+      "attack": 4,
+      "health": 2,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nWhen this returns by Reborn, it gains +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nWhen this returns by Reborn, it gains +{buff}/+{buff}."
+    }
+  },
+  "felinorsvshumans-163": {
+    "id": "felinorsvshumans-163",
+    "index": "163",
+    "name": "Plagiarized: Scrape the Graveyard",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "loc": 29,
+    "base": {
+      "keywords": [],
+      "text": "Add copies of two random cards in your opponent's graveyard to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Add copies of three random cards in your opponent's graveyard to your hand."
+    }
+  },
+  "felinorsvshumans-164": {
+    "id": "felinorsvshumans-164",
+    "index": "164",
+    "name": "Plagiarized: Shadow Library",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 21,
+    "base": {
+      "keywords": [],
+      "text": "Start of turn: Add a copy of a random card your opponent played last turn to your hand."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Start of turn: Add two copies of a random card your opponent played last turn to your hand."
+    }
+  },
+  "felinorsvshumans-165": {
+    "id": "felinorsvshumans-165",
+    "index": "165",
+    "name": "Plagiarized: Synthetic Data",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 24,
+    "base": {
+      "keywords": [],
+      "text": "Fill your hand with random Plagiarized cards. They're Temporary."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Fill your hand with random Plagiarized cards. They're Temporary and cost ({discount}) less."
+    }
+  },
+  "felinorsvshumans-166": {
+    "id": "felinorsvshumans-166",
+    "index": "166",
+    "name": "Plagiarized: Thought Accelerator",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "buff",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant",
+        "read": "cry"
+      }
+    ],
+    "loc": 34,
+    "base": {
+      "attack": 2,
+      "health": 4,
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nCry: Your Dormant Units awaken."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nCry: Your Dormant Units awaken. They gain +{buff}/+{buff}."
+    }
+  },
+  "felinorsvshumans-167": {
+    "id": "felinorsvshumans-167",
+    "index": "167",
+    "name": "Plagiarized: Thermal Throttler",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "health",
+        "base": 10,
+        "radiant": 5,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 18,
+    "base": {
+      "attack": 3,
+      "health": 6,
+      "keywords": [],
+      "text": "Start of turn: Gain {mana} mana this turn for each {health} Health your hero is missing."
+    },
+    "radiant": {
+      "attack": 6,
+      "health": 12,
+      "keywords": [],
+      "text": "Start of turn: Gain {mana} mana this turn for each {health} Health your hero is missing."
+    }
+  },
+  "felinorsvshumans-168": {
+    "id": "felinorsvshumans-168",
+    "index": "168",
+    "name": "Plagiarized: Undo",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 26,
+    "base": {
+      "keywords": [],
+      "text": "Bounce an enemy Unit. It costs (1) more."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Bounce an enemy Unit. It costs (2) more. Draw a card."
+    }
+  },
+  "felinorsvshumans-169": {
+    "id": "felinorsvshumans-169",
+    "index": "169",
+    "name": "Plagiarized: DDoS",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "params": [
+      {
+        "base": 2,
+        "better": "up",
+        "key": "damage",
+        "min": 1,
+        "radiant": 2,
+        "step": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "dealsDamage": true,
+    "loc": 22,
+    "base": {
+      "keywords": [],
+      "text": "Freeze every enemy Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Freeze every enemy Unit and deal {damage} damage to them."
+    }
+  },
+  "felinorsvshumans-170": {
+    "id": "felinorsvshumans-170",
+    "index": "170",
+    "name": "Plagiarized: Checkpoint Daemon",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "base": 5,
+        "better": "up",
+        "key": "armor",
+        "min": 1,
+        "radiant": 5,
+        "step": 1,
+        "tunedOn": "radiant"
+      }
+    ],
+    "loc": 34,
+    "base": {
+      "attack": 2,
+      "health": 6,
+      "keywords": [],
+      "text": "End of turn: Take a snapshot of your hero's Health.\nDeath: Set your hero's Health to that snapshot."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 12,
+      "keywords": [],
+      "text": "End of turn: Take a snapshot of your hero's Health.\nDeath: Set your hero's Health to that snapshot and gain {armor} Armor."
+    }
+  },
+  "felinorsvshumans-171": {
+    "id": "felinorsvshumans-171",
+    "index": "171",
+    "name": "Plagiarized: Deep Crawler",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 57,
+    "base": {
+      "attack": 5,
+      "health": 7,
+      "keywords": [],
+      "text": "Start of turn: Discover a card from your opponent's deck."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 14,
+      "keywords": [],
+      "text": "Start of turn: Discover a card from your opponent's deck twice."
+    }
+  },
+  "felinorsvshumans-172": {
+    "id": "felinorsvshumans-172",
+    "index": "172",
+    "name": "Plagiarized: Exponent",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 34,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Start of turn: Double this's Attack."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Start of turn: Double this's Attack and Health."
+    }
+  },
+  "felinorsvshumans-173": {
+    "id": "felinorsvshumans-173",
+    "index": "173",
+    "name": "Plagiarized: Ego Death",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 16,
+    "base": {
+      "keywords": [],
+      "text": "Swap hands with your opponent. The cards you get cost ({discount}) less."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Swap hands with your opponent. The cards you get cost ({discount}) less."
+    }
+  },
+  "felinorsvshumans-174": {
+    "id": "felinorsvshumans-174",
+    "index": "174",
+    "name": "Plagiarized: Mirror Firewall",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 26,
+    "base": {
+      "attack": 2,
+      "health": 8,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAfter this is attacked: Deal damage to the attacker equal to the damage this took."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAfter this is attacked: Deal damage to the attacker equal to twice the damage this took."
+    }
+  },
+  "felinorsvshumans-175": {
+    "id": "felinorsvshumans-175",
+    "index": "175",
+    "name": "Plagiarized: Ouroboros Engine",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 2,
+    "loc": 35,
+    "base": {
+      "attack": 5,
+      "health": 5,
+      "keywords": [],
+      "text": "Death: Shuffle your graveyard into your deck."
+    },
+    "radiant": {
+      "attack": 10,
+      "health": 10,
+      "keywords": [],
+      "text": "Death: Shuffle your graveyard into your deck and draw two cards."
+    }
+  },
+  "felinorsvshumans-176": {
+    "id": "felinorsvshumans-176",
+    "index": "176",
+    "name": "Plagiarized: Privilege Escalation",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 22,
+    "base": {
+      "keywords": [],
+      "text": "Steal a (2) Cost or less enemy Unit."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Steal a (3) Cost or less enemy Unit."
+    }
+  },
+  "felinorsvshumans-177": {
+    "id": "felinorsvshumans-177",
+    "index": "177",
+    "name": "Plagiarized: Overparameterized",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Common",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 34,
+    "base": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [],
+      "text": "Costs ({discount}) less for each other Unit you control."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [],
+      "text": "Costs ({discount}) less for each other Unit you control."
+    }
+  },
+  "felinorsvshumans-178": {
+    "id": "felinorsvshumans-178",
+    "index": "178",
+    "name": "Plagiarized: Phantom Army",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "refs": [
+      "infiniteassault-041-1"
+    ],
+    "loc": 16,
+    "base": {
+      "keywords": [],
+      "text": "Fill your board with Phantoms."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Fill your board with Radiant Phantoms."
+    }
+  },
+  "felinorsvshumans-179": {
+    "id": "felinorsvshumans-179",
+    "index": "179",
+    "name": "Plagiarized: Rerun",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 40,
+    "base": {
+      "keywords": [],
+      "text": "Cast the last three Spells you played this game, at random targets."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Cast the last four Spells you played this game, at random targets."
+    }
+  },
+  "felinorsvshumans-180": {
+    "id": "felinorsvshumans-180",
+    "index": "180",
+    "name": "Plagiarized: Rollback Point",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 47,
+    "base": {
+      "keywords": [],
+      "text": "Summon copies of the three most expensive friendly Units that died this game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon copies of the three most expensive friendly Units that died this game. They have Rush."
+    }
+  },
+  "felinorsvshumans-181": {
+    "id": "felinorsvshumans-181",
+    "index": "181",
+    "name": "Plagiarized: Social Engineer",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 38,
+    "base": {
+      "attack": 4,
+      "health": 6,
+      "keywords": [],
+      "text": "Cry: Swap control of this and a random enemy Unit."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 12,
+      "keywords": [],
+      "text": "Cry: Swap control of this and the enemy Unit with the highest Attack."
+    }
+  },
+  "felinorsvshumans-182": {
+    "id": "felinorsvshumans-182",
+    "index": "182",
+    "name": "Plagiarized: Takeoff",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "loc": 42,
+    "base": {
+      "keywords": [],
+      "text": "Double a friendly Unit's Attack and Health."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Double a friendly Unit's Attack and Health. It has Rush."
+    }
+  },
+  "felinorsvshumans-183": {
+    "id": "felinorsvshumans-183",
+    "index": "183",
+    "name": "Plagiarized: Zero Trust",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Rare",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 3,
+    "params": [
+      {
+        "key": "health",
+        "base": 3,
+        "radiant": 6,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 30,
+    "base": {
+      "keywords": [],
+      "text": "Aura: Your Units in Defense Position have +{health} Health and are Immune to Spells."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Aura: Your Units in Defense Position have +{health} Health and are Immune to Spells."
+    }
+  },
+  "felinorsvshumans-184": {
+    "id": "felinorsvshumans-184",
+    "index": "184",
+    "name": "Plagiarized: Assault Mainframe",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "buff",
+        "base": 2,
+        "radiant": 4,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 24,
+    "base": {
+      "attack": 6,
+      "health": 10,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAura: Your Created Units have +{buff}/+{buff}."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "Taunt\nAura: Your Created Units have +{buff}/+{buff}."
+    }
+  },
+  "felinorsvshumans-185": {
+    "id": "felinorsvshumans-185",
+    "index": "185",
+    "name": "Plagiarized: Bastion.exe",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 15,
+    "base": {
+      "attack": 4,
+      "health": 16,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 5
+        }
+      ],
+      "text": "Taunt, Armor 5\nAura: Your hero is immune to damage."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 32,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Armor",
+          "n": 10
+        }
+      ],
+      "text": "Taunt, Armor 10\nAura: Your hero is immune to damage."
+    }
+  },
+  "felinorsvshumans-186": {
+    "id": "felinorsvshumans-186",
+    "index": "186",
+    "name": "Plagiarized: Clone Vat",
+    "set": "Felinors vs Humans",
+    "type": "Field Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 39,
+    "base": {
+      "keywords": [],
+      "text": "End of turn: Summon a copy of a random enemy Unit. Give it Brittle 2."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "End of turn: Summon a copy of a random enemy Unit."
+    }
+  },
+  "felinorsvshumans-187": {
+    "id": "felinorsvshumans-187",
+    "index": "187",
+    "name": "Plagiarized: Dream Within a Dream",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 43,
+    "base": {
+      "keywords": [],
+      "text": "Summon a copy of every enemy Unit for yourself. They have Brittle 1."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Summon a copy of every enemy Unit for yourself. They have Brittle 2."
+    }
+  },
+  "felinorsvshumans-188": {
+    "id": "felinorsvshumans-188",
+    "index": "188",
+    "name": "Plagiarized: Eternal Return",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "base": 1,
+        "better": "up",
+        "key": "discount",
+        "min": 1,
+        "radiant": 2,
+        "step": 1
+      }
+    ],
+    "loc": 33,
+    "base": {
+      "keywords": [],
+      "text": "Shuffle every card you've played this game into your deck. They cost ({discount}) less. Draw three cards."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Shuffle every card you've played this game into your deck. They cost ({discount}) less. Draw four cards."
+    }
+  },
+  "felinorsvshumans-189": {
+    "id": "felinorsvshumans-189",
+    "index": "189",
+    "name": "Plagiarized: Emergent Mind",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "buff",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 30,
+    "base": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Start of turn: Gain +{buff}/+{buff} for each card you played last turn."
+    },
+    "radiant": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "Start of turn: Gain +{buff}/+{buff} for each card you played last turn."
+    }
+  },
+  "felinorsvshumans-190": {
+    "id": "felinorsvshumans-190",
+    "index": "190",
+    "name": "Plagiarized: Gestalt",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 38,
+    "base": {
+      "attack": 2,
+      "health": 2,
+      "keywords": [],
+      "text": "Cry: Fuse every other friendly Unit into this."
+    },
+    "radiant": {
+      "attack": 4,
+      "health": 4,
+      "keywords": [],
+      "text": "Cry: Fuse every other friendly Unit into this. Then it gains Rush and Divine Shield."
+    }
+  },
+  "felinorsvshumans-191": {
+    "id": "felinorsvshumans-191",
+    "index": "191",
+    "name": "Plagiarized: Everything You've Ever Played",
+    "set": "Felinors vs Humans",
+    "type": "Spell",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 12,
+    "base": {
+      "keywords": [],
+      "text": "Fill your board with copies of random Units your opponent played this game."
+    },
+    "radiant": {
+      "keywords": [],
+      "text": "Fill your board with Radiant copies of random Units your opponent played this game."
+    }
+  },
+  "felinorsvshumans-192": {
+    "id": "felinorsvshumans-192",
+    "index": "192",
+    "name": "Plagiarized: Loopback, Who Returns",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Legendary",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "base": 3,
+        "better": "up",
+        "key": "buff",
+        "min": 1,
+        "radiant": 6,
+        "step": 1
+      }
+    ],
+    "loc": 57,
+    "base": {
+      "attack": 6,
+      "health": 6,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nWhen this returns by Reborn, it gains +{buff}/+{buff} and Reborn, up to three times a game."
+    },
+    "radiant": {
+      "attack": 12,
+      "health": 12,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nWhen this returns by Reborn, it gains +{buff}/+{buff} and Reborn, up to three times a game."
+    }
+  },
+  "felinorsvshumans-193": {
+    "id": "felinorsvshumans-193",
+    "index": "193",
+    "name": "Plagiarized: Matrioshka Brain",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 6,
+    "base": {
+      "attack": 10,
+      "health": 20,
+      "keywords": [
+        {
+          "kind": "GIGA"
+        },
+        {
+          "kind": "Taunt"
+        }
+      ],
+      "text": "GIGA, Taunt"
+    },
+    "radiant": {
+      "attack": 20,
+      "health": 40,
+      "keywords": [
+        {
+          "kind": "GIGA"
+        },
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Divine Shield"
+        }
+      ],
+      "text": "GIGA, Taunt, Divine Shield"
+    }
+  },
+  "felinorsvshumans-194": {
+    "id": "felinorsvshumans-194",
+    "index": "194",
+    "name": "Plagiarized: Model Collapse",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 23,
+    "base": {
+      "attack": 7,
+      "health": 7,
+      "keywords": [],
+      "text": "Start of turn: Nerf every enemy Unit and every card in your opponent's hand."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 14,
+      "keywords": [],
+      "text": "Start of turn: Nerf every enemy Unit and every card in your opponent's hand twice."
+    }
+  },
+  "felinorsvshumans-195": {
+    "id": "felinorsvshumans-195",
+    "index": "195",
+    "name": "Plagiarized: Phoenix Protocol",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 37,
+    "base": {
+      "attack": 7,
+      "health": 7,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nCry: Give your other Units Reborn."
+    },
+    "radiant": {
+      "attack": 14,
+      "health": 14,
+      "keywords": [
+        {
+          "kind": "Reborn"
+        }
+      ],
+      "text": "Reborn\nCry: Give your other Units Reborn and Divine Shield."
+    }
+  },
+  "felinorsvshumans-196": {
+    "id": "felinorsvshumans-196",
+    "index": "196",
+    "name": "Plagiarized: Singularity",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized",
+      "Wincon"
+    ],
+    "rarity": "Mythic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "params": [
+      {
+        "key": "turns",
+        "base": 5,
+        "radiant": 4,
+        "better": "down",
+        "step": 1,
+        "min": 1
+      }
+    ],
+    "loc": 38,
+    "base": {
+      "attack": 0,
+      "health": 30,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Can't attack"
+        },
+        {
+          "kind": "Immutable"
+        }
+      ],
+      "text": "Immutable, Can't attack, Taunt\nIn {turns|turn|turns}: If this is still on the field, you win the game."
+    },
+    "radiant": {
+      "attack": 0,
+      "health": 60,
+      "keywords": [
+        {
+          "kind": "Taunt"
+        },
+        {
+          "kind": "Can't attack"
+        },
+        {
+          "kind": "Immutable"
+        }
+      ],
+      "text": "Immutable, Can't attack, Taunt\nIn {turns|turn|turns}: If this is still on the field, you win the game."
+    }
+  },
+  "felinorsvshumans-197": {
+    "id": "felinorsvshumans-197",
+    "index": "197",
+    "name": "Plagiarized: The Long Game",
+    "set": "Felinors vs Humans",
+    "type": "Unit",
+    "tags": [
+      "Plagiarized"
+    ],
+    "rarity": "Epic",
+    "flavor": "Tech",
+    "token": false,
+    "cost": 4,
+    "loc": 31,
+    "base": {
+      "attack": 8,
+      "health": 8,
+      "keywords": [],
+      "text": "Dormant for 2 turns.\nWhen this awakens, destroy every enemy Unit."
+    },
+    "radiant": {
+      "attack": 16,
+      "health": 16,
+      "keywords": [],
+      "text": "Dormant for 2 turns.\nWhen this awakens, destroy every enemy Unit and draw a card."
+    }
+  },
   "infiniteassault-001": {
     "id": "infiniteassault-001",
     "index": "1",

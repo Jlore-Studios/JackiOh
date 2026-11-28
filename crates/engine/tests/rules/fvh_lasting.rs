@@ -184,17 +184,29 @@ mod r5237000_watch_summons {
         s.play(WATCHER, json!({}));
         s.play(PAWN, json!({}));
         let first = lane_id(&s, P1, 1);
-        s.expect_stats(first.as_str(), json!({ "attack": 1 + WATCH_BUFF, "health": 1 + WATCH_BUFF }));
+        s.expect_stats(
+            first.as_str(),
+            json!({ "attack": 1 + WATCH_BUFF, "health": 1 + WATCH_BUFF }),
+        );
         s.play(PAWN, json!({}));
         let second = lane_id(&s, P1, 2);
-        s.expect_stats(second.as_str(), json!({ "attack": 1 + WATCH_BUFF, "health": 1 + WATCH_BUFF }));
+        s.expect_stats(
+            second.as_str(),
+            json!({ "attack": 1 + WATCH_BUFF, "health": 1 + WATCH_BUFF }),
+        );
         // A turn of each later, the watcher still answers.
         s.end_turn().end_turn();
         s.play(PAWN, json!({}));
         let third = lane_id(&s, P1, 3);
-        s.expect_stats(third.as_str(), json!({ "attack": 1 + WATCH_BUFF, "health": 1 + WATCH_BUFF }));
+        s.expect_stats(
+            third.as_str(),
+            json!({ "attack": 1 + WATCH_BUFF, "health": 1 + WATCH_BUFF }),
+        );
         // Each answer is once: the earlier Units took nothing more.
-        s.expect_stats(first.as_str(), json!({ "attack": 1 + WATCH_BUFF, "health": 1 + WATCH_BUFF }));
+        s.expect_stats(
+            first.as_str(),
+            json!({ "attack": 1 + WATCH_BUFF, "health": 1 + WATCH_BUFF }),
+        );
     }
 
     #[test]
@@ -241,7 +253,11 @@ mod r5237001_grant_for_turns {
     fn holds(s: &Scenario, id: &str) -> bool {
         let attack = s.stats(id).attack;
         let taunt = has_taunt(s, id);
-        assert_eq!(attack == 1 + TIMED_ATTACK, taunt, "the Attack and the keyword go together");
+        assert_eq!(
+            attack == 1 + TIMED_ATTACK,
+            taunt,
+            "the Attack and the keyword go together"
+        );
         taunt
     }
 
@@ -260,7 +276,10 @@ mod r5237001_grant_for_turns {
         s.end_turn();
         assert!(holds(&s, &wall), "and through the opponent's turn");
         s.end_turn();
-        assert!(!holds(&s, &wall), "gone once the caster has started one more turn");
+        assert!(
+            !holds(&s, &wall),
+            "gone once the caster has started one more turn"
+        );
     }
 
     #[test]
@@ -278,7 +297,10 @@ mod r5237001_grant_for_turns {
         s.end_turn();
         assert!(holds(&s, &wall));
         s.end_turn();
-        assert!(!holds(&s, &wall), "gone at the start of the caster's second turn from now");
+        assert!(
+            !holds(&s, &wall),
+            "gone at the start of the caster's second turn from now"
+        );
     }
 
     #[test]
@@ -330,7 +352,11 @@ mod r5237002_float_last_turn {
         let theirs = unspent_at_end(&s, P2);
         assert_eq!(float_last_turn(s.state(), P2), theirs);
         // Back on p1's next turn, their last turn is still the one that left 3.
-        assert_eq!(float_last_turn(s.state(), P1), 3, "never reset by the turn that follows");
+        assert_eq!(
+            float_last_turn(s.state(), P1),
+            3,
+            "never reset by the turn that follows"
+        );
     }
 
     #[test]
@@ -435,7 +461,11 @@ mod r5237003_raise_mana_cap {
         assert_eq!(s.state().players[P1].mana_cap_bonus, None);
         s.end_turn().end_turn().end_turn();
         assert_eq!(s.state().players[P2].mana.max, MAX_MANA + CAP_RAISE);
-        assert_eq!(s.state().players[P1].mana.max, MAX_MANA, "the caster's cap is untouched");
+        assert_eq!(
+            s.state().players[P1].mana.max,
+            MAX_MANA,
+            "the caster's cap is untouched"
+        );
     }
 }
 
@@ -542,7 +572,11 @@ mod r5237005_hand_place {
     #[test]
     fn r5237005_a_one_card_hand_is_both() {
         install(vec![]);
-        let mut s = board("r5237005-one", json!({ "hand": [FILLER] }), json!({ "hand": [FILLER] }));
+        let mut s = board(
+            "r5237005-one",
+            json!({ "hand": [FILLER] }),
+            json!({ "hand": [FILLER] }),
+        );
         let only = s.hand(P1)[0].clone();
         s.play(only.clone(), json!({}));
         let event = played(&s, &only.id);
@@ -611,10 +645,7 @@ mod r5237006_end_of_turn_grant {
     }
 
     fn cards() -> Vec<(CardDef, Script)> {
-        vec![
-            granter(AT_END, 523_040, true),
-            granter(AT_DEATH, 523_041, false),
-        ]
+        vec![granter(AT_END, 523_040, true), granter(AT_DEATH, 523_041, false)]
     }
 
     #[test]
@@ -630,7 +661,11 @@ mod r5237006_end_of_turn_grant {
         assert!(jackioh_engine::grants::end_of_turn_hook_of(s.state(), s.card(wall.as_str())).is_some());
         let health = hero_health(&s, P2);
         s.end_turn();
-        assert_eq!(hero_health(&s, P2), health - GRANT_DAMAGE, "its controller's end of turn");
+        assert_eq!(
+            hero_health(&s, P2),
+            health - GRANT_DAMAGE,
+            "its controller's end of turn"
+        );
         s.end_turn().end_turn();
         assert_eq!(hero_health(&s, P2), health - 2 * GRANT_DAMAGE, "and the next one");
     }
@@ -649,7 +684,11 @@ mod r5237006_end_of_turn_grant {
         let p1_health = hero_health(&s, P1);
         let p2_health = hero_health(&s, P2);
         s.end_turn();
-        assert_eq!(hero_health(&s, P2), p2_health, "p2's end of turn runs nothing on p1's Unit");
+        assert_eq!(
+            hero_health(&s, P2),
+            p2_health,
+            "p2's end of turn runs nothing on p1's Unit"
+        );
         assert_eq!(hero_health(&s, P1), p1_health);
     }
 
@@ -664,7 +703,10 @@ mod r5237006_end_of_turn_grant {
         let wall = lane_id(&s, P1, 1);
         s.play(AT_DEATH, pick::targets(pick::id(&wall)));
         assert!(
-            s.card(wall.as_str()).grants.as_ref().is_some_and(|grants| !grants.is_empty()),
+            s.card(wall.as_str())
+                .grants
+                .as_ref()
+                .is_some_and(|grants| !grants.is_empty()),
             "the grant is held"
         );
         assert!(jackioh_engine::grants::end_of_turn_hook_of(s.state(), s.card(wall.as_str())).is_none());
@@ -822,7 +864,13 @@ mod r5237009_harm_ignores_tags {
                 Script::default(),
             ),
             (
-                def(BOTH_TAGS, 523_072, "Unit", Some((1, 3)), vec![Tag::Felinor, Tag::Human]),
+                def(
+                    BOTH_TAGS,
+                    523_072,
+                    "Unit",
+                    Some((1, 3)),
+                    vec![Tag::Felinor, Tag::Human],
+                ),
                 ignores_felinor(),
             ),
             (spell(PURGE_FELINORS, 523_073), purge(Tag::Felinor)),
@@ -910,7 +958,10 @@ mod r5237010_immune_to_tag {
                     ..Script::default()
                 },
             ),
-            (def(HUMAN_BLAST, 523_081, "Spell", None, vec![Tag::Human]), blast()),
+            (
+                def(HUMAN_BLAST, 523_081, "Spell", None, vec![Tag::Human]),
+                blast(),
+            ),
             (spell(PLAIN_BLAST, 523_082), blast()),
         ]
     }
@@ -956,9 +1007,18 @@ mod r5237010_immune_to_tag {
         let human = s.card(HUMAN_BLAST).clone();
         let plain = s.card(PLAIN_BLAST).clone();
         assert!(tag_cannot_reach(s.state(), Some(&human), &warded));
-        assert!(!tag_cannot_reach(s.state(), Some(&plain), &warded), "a source without the tag");
-        assert!(!tag_cannot_reach(s.state(), None, &warded), "no source carries no tag");
-        assert!(!tag_cannot_reach(s.state(), Some(&human), &wall), "a card without the flag");
+        assert!(
+            !tag_cannot_reach(s.state(), Some(&plain), &warded),
+            "a source without the tag"
+        );
+        assert!(
+            !tag_cannot_reach(s.state(), None, &warded),
+            "no source carries no tag"
+        );
+        assert!(
+            !tag_cannot_reach(s.state(), Some(&human), &wall),
+            "a card without the flag"
+        );
     }
 }
 

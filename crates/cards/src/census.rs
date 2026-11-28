@@ -268,11 +268,22 @@ pub const CENSUS: &[SetCensus] = &[
     SetCensus {
         set: "Felinors vs Humans",
         segment: "felinorsvshumans",
-        cards: 0,
+        cards: 197,
         shared_cards: &[],
-        card_defined_tokens: &[],
+        card_defined_tokens: &[
+            "16.1", "16.2", "19.1", "20.1", "49.1", "57.1", "57.2", "57.3", "57.4", "57.5", "57.6", "60.1",
+            "60.2", "72.1", "72.2", "72.3", "74.1", "78.1", "98.1", "98.2", "100.1", "100.2", "112.1",
+            "112.2", "112.3", "112.4", "112.5", "112.6", "112.7", "112.8", "112.9", "112.10", "112.11",
+            "112.12", "112.13",
+        ],
         shared_tokens: &[],
-        rarities: &[],
+        rarities: &[
+            ("Common", 54),
+            ("Rare", 54),
+            ("Epic", 49),
+            ("Legendary", 28),
+            ("Mythic", 12),
+        ],
     },
     // R4577000: the Infinite Assault (tracker #4576, docs/infinite-assault.md IA11), a single-player set
     // held while it was built card by card and open since its release (#4597). Its counts are IA11's table: C1 (issue #4577) wrote the Assault

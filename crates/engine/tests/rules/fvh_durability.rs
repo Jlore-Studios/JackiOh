@@ -11,7 +11,8 @@ use jackioh_engine::effects::{
     ActivationOfArgs, TuneDirection, bounce, damage, gain_mana, refresh_activates, run_activation, tune_once,
 };
 use jackioh_engine::subsystems::activate::{
-    ability_uses_this_turn, activation_views_for, durability_left, spend_durability, why_cannot_activate_ability,
+    ability_uses_this_turn, activation_views_for, durability_left, spend_durability,
+    why_cannot_activate_ability,
 };
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -129,7 +130,13 @@ fn defs() -> Vec<CardDef> {
             json!([{ "kind": "Indestructible" }]),
             Some(FIELD_DURABILITY),
         ),
-        card(5236109, LASTING, "Field Spell", json!([]), Some(LASTING_DURABILITY)),
+        card(
+            5236109,
+            LASTING,
+            "Field Spell",
+            json!([]),
+            Some(LASTING_DURABILITY),
+        ),
         card(
             5236110,
             CLOAKED,
@@ -396,11 +403,7 @@ mod r5236000_one_counter_spent_by_each_use {
 
     #[test]
     fn r5236000_cloakeds_reveal_spends_none() {
-        let mut s = board(
-            "r5236000-reveal",
-            json!({ "hand": [CLOAKED, PLAIN] }),
-            json!({}),
-        );
+        let mut s = board("r5236000-reveal", json!({ "hand": [CLOAKED, PLAIN] }), json!({}));
         let id = hand_id(&s, CLOAKED);
         s.play(
             id.as_str(),
@@ -451,8 +454,14 @@ mod r5236000_one_counter_spent_by_each_use {
             register_starship_fixtures();
             let mut catalog: CardDefs = registered_catalog().clone();
             let mut ship_def = hull.clone();
-            ship_def.base.keywords.push(Keyword::Durability { n: SHIP_DURABILITY });
-            ship_def.radiant.keywords.push(Keyword::Durability { n: SHIP_DURABILITY });
+            ship_def
+                .base
+                .keywords
+                .push(Keyword::Durability { n: SHIP_DURABILITY });
+            ship_def
+                .radiant
+                .keywords
+                .push(Keyword::Durability { n: SHIP_DURABILITY });
             catalog.insert(ship_def.id.clone(), ship_def);
             register_catalog(catalog);
             let library = json!([plain.id, plain.id, plain.id, plain.id]);
@@ -512,8 +521,16 @@ mod r5236001_at_0_its_activates_are_refused {
         let before = mana(&s, P1);
         s.expect_refused_with(|s| s.activate(id.as_str(), json!({})), NO_DURABILITY);
         assert_eq!(mana(&s, P1), before, "the refused Activate did nothing");
-        assert_eq!(left(&s, &id), Some(0), "a refusal spends nothing and never goes below 0");
-        assert!(s.activations_of(id.as_str()).is_empty(), "{:?}", s.activations_of(id.as_str()));
+        assert_eq!(
+            left(&s, &id),
+            Some(0),
+            "a refusal spends nothing and never goes below 0"
+        );
+        assert!(
+            s.activations_of(id.as_str()).is_empty(),
+            "{:?}",
+            s.activations_of(id.as_str())
+        );
         let why = refusal(&s, &id, None);
         assert!(
             why.as_deref().is_some_and(|text| text.contains(NO_DURABILITY)),
@@ -536,7 +553,10 @@ mod r5236001_at_0_its_activates_are_refused {
         assert_eq!(spent.len(), 1, "{spent:?}");
         assert_eq!(spent[0].durability_left, Some(0));
         assert!(!spent[0].usable, "{spent:?}");
-        assert!(spent[0].reason.is_some(), "an unusable ability says why: {spent:?}");
+        assert!(
+            spent[0].reason.is_some(),
+            "an unusable ability says why: {spent:?}"
+        );
     }
 
     #[test]
@@ -662,7 +682,9 @@ mod r5236004_leaving_the_field_resets_it {
         assert_eq!(left(&s, &id), Some(ONCE_DURABILITY - 1));
         apply_now(
             s.state_mut(),
-            bounce(json_as(json!({ "target": { "of": "instance", "instanceId": id } }))),
+            bounce(json_as(
+                json!({ "target": { "of": "instance", "instanceId": id } }),
+            )),
         );
         s.expect_in_zone(id.as_str(), "hand");
         assert_eq!(s.card(id.as_str()).durability_spent, None, "the reset clears it");

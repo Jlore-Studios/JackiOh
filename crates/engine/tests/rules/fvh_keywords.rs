@@ -8,7 +8,8 @@
 //! are printed on a fixture's faces as `Keyword` values, never given.
 
 use jackioh_engine::effects::{
-    TuneDirection, damage, evolve, gain_mana, grant_random_keywords, random_pool_keywords, tune_once,
+    TuneDirection, damage, damage_all, evolve, gain_mana, grant_random_keywords, random_pool_keywords,
+    tune_once,
 };
 use jackioh_engine::layers::unit_view;
 use jackioh_engine::query::lucky_on;
@@ -36,7 +37,8 @@ const ARMORED: &str = "fvh-kw-armored";
 const STURDY: &str = "fvh-kw-sturdy";
 /// `FRAGILE` with every keyword of R21's pool besides, so a Buff's keyword row holds little but Fragile.
 const PACKED: &str = "fvh-kw-packed";
-/// 0/10 Units printing Lucky and Unlucky: (1, 0), (1, 1), (1, 2), (0, 2) and (3, 1).
+/// 0/10 Units printing Lucky and Unlucky: (1, 0), (1, 1), (1, 2), (0, 2) and (3, 1), each with a luck roll:
+/// "Activate: deal 1 or 2 damage to each enemy, at even odds", rolled with its net luck (`roller`).
 const LUCKY: &str = "fvh-kw-lucky";
 const JINXED: &str = "fvh-kw-jinxed";
 const CURSED: &str = "fvh-kw-cursed";
@@ -74,7 +76,7 @@ const BIG_HIT: i32 = 5;
 /// How many times the Endless Evolve test evolves its Unit.
 const EVOLVES: i32 = 3;
 /// How many rng cursors a Buff or a Nerf is drawn at (`after_one`).
-const SAMPLES: u32 = 60;
+const SAMPLES: u32 = 120;
 /// How many Nerfs in a row the never-removes tests apply.
 const NERFS_IN_A_ROW: usize = 40;
 /// The rng tests' seed, cursors and roll.
@@ -84,6 +86,10 @@ const ROLL_RANGE: i32 = 1000;
 /// A net luck of −2: two extra rolls, the worst kept.
 const NET_UNLUCKY: i32 = -2;
 const NET_LUCKY: i32 = 2;
+/// The luck fixtures' roll: 1 or 2, at even odds.
+const ROLL_LOW: i32 = 1;
+const ROLL_HIGH: i32 = 2;
+const ROLL_WEIGHT: i32 = 1;
 
 // Fixtures
 
@@ -233,6 +239,37 @@ fn evolving(endless: bool, watches: bool) -> Script {
     }
 }
 
+/// The luck fixtures' Activate: a weighted damage roll that reads the card's net luck as `damage_odds.rs`'s
+/// flak does, so each is a card with a luck roll on any reading.
+fn roller() -> Script {
+    Script {
+        activations: vec![ActivationDecl {
+            id: "roll".to_string(),
+            label: "Deal 1 or 2 damage to each enemy".to_string(),
+            uses: ActivationUses::Count(1),
+            cost: None,
+            targets: vec![],
+            modes: vec![],
+            can_activate: None,
+            has: None,
+            run: hook(|ctx| {
+                let luck = ctx.live_self().map_or(0, |me| lucky_on(&*ctx.state, me));
+                vec![damage_all(json_as(json!({
+                    "amount": ROLL_LOW,
+                    "odds": [
+                        { "amount": ROLL_LOW, "weight": ROLL_WEIGHT },
+                        { "amount": ROLL_HIGH, "weight": ROLL_WEIGHT },
+                    ],
+                    "lucky": luck,
+                    "side": "enemy",
+                    "heroes": true,
+                })))]
+            }),
+        }],
+        ..Script::default()
+    }
+}
+
 fn scripts() -> IndexMap<String, CardScripts> {
     let gain = ActivationDecl {
         id: "gain".to_string(),
@@ -254,6 +291,9 @@ fn scripts() -> IndexMap<String, CardScripts> {
                 ..Script::default()
             }),
         );
+    }
+    for id in [LUCKY, JINXED, CURSED, DOOMED, BLESSED] {
+        all.insert(id.to_string(), both(roller()));
     }
     all.insert(ENDLESS.to_string(), both(evolving(true, false)));
     all.insert(ENDLESS_WATCH.to_string(), both(evolving(true, true)));
@@ -411,7 +451,11 @@ fn took_fragile_off(events: &[GameEvent]) -> bool {
     events.iter().any(|event| match event {
         GameEvent::Degraded { change, .. } | GameEvent::Upgraded { change, .. } => matches!(
             change,
-            TuningChange::Keyword { keyword: Keyword::Fragile, added: false, .. }
+            TuningChange::Keyword {
+                keyword: Keyword::Fragile,
+                added: false,
+                ..
+            }
         ),
         _ => false,
     })
@@ -567,7 +611,11 @@ mod r5236011_fragile_under_a_nerf_and_a_buff {
 
     #[test]
     fn r5236011_a_grant_of_the_whole_pool_never_gives_fragile() {
-        let mut s = board("r5236011-grant", json!({ "field": [attacking(STURDY)] }), json!({}));
+        let mut s = board(
+            "r5236011-grant",
+            json!({ "field": [attacking(STURDY)] }),
+            json!({}),
+        );
         let sturdy = s.unit_at(P1, 1).id;
         apply_now(
             s.state_mut(),
@@ -576,13 +624,20 @@ mod r5236011_fragile_under_a_nerf_and_a_buff {
                 "count": RANDOM_KEYWORD_POOL.len(),
             }))),
         );
-        assert!(!s.card(sturdy.as_str()).granted_keywords.is_empty(), "setup: the grant landed");
+        assert!(
+            !s.card(sturdy.as_str()).granted_keywords.is_empty(),
+            "setup: the grant landed"
+        );
         assert!(!has_fragile(s.state(), &sturdy));
     }
 
     #[test]
     fn r5236011_a_nerf_may_add_fragile_to_a_unit() {
-        let s = board("r5236011-nerf-adds", json!({ "field": [attacking(STURDY)] }), json!({}));
+        let s = board(
+            "r5236011-nerf-adds",
+            json!({ "field": [attacking(STURDY)] }),
+            json!({}),
+        );
         let sturdy = s.unit_at(P1, 1).id;
         assert!(!has_fragile(s.state(), &sturdy));
         let after = after_one(&s, &sturdy, TuneDirection::Degrade, has_fragile);
@@ -591,7 +646,11 @@ mod r5236011_fragile_under_a_nerf_and_a_buff {
 
     #[test]
     fn r5236011_a_nerf_never_removes_fragile() {
-        let s = board("r5236011-nerf-keeps", json!({ "field": [attacking(FRAGILE)] }), json!({}));
+        let s = board(
+            "r5236011-nerf-keeps",
+            json!({ "field": [attacking(FRAGILE)] }),
+            json!({}),
+        );
         let fragile = s.unit_at(P1, 1).id;
         let after = after_one(&s, &fragile, TuneDirection::Degrade, has_fragile);
         assert!(after.iter().all(|kept| *kept), "{after:?}");
@@ -605,7 +664,11 @@ mod r5236011_fragile_under_a_nerf_and_a_buff {
 
     #[test]
     fn r5236011_a_nerf_never_gives_a_fragile_unit_a_second_fragile() {
-        let s = board("r5236011-nerf-once", json!({ "field": [attacking(FRAGILE)] }), json!({}));
+        let s = board(
+            "r5236011-nerf-once",
+            json!({ "field": [attacking(FRAGILE)] }),
+            json!({}),
+        );
         let fragile = s.unit_at(P1, 1).id;
         let after = after_one(&s, &fragile, TuneDirection::Degrade, fragile_count);
         assert!(after.iter().all(|count| *count == 1), "{after:?}");
@@ -613,7 +676,11 @@ mod r5236011_fragile_under_a_nerf_and_a_buff {
 
     #[test]
     fn r5236011_a_buff_removes_fragile() {
-        let s = board("r5236011-buff-removes", json!({ "field": [attacking(PACKED)] }), json!({}));
+        let s = board(
+            "r5236011-buff-removes",
+            json!({ "field": [attacking(PACKED)] }),
+            json!({}),
+        );
         let packed = s.unit_at(P1, 1).id;
         assert!(has_fragile(s.state(), &packed));
         let after = after_one(&s, &packed, TuneDirection::Upgrade, has_fragile);
@@ -622,7 +689,11 @@ mod r5236011_fragile_under_a_nerf_and_a_buff {
 
     #[test]
     fn r5236011_a_buff_never_adds_fragile() {
-        let s = board("r5236011-buff-adds", json!({ "field": [attacking(STURDY)] }), json!({}));
+        let s = board(
+            "r5236011-buff-adds",
+            json!({ "field": [attacking(STURDY)] }),
+            json!({}),
+        );
         let sturdy = s.unit_at(P1, 1).id;
         let after = after_one(&s, &sturdy, TuneDirection::Upgrade, has_fragile);
         assert!(after.iter().all(|added| !*added), "{after:?}");
@@ -699,7 +770,11 @@ mod r5236020_net_luck_and_the_worst_of_roll {
             let (flipped, end) = coins(cursor, rolls_for(NET_UNLUCKY));
             let mut rng = Rng::new(RNG_SEED, cursor);
             let heads = rng.lucky_coin(NET_UNLUCKY);
-            assert_eq!(heads, flipped.iter().all(|flip| *flip), "cursor {cursor}: {flipped:?}");
+            assert_eq!(
+                heads,
+                flipped.iter().all(|flip| *flip),
+                "cursor {cursor}: {flipped:?}"
+            );
             assert_eq!(rng.cursor(), end, "cursor {cursor}");
             kept_tails_over_heads |= !heads && flipped.contains(&true);
         }
@@ -736,13 +811,19 @@ mod r5236021_unlucky_under_a_nerf_and_a_buff {
     use super::*;
 
     #[test]
-    fn r5236021_a_nerf_adds_unlucky_1_to_a_card_with_lucky() {
+    fn r5236021_a_nerf_adds_unlucky_1_to_a_card_with_a_luck_roll() {
         let s = board("r5236021-adds", json!({ "field": [LUCKY] }), json!({}));
         let id = s.unit_at(P1, 1).id;
         assert_eq!(unlucky_of(s.state(), &id), 0);
         let after = after_one(&s, &id, TuneDirection::Degrade, unlucky_of);
-        assert!(after.contains(&1), "no Nerf of {SAMPLES} added Unlucky 1: {after:?}");
-        assert!(after.iter().all(|n| *n <= 1), "a Nerf adds Unlucky 1, never more: {after:?}");
+        assert!(
+            after.contains(&1),
+            "no Nerf of {SAMPLES} added Unlucky 1: {after:?}"
+        );
+        assert!(
+            after.iter().all(|n| *n <= 1),
+            "a Nerf adds Unlucky 1, never more: {after:?}"
+        );
     }
 
     #[test]
@@ -762,7 +843,10 @@ mod r5236021_unlucky_under_a_nerf_and_a_buff {
         let (_, before) = CURSED_LUCK;
         let after = after_one(&s, &id, TuneDirection::Upgrade, unlucky_of);
         assert!(after.contains(&(before - 1)), "{after:?}");
-        assert!(after.iter().all(|n| *n <= before), "a Buff never raises it: {after:?}");
+        assert!(
+            after.iter().all(|n| *n <= before),
+            "a Buff never raises it: {after:?}"
+        );
     }
 
     #[test]
@@ -775,7 +859,11 @@ mod r5236021_unlucky_under_a_nerf_and_a_buff {
 
     #[test]
     fn r5236021_a_nerf_never_gives_unlucky_to_a_card_with_no_luck_roll() {
-        let s = board("r5236021-no-roll", json!({ "field": [attacking(STURDY)] }), json!({}));
+        let s = board(
+            "r5236021-no-roll",
+            json!({ "field": [attacking(STURDY)] }),
+            json!({}),
+        );
         let sturdy = s.unit_at(P1, 1).id;
         let after = after_one(&s, &sturdy, TuneDirection::Degrade, unlucky_of);
         assert!(after.iter().all(|n| *n == 0), "{after:?}");
@@ -975,7 +1063,11 @@ mod r5236031_the_instance_view_shows_them {
         let s = board("r5236031-none", json!({ "field": [STURDY] }), json!({}));
         let id = s.unit_at(P1, 1).id;
         let shown = kinds(&unit_keywords(&s.view(P1), true, &id));
-        for kind in [KeywordKind::Durability, KeywordKind::Fragile, KeywordKind::Unlucky] {
+        for kind in [
+            KeywordKind::Durability,
+            KeywordKind::Fragile,
+            KeywordKind::Unlucky,
+        ] {
             assert!(!shown.contains(&kind), "{shown:?}");
         }
     }

@@ -526,7 +526,10 @@ pub fn allure_unit(args: AllureUnitArgs) -> Effect {
         let owner = ctx.controller;
         let candidates = allure_candidates(ctx, owner);
         let unit: Option<String> = match (&args.instance_id, args.random_enemy) {
-            (Some(id), _) => candidates.iter().find(|unit| unit.id == *id).map(|unit| unit.id.clone()),
+            (Some(id), _) => candidates
+                .iter()
+                .find(|unit| unit.id == *id)
+                .map(|unit| unit.id.clone()),
             (None, Some(true)) => ctx.rng.pick(&candidates).map(|unit| unit.id.clone()),
             (None, _) => None,
         };
@@ -572,12 +575,7 @@ pub fn watch_deaths(args: WatchDeathsArgs) -> Effect {
             DEATH_WATCH_HOLDER_KEY.to_string(),
             Value::String(player.as_str().to_string()),
         );
-        let mut resume = delayed_resume(
-            ctx,
-            &args.step,
-            data,
-            args.hook.as_deref().unwrap_or(RESUME_HOOK),
-        );
+        let mut resume = delayed_resume(ctx, &args.step, data, args.hook.as_deref().unwrap_or(RESUME_HOOK));
         resume.instance_id = None;
         crate::modifiers::add_death_watch(ctx, player, args.tag, resume, &args.label);
     })

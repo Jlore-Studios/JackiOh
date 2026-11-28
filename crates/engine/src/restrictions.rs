@@ -72,7 +72,9 @@ pub fn tag_cannot_reach(state: &GameState, source: Option<&CardInstance>, card: 
 fn tag_keeps_effect_off(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     // The card's own flag first: most cards hold none, and the walks ask this of every card they meet.
     if !matches!(card.zone, Zone::Field { .. })
-        || crate::scripts::flags_of(ctx.sink.state, card).immune_to_tag.is_none()
+        || crate::scripts::flags_of(ctx.sink.state, card)
+            .immune_to_tag
+            .is_none()
     {
         return false;
     }

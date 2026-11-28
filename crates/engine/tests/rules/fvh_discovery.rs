@@ -185,7 +185,9 @@ mod r5239000_added_to_hand_so_far {
         assert_eq!(listed.len(), 2, "{listed:?}");
         for card in &fresh {
             assert!(
-                listed.iter().any(|entry| *entry == card.id || *entry == card.def_id),
+                listed
+                    .iter()
+                    .any(|entry| *entry == card.id || *entry == card.def_id),
                 "{} is listed: {listed:?}",
                 card.id
             );
@@ -365,7 +367,10 @@ mod r5239002_catalog_hooks_and_any_of {
     fn r5239002_any_of_with_no_sub_query_matching_is_empty() {
         registered();
         let nothing = CatalogQueryArgs {
-            any_of: Some(vec![named("fvhd-no-such-card"), named("fvhd-no-such-card-either")]),
+            any_of: Some(vec![
+                named("fvhd-no-such-card"),
+                named("fvhd-no-such-card-either"),
+            ]),
             ..CatalogQueryArgs::default()
         };
         assert!(pool(nothing).is_empty());
@@ -446,10 +451,7 @@ mod r5239004_discover_keyword {
 
     /// The resume step: the marker with what `chosen_options` read.
     fn picked() -> IndexMap<&'static str, Hook> {
-        IndexMap::from([(
-            PICKED_STEP,
-            hook(|ctx| vec![mark(json!(chosen_options(ctx)))]),
-        )])
+        IndexMap::from([(PICKED_STEP, hook(|ctx| vec![mark(json!(chosen_options(ctx)))]))])
     }
 
     fn cards() -> Vec<(CardDef, Script)> {
@@ -515,7 +517,11 @@ mod r5239004_discover_keyword {
         let taunter = lane_id(&s, P1, 1);
         s.play(DISCOVER_LACKING, pick::targets(pick::id(&taunter)));
         let modes = s.prompt_modes();
-        assert_eq!(modes.len(), 2, "Taunt is held, so two of the three are left: {modes:?}");
+        assert_eq!(
+            modes.len(),
+            2,
+            "Taunt is held, so two of the three are left: {modes:?}"
+        );
     }
 
     #[test]
@@ -528,7 +534,8 @@ mod r5239004_discover_keyword {
         s.answer(pick::mode(&answer));
         let read = marked(&s);
         assert!(
-            read.as_array().is_some_and(|picks| picks.contains(&json!(answer))),
+            read.as_array()
+                .is_some_and(|picks| picks.contains(&json!(answer))),
             "chosen_options read {read} for {answer}"
         );
     }
@@ -569,7 +576,10 @@ mod r5239005_dearest_first {
             (unit(TWO, 523_751, 2, (1, 1)), Script::default()),
             (unit(THREE, 523_752, 3, (1, 1)), Script::default()),
             (unit(FOUR, 523_753, 4, (1, 1)), Script::default()),
-            (unit(DEAREST_UNIT, 523_754, 9, (1, 1)), discover(3, &[DEAREST_UNIT])),
+            (
+                unit(DEAREST_UNIT, 523_754, 9, (1, 1)),
+                discover(3, &[DEAREST_UNIT]),
+            ),
             (spell(DEAREST_THREE, 523_755), discover(3, &[])),
             (spell(DEAREST_TWO, 523_756), discover(2, &[])),
         ]
@@ -634,7 +644,10 @@ mod r5239006_flashback_without_cry {
     fn cards() -> Vec<(CardDef, Script)> {
         let flashback = json!([{ "kind": "Flashback" }]);
         vec![
-            (def(ECHO_QUIET, 523_760, "Spell", 1, None, flashback.clone()), echo(true)),
+            (
+                def(ECHO_QUIET, 523_760, "Spell", 1, None, flashback.clone()),
+                echo(true),
+            ),
             (def(ECHO_LOUD, 523_761, "Spell", 1, None, flashback), echo(false)),
         ]
     }
@@ -646,10 +659,16 @@ mod r5239006_flashback_without_cry {
         let mut s = board(seed, json!({ "hand": [card, FILLER] }), json!({}));
         let health = hero_health(&s, P2);
         s.play(card, json!({}));
-        assert_eq!(hero_health(&s, P2), health - CRY_DAMAGE, "a play from hand runs its Cry");
+        assert_eq!(
+            hero_health(&s, P2),
+            health - CRY_DAMAGE,
+            "a play from hand runs its Cry"
+        );
         let between = hero_health(&s, P2);
         let in_graveyard = must(
-            s.pile(P1, "graveyard").into_iter().find(|landed| landed.def_id == card),
+            s.pile(P1, "graveyard")
+                .into_iter()
+                .find(|landed| landed.def_id == card),
             "the Spell in the graveyard",
         );
         let body: ActionBody = json_as(json!({ "type": "play", "instanceId": in_graveyard.id }));
@@ -714,7 +733,15 @@ mod r5239007_damage_also_toxic {
     fn toxic_events(s: &Scenario) -> usize {
         s.last_events()
             .iter()
-            .filter(|event| matches!(event, GameEvent::CounterChanged { counter: CounterKind::Toxic, .. }))
+            .filter(|event| {
+                matches!(
+                    event,
+                    GameEvent::CounterChanged {
+                        counter: CounterKind::Toxic,
+                        ..
+                    }
+                )
+            })
             .count()
     }
 
@@ -770,10 +797,7 @@ mod r5239008_past_options {
                 }
                 vec![effects::discover_from_catalog(args)]
             })),
-            resume: IndexMap::from([(
-                PICKED_STEP,
-                hook(|ctx| vec![mark(json!(discovered_card(ctx)))]),
-            )]),
+            resume: IndexMap::from([(PICKED_STEP, hook(|ctx| vec![mark(json!(discovered_card(ctx)))]))]),
             ..Script::default()
         }
     }
@@ -810,40 +834,60 @@ mod r5239008_past_options {
         s
     }
 
-    fn past_modes(modes: &[String]) -> Vec<String> {
-        modes
-            .iter()
-            .filter(|mode| split_past_id(mode).is_some())
-            .cloned()
+    /// What `discovered_card` read for each option of the offer, each answered in turn on the same
+    /// board: the read names the pick, so it tells a past version from the card itself whatever the
+    /// option's own label.
+    fn reads(seed: &str, discoverer: &str) -> Vec<String> {
+        let options = offered(seed, discoverer).prompt_modes().len();
+        assert!(options > 0, "an offer is open");
+        (0..options)
+            .map(|at| {
+                let mut s = offered(seed, discoverer);
+                let modes = s.prompt_modes();
+                s.answer(pick::mode(&modes[at]));
+                must(marked(&s).as_str().map(str::to_string), "the card read")
+            })
             .collect()
+    }
+
+    fn past_reads(reads: &[String]) -> usize {
+        reads.iter().filter(|read| split_past_id(read).is_some()).count()
     }
 
     #[test]
     fn r5239008_offers_that_many_past_version_options() {
-        let s = offered("r5239008-past", DISCOVER_PAST);
-        let modes = s.prompt_modes();
-        assert_eq!(past_modes(&modes).len(), PAST_COUNT as usize, "{modes:?}");
+        let read_back = reads("r5239008-past", DISCOVER_PAST);
+        assert_eq!(past_reads(&read_back), PAST_COUNT as usize, "{read_back:?}");
     }
 
     #[test]
     fn r5239008_absent_no_past_version_is_offered() {
-        let s = offered("r5239008-now", DISCOVER_NOW);
-        let modes = s.prompt_modes();
-        assert!(!modes.is_empty());
-        assert!(past_modes(&modes).is_empty(), "{modes:?}");
+        let read_back = reads("r5239008-now", DISCOVER_NOW);
+        assert_eq!(past_reads(&read_back), 0, "{read_back:?}");
     }
 
     #[test]
-    fn r5239008_discovered_card_reads_the_pick_a_past_version_included() {
-        let mut s = offered("r5239008-read-past", DISCOVER_PAST);
-        let answer = must(past_modes(&s.prompt_modes()).pop(), "the past option");
-        s.answer(pick::mode(&answer));
-        assert_eq!(marked(&s), json!(answer));
-
-        let mut s = offered("r5239008-read-now", DISCOVER_NOW);
-        let answer = must(s.prompt_modes().pop(), "an option");
-        s.answer(pick::mode(&answer));
-        assert_eq!(marked(&s), json!(answer));
+    fn r5239008_discovered_card_reads_the_pick() {
+        for (seed, discoverer) in [
+            ("r5239008-read-past", DISCOVER_PAST),
+            ("r5239008-read-now", DISCOVER_NOW),
+        ] {
+            let read_back = reads(seed, discoverer);
+            for read in &read_back {
+                assert!(
+                    [ALPHA, BETA, GAMMA].iter().any(|id| past_card_of(read) == *id),
+                    "{read} names a card of the pool"
+                );
+            }
+            let mut distinct = read_back.clone();
+            distinct.sort();
+            distinct.dedup();
+            assert_eq!(
+                distinct.len(),
+                read_back.len(),
+                "each option reads its own pick: {read_back:?}"
+            );
+        }
     }
 }
 

@@ -155,7 +155,11 @@ fn cast(effect: impl Fn() -> Effect + Send + Sync + 'static) -> Script {
 /// A Spell aimed at `count` Units of either side, its Cry built from what it chose.
 fn aimed(count: i32, effect: impl Fn(&EffectContext<'_>) -> Effect + Send + Sync + 'static) -> Script {
     Script {
-        targets: vec![TargetDecl::target(count, count, json!({ "side": "any", "of": ["unit"] }))],
+        targets: vec![TargetDecl::target(
+            count,
+            count,
+            json!({ "side": "any", "of": ["unit"] }),
+        )],
         cry: Some(hook(move |ctx| vec![effect(ctx)])),
         ..Script::default()
     }
@@ -213,9 +217,15 @@ mod r5238000_temporary_count {
         let added = must(pile_of(&s, P1, "hand", KEEPSAKE).pop(), "the added card");
         assert!(is_temporary_card(s.state(), s.card(added.as_str())));
         s.end_turn();
-        assert!(hand_holds(&s, P1, &added), "Temporary 2 outlasts its owner's first end of turn");
+        assert!(
+            hand_holds(&s, P1, &added),
+            "Temporary 2 outlasts its owner's first end of turn"
+        );
         s.end_turn();
-        assert!(hand_holds(&s, P1, &added), "the opponent's end of turn counts nothing");
+        assert!(
+            hand_holds(&s, P1, &added),
+            "the opponent's end of turn counts nothing"
+        );
         s.end_turn();
         s.expect_in_zone(added.as_str(), "graveyard");
     }
@@ -299,7 +309,10 @@ mod r5238001_secret_grant {
         let (s, target, decoy) = granted("r5238001-shown");
         assert!(unit_has(s.state(), s.card(target.as_str()), KeywordKind::Taunt));
         assert!(shown(&s, P2, &target).contains(&KeywordKind::Taunt));
-        assert!(shown(&s, P2, &decoy).contains(&KeywordKind::Taunt), "the decoy shows it too");
+        assert!(
+            shown(&s, P2, &decoy).contains(&KeywordKind::Taunt),
+            "the decoy shows it too"
+        );
         assert!(shown(&s, P1, &target).contains(&KeywordKind::Taunt));
     }
 
@@ -369,7 +382,10 @@ mod r5238002_plays_on_either_side {
         let mut s = board("r5238002-own", json!({ "hand": [EITHER] }), json!({}));
         let either = s.card(EITHER).id.clone();
         let sides = sides_offered(&s, &either);
-        assert!(sides.contains(&Some(P2)), "the opponent's zones are offered: {sides:?}");
+        assert!(
+            sides.contains(&Some(P2)),
+            "the opponent's zones are offered: {sides:?}"
+        );
         assert!(
             sides.iter().any(|side| *side != Some(P2)),
             "and its own: {sides:?}"
@@ -546,7 +562,15 @@ mod r5238005_recruit_by_set {
         vec![
             (unit(CORE_UNIT, 523_850, 1, (1, 1), Vec::new()), Script::default()),
             (
-                def_in("Classic", CLASSIC_UNIT, 523_851, "Unit", 1, Some((1, 1)), Vec::new()),
+                def_in(
+                    "Classic",
+                    CLASSIC_UNIT,
+                    523_851,
+                    "Unit",
+                    1,
+                    Some((1, 1)),
+                    Vec::new(),
+                ),
                 Script::default(),
             ),
             (spell(RECRUIT_CLASSIC, 523_852), recruiter(SetName::Classic)),
@@ -569,7 +593,11 @@ mod r5238005_recruit_by_set {
     fn r5238005_recruits_only_a_card_of_the_named_set() {
         let s = recruiting("r5238005-classic", RECRUIT_CLASSIC);
         assert_eq!(s.unit_at(P1, 1).def_id, CLASSIC_UNIT);
-        assert_eq!(pile_of(&s, P1, "library", CORE_UNIT).len(), 1, "the Core Unit stays");
+        assert_eq!(
+            pile_of(&s, P1, "library", CORE_UNIT).len(),
+            1,
+            "the Core Unit stays"
+        );
         assert!(pile_of(&s, P1, "library", CLASSIC_UNIT).is_empty());
     }
 
@@ -633,10 +661,7 @@ mod r5238006_exclude_replaced {
         let defs = hand_defs(&s);
         assert_eq!(defs.len(), 2, "each card is replaced: {defs:?}");
         assert!(!defs.contains(&APPLE.to_string()), "{defs:?}");
-        assert!(
-            defs.iter().all(|def| def == BANANA || def == CHERRY),
-            "{defs:?}"
-        );
+        assert!(defs.iter().all(|def| def == BANANA || def == CHERRY), "{defs:?}");
     }
 }
 
@@ -778,7 +803,11 @@ mod r5238008_allure_unit {
         let (s, _pawn, wall) = allured("r5238008-named", ALLURE_NAMED, |s| {
             pick::targets(pick::id(&s.unit_at(P2, 2).id))
         });
-        assert_eq!(s.card(wall.as_str()).controller, P1, "stolen at the Allurer's next start");
+        assert_eq!(
+            s.card(wall.as_str()).controller,
+            P1,
+            "stolen at the Allurer's next start"
+        );
     }
 
     #[test]
@@ -810,7 +839,10 @@ mod r5238009_watch_deaths {
 
     fn cards() -> Vec<(CardDef, Script)> {
         vec![
-            (unit(HUMAN, 523_890, 0, (1, 1), vec![Tag::Human]), Script::default()),
+            (
+                unit(HUMAN, 523_890, 0, (1, 1), vec![Tag::Human]),
+                Script::default(),
+            ),
             (
                 spell(WATCH_HUMANS, 523_891),
                 Script {
@@ -837,7 +869,9 @@ mod r5238009_watch_deaths {
             (
                 spell(BOLT, 523_892),
                 aimed(1, |_ctx| {
-                    effects::damage(json_as(json!({ "to": { "of": "chosen" }, "amount": BOLT_DAMAGE })))
+                    effects::damage(json_as(
+                        json!({ "to": { "of": "chosen" }, "amount": BOLT_DAMAGE }),
+                    ))
                 }),
             ),
         ]
@@ -859,7 +893,11 @@ mod r5238009_watch_deaths {
         assert_eq!(hero_health(&s, P2), health - WATCH_DAMAGE);
         s.end_turn().end_turn();
         s.play(BOLT, pick::targets(pick::id(&second)));
-        assert_eq!(hero_health(&s, P2), health - 2 * WATCH_DAMAGE, "a turn later it still fires");
+        assert_eq!(
+            hero_health(&s, P2),
+            health - 2 * WATCH_DAMAGE,
+            "a turn later it still fires"
+        );
     }
 
     #[test]
@@ -1125,7 +1163,10 @@ mod r5238013_swap_until_end_of_turn {
         s.end_turn();
         s.expect_in_zone(played.as_str(), "field");
         assert!(!hand_holds(&s, P2, &played));
-        assert!(hand_holds(&s, P2, &theirs[1]), "the one still in a hand went back");
+        assert!(
+            hand_holds(&s, P2, &theirs[1]),
+            "the one still in a hand went back"
+        );
     }
 
     #[test]

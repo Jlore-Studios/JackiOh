@@ -1088,7 +1088,8 @@ fn run_resume_now(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOpt
         }
         _ => None,
     };
-    let Some(hook) = granted.or_else(|| hook_for(&face_of(sink.state, &resume.def_id, resume.radiant), resume))
+    let Some(hook) =
+        granted.or_else(|| hook_for(&face_of(sink.state, &resume.def_id, resume.radiant), resume))
     else {
         return true;
     };
