@@ -43,9 +43,11 @@ fn zone_group_key(play: &ActionBody) -> ActionBody {
                 zone: blanked_zone, ..
             } = &mut blanked
             {
+                // R5238002: a play onto the other side is its own group.
                 *blanked_zone = Some(ZoneChoice {
                     row: zone.row,
                     lane: -1,
+                    player: zone.player,
                 });
             }
             blanked

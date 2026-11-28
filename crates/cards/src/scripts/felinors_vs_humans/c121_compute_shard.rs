@@ -123,7 +123,7 @@ mod tests {
             let mut s = ended(false, vec![json!(CHEAP), json!(DEAR)], "shard-start");
             s.end_turn();
             assert_eq!(s.state().active, P1, "p1's turn has started");
-            assert_eq!(cost_of(&s, DEAR), 3, "discounted once, at the end of p1's turn");
+            assert_eq!(cost_of(&s, DEAR), 3, "once, at the end of p1's turn");
             assert_eq!(cost_of(&s, CHEAP), 2);
         }
 

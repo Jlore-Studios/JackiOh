@@ -350,6 +350,27 @@ pub fn add_lane_watch(
     )
 }
 
+/// R5237000: KY's Unification Mandate's watcher — a `never` modifier on `player` that answers each card
+/// of theirs entering one of their zones from now on, a Unit's alone with `units_only` (FvH #4).
+pub fn add_summon_watch(
+    sink: &mut EngineSink<'_>,
+    player: PlayerId,
+    resume: Resume,
+    label: &str,
+    units_only: Option<bool>,
+) -> PlayerModifier {
+    add_modifier(
+        sink,
+        player,
+        ModifierExpiry::Never,
+        ModifierKind::SummonWatch {
+            resume,
+            label: label.to_string(),
+            units_only,
+        },
+    )
+}
+
 /// R1863000: Great Paperclip Theory's watcher — a `never` modifier on `player` that answers the first
 /// resolved play of theirs of each of `def_ids` (Stinkyscape #44).
 pub fn add_play_watch(

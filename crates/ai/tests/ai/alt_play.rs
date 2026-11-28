@@ -52,6 +52,7 @@ fn set_state(seed: &str) -> GameState {
             zone: Some(ZoneChoice {
                 row: Row::Backrow,
                 lane: 1,
+                player: None,
             }),
             x: None,
             embiggen: None,
@@ -220,6 +221,7 @@ fn set_two_turns_ago(seed: &str, def_id: &str) -> (GameState, String) {
             zone: Some(ZoneChoice {
                 row: Row::Backrow,
                 lane: 1,
+                player: None,
             }),
             x: None,
             embiggen: None,
@@ -311,6 +313,7 @@ fn r783009_determinize_samples_a_printed_cloaked_card_stamped_cloaked() {
             zone: Some(ZoneChoice {
                 row: Row::Backrow,
                 lane: 1,
+                player: None,
             }),
             x: None,
             embiggen: None,

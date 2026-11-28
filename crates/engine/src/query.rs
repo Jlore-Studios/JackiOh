@@ -1222,6 +1222,13 @@ struct Reached {
 /// every damage figure and `lethal` read the board as it stands, since every hit lands before any
 /// check (R59), and no card dormant beneath a pile is read (R13).
 pub fn combat_forecast(state: &GameState, seat: PlayerId) -> CombatForecast {
+    // R5238001: the seat forecasts against what it is shown, so a secret grant's target and its decoys
+    // read alike to the seat that does not control them (the copy holds no disguise, so this recurses once).
+    if crate::effects::secret_grant::any_secret_grant(state) {
+        let mut believed = state.clone();
+        crate::effects::secret_grant::believe_secret_grants(&mut believed, seat);
+        return combat_forecast(&believed, seat);
+    }
     let enemy = opponent_of(seat);
     let mut attacks = Vec::new();
     let mut hitters: IndexSet<String> = IndexSet::new();

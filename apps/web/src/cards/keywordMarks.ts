@@ -49,4 +49,7 @@ export const KEYWORD_MARK: Readonly<Record<KeywordKind, string>> = {
   Frenzy: "FZ",
   Evasive: "EA",
   Woozy: "WZ",
+  Durability: "DU",
+  Fragile: "FR",
+  Unlucky: "UL",
 };

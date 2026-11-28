@@ -76,13 +76,22 @@ pub struct RecursionLog {
 
 /// R4589000: whether the game keeps the log: once either side's is `Some`, or the game holds an
 /// Infinite Assault card anywhere (hands, libraries and piles included, D14's hashes among them).
+/// R5237013: or a card tagged with one of `RECURSION_LOG_TAGS` (Plagiarized), which no shipped set's
+/// card carries, so no recorded game's hash moves.
 pub fn kept(state: &GameState) -> bool {
     if state.players.p1.recursion.is_some() || state.players.p2.recursion.is_some() {
         return true;
     }
+    // R5237013: or a card whose definition carries one of `RECURSION_LOG_TAGS` (the Plagiarized reprints,
+    // FV4), so a reprint of a Recursion card reads the log back in a game with no Assault card.
     crate::state::every_instance(state).any(|card| {
-        crate::catalog::find_def(Some(state), &card.def_id)
-            .is_some_and(|def| def.set == SetName::InfiniteAssault)
+        crate::catalog::find_def(Some(state), &card.def_id).is_some_and(|def| {
+            def.set == SetName::InfiniteAssault
+                || def
+                    .tags
+                    .iter()
+                    .any(|tag| crate::config::RECURSION_LOG_TAGS.contains(tag))
+        })
     })
 }
 

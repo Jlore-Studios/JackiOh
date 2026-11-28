@@ -549,6 +549,13 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub hidden_nerfs: Option<i32>,
+    /// R5238001: a secret grant's disguise (`effects::secret_grant`): keywords the seat that does not
+    /// control the card is shown on it besides its own, on the true target and each decoy alike, so that
+    /// seat cannot tell which holds the keyword. Taken off by R78's reset as the card leaves the field.
+    /// Absent on every other card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub shown_to_opponent: Option<Vec<Keyword>>,
     /// R3536000: has evolved, so it evolves no more; R78's reset takes it off; only `Some(true)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
@@ -3225,6 +3232,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         grants: None,
         fixed_x: None,
         hidden_nerfs: None,
+        shown_to_opponent: None,
         evolved: None,
         enters_evolved: None,
         giga: None,

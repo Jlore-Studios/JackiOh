@@ -100,11 +100,15 @@ mod tests {
             "p2": { "hand": [FILLER], "library": crate::filler(4) },
         }));
         s.state_mut().players[P1].auto_end_turn = Some(false);
-        assert!(is_tradable(s.state(), s.card(ID)), "radiant {radiant}: Tradable");
+        assert!(is_tradable(s.state(), s.card(ID)), "radiant {radiant}");
         let (hand, mana) = (s.hand(P1).len(), s.state().players[P1].mana.current);
         s.trade(ID);
         s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
-        assert_eq!(s.hand(P1).len(), hand, "one card went into the deck and one was drawn");
+        assert_eq!(
+            s.hand(P1).len(),
+            hand,
+            "one card went into the deck and one was drawn"
+        );
         assert_eq!(s.state().players[P1].mana.current, mana, "at no mana");
     }
 

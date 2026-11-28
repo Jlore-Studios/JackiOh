@@ -105,7 +105,7 @@ mod tests {
         let s = played(radiant, seed);
         let unit = s.unit_at(P1, 1);
         assert_eq!(unit.def_id, ID);
-        assert!(is_immutable(s.state(), &unit), "radiant {radiant}: Immutable");
+        assert!(is_immutable(s.state(), &unit), "radiant {radiant}");
         let def = def_of(Some(s.state()), ID);
         assert!(!def.is_token());
         assert_eq!(def.rarity, Rarity::Mythic);

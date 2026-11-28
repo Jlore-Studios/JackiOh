@@ -2673,6 +2673,11 @@ pub const SLASH_LANES: [i32; 3] = [2, 3, 4];
 /// R4589001: "since your last turn" reaches back this many player-turns.
 pub const SINCE_LAST_TURN: i32 = 1;
 
+/// R5237013: the tags whose cards keep the recursion log in a game beside the Infinite Assault set's
+/// (`recursion_log::kept`): the Plagiarized reprints of Felinors vs Humans (FV4), frozen copies of IA
+/// scripts that read it back.
+pub const RECURSION_LOG_TAGS: &[Tag] = &[Tag::Plagiarized];
+
 #[cfg(test)]
 mod tests {
     use super::*;

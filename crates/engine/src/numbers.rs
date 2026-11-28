@@ -12,9 +12,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::brittle_count::active_brittle_count;
 use crate::layers::{card_keywords, has_stat_line, printed_keywords_of, stats_with_buffs, unit_view};
-use crate::script::{ActivationUses, Script};
+use crate::script::{ActivationUses, Log2Utility, Script};
 use crate::state::{CardInstance, GameState};
-use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter};
+use crate::wire::{AttackHealth, CardType, Keyword, KeywordKind, ParamBetter, PlayerId, Zone};
 
 /// B3.4 rule 3: the numbered keywords, by the tuning key each is read under (`tuning::tuned_count`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -413,4 +413,56 @@ pub fn number_on(state: &GameState, card: &CardInstance, ref_: &NumberRef) -> Op
         .into_iter()
         .find(|entry| entry.id == id)
         .map(|entry| entry.value)
+}
+
+// R5237011, R5237012: FvH #92's "log 2 utility"
+
+/// R5237011: a number as "log 2 utility" counts it: its number of binary digits, ⌊log₂N⌋ + 1 (1 is 1,
+/// 2 and 3 are 2, 4 to 7 are 3, 9999 is 14); 0 and below unchanged.
+pub fn log2_utility(n: i32) -> i32 {
+    if n <= 0 {
+        return n;
+    }
+    // `n` is positive, so its bit length is at most 31 and the cast is exact.
+    (u32::BITS - n.unsigned_abs().leading_zeros()) as i32
+}
+
+/// R5237011, R5237012: every "log 2 utility" acting now, with its controller: each aura source whose
+/// text carries the flag (`StaticFlags.log2_utility`), as the layers' auras are found (a face-down or
+/// Dormant card's sleeps, a Vanilla's is gone). Read by reference, as every unit read walks it.
+pub fn log2_utility_acting(state: &GameState) -> Vec<(PlayerId, Log2Utility)> {
+    let mut acting: Vec<(PlayerId, Log2Utility)> = Vec::new();
+    for source in crate::layers::aura_sources(state) {
+        if source.vanilla {
+            continue;
+        }
+        let mode = crate::scripts::script_of(state, source)
+            .static_flags
+            .as_ref()
+            .and_then(|flags| flags.log2_utility);
+        if let Some(mode) = mode {
+            acting.push((source.controller, mode));
+        }
+    }
+    acting
+}
+
+/// R5237011, R5237012: whether "log 2 utility" counts this card's Attack and max Health: a card on the
+/// field, under an `All` one, or a `Helpful` one of the other player's (the enemy's Attack and Health).
+/// Two never stack: the stats are counted once.
+pub fn log2_utility_reaches_stats(state: &GameState, card: &CardInstance) -> bool {
+    if !matches!(card.zone, Zone::Field { .. }) {
+        return false;
+    }
+    log2_utility_acting(state)
+        .into_iter()
+        .any(|(controller, mode)| mode == Log2Utility::All || controller != card.controller)
+}
+
+/// R5237011, R5237012: whether "log 2 utility" counts this card's own cost: under an `All` one, or a
+/// `Helpful` one of its own controller's (your costs). The caller leaves an X cost alone.
+pub fn log2_utility_reaches_cost(state: &GameState, card: &CardInstance) -> bool {
+    log2_utility_acting(state)
+        .into_iter()
+        .any(|(controller, mode)| mode == Log2Utility::All || controller == card.controller)
 }

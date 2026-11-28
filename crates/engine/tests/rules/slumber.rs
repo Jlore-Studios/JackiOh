@@ -692,6 +692,7 @@ mod r3039000_an_awakened_card_is_never_dormant_again {
             zone: Some(ZoneChoice {
                 row: Row::Units,
                 lane,
+                player: None,
             }),
             x: None,
             embiggen: None,

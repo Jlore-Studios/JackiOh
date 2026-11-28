@@ -205,11 +205,10 @@ mod tests {
             assert_eq!(hero(&s), HERO_HEALTH, "the first three starts are quiet");
             next_turn_of(&mut s, P1);
             // FV4: 40 (IA #205's Radiant face deals 20), past the enemy hero's Health: p1 wins.
-            assert!(
-                crate::hits(s.events()).iter().any(|(_, amount)| *amount == 40),
-                "one hit of 40"
-            );
-            assert_eq!(s.state().result.map(|result| result.winner), Some(Winner::P1));
+            let hits = crate::hits(s.events());
+            assert!(hits.iter().any(|(_, amount)| *amount == 40), "one hit of 40");
+            let winner = s.state().result.map(|result| result.winner);
+            assert_eq!(winner, Some(Winner::P1));
         }
 
         #[test]

@@ -164,7 +164,8 @@ mod b5_e20_lock_the_zone_a_permanent_was_just_played_into {
         assert!(
             !legal_zones_for(&state, PlayerId::P1, &next, &[]).contains(&ZoneChoice {
                 row: Row::Units,
-                lane: 4
+                lane: 4,
+                player: None,
             })
         );
         let spell = play(&mut state, &leak.id, None, false);
@@ -310,7 +311,8 @@ mod b5_e20_unlock {
         assert!(
             legal_zones_for(&out.state, PlayerId::P1, &next, &[]).contains(&ZoneChoice {
                 row: Row::Units,
-                lane: 2
+                lane: 2,
+                player: None,
             })
         );
     }

@@ -234,7 +234,11 @@ mod tests {
             s.act(
                 ActionBody::Play {
                     instance_id: cosmality.clone(),
-                    zone: Some(ZoneChoice { row: Row::Units, lane: 3 }),
+                    zone: Some(ZoneChoice {
+                        row: Row::Units,
+                        lane: 3,
+                        player: None,
+                    }),
                     x: None,
                     embiggen: None,
                     equip: None,

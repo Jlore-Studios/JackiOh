@@ -1444,6 +1444,7 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
         let left_out = ZoneChoice {
             row: Row::Units,
             lane,
+            player: None,
         };
         let legal = without_matching(&g, |body| {
             is_play_of(body, &card.id)
@@ -1479,6 +1480,7 @@ mod i8_a_play_reduce_accepts_that_the_list_leaves_out {
         let into_lane_2 = ZoneChoice {
             row: Row::Backrow,
             lane: 2,
+            player: None,
         };
         let play = g
             .plays_of(&crater)

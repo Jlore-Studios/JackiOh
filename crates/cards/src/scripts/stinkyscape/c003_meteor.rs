@@ -188,7 +188,14 @@ mod tests {
             assert!(!plays.is_empty(), "the Unit has other zones to go to");
             plays
                 .iter()
-                .all(|zone| *zone != Some(ZoneChoice { row: Row::Units, lane }))
+                .all(|zone| {
+                    *zone
+                        != Some(ZoneChoice {
+                            row: Row::Units,
+                            lane,
+                            player: None,
+                        })
+                })
         }
 
         fn locked_event(s: &Scenario, lane: i32) -> bool {

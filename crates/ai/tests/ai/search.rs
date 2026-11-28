@@ -350,6 +350,7 @@ mod candidate_actions_b14 {
         let zone = |lane: i32| ZoneChoice {
             row: Row::Units,
             lane,
+            player: None,
         };
         assert_ne!(placement(&state, AI, &zone(2)), placement(&state, AI, &zone(3)));
         assert_eq!(placement(&state, AI, &zone(2)), placement(&state, AI, &zone(4)));

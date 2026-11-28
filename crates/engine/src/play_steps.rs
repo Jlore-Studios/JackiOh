@@ -716,8 +716,10 @@ pub fn validate_play(
     if is_permanent(state, &card) && crate::play_choices::needs_zone(state, &card) {
         zone = match &action.zone {
             None => default_zone_for(state, player, &card, &tributes),
+            // R5238002: on the side the zone names (step 1 accepted another side only for a card that
+            // plays on either side), where the placement gives that side control (`zones::place_on_field`).
             Some(named) => Some(ZoneSlot {
-                player,
+                player: named.player.unwrap_or(player),
                 row: named.row,
                 lane: named.lane,
             }),

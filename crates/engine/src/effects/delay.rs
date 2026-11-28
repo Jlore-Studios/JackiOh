@@ -960,6 +960,48 @@ pub fn watch_lane_this_turn(args: WatchLaneArgs) -> Effect {
     })
 }
 
+/// `watchSummons`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct WatchSummonsArgs {
+    pub step: String,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hook: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: Option<IndexMap<String, Value>>,
+    /// Only a Unit answers (FvH #4's "whenever you summon a Unit"); absent, every card that enters.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub units_only: Option<bool>,
+}
+
+/// R5237000 (FvH #4 KY's Unification Mandate): "for the rest of the game, whenever you summon a Unit,
+/// …" — a `never` watcher as `watch_lane_this_turn`'s but in every lane, re-entering the card's `step`
+/// (under `hook`, `RESUME_HOOK` by default) after each card of the controller's that enters one of their
+/// zones from now on (a permanent's resolved play, or a summon no play made), with `unitsOnly` a Unit's
+/// alone. The step's data holds `instanceId` (the card that entered) and `watcher`. The player's effect,
+/// no `self` (R127); `label` is its badge (R169).
+pub fn watch_summons(args: WatchSummonsArgs) -> Effect {
+    Effect::new("watchSummons", move |ctx| {
+        let mut resume = delayed_resume(
+            ctx,
+            &args.step,
+            args.data.clone().unwrap_or_default(),
+            args.hook.as_deref().unwrap_or(RESUME_HOOK),
+        );
+        resume.instance_id = None;
+        let player = ctx.controller;
+        crate::modifiers::add_summon_watch(
+            ctx,
+            player,
+            resume,
+            &args.label,
+            args.units_only.filter(|only| *only),
+        );
+    })
+}
+
 /// `watchFirstPlays`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]

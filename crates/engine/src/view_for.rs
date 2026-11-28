@@ -920,7 +920,8 @@ fn unit_view_of(
         attack: layers.attack,
         max_health: layers.max_health,
         health: layers.health,
-        keywords: shown_keywords(&keywords),
+        // R5238001: to the seat that does not control it, a secret grant's disguise besides its keywords.
+        keywords: crate::effects::secret_grant::keywords_shown_to(top, viewer, shown_keywords(&keywords)),
         armor: layers.armor,
         position: layers.position,
         counters: top.counters,
@@ -1315,6 +1316,8 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ModifierKind::DeathWatch { label, .. } => label.clone(),
         // R3570004: Stinkyscape+ #142's launch watcher, in the card's own words.
         ModifierKind::LaunchWatch { label, .. } => label.clone(),
+        // R5237000: FvH #4's summon watcher, in the card's own words.
+        ModifierKind::SummonWatch { label, .. } => label.clone(),
         // R1180001: Meditative+ #11 Living Mana Potion's "Spell Damage +N this turn".
         ModifierKind::SpellDamage { amount } => format!("You have Spell Damage +{amount} this turn"),
         // R1180004: Meditative+ #6 Bloodbloom's health price, and the Echo the Radiant one adds.
@@ -1348,6 +1351,26 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         // R4586006: Infinite Assault #33 Uncanny Valley's "Enemy Units have −N Attack until your
         // next turn", read from the affected side.
         ModifierKind::UnitsAttack { amount, .. } => format!("Your Units have {amount:+} Attack"),
+        // R5237007: FvH #73's "your Humans have +2/+2", the tags named, or "Units" for every one.
+        ModifierKind::UnitsStats {
+            attack, health, tags, ..
+        } => {
+            let named = tags
+                .as_ref()
+                .filter(|tags| !tags.is_empty())
+                .map(|tags| {
+                    tags.iter()
+                        .map(|tag| tag.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" and ")
+                })
+                .map_or_else(|| "Units".to_string(), |named| format!("{named} Units"));
+            format!("Your {named} have {attack:+}/{health:+}")
+        }
+        // R5237008: FvH #95's "your cards have <keyword>".
+        ModifierKind::CardsHaveKeyword { keyword, .. } => {
+            format!("Your cards have {}", crate::wire::keyword_key(keyword))
+        }
     }
 }
 

@@ -126,6 +126,7 @@ mod tests {
                 zone: Some(ZoneChoice {
                     row: Row::Backrow,
                     lane: 1,
+                    player: None,
                 }),
                 x: None,
                 embiggen: None,

@@ -567,6 +567,11 @@ fn priced(state: &GameState, instance: &CardInstance, options: CostOptions, flas
     let mut cost = override_.unwrap_or_else(|| printed_cost(state, instance))
         + instance.cost_mod
         + crate::hand_order::hand_aura_cost_delta(state, instance);
+    // R5237011, R5237012: under "log 2 utility" (FvH #92) the card's own cost counts as its bit length,
+    // before its player's discounts and price rules; an X cost (returned above) never does.
+    if crate::numbers::log2_utility_reaches_cost(state, instance) {
+        cost = crate::numbers::log2_utility(cost);
+    }
     // R65: a player's discounts price a play, and a play takes a card from its hand — or from its
     // graveyard, while a permission lets its player play it from there (E11, R454).
     let for_play = options.as_play == Some(true)

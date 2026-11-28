@@ -251,6 +251,80 @@ fn attack_lent_by_player(state: &GameState, instance: &CardInstance, immune: boo
         .sum()
 }
 
+/// R5237007 (FvH #73): the Attack and max Health its controller's `UnitsStats` lends a card — the live
+/// amounts on its controller's side whose `tags` (absent: every Unit) one of the card's tags is in
+/// (`query::tags_of`), added up — gated as `lent_by_player`, so Units arriving later read them as they
+/// land. One a Spell made passes the card by while it is `immune` to Spells.
+fn stats_lent_by_player(state: &GameState, instance: &CardInstance, immune: bool) -> (i32, i32) {
+    if !takes_player_lends(state, instance) {
+        return (0, 0);
+    }
+    let mods = &state.players[instance.controller].mods;
+    if !mods
+        .iter()
+        .any(|modifier| matches!(modifier.kind, ModifierKind::UnitsStats { .. }))
+    {
+        return (0, 0);
+    }
+    let tags = crate::query::tags_of(state, instance);
+    let mut lent = (0, 0);
+    for modifier in mods {
+        let ModifierKind::UnitsStats {
+            attack,
+            health,
+            tags: wanted,
+            from_spell,
+        } = &modifier.kind
+        else {
+            continue;
+        };
+        if !crate::mana::modifier_is_live(state, modifier) || (immune && *from_spell == Some(true)) {
+            continue;
+        }
+        if wanted
+            .as_ref()
+            .is_some_and(|wanted| !wanted.iter().any(|tag| tags.contains(tag)))
+        {
+            continue;
+        }
+        lent.0 += attack;
+        lent.1 += health;
+    }
+    lent
+}
+
+/// R5237008 (FvH #95): the keywords its controller's "your cards have <keyword>" (`CardsHaveKeyword`)
+/// lends a card: one on the field in any row, or in its controller's resolving zone, but a Vanilla,
+/// Dormant or buried one (R13, R1839000). R4508000: one a Spell made passes the card by while it is
+/// `immune` to Spells.
+fn lent_to_cards(state: &GameState, instance: &CardInstance, immune: bool) -> Vec<Keyword> {
+    let reached = match instance.zone {
+        Zone::Field { .. } => {
+            !(is_dormant(state, instance)
+                || crate::slumber::is_slumbering(instance)
+                || crate::zones::is_buried(state, instance))
+        }
+        Zone::Resolving { player } => player == instance.controller,
+        _ => false,
+    };
+    if !reached || instance.vanilla {
+        return Vec::new();
+    }
+    state.players[instance.controller]
+        .mods
+        .iter()
+        .filter_map(|modifier| match &modifier.kind {
+            ModifierKind::CardsHaveKeyword { keyword, from_spell }
+                if crate::mana::modifier_is_live(state, modifier)
+                    && !(immune && *from_spell == Some(true)) =>
+            {
+                Some(keyword.clone())
+            }
+            _ => None,
+        })
+        .collect()
+}
+
 /// Every permanent whose aura is in play, in lane order per side (§10.4 layer 5): a face-down card's
 /// sleeps (R1487000).
 pub(crate) fn aura_sources(state: &GameState) -> Vec<&CardInstance> {
@@ -376,6 +450,26 @@ pub fn spells_have_aura(keyword: Keyword) -> AuraHook {
             applies: Box::new(move |card: &CardInstance| {
                 matches!(card.zone, Zone::Resolving { player } if player == controller)
                     && crate::faces::card_type_of(state, card) == CardType::Spell
+            }),
+            mod_: StatMod {
+                keywords: Some(vec![keyword.clone()]),
+                ..StatMod::default()
+            },
+        }]
+    })
+}
+
+/// R5237008 (FvH #95, base face): "Aura: Your cards have <keyword>." — while the source acts, every card
+/// its controller controls on the field, in any row, or resolving has it, as `CardsHaveKeyword` lends
+/// it for the rest of the game. The test reads instance data only, as an aura's must.
+pub fn cards_have_aura(keyword: Keyword) -> AuraHook {
+    crate::script::aura_hook(move |args| {
+        let controller = args.self_.controller;
+        vec![AuraEntry {
+            applies: Box::new(move |card: &CardInstance| match card.zone {
+                Zone::Field { .. } => card.controller == controller,
+                Zone::Resolving { player } => player == controller,
+                _ => false,
             }),
             mod_: StatMod {
                 keywords: Some(vec![keyword.clone()]),
@@ -595,6 +689,10 @@ fn compute_layers_on(
     // R4594002: a Spell's lend passes a Unit Immune to Spells by too, read through the layers above.
     if !immutable {
         attack += attack_lent_by_player(state, instance, immune);
+        // R5237007: and the stats its controller's "your <tag> Units have +N/+N" lends it.
+        let (lent_attack, lent_health) = stats_lent_by_player(state, instance, immune);
+        attack += lent_attack;
+        max_health += lent_health;
     }
     // §10.4: an aura that sets attack to a value (Classic #88's Radiant "0 Attack") applies after every
     // other layer, so nothing above lifts it; with several, the last in aura order holds.
@@ -610,6 +708,8 @@ fn compute_layers_on(
     }
     if !immutable {
         listed.extend(lent_by_player(state, instance, immune));
+        // R5237008: and "your cards have <keyword>", which reaches every card its player controls.
+        listed.extend(lent_to_cards(state, instance, immune));
     }
     let mut keywords: Vec<Keyword> = with_brittle_count(&listed, instance);
 
@@ -648,6 +748,13 @@ fn compute_layers_on(
         })
         .collect();
     let final_keywords = as_set(&kept);
+
+    // R5237011, R5237012: under a "log 2 utility" aura (FvH #92) the finished Attack and max Health count
+    // as their bit length, after every layer, so a damaged Unit whose Health falls to 0 dies (§4.5).
+    if crate::numbers::log2_utility_reaches_stats(state, instance) {
+        attack = crate::numbers::log2_utility(attack);
+        max_health = crate::numbers::log2_utility(max_health);
+    }
 
     Layered {
         attack,

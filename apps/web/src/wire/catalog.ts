@@ -203,7 +203,13 @@ export type Keyword =
   /** #3535: a Unit its attackers slip past. */
   | { kind: "Evasive" }
   /** R373, R3548001: a Woozy N stamp: N is the count that drops by 1 at its owner's Start of turn; its view blurs. */
-  | { kind: "Woozy"; n: number };
+  | { kind: "Woozy"; n: number }
+  /** R5236000: N uses in all, shared by the card's Activates; a view's N is the count left (R5236031). */
+  | { kind: "Durability"; n: number }
+  /** R5236010: any hit that lowers the Unit's Health destroys it. */
+  | { kind: "Fragile" }
+  /** R5236020: N less Lucky on each luck roll; below 0 the worst roll is kept. */
+  | { kind: "Unlucky"; n: number };
 
 export type KeywordKind = Keyword["kind"];
 
@@ -250,6 +256,9 @@ export const KEYWORD_KINDS = [
   "Frenzy",
   "Evasive",
   "Woozy",
+  "Durability",
+  "Fragile",
+  "Unlucky",
 ] as const;
 
 /**

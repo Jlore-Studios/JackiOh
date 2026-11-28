@@ -121,14 +121,16 @@ mod r3543000_flexible {
             assert!(
                 zones.contains(&ZoneChoice {
                     row: Row::Units,
-                    lane
+                    lane,
+                    player: None,
                 }),
                 "unit lane {lane} offered"
             );
             assert!(
                 zones.contains(&ZoneChoice {
                     row: Row::Backrow,
-                    lane
+                    lane,
+                    player: None,
                 }),
                 "backrow lane {lane} offered"
             );
@@ -246,14 +248,16 @@ mod r3543000_flexible {
             assert!(
                 zones.contains(&ZoneChoice {
                     row: Row::Units,
-                    lane
+                    lane,
+                    player: None,
                 }),
                 "unit lane {lane} offered"
             );
             assert!(
                 zones.contains(&ZoneChoice {
                     row: Row::Backrow,
-                    lane
+                    lane,
+                    player: None,
                 }),
                 "backrow lane {lane} offered"
             );
@@ -331,7 +335,8 @@ mod r3543001_r3828000_flexible_field_spells {
             assert!(
                 zones.contains(&ZoneChoice {
                     row: Row::Backrow,
-                    lane
+                    lane,
+                    player: None,
                 }),
                 "backrow lane {lane} offered"
             );
