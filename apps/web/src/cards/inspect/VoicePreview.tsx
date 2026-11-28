@@ -33,13 +33,21 @@ function MicIcon(): ReactElement {
   );
 }
 
-const LINE_LABELS: Record<VoiceLineKind, string> = {
+/** Each hook's label in the mic dropdown, fed to `t()` (i18n.test.ts walks it). */
+export const LINE_LABELS: Readonly<Record<VoiceLineKind, string>> = {
   play: "Play",
   attack: "Attack",
   death: "Death",
   cast: "Cast",
   // R1088: the trigger's numbered lines (`trigger<n>`) preview through `playVoice` like the rest.
   trigger: "Trigger",
+  // R5188000: the recurring hooks.
+  startOfTurn: "Start of turn",
+  endOfTurn: "End of turn",
+  whenever: "Whenever",
+  activate: "Activate",
+  hurt: "Hurt",
+  hit: "Hit",
 };
 
 export function VoicePreview({ defId }: { defId: string }): ReactElement | null {

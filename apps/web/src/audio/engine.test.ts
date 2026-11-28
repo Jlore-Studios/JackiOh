@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CARD_EFFECT_DELAY_MS,
   EFFECT_PITCH_JITTER,
+  EFFECT_SEQUENCE_GAP_MS,
   GAIN_SMOOTHING_S,
   HIDDEN_DEF_ID,
   LOG_LIMIT,
@@ -1868,6 +1869,100 @@ describe("R655 a card's effect and a Unit picked up to attack", () => {
     expect(r.engine.playPickup("core-004")).toBe(true);
     await settle();
     expect(r.engine.log().map((c) => c.kind)).toEqual(["effect"]);
+  });
+
+  /** #91 with a list of effects on its Whenever, and a pool of attack lines. */
+  const SEQ_LINES: CardAudioTable = {
+    ...FX_LINES,
+    cards: {
+      ...FX_LINES.cards,
+      "core-091": {
+        kind: "unit",
+        whenever: { effect: ["thud", "rumble"] },
+        attack: { voice: "hustler", lines: ["One.", "Two.", "Three."] },
+      },
+    },
+  };
+
+  it("R5188000 an effect list plays in order, each after the last ends plus EFFECT_SEQUENCE_GAP_MS", () => {
+    const r = rig({ engine: { lines: SEQ_LINES, manifest: FX_MANIFEST, random: () => 0.5 } });
+    const audio = unlocked(r);
+    const bus = buses(audio);
+    audio.currentTime = 2;
+    const before = audio.nodes.length;
+
+    expect(r.engine.playEffect("core-091", "whenever", 100)).toBe(true);
+
+    const entries = effectEntries(r);
+    expect(entries.map((e) => e.effect)).toEqual(["thud", "rumble"]);
+    const [first, second] = entries.map((e) => e.delayMs);
+    expect(first).toBe(100);
+    // The second starts once the first has ended, and the gap after it.
+    expect(must(second, "the second's delay") - must(first, "the first's delay")).toBeGreaterThan(EFFECT_SEQUENCE_GAP_MS);
+    // Each effect is its own cue on the sfx bus, its sources starting at or after its own moment.
+    const cues = cueGains(audio, bus.sfx, before);
+    expect(cues).toHaveLength(2);
+    const sources = audio.nodes.slice(before).filter((n) => n.started);
+    entries.forEach((entry, i) => {
+      const own = sources.filter((source) => audio.reaches(source, must(cues[i], "its cue")));
+      expect(own.length, `${entry.effect}'s sources`).toBeGreaterThan(0);
+      for (const source of own) expect(must(source.startTime, "a start time")).toBeGreaterThanOrEqual(2 + entry.delayMs / 1000 - 1e-9);
+    });
+    expect(audio.violations).toEqual([]);
+
+    // The list is guarded as one, by its first effect: at once again, all of it is refused.
+    expect(r.engine.playEffect("core-091", "whenever")).toBe(false);
+    expect(effectEntries(r)).toHaveLength(2);
+  });
+
+  it("R5188000 a context that is not running logs each effect of a list as suspended, at its hook's moment", () => {
+    const r = rig({
+      factory: fakeContextFactory({ state: "suspended", resumeMode: "stay" }),
+      engine: { lines: SEQ_LINES, manifest: FX_MANIFEST },
+    });
+    const audio = unlocked(r);
+    const before = audio.nodes.length;
+    expect(r.engine.playEffect("core-091", "whenever", 40)).toBe(true);
+    expect(r.engine.log()).toEqual([
+      { kind: "effect", defId: "core-091", hook: "whenever", effect: "thud", delayMs: 40, atMs: 10_000, suspended: true },
+      { kind: "effect", defId: "core-091", hook: "whenever", effect: "rumble", delayMs: 40, atMs: 10_000, suspended: true },
+    ]);
+    expect(audio.nodes.length).toBe(before);
+  });
+
+  it("R5188000 a pick-up speaks one line of an attack pool by the engine's random", async () => {
+    const draws = [0.5, 0.9];
+    const r = rig({ engine: { lines: SEQ_LINES, manifest: FX_MANIFEST, random: () => draws.shift() ?? 0 } });
+    unlocked(r);
+
+    expect(r.engine.playPickup("core-091")).toBe(true);
+    await settle();
+    await elapse(r, PICKUP_MIN_GAP_MS);
+    expect(r.engine.playPickup("core-091")).toBe(true);
+    await settle();
+
+    expect(voiceEntries(r).map((e) => `${e.line}!${String(e.priority)}`)).toEqual([
+      `attack2!${String(VOICE_PRIORITY.pickup)}`,
+      `attack3!${String(VOICE_PRIORITY.pickup)}`,
+    ]);
+    expect(draws, "one draw per pick-up, none for a pitch it has no effect to vary").toEqual([]);
+    // A single line draws nothing: #4's attack speaks with its effect's one pitch draw alone.
+    let calls = 0;
+    const single = rig({
+      engine: {
+        lines: SEQ_LINES,
+        manifest: FX_MANIFEST,
+        random: () => {
+          calls += 1;
+          return 0.5;
+        },
+      },
+    });
+    unlocked(single);
+    expect(single.engine.playPickup("core-004")).toBe(true);
+    await settle();
+    expect(voiceEntries(single).map((e) => e.line)).toEqual(["attack"]);
+    expect(calls, "the effect's pitch alone").toBe(1);
   });
 });
 

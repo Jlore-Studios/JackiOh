@@ -13,7 +13,11 @@
 #   artist   the credited artist of the card's art, 60 characters at most
 #   voice    the card's spoken lines, each in letters, spaces and , . ' ! ? - only: a Unit's play,
 #            attack and death, anything else's cast, and for a card whose effect summons a trigger
-#            list (R1088). Each needs its hook, with the voice that speaks it, in card-audio.json5.
+#            list (R1088). Since R5188000 also the recurring hooks' lines, under the hook's name:
+#            startOfTurn, endOfTurn, whenever, activate, hit, and a Unit's hurt. Any hook's line may
+#            be a list, a pool the client picks one of each time ([first, second, ...]). A line added
+#            since R5188001 is four words at most. Each needs its hook, with the voice that speaks it,
+#            in card-audio.json5.
 #   zh       name, base and radiant, each face with exactly the {key}s its English face has, and
 #            previews (English label template: Chinese one) where the card's script previews one
 #   emotes   per portrait id, its five lines: greetings, wellPlayed, oops, thanks and threaten
