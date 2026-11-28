@@ -21129,15 +21129,8 @@
       "taken_asks": []
     },
     "5230": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46090507495",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-28T01:04:10Z",
-        "until": "2026-11-28T01:34:10Z"
-      },
       "difficulty_by": {
         "at": "2026-11-28T01:04:01Z",
         "difficulty": "medium",
@@ -21156,10 +21149,9 @@
         "reason": "planned on sonnet",
         "trail": "rd-ux.test.tsx\"}\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/test/ux/board-ux.test.tsx; sed -n 200,260p apps/web/src/test/ux/board-ux.test.tsx; wc -l apps/web/src/game/Game.test.tsx apps/web/src/game/Game.render.test.tsx\"}\n- Bash: {\"command\": \"sed -n 1,140p apps/web/src/game/Game.test.tsx\"}\n- Bash: {\"command\": \"cd apps/web/src; sed -n 1,90p test/ux/attack-pickup.test.tsx; grep -n \\\"hand-card\\\" game/Game.test.tsx | head -20\"}\n- Bash: {\"command\": \"cd apps/web/src; sed -n 1,80p test/ux/drag-continue.test.tsx; grep -n \\\"onInteraction\\\\|plan.lifted\\\" game/drag/DragLayer.tsx | head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5230 && sed -n 80,140p apps/web/src/test/ux/drag-continue.test.tsx; sed -n 90,200p apps/web/src/test/ux/attack-pickup.test.tsx\"}\n- Bash: {\"command\": \"sed -n 40,80p apps/web/src/settings/SettingsPanel.tsx; grep -n \\\"dragToPlay\\\" apps/web/src/settings/*.ts | head; git status --short | head\"}\n- Bash: {\"command\": \"grep -rn \\\"hasMovesLeft\\\\|autoEndTurn\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"test\\\\.\\\" | head -20; grep -rn \\\"B25\\\" spec/*.md docs/polish/7-mobile-ux.md 2>/dev/null | \u2026\n- Bash: {\"command\": \"grep -rn \\\"B25\\\" spec --include=*.md -l | head; grep -rn \\\"data-turn-state\\\\|\\\\\\\"ready\\\\\\\"\\\\|'ready'\\\" apps/web/src --include=*.ts --include=*.tsx -l | head -20; grep -n \\\"turn-state=\\\\\\\u2026\n- Bash: {\"command\": \"cat spec/rulings/R5014000.md 2>/dev/null | head -40; grep -rn \\\"B25\\\" spec/history/541.md | head -5; grep -rln \\\"turn-state\\\\|hasMovesLeft\\\" spec/rulings spec/10-engine-guide spec/pendin\u2026\n- Bash: {\"command\": \"sed -n 700,730p docs/polish/7-mobile-ux.md; sed -n 1,60p apps/web/src/test/ux/glow-render.test.tsx\"}\n- Bash: {\"command\": \"grep -rln \\\"Confirm end turn\\\\|confirmEndTurn\\\\|confirm end turn\\\" spec/rulings spec/*.md spec/10-engine-guide spec/09-architecture spec/pending 2>/dev/null | head; grep -rln \\\"turn-stat\u2026\n- Bash: {\"command\": \"sed -n 1,60p apps/web/src/test/ux/glow.test.ts; grep -n \\\"turn-state\\\\|data-turn-state\\\" -r apps/web/src --include=*.tsx --include=*.ts | grep -v \\\"Board.test\\\\|board-ux\\\" | head\"}\n- Bash: {\"command\": \"grep -n -i \\\"confirm end turn\\\\|confirmEndTurn\\\" spec/rulings/R5174000.md spec/rulings/R4680000.md spec/rulings/R4965000.md spec/rulings/R0093.md | cut -c1-400; sed -n 836,880p apps/web/\u2026\n- Bash: {\"command\": \"grep -rn \\\"<Board\\\\b\\\" apps/web/src --include=*.tsx | grep -v \\\"test\\\\.\\\\|\\\\.test\\\" | head; grep -n \\\"IDLE\\\\b\\\" apps/web/src/game/Game.tsx | head -5; sed -n 40,70p apps/web/src/game/Game\u2026\n- Bash: {\"command\": \"grep -rn \\\"BoardProps\\\" --include=*.md --include=*.rs --include=*.ts --include=*.tsx . 2>/dev/null | grep -v node_modules | grep -v \\\"^./apps/web/src/game/Board.tsx\\\\|^./target\\\" | head \u2026\n- Bash: {\"command\": \"grep -n \\\"pointerDown\\\\|elementsFromPoint\\\\|fireEvent.click(screen.getByTestId(\\\\\\\"hand\\\\|describe(\\\" apps/web/src/game/Game.test.tsx | head -60; sed -n 1,40p apps/web/src/game/Game.rend\u2026\n- Bash: {\"command\": \"grep -n \\\"requestAnimationFrame\\\\|setTimeout\\\\|setInterval\\\" apps/web/src/game/drag/DragLayer.tsx | head; grep -n \\\"export function baseView\\\" -A30 apps/web/src/test/fixtures.ts | head -\u2026\n- Bash: {\"command\": \"sed -n 214,232p apps/web/src/game/Game.test.tsx; sed -n 784,860p apps/web/src/game/Game.test.tsx\"}\n- Bash: {\"command\": \"grep -rn \\\"turn-state\\\\|only move\\\" spec/rulings/R4734000.md spec/rulings/R5174000.md spec/rulings/R4680000.md spec/rulings/R4965000.md spec/rulings/R0093.md | cut -c1-500; grep -rln \\\"E\u2026\n- Bash: {\"command\": \"grep -n \\\"B25\\\\|confirm\\\" spec/10-engine-guide/*.md spec/09-architecture/*.md 2>/dev/null | head; grep -n \\\"^type Interaction\\\\|stage:\\\" apps/web/src/game/actions.ts | head -20; grep -n \u2026\n- Bash: {\"command\": \"grep -n \\\"End turn\\\" spec/10-engine-guide/10.10-client-rendering.md | cut -c1-600; sed -n 40,70p apps/web/src/game/Game.tsx\"}\n- Bash: {\"command\": \"grep -n -i \\\"Patch:\\\\|fragment\\\\|--visual\\\\|client\\\" docs/issues-and-patches.md | cut -c1-300 | head -50\"}\n- Bash: {\"command\": \"sed -n 118,135p docs/issues-and-patches.md | cut -c1-400; sed -n 318,334p docs/issues-and-patches.md | cut -c1-400\"}\n- Bash: {\"command\": \"grep -rn \\\"confirmEndTurn\\\" apps/web/src --include=*.ts --include=*.tsx | grep -v \\\"test\\\\.\\\\|settings/\\\" | head; grep -rn \\\"waiting\\\\b\\\" apps/web/src/game/board.css | head -5; sed -n 26\u2026\n- Bash: {\"command\": \"grep -n \\\"data-selected\\\\|data-lifted\\\" apps/web/src/game/Card.tsx apps/web/src/game/Hand.tsx | head; grep -n \\\"export function card\\\\b\\\" -A22 apps/web/src/test/fixtures.ts | head -40; g\u2026\n- Bash: {\"command\": \"sed -n 1,30p apps/web/src/game/Hand.tsx; grep -n \\\"dragToPlay\\\" apps/web/src/game/Game.tsx apps/web/src/game/Hand.tsx apps/web/src/game/drag/DragLayer.tsx | head\"}\n- Bash: {\"command\": \"sed -n 340,415p apps/web/src/game/drag/DragLayer.tsx\"}\n- Bash: {\"command\": \"grep -n \\\"export function onControl\\\" -A40 apps/web/src/game/actions.ts | head -70; grep -n \\\"function handleControl\\\\|const handleControl\\\" -A25 apps/web/src/game/Game.tsx | head -40\"}\n- bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5230 && grep -rn \\\"polish/7-mobile-ux\\\\|docs/polish\\\" crates/tools/tests crates/tools/src scripts apps/web/src --include=*.rs --include=*.sh --includ\u2026\n- tool error: <tool_use_error>Error: No such tool available: bash. Tool names are case-sensitive: call Bash instead.</tool_use_error>\n- Bash: {\"command\": \"grep -rln \\\"polish/7-mobile-ux\\\" crates scripts apps/web/src e2e bot 2>/dev/null | head -8; grep -n \\\"docs/\\\" scripts/ci-scope.sh | head\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5230/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"Client-only (Game.tsx, Board.tsx, contract.ts, tests): no engine, AI\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Client-only change in apps/web (Game.tsx, Board.tsx, contract.ts and tests): no engine, AI, migration, cross-crate contract or 40 files, so none of the five hard lines holds.\"} --> ## Goal On the player's own turn, End turn's `data-turn-state` and Confirm \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-28T00:55:52Z",
       "owner_why": "it plans it",
@@ -21172,9 +21164,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-28T00:51:57Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46090507495",
+      "run_id": "pending:b46f99d0-1795827953",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T00:55:52Z",
+      "started_at": "2026-11-28T01:06:15Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -21381,9 +21373,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T00:56:23Z",
+    "at": "2026-11-28T01:06:15Z",
     "url": "",
-    "what": "plan #5231 on claude-8"
+    "what": "build #5230 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-28T00:50:23Z",
