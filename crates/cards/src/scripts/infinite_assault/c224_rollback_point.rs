@@ -9,7 +9,8 @@
 //! (`query_cost`), the list stable-sorted highest first; a tie at the cut is drawn from the match
 //! rng, and with no tie no number is drawn (R129). Each is a fresh copy on its printed face, most
 //! expensive first, with Rush on the Radiant face. With nothing to summon, nothing is drawn and
-//! the cursor stands.
+//! the cursor stands. Issue #5158: the Radiant face once summoned Radiant copies
+//! (`script_before_printed_face`, R767000).
 //!
 //! Engine: `recursion_log::deaths_this_game`, `summon` (R4594005). Built by C10 (#4594).
 
@@ -20,7 +21,9 @@ pub const ID: &str = "infiniteassault-224";
 /// How many of the dead come back.
 const COPIES: i32 = 3;
 
-fn rollback(radiant: bool) -> Script {
+/// `copies_radiant`: whether each copy is summoned on the Radiant face, which only the script kept for the
+/// games before issue #5158 does.
+fn rollback(radiant: bool, copies_radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             // The controller's dead, highest printed cost first (a stable sort keeps the oldest of
@@ -54,7 +57,10 @@ fn rollback(radiant: bool) -> Script {
             chosen
                 .into_iter()
                 .map(|def_id| {
-                    let mut args = json!({ "defId": def_id, "radiant": radiant });
+                    let mut args = json!({ "defId": def_id });
+                    if copies_radiant {
+                        args["radiant"] = json!(true);
+                    }
                     if radiant {
                         args["keywords"] = json!([{ "kind": "Rush" }]);
                     }
@@ -67,7 +73,13 @@ fn rollback(radiant: bool) -> Script {
 }
 
 pub fn script() -> CardScripts {
-    CardScripts { base: rollback(false), radiant: rollback(true) }
+    CardScripts { base: rollback(false, false), radiant: rollback(true, false) }
+}
+
+/// R767000: what it ran before issue #5158, the Radiant face summoning Radiant copies (doubled stats and
+/// their Radiant text); `KEPT_SCRIPTS` folds the games before it under this.
+pub fn script_before_printed_face() -> CardScripts {
+    CardScripts { base: rollback(false, false), radiant: rollback(true, true) }
 }
 
 // IA #224 Rollback Point — SPEC §8.13 row 224 (R4594005).
@@ -95,6 +107,19 @@ mod tests {
             .flatten()
             .flatten()
             .map(|card| card.def_id.clone())
+            .collect()
+    }
+
+    /// Lanes 1 and 2 as `(radiant, attack, max health, has Rush)`.
+    fn copies(s: &Scenario) -> Vec<(bool, i32, i32, bool)> {
+        [1, 2]
+            .into_iter()
+            .map(|lane| {
+                let unit = s.unit_at(P1, lane);
+                let view = unit_view(s.state(), &unit);
+                let rush = view.keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Rush);
+                (unit.radiant, view.attack, view.max_health, rush)
+            })
             .collect()
     }
 
@@ -133,6 +158,13 @@ mod tests {
             }
         }
 
+        /// R4594005: each copy is a fresh one on its printed face, with no Rush.
+        #[test]
+        fn r4594005_the_copies_are_on_their_printed_face_without_rush() {
+            let s = wipe_and_point(false, "rollback-base");
+            assert_eq!(copies(&s), vec![(false, 6, 6, false), (false, 5, 5, false)]);
+        }
+
         #[test]
         fn r4594005_nothing_died_nothing_drawn() {
             let mut s = scenario(json!({
@@ -158,6 +190,29 @@ mod tests {
                 let view = unit_view(s.state(), &s.unit_at(P1, lane));
                 assert!(view.keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Rush));
             }
+        }
+
+        /// R4594005, issue #5158: the Radiant face adds only Rush; each copy is on its printed face, not
+        /// Radiant, with its printed stats.
+        #[test]
+        fn r4594005_the_copies_are_on_their_printed_face_with_rush() {
+            let s = wipe_and_point(true, "rollback-radiant");
+            assert_eq!(copies(&s), vec![(false, 6, 6, true), (false, 5, 5, true)]);
+        }
+    }
+
+    mod before_printed_face {
+        use super::super::script_before_printed_face;
+        use super::*;
+
+        /// R767000, R4594005: the script kept for the games before issue #5158 summoned Radiant copies
+        /// on the Radiant face, with doubled stats (a stand-in's Radiant fallback).
+        #[test]
+        fn r767000_r4594005_a_game_before_issue_5158_summons_radiant_copies_on_the_radiant_face() {
+            let kept = crate::under_kept(ID, script_before_printed_face(), || {
+                copies(&wipe_and_point(true, "rollback-radiant"))
+            });
+            assert_eq!(kept, vec![(true, 12, 12, true), (true, 10, 10, true)]);
         }
     }
 }
