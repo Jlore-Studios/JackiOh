@@ -46522,7 +46522,7 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-28T08:42:34Z",
+    "idle_since": null,
     "last_area": "client",
     "last_run": "2026-11-28T08:42:34Z",
     "provider": null,
