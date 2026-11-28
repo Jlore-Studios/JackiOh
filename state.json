@@ -43796,7 +43796,12 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {},
+    "auto": {
+      "5226": {
+        "at": "2026-11-28T00:33:15Z",
+        "why": "Confirmed and offered exactly as #5157's rejection asked: `gain_keyword_for_good` (`crates/engine/src/effects/tune.rs:1390`-`:1411`) writes `tuning.add_keywords` with no `immutable_keeps_off` check, while `lose_keyword` beside it (`:429`) and every grant in `buff.rs` (`:252`, `:275`, `:581`) have one, so Last Hurrah (`c037_last_hurrah.rs:42`-`:50`, `:80`) gives an Immutable hand card Flashback aga"
+      }
+    },
     "auto_approved": [
       "2026-11-26T23:19:32Z",
       "2026-11-27T03:08:24Z",
