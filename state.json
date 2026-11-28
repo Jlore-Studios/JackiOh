@@ -45315,14 +45315,6 @@
     "requested": false,
     "run_id": null,
     "running": {
-      "2": {
-        "area": "ai",
-        "count": 2,
-        "last_run": "2026-11-28T00:11:25Z",
-        "provider": "claude-8",
-        "run_id": "46086552799",
-        "taken_asks": []
-      },
       "4": {
         "area": "client",
         "count": 2,
