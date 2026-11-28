@@ -893,8 +893,9 @@ mod r4290000_splash_and_overflow {
                 (1, true)
             );
         }
-        // Three instances of 2 past a 1-health unit, each less Armor 1 (R176).
-        assert_eq!(forecast.overflow.map(|overflow| overflow.dealt), Some(3));
+        // Three instances of 2 past a 1-health unit, each its own hit (R176): the first meets Armor 1
+        // and wears it off, so the other two land whole (R5183000): 1 + 2 + 2.
+        assert_eq!(forecast.overflow.map(|overflow| overflow.dealt), Some(5));
     }
 
     #[test]

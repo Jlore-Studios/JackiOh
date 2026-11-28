@@ -82,25 +82,38 @@ afterEach(() => {
 
 /**
  * The action's script run as GitHub runs a composite step's `shell: bash` (`-e`, `-o pipefail`), with a
- * stand-in curl that answers each request with the next of `answers`: `gave-up` as curl answers a
- * request it gave up on (its -w line with status 000, an error, exit 52), or an HTTP status, with one
- * card for 200 and none for any other.
+ * stand-in curl that answers each request for the statistics with the next of `answers`: `gave-up` as curl
+ * answers a request it gave up on (its -w line with status 000, an error, exit 52), or an HTTP status,
+ * with one card for 200 and none for any other. It answers each ask of `/api/stats/loading` (R5186000)
+ * with the next of `loading`, `false` once they run out.
  */
-function check(answers: string[]): { status: number | null; out: string } {
+function check(answers: string[], loading: string[] = []): { status: number | null; out: string; loadingAsks: number } {
   const root = mkdtempSync(join(tmpdir(), "stats-check-"));
   roots.push(root);
   writeFileSync(join(root, "answers"), `${answers.join("\n")}\n`);
   writeFileSync(join(root, "asked"), "0");
+  writeFileSync(join(root, "loading"), `${loading.join("\n")}\n`);
+  writeFileSync(join(root, "loading-asked"), "0");
   writeFileSync(join(root, "check.sh"), SCRIPT);
   const curl = join(root, "curl");
   writeFileSync(
     curl,
     `#!/bin/sh
 body=""
+url=""
 while [ "$#" -gt 0 ]; do
   if [ "$1" = -o ]; then body=$2; fi
+  url=$1
   shift
 done
+case $url in
+  */api/stats/loading)
+    loaded=$(( $(cat "${root}/loading-asked") + 1 ))
+    echo "$loaded" > "${root}/loading-asked"
+    printf '{"loading":%s}' "$(sed -n "$loaded"p "${root}/loading" | grep . || echo false)"
+    exit 0
+    ;;
+esac
 asked=$(( $(cat "${root}/asked") + 1 ))
 echo "$asked" > "${root}/asked"
 answer=$(sed -n "$asked"p "${root}/answers")
@@ -126,10 +139,17 @@ printf '%s 1.5' "$answer"
       STATS_PATH: setting("STATS_PATH"),
       ATTEMPTS: setting("ATTEMPTS"),
       PAUSE_SECONDS: "0",
+      LOADING_PATH: setting("LOADING_PATH"),
+      LOAD_WAIT_SECONDS: setting("LOAD_WAIT_SECONDS"),
+      LOAD_POLL_SECONDS: "0",
       GITHUB_STEP_SUMMARY: join(root, "summary"),
     },
   });
-  return { status: result.status, out: `${result.stdout}${result.stderr}` };
+  return {
+    status: result.status,
+    out: `${result.stdout}${result.stderr}`,
+    loadingAsks: Number(readFileSync(join(root, "loading-asked"), "utf8")),
+  };
 }
 
 describe("the card statistics' check, run as GitHub runs it (bash -e)", () => {
@@ -145,6 +165,15 @@ describe("the card statistics' check, run as GitHub runs it (bash -e)", () => {
       "::warning::https://staging.example/api/stats/cards?mode=all, attempt 1 of 2: HTTP 000 after 62.0s, no body; curl: (52) Empty reply from server",
     );
     expect(out).toContain("https://staging.example/api/stats/cards?mode=all: 1 cards in 1.5s (attempt 2 of 2)");
+  });
+
+  it("R5186000 follows a load the server reports before its next attempt, as the page does", () => {
+    const { status, out, loadingAsks } = check(["gave-up", "200"], ["true", "true", "false"]);
+    expect(status).toBe(0);
+    expect(setting("LOADING_PATH")).toBe("/api/stats/loading");
+    expect(out).toContain("https://staging.example: the card statistics are still loading, 0s waited of 600s");
+    expect(out).toContain("1 cards in 1.5s (attempt 2 of 2)");
+    expect(loadingAsks).toBe(3);
   });
 
   it("names the last failure when every attempt fails, with an error from curl or without one", () => {

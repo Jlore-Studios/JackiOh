@@ -507,6 +507,11 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             "{whose} hero gained {amount} Armor",
             vec![p("whose", capitalised(&whose(*player))), p("amount", *amount)],
         ),
+        // R5183000: a hit wore the hero's own Armor down by 1, to the number on its badge.
+        GameEvent::ArmorWorn { player, armor } => s(
+            "{whose} hero's Armor wore down to {armor}",
+            vec![p("whose", capitalised(&whose(*player))), p("armor", *armor)],
+        ),
         // R860: the line names only that a secret is held, never the choice.
         GameEvent::SecretChosen { player, .. } => s("{seat} kept a secret", vec![p("seat", seat(*player))]),
         // R864: revealed, the choice is public history.
@@ -689,7 +694,7 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 CounterKind::Brittle => "{target} brittle counters: {value}",
                 CounterKind::Burn => "{target} burn counters: {value}",
                 CounterKind::Toxic => "{target} toxic counters: {value}",
-                CounterKind::Tipsy => "{target} Tipsy counter: {value}",
+                CounterKind::Woozy => "{target} Woozy counter: {value}",
                 CounterKind::Warhero => "Warhero Tokens are worth {value} Credits",
             };
             // R3548002: the game-wide worth, which names no card.

@@ -136,8 +136,8 @@ export const VOICE_MAX_WORDS = {
 export const VOICE_NEW_LINE_MAX_WORDS = 4;
 /**
  * R5188001: the sound tables (`card-audio.json5`, `voice-text.json`, `voice-manifest.json`), each gzipped
- * at Node `zlib`'s defaults and summed, stay within this. They measured 90,954 bytes on `41323abeda`,
- * and about 142,000 in a simulation of the card parts' growth: 3,000 hook entries and 1,331 four-word
+ * at Node `zlib`'s defaults and summed, stay within this. They measured 90,954 bytes on `41323abeda`
+ * (92,801 once #5190's spell-verb effects landed), and about 142,000 in a simulation of the card parts' growth: 3,000 hook entries and 1,331 four-word
  * lines with their manifest entries. The cap leaves room for that and little more.
  */
 export const SOUND_TABLES_GZIP_BUDGET_BYTES = 18 * 8192;

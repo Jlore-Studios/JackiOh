@@ -747,8 +747,8 @@ pub fn complete_draw(
         return DrawOutcome::Cast;
     }
 
-    // R3548001: the stamp a Tipsy counter now up lays on the drawn card, before it reaches the hand.
-    card.tipsy = crate::tipsy::stamp_for(sink.state, player);
+    // R3548001: the stamp a Woozy counter now up lays on the drawn card, before it reaches the hand.
+    card.woozy = crate::woozy::stamp_for(sink.state, player);
     if add_to_hand(sink, &mut card) == AddToHandOutcome::Burned {
         DrawOutcome::Burned
     } else {
@@ -908,11 +908,14 @@ pub fn draw_one(sink: &mut EngineSink, player: PlayerId, link: Option<ChainLinkO
                 flags: None,
             },
         );
-        // The pipeline's report is the last thing the hit emitted (`damage::land_hit`).
-        let at = sink.events.len().saturating_sub(1);
+        // The pipeline's report is the last thing the hit emitted (`damage::land_hit`) but the wear
+        // of the Armor that took it, reported after it (`armorWorn`, R5183000).
+        let at = (before..sink.events.len())
+            .rev()
+            .find(|at| !matches!(sink.events.get(*at), Some(GameEvent::ArmorWorn { .. })));
         if dealt <= 0
             && sink.state.result.is_none()
-            && at >= before
+            && let Some(at) = at
             && matches!(sink.events.get(at), Some(GameEvent::DamageAbsorbed { .. }))
         {
             crate::triggers::order_report(sink, at);

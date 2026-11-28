@@ -102,14 +102,16 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
             ]
         );
 
-        // A hero's Armor takes its part the same way (§4.4 step 2, R124).
+        // A hero's Armor takes its part the same way (§4.4 step 2, R124), and the hit wears 1 off it
+        // (R5183000).
         state.players.p2.hero.armor = 2;
         let (dealt, events) = hit_alone(&mut state, None, Aim::Hero(P2), 5, None);
         assert_eq!(dealt, 3);
         assert_eq!(
             events,
             vec![
-                json!({ "type": "damage", "sourceId": null, "targetId": "hero-p2", "amount": 3, "combat": false, "absorbed": 2 })
+                json!({ "type": "damage", "sourceId": null, "targetId": "hero-p2", "amount": 3, "combat": false, "absorbed": 2 }),
+                json!({ "type": "armorWorn", "player": "p2", "armor": 1 }),
             ]
         );
 
@@ -249,6 +251,8 @@ mod r1360_the_damage_event_carries_the_armor_s_part {
                 json!({ "type": "damage", "sourceId": source.id, "targetId": target.id, "amount": 3, "combat": false, "absorbed": 1 }),
                 // R2783001: the excess says it is Trample's.
                 json!({ "type": "damage", "sourceId": source.id, "targetId": "hero-p2", "amount": 4, "combat": false, "absorbed": 2, "via": "Trample" }),
+                // R5183000: the excess met p2's Armor, which wears.
+                json!({ "type": "armorWorn", "player": "p2", "armor": 1 }),
             ]
         );
     }
@@ -302,7 +306,9 @@ mod r1361_a_hit_armor_takes_whole_is_reported_and_answered_by_nothing {
         assert_eq!(
             events,
             vec![
-                json!({ "type": "damageAbsorbed", "sourceId": leech.id, "targetId": "hero-p2", "absorbed": 3, "combat": false })
+                json!({ "type": "damageAbsorbed", "sourceId": leech.id, "targetId": "hero-p2", "absorbed": 3, "combat": false }),
+                // R5183000: a hit the Armor takes whole wears it too.
+                json!({ "type": "armorWorn", "player": "p2", "armor": 4 }),
             ]
         );
         assert_eq!(state.players.p1.hero.health, 20);
@@ -621,6 +627,8 @@ mod r1360_r1361_r1362_the_reports_leave_the_state_as_it_was {
                 vec![
                     json!({ "type": "fatigue", "player": "p1", "count": 1, "amount": 1 }),
                     json!({ "type": "damageAbsorbed", "sourceId": null, "targetId": "hero-p1", "absorbed": 1, "combat": false }),
+                    // R5183000: the Armor wears, a report that takes no number.
+                    json!({ "type": "armorWorn", "player": "p1", "armor": 2 }),
                 ]
             );
             assert_eq!(sink.state.next_seq, seq + 2);

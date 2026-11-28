@@ -88,7 +88,7 @@ export type { StarscapeNodeView } from "./generated/StarscapeNodeView.ts";
 export type { StarscapeView } from "./generated/StarscapeView.ts";
 export type { Tag } from "./generated/Tag.ts";
 export type { TallyView } from "./generated/TallyView.ts";
-export type { TipsyBlur } from "./generated/TipsyBlur.ts";
+export type { WoozyBlur } from "./generated/WoozyBlur.ts";
 export type { TrampleOverflow } from "./generated/TrampleOverflow.ts";
 export type { Tuning } from "./generated/Tuning.ts";
 export type { UnitView } from "./generated/UnitView.ts";
@@ -194,6 +194,8 @@ export const GAME_EVENT_TYPES = [
   "damageNullified",
   // Issue #3857: a hero kept Armor (R3857000).
   "armorGained",
+  // Issue #5183: a hit wore a hero's Armor down by 1 (R5183000).
+  "armorWorn",
   // Issue #3925: a resolution loop reached the loop cap (R3925000).
   "loopCapped",
   "jadeChanged",

@@ -785,23 +785,26 @@ mod heroic_power_the_powers_r753_r758 {
         assert!(active_units_of(&survived.state, P1).is_empty());
     }
 
+    /// R5183001: Armor Up's Armor is the hero's to keep, there when its next turn begins.
     #[test]
-    fn r757_armor_ups_2_armor_holds_through_the_opponents_turn_and_is_gone_when_yours_begins() {
+    fn r757_r5183001_armor_ups_armor_is_the_heros_own_and_holds_past_its_next_turn() {
         let mut state = game("r757-armor");
         let card = powered(&mut state, "armor", false, 1);
         keep_turn(&mut state);
         let with_armor = use_power(&state, &card, None).state;
         assert_eq!(hero_armor_of(&with_armor, P1), ARMOR_UP_ARMOR);
+        assert_eq!(with_armor.players.p1.hero.armor, ARMOR_UP_ARMOR);
         let their_turn = act_result(&with_armor, json!({ "type": "endTurn", "playerId": "p1" })).state;
         assert_eq!(their_turn.active, P2);
         assert_eq!(hero_armor_of(&their_turn, P1), ARMOR_UP_ARMOR);
         let mine = act_result(&their_turn, json!({ "type": "endTurn", "playerId": "p2" })).state;
         assert_eq!(mine.active, P1);
-        assert_eq!(hero_armor_of(&mine, P1), 0);
+        assert_eq!(hero_armor_of(&mine, P1), ARMOR_UP_ARMOR);
     }
 
+    /// R5183001: Tank Up keeps its Armor and refreshes no more: the card keeps its power, used.
     #[test]
-    fn r757_tank_up_keeps_4_armor_then_refreshes_into_a_different_power_that_may_be_used_this_turn() {
+    fn r757_r5183001_tank_up_keeps_its_armor_and_its_power_used_this_turn() {
         let mut state = game("r757-tank-up");
         let card = powered(&mut state, "armor", true, 1);
         keep_turn(&mut state);
@@ -810,23 +813,23 @@ mod heroic_power_the_powers_r753_r758 {
         let after = tanked.state;
         assert_eq!(after.players.p1.hero.armor, TANK_UP_ARMOR);
         let changed = on_field_now(&after, &card.id);
-        let next = power_of(&changed).expect("a new power");
-        assert_ne!(name_of(next.name), "armor");
-        assert_eq!(uses_this_turn(&after, &changed), 0);
-        assert!(!used_this_turn(&after, &changed));
+        let power = power_of(&changed).expect("its power");
+        assert_eq!(name_of(power.name), "armor");
+        assert_eq!(uses_this_turn(&after, &changed), 1);
+        assert!(used_this_turn(&after, &changed));
         // The armor stays into the next turn: Tank Up's is the hero's own (R757).
         let later = act_result(
             &act_result(&after, json!({ "type": "endTurn", "playerId": "p1" })).state,
             json!({ "type": "endTurn", "playerId": "p2" }),
         )
         .state;
-        assert!(hero_armor_of(&later, P1) >= TANK_UP_ARMOR);
+        assert_eq!(hero_armor_of(&later, P1), TANK_UP_ARMOR);
     }
 
     /// R3857000: Tank Up's kept Armor is reported once, its amount and the hero's Armor after, to both
-    /// seats; Armor Up's temporary Armor is a modifier (`modifierChanged`) and reports no gain.
+    /// seats; R5183001: so is Armor Up's, kept too.
     #[test]
-    fn r3857000_tank_up_reports_its_kept_armor_to_both_seats_and_armor_up_reports_none() {
+    fn r3857000_r5183001_tank_up_and_armor_up_report_their_kept_armor() {
         let mut state = game("r3857000-tank-up");
         let card = powered(&mut state, "armor", true, 1);
         keep_turn(&mut state);
@@ -856,7 +859,12 @@ mod heroic_power_the_powers_r753_r758 {
         assert_eq!(armored.error, None);
         assert_eq!(
             events_json(&armored.events, GameEventType::ArmorGained),
-            Vec::<Value>::new()
+            vec![json!({
+                "type": "armorGained",
+                "player": "p1",
+                "amount": ARMOR_UP_ARMOR,
+                "armor": ARMOR_UP_ARMOR,
+            })]
         );
     }
 

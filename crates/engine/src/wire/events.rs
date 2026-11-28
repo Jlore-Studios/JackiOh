@@ -39,8 +39,9 @@ string_union! {
         Burn = "burn",
         /// R3540000: a Unit's or a hero's Toxic.
         Toxic = "toxic",
-        /// R3548000: a player's Tipsy counter.
-        Tipsy = "tipsy",
+        /// R3548000: a player's Woozy counter, sent under the keyword's old name, so the events are
+        /// what they were before the rename (R5181000).
+        Woozy = "tipsy",
         /// R3548002: the game-wide worth of every Warhero Token.
         Warhero = "warhero",
     }
@@ -1110,6 +1111,14 @@ pub enum GameEvent {
         amount: i32,
         armor: i32,
     },
+    /// R5183000: a hit that `player`'s hero's Armor took something off (§4.4 step 2) wore 1 off the
+    /// Armor the hero holds itself (`damage::wear_hero_armor`); `armor` is its Armor after, as the view's
+    /// badge reads it (`damage::hero_armor_of`, §10.8). A report nothing answers: it takes no number in
+    /// R68's order. Public: a player and a number.
+    ArmorWorn {
+        player: PlayerId,
+        armor: i32,
+    },
     /// R3925000, §10.3: the interaction `player` began reached `RESOLUTION_EVENT_CAP` events, so its
     /// resolution loop stopped: the rest was dropped and card text is off until the next interaction
     /// (`loop_cap.rs`). A report nothing answers. Public: a seat.
@@ -1489,6 +1498,7 @@ string_union! {
         DamageAbsorbed = "damageAbsorbed",
         DamageNullified = "damageNullified",
         ArmorGained = "armorGained",
+        ArmorWorn = "armorWorn",
         LoopCapped = "loopCapped",
         JadeChanged = "jadeChanged",
         SecretChosen = "secretChosen",
@@ -1812,6 +1822,7 @@ impl GameEvent {
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
             GameEvent::DamageNullified { .. } => GameEventType::DamageNullified,
             GameEvent::ArmorGained { .. } => GameEventType::ArmorGained,
+            GameEvent::ArmorWorn { .. } => GameEventType::ArmorWorn,
             GameEvent::LoopCapped { .. } => GameEventType::LoopCapped,
             GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
             GameEvent::SecretChosen { .. } => GameEventType::SecretChosen,
@@ -1928,8 +1939,9 @@ mod tests {
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
         // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000); and Stinkyscape+'s
         // `evolved` (R3536005); and E7's `lineDrawn` (R3554005); and #3857's `armorGained` (R3857000);
-        // and #3925's `loopCapped` (R3925000); and #5045's `damageNullified` (R5045000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 98);
+        // and #3925's `loopCapped` (R3925000); and #5045's `damageNullified` (R5045000); and #5183's
+        // `armorWorn` (R5183000).
+        assert_eq!(GAME_EVENT_TYPES.len(), 99);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
@@ -2019,6 +2031,22 @@ mod tests {
         assert_eq!(event.event_type().as_str(), "armorGained");
         assert_eq!(event.as_rules_read(), event);
         assert!(GAME_EVENT_TYPES.contains(&GameEventType::ArmorGained));
+    }
+
+    /// R5183000: a wear of a hero's Armor names its player and the hero's Armor after, and the rules
+    /// read it as it is.
+    #[test]
+    fn r5183000_armor_worn_serializes_as_a_player_and_a_number() {
+        let event = GameEvent::ArmorWorn {
+            player: PlayerId::P1,
+            armor: 3,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(json, r#"{"type":"armorWorn","player":"p1","armor":3}"#);
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
+        assert_eq!(event.event_type().as_str(), "armorWorn");
+        assert_eq!(event.as_rules_read(), event);
+        assert!(GAME_EVENT_TYPES.contains(&GameEventType::ArmorWorn));
     }
 
     /// R3925000: the loop cap's report names the seat whose interaction it stopped, and the rules read

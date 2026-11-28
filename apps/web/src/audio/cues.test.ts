@@ -238,6 +238,8 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   damageNullified: { type: "damageNullified", instanceId: "b5", sourceId: "u1", targetId: "u6", amount: 2, combat: true },
   // R3857000.
   armorGained: { type: "armorGained", player: "p2", amount: 2, armor: 2 },
+  // R5183000.
+  armorWorn: { type: "armorWorn", player: "p2", armor: 1 },
   // Meditative #39.2, R961.
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
   // Meditative MB05 (ME-SECRET).
@@ -359,6 +361,8 @@ const HEADLINE: Record<GameEventType, SfxId | null> = {
   damageNullified: "cancel",
   // R3857000: the sweep of a stat gained; the ring stays the whole hit's (R1365's own sounds).
   armorGained: "buff",
+  // R5183000: the hit that wore it already sounded.
+  armorWorn: null,
   // Meditative #39.2, R961.
   jadeChanged: "uiClick",
   // Meditative MB05 (ME-SECRET).

@@ -60,7 +60,9 @@ export type SfxId =
   // R3395000: Stinkyscape 001 to 090's signature Legendaries and Mythics, one each (signatureCues.ts).
   | "vaultHiss" | "safeChirp" | "stoneChime" | "magiChord" | "lectureRumble" | "pressStamp" | "corvetteRoar" | "popGasp"
   | "geigerHum" | "wireRatchet" | "beamWhine" | "rattleSteam" | "breechBoom" | "flakWind" | "crunchJackpot" | "choirHulls"
-  | "hornEcho" | "jetSnap" | "whiteRing" | "hullDrills" | "klaxonSputter" | "moltenSnarl" | "shutterPurr" | "venomDrip";
+  | "hornEcho" | "jetSnap" | "whiteRing" | "hullDrills" | "klaxonSputter" | "moltenSnarl" | "shutterPurr" | "venomDrip"
+  // #5190: the spell verbs' recipes (card-audio.json5's verb table).
+  | "elementWindUp" | "elementBolt" | "elementTail" | "windUp" | "sparkleTail" | "hush" | "shatter" | "morph" | "revealGlint";
 
 /**
  * A card's sound family, from its public tags and type (cues.ts `timbreFor`): the summon thud gains
@@ -70,6 +72,9 @@ export type SfxId =
 export type SfxTimbre =
   | "human" | "felinor" | "ky" | "cn" | "fruit" | "chaos" | "quickdraw" | "token" | "field"
   | "book" | "pancake" | "ai";
+
+/** #5190: a damage's element, as its card's tags and art show it (elementWindUp, elementBolt, elementTail). */
+export type SfxElement = "fire" | "frost" | "lightning" | "arcane" | "shadow" | "poison" | "holy" | "physical";
 
 export type SfxParams = {
   /**
@@ -85,6 +90,8 @@ export type SfxParams = {
   mine?: boolean;
   /** summon and spell: the card's family (see SfxTimbre). */
   timbre?: SfxTimbre;
+  /** elementWindUp, elementBolt, elementTail: the damage's element. Absent: physical. */
+  element?: SfxElement;
   /** entrance: a Mythic's prismatic sting rather than a Legendary's brass. */
   mythic?: boolean;
   /** notify: a notice awaiting the viewer's answer (a draw offer): a doorbell, not two blips, in the same durationMs. */

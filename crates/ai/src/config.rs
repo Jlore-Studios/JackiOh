@@ -210,6 +210,18 @@ pub struct AiSearch {
     pub lethal_quick_nodes: i32,
     /// Moves the best-first lethal walk tries from each position it expands, in move order.
     pub lethal_width: i32,
+    /// R5119000: among open positions of the same gap above 0 and the same depth, the best-first lethal
+    /// walk expands first the one whose ready attacks would leave the enemy hero least were no Taunt
+    /// standing (`lethal::Gaps::taunt_free`, read through an open prompt, which spends no attack), so an
+    /// attack on a Taunt the gap already counted its attacker against comes after the moves that keep
+    /// the attacker ready. `false` takes them by age alone, as before.
+    pub lethal_keep_attacks: bool,
+    /// R5119000: the moves the best-first lethal walk may try at and below one child of a position, from
+    /// positions no closer to lethal than that position, before it sets the child aside: the open
+    /// positions below a set-aside child come after every other open position of their gap. While the
+    /// gap stands flat the walk is a dive in move order, and this bounds what one dead child costs it.
+    /// Negative sets nothing aside, as before.
+    pub lethal_dive_moves: i32,
     /// Lines per first action scored after the opponent's reply on determinization 0.
     pub lines_per_action: i32,
     /// R4788000: on a state whose allowance was scaled down (`fat_*`, below), the lethal solver's best-first
@@ -299,6 +311,22 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     lethal_max_depth: 10,
     lethal_quick_nodes: 40,
     lethal_width: 60,
+    // R5119000: on, with `lethal_dive_moves`. Both off are the walk before it, node for node. Mirror 26's
+    // turn-12 lethal rests on this switch, hard-vs-easy 12's turn 21 on its read through a prompt. Fork
+    // screen on improve-dev (both on, this walk on f6ef0c1c88) against the control at f6ef0c1c88: 200
+    // trunk games, 10 forks, 3 live, edge +0.028 (-0.236 to +0.292), no faults, inconclusive (R4319000): kept,
+    // and its scene tests (lethal.rs's and wide_lethal.rs's r5119000_ tests) settle it (training/improve.md,
+    // A screen).
+    lethal_keep_attacks: true,
+    // R5119000: 75 moves, set after a first sweep counted in nodes (40, 60, 75 and 100 on both logged
+    // sets: 40 lost a lethal, 60 to 100 held). Counted in moves, with `lethal_keep_attacks` on, and
+    // measured on both logged sets at 40, 50, 60, 65, 75, 90, 120 and 150: every count from 60 to 150
+    // holds every lethal there. 40 and 50 lose hard-vs-easy 7's turn-18 lethal (R4788000's, 157 nodes).
+    // 200, measured on the three fixtures alone, loses hard-vs-easy 8's turn 12, a named fixture that
+    // rests on this bound, so it sets the upper edge. It is a count, not a share of the walk's allowance:
+    // a share shrinks with a scaled-down allowance (R2575000), and at 0.15, 0.2, 0.33 and 0.5 it lost
+    // R4788000's reach on one of its four logged wide lethals.
+    lethal_dive_moves: 75,
     lines_per_action: 2,
     // R4788000: on. Its deal screen, 400 games on improve-dev against the control at 3a83bd7741, read
     // 200-200, edge 0.0 (0.0 to 0.0), inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 6

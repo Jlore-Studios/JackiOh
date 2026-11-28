@@ -648,14 +648,14 @@ pub const TUNE_ACTS_IN_HAND: &[KeywordKind] = &[
     KeywordKind::Temporary,
 ];
 /// R3888000: the keywords that act only as the card is played or enters the field (Crater's Lock, an
-/// Equip, a Stack, a GIGA's size, a Tipsy count, a Flexible placement), so a Buff or a Nerf changes them
+/// Equip, a Stack, a GIGA's size, a Woozy count, a Flexible placement), so a Buff or a Nerf changes them
 /// only before the card is face-up on the field.
 pub const TUNE_ACTS_AT_PLAY: &[KeywordKind] = &[
     KeywordKind::Crater,
     KeywordKind::Equip,
     KeywordKind::Stack,
     KeywordKind::Giga,
-    KeywordKind::Tipsy,
+    KeywordKind::Woozy,
     KeywordKind::Flexible,
 ];
 /// R3888000: the keywords that act only on the turn a Unit enters the field (§4.1's summoning
@@ -1423,9 +1423,15 @@ pub const LIFE_TAP_DAMAGE: i32 = 2;
 pub const STEADY_SHOT_RAISE: i32 = 2;
 /// R756: Ping's damage.
 pub const PING_DAMAGE: i32 = 1;
-/// R757: Armor Up's Armor until your next turn, and the Armor Tank Up (its Radiant face) keeps.
-pub const ARMOR_UP_ARMOR: i32 = 2;
-pub const TANK_UP_ARMOR: i32 = 4;
+/// R757, R5183001: the Armor Armor Up gives its hero to keep, and Tank Up (its Radiant face); 2 until
+/// your next turn and a kept 4 that refreshed the power through #5183 (`armor_up_kept_5183` reads
+/// the card's own numbers).
+pub const ARMOR_UP_ARMOR: i32 = 1;
+pub const TANK_UP_ARMOR: i32 = 2;
+/// R5183001: Armor Up's 2 until your next turn and Tank Up's kept 4 through #5183, the defaults of
+/// `armor_up_kept_5183`, which Heroic Power's kept scripts run.
+pub const ARMOR_UP_ARMOR_KEPT_5183: i32 = 2;
+pub const TANK_UP_ARMOR_KEPT_5183: i32 = 4;
 /// R758: Die Insect's damage, and its Radiant face's Lucky.
 pub const DIE_INSECT_DAMAGE: i32 = 8;
 pub const DIE_INSECT_LUCKY: i32 = 1;
@@ -2596,12 +2602,12 @@ pub const EMOTE_WINDOW_MAX: usize = 5;
 
 // ---- Stinkyscape+ E5 (issue #3548) ----
 
-/// R3548000: what a Tipsy counter drops by at the start of its owner's turn.
-pub const TIPSY_DECAY: i32 = 1;
-/// R3548001: the chance, in percent, that one Tipsy level blurs a newly stamped card.
-pub const TIPSY_BLUR_CHANCE_PER_STACK: i32 = 10;
-/// R3548001: the most the Tipsy blur chance reaches, in percent, however high the counter climbs.
-pub const TIPSY_BLUR_CHANCE_CAP: i32 = 50;
+/// R3548000: what a Woozy counter drops by at the start of its owner's turn.
+pub const WOOZY_DECAY: i32 = 1;
+/// R3548001: the chance, in percent, that one Woozy level blurs a newly stamped card.
+pub const WOOZY_BLUR_CHANCE_PER_STACK: i32 = 10;
+/// R3548001: the most the Woozy blur chance reaches, in percent, however high the counter climbs.
+pub const WOOZY_BLUR_CHANCE_CAP: i32 = 50;
 /// R3548002: the catalog id of the Warhero Token, the Stinkyscape Resource whose worth is game-wide.
 pub const WARHERO_TOKEN_DEF_ID: &str = "stinkyscapeplus-t-warhero-token";
 /// R3548002: the least a Warhero Token's worth grows by at the end of a turn.

@@ -651,8 +651,9 @@ const KEPT_IN_EVERY_PILE: [&str; 3] = ["controller", "memory", "brittle"];
 /// state, which rides it onto the field (`effects/buff.rs`, B5 E38) and which R215 takes as it reaches a
 /// graveyard or an exile pile (`buffs`, `grantedKeywords`, `grants`, `vanilla`, `counters`); a copy's
 /// `statsOverride` and `armorOverride` (R57, R1242, R2198001; R175 reads them before R78's reset takes
-/// them); and the `tipsy` stamp (R3548001) a card is given as it is drawn (`draw.rs`), which only a hand
-/// or the field reads (`tipsy::blur_for`) and a hand card carries into a library.
+/// them); and the Woozy stamp (R3548001), stored as `tipsy` (R5181000), a card is given as it is drawn
+/// (`draw.rs`), which only a hand or the field reads (`woozy::blur_for`) and a hand card carries into a
+/// library.
 const KEPT_IN_HAND_OR_LIBRARY: [&str; 8] = [
     "buffs",
     "grantedKeywords",

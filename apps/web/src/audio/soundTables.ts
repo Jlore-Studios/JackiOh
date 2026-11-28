@@ -15,7 +15,7 @@ import { VOICE_EMOTE_IDS } from "@jackioh/shared";
 import { currentCatalog } from "../game/currentCatalog.ts";
 
 import { CARD_HOOKS, CARD_HOOK_NAMES, HIDDEN_DEF_ID } from "./constants.ts";
-import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
+import { SFX_ELEMENTS, SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
 import type {
   CardAudioEntry,
   CardAudioTable,
@@ -28,6 +28,7 @@ import type {
   MusicCardEntry,
   MusicManifest,
   Persona,
+  SfxElement,
   SfxId,
   SfxParams,
   SfxTimbre,
@@ -104,7 +105,7 @@ const EFFECT_AMOUNT_RANGE = [0, 100] as const;
 const SAY_FIELDS = ["backend", "say", "rate", "pbas", "pmod", "web", "gain"] as const;
 const SAPI_FIELDS = ["backend", "voice", "rate", "semitones", "filter", "web", "gain"] as const;
 const EFFECT_FIELDS = ["sfx", "pitch", "gain", "params"] as const;
-const PARAM_FIELDS = ["amount", "mine", "timbre", "mythic", "urgent", "release"] as const;
+const PARAM_FIELDS = ["amount", "mine", "timbre", "element", "mythic", "urgent", "release"] as const;
 const ASSIGNMENT_FIELDS = ["voice", "text", "lines", "effect"] as const;
 /** The file's sections, in the order it keeps them. */
 const SECTIONS = ["voices", "effects", "cards"] as const;
@@ -166,6 +167,12 @@ function parseParams(raw: unknown, path: string): SfxParams {
       fail(`${path}.timbre`, `unknown timbre ${JSON.stringify(o.timbre)} (expected one of ${SFX_TIMBRES.join(", ")})`);
     }
     params.timbre = o.timbre as SfxTimbre;
+  }
+  if (o.element !== undefined) {
+    if (typeof o.element !== "string" || !(SFX_ELEMENTS as readonly string[]).includes(o.element)) {
+      fail(`${path}.element`, `unknown element ${JSON.stringify(o.element)} (expected one of ${SFX_ELEMENTS.join(", ")})`);
+    }
+    params.element = o.element as SfxElement;
   }
   for (const name of ["mine", "mythic", "urgent", "release"] as const) {
     if (o[name] !== undefined) params[name] = flag(o[name], `${path}.${name}`);

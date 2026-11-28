@@ -13,9 +13,9 @@ import type { QuestView } from "./QuestView";
 import type { RevealAt } from "./RevealAt";
 import type { Slumber } from "./Slumber";
 import type { Tag } from "./Tag";
-import type { TipsyBlur } from "./TipsyBlur";
 import type { Tuning } from "./Tuning";
 import type { UnitView } from "./UnitView";
+import type { WoozyBlur } from "./WoozyBlur";
 
 /**
  * The public member of `BackrowView`: `CardView & { faceDown: false; type: CardType; … }`. Every
@@ -95,7 +95,9 @@ unit?: UnitView,
  */
 slumber?: Slumber, 
 /**
- * R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
+ * R3548001: what of this card the owner's Woozy stamp blurs on their view alone, or nothing.
  * Never on a face-down card, and never on the opponent's view of it.
+ * Sent as `tipsyBlur`, the keyword's old name, so the view is what it was before the rename
+ * (R5181000).
  */
-tipsyBlur?: TipsyBlur, };
+tipsyBlur?: WoozyBlur, };

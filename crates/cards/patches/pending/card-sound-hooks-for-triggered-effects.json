@@ -1,0 +1,17 @@
+{
+  "title": "Card sound hooks for triggered effects",
+  "sources": "issue #5188, PR #5218",
+  "notes": "R5188000: cards may carry sounds for six recurring hooks (startOfTurn, endOfTurn, whenever, activate, hurt, hit), any voiced hook may give a pool of lines and an effect may be a list played in order; the card inspector's voice preview (apps/web/src/cards/inspect/VoicePreview.tsx) labels the six new hooks. Effect-only proof hooks on Gravedigger (start of turn), Combo-Index (end of turn), Fed Fauci (Whenever) and Unstable Clone Machine (Activate). R5188001: the voice budget is 32 MiB, with a four-word cap on new lines, a gzip cap on the sound tables and a census. No voice line is written or rendered, and no card plays differently.",
+  "player": {
+    "title": "Cards that sound when their effects trigger",
+    "new": [
+      "Gravedigger, Combo-Index, Fed Fauci and Unstable Clone Machine now make a sound when their start-of-turn, end-of-turn, Whenever or Activate effect runs."
+    ],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

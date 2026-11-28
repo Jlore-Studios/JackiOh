@@ -500,6 +500,12 @@ to the searched section, so the beam and the replies keep their nodes, and no de
 `nodes`. A state of ordinary width, and a wide one whose walk never reads as lethal, decide node for node
 as before; `lethal_hint` and `unstoppable_lethal` call `find_lethal` and have no reach;
 `AI_SEARCH.lethal_reach` off stops every walk at its scaled allowance.
+R5119000: among open positions of the same gap above 0 and the same depth, the best-first walk takes
+first the one whose ready attacks leave the enemy hero least were no Taunt standing (`Gaps::taunt_free`,
+read through an open prompt, whose answer spends no attack; `AI_SEARCH.lethal_keep_attacks`), and once
+it has tried `AI_SEARCH.lethal_dive_moves` (75) moves at and below one child, from positions no closer
+than that child's parent, it sets the child aside: the open positions below it come after the others of
+their gap. Both off are the walk before it, node for node.
 
 R4447000: `decide` replays each finalist's world-0 line on the other determinizations with
 `replay_line`, which says whether the line was cut there: whether it met a step that world does not

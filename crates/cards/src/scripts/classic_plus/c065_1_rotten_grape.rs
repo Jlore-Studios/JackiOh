@@ -34,7 +34,7 @@ pub fn script() -> CardScripts {
 
 // C+ #65.1 Rotten Grape — SPEC §8.7 row 65.1, BUILD M9 Classic+ row C+ 65.1.
 #[cfg(test)]
-mod tipsy {
+mod woozy {
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -53,21 +53,21 @@ mod tipsy {
     }
 
     #[test]
-    fn tipsy_1_on_both_faces_raises_the_counter() {
+    fn woozy_1_on_both_faces_raises_the_counter() {
         crate::register_all();
         let def = crate::card_def(ROTTEN);
         for face in [&def.base, &def.radiant] {
             assert_eq!(
                 crate::js(&face.keywords),
-                json!([{ "kind": "Tipsy", "n": 1 }]),
+                json!([{ "kind": "Woozy", "n": 1 }]),
             );
-            assert!(face.text.starts_with("Tipsy 1\n"));
+            assert!(face.text.starts_with("Woozy 1\n"));
         }
         for radiant in [false, true] {
             let s = played(radiant);
-            // R3548000: playing a Tipsy 1 card adds 1 to its controller's counter.
-            assert_eq!(s.state().players[PlayerId::P1].tipsy.map(|counter| counter.count), Some(1));
-            assert_eq!(s.state().players[PlayerId::P2].tipsy, None);
+            // R3548000: playing a Woozy 1 card adds 1 to its controller's counter.
+            assert_eq!(s.state().players[PlayerId::P1].woozy.map(|counter| counter.count), Some(1));
+            assert_eq!(s.state().players[PlayerId::P2].woozy, None);
         }
     }
 }

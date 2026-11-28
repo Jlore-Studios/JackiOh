@@ -53,7 +53,7 @@ describe("#98 Heroic Power's rolled power, in words (R752)", () => {
 
   it("prints the Radiant words and name on a radiant face, filling the card's numbers", () => {
     expect(powerFace("discover", true)).toMatch(/Witness Value\nActivate: Spend \(1\): Discover a Radiant Unit\.$/u);
-    expect(powerFace("armor", true, { armor: 4 })).toMatch(/Tank Up\nActivate: Spend \(0\): Your hero gains 4 Armor, then this power refreshes\.$/u);
+    expect(powerFace("armor", true, { armor: 4 })).toMatch(/Tank Up\nActivate: Spend \(0\): Your hero gains 4 Armor\.$/u);
     expect(powerFace("burn", false, { shot: 6 })).toMatch(/Steady Shot\nActivate: Spend \(0\): Deal 6 damage to the enemy hero\.$/u);
     expect(POWER_WORDS["armor"]?.title).toBe("Armor Up");
   });

@@ -22,6 +22,7 @@ import {
   VOICE_NEW_LINE_MAX_WORDS,
 } from "./constants.ts";
 import { SFX_IDS } from "./sfx.ts";
+import { VERB_BANK_EFFECTS } from "./test/verbBank.ts";
 import { withVoiceText } from "./soundTables.ts";
 import type { CardHook } from "./types.ts";
 import baselineJson from "./census-baseline.json";
@@ -127,6 +128,29 @@ function allAssignments(): Assignment[] {
     Object.entries(entry).map(([hook, value]) => ({ defId, key: `${defId}-${hook}`, hook, value })),
   );
 }
+
+/** The effects some card's hook names, each name of a list (R5188000) among them. */
+function usedEffects(): Set<string> {
+  return new Set(allAssignments().flatMap(({ value }) => (isRecord(value) ? (effectNames(value.effect) ?? []) : [])));
+}
+
+/**
+ * #5190, #5217: the spell verbs' bank effects that no card names yet (the card parts, #5187, will). Written
+ * out here, never read off the verb table, so a card that names one fails "R655 takes an effect off
+ * UNUSED_VERB_EFFECTS once a card names it" until the name is taken off, and the list only shrinks.
+ * The lightning ones wait for a card whose name or text names lightning (docs/polish/2-sound.md, "Spell verbs").
+ */
+const UNUSED_VERB_EFFECTS: readonly string[] = [
+  "fireWind", "fireRelease", "fireTail", "frostWind", "frostRelease", "frostTail",
+  "lightningWind", "lightningRelease", "lightningTail", "arcaneWind", "arcaneRelease", "arcaneTail",
+  "shadowWind", "shadowRelease", "shadowTail", "poisonWind", "poisonRelease", "poisonTail",
+  "holyWind", "holyRelease", "holyTail", "physicalWind", "physicalRelease", "physicalTail",
+  "calmWind", "surgeWind", "dreadWind", "twistWind", "snapWind",
+  "sparkleTail", "hushTail", "ringTail",
+  "shatterRelease", "healRelease", "drawRelease", "discardRelease", "summonRelease", "morphRelease",
+  "bounceRelease", "stealRelease", "buffRelease", "debuffRelease", "lockRelease", "armorRelease",
+  "manaRelease", "shuffleRelease", "counterRelease", "revealRelease",
+];
 
 /** A voice and its words: one text, or (R5188000) a pool of lines. */
 function isLine(value: unknown): boolean {
@@ -600,11 +624,29 @@ describe("card-audio.json5's layout and effects (R655)", () => {
   });
 
   it("R655 uses every bank effect on at least one card", () => {
-    const used = new Set(
-      allAssignments().flatMap(({ value }) => (isRecord(value) ? (effectNames(value.effect) ?? []) : [])),
-    );
-    const dead = Object.keys(EFFECTS).filter((name) => !used.has(name));
+    const used = usedEffects();
+    const dead = Object.keys(EFFECTS).filter((name) => !used.has(name) && !UNUSED_VERB_EFFECTS.includes(name));
     expect(dead, "effects no card's hook names").toEqual([]);
+  });
+
+  it("R655 takes an effect off UNUSED_VERB_EFFECTS once a card names it", () => {
+    const used = usedEffects();
+    expect(
+      UNUSED_VERB_EFFECTS.filter((name) => used.has(name)),
+      "effects a card names now: take them off UNUSED_VERB_EFFECTS in voice-lines.test.ts",
+    ).toEqual([]);
+  });
+
+  it("R655 lists each UNUSED_VERB_EFFECTS name once, as a bank effect a verb row uses", () => {
+    expect(new Set(UNUSED_VERB_EFFECTS).size, "UNUSED_VERB_EFFECTS names one effect twice").toBe(UNUSED_VERB_EFFECTS.length);
+    expect(
+      UNUSED_VERB_EFFECTS.filter((name) => !Object.hasOwn(EFFECTS, name)),
+      "UNUSED_VERB_EFFECTS names that are no bank effect",
+    ).toEqual([]);
+    expect(
+      UNUSED_VERB_EFFECTS.filter((name) => !VERB_BANK_EFFECTS.has(name)),
+      "UNUSED_VERB_EFFECTS names that no verb row uses",
+    ).toEqual([]);
   });
 });
 

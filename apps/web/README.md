@@ -494,9 +494,9 @@ and nothing while the view carries none; a count of 0 still shows. A Resource is
 
 **Hero counters** (#4251). The oval keeps one badge on each corner — health lower right, Armor lower
 left (both `emotes.css`), the Jade Counter top left and the Credits top right — so no two overlap.
-Luck (R987), Burn and Toxic (R3540000) and Tipsy (R3548000) ride the hero's tray instead
+Luck (R987), Burn and Toxic (R3540000) and Woozy (R3548000) ride the hero's tray instead
 (`HeroTray.tsx`'s `hero-counters-<side>`), as labelled chips with their names beside their counts
-(`hero-luck`, `hero-burn`, `hero-toxic`, `hero-tipsy`, each keeping its `data-*` attribute),
+(`hero-luck`, `hero-burn`, `hero-toxic`, `hero-woozy`, each keeping its `data-*` attribute),
 outside the tray's overflow allowance: every counter reads at once however many effects the seat
 carries, and a counter rising from 0 never moves the plate. Holding a hero (or Shift+F10 on it)
 lists every counter above 0 with its name and number in the inspect view (`HeroInspect.tsx`). #4270: where

@@ -165,6 +165,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
   damageNullified: { type: "damageNullified", instanceId: "u7", sourceId: "u1", targetId: "u6", amount: 2, combat: true },
   armorGained: { type: "armorGained", player: "p2", amount: 2, armor: 2 },
+  armorWorn: { type: "armorWorn", player: "p2", armor: 1 },
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
   secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },
@@ -320,6 +321,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   damageNullified: "nullify",
   // R3857000: a hero's kept Armor gain blooms the same shield over the hero.
   armorGained: "armor",
+  // R5183000: a wear ticks the badge; the hit that wore it carries the effect.
+  armorWorn: null,
   // Meditative #39.2 (R961): the Jade badge ticks and nothing decorates it.
   jadeChanged: null,
   // Meditative MB05 (ME-SECRET): the badge by the hero is the change; no effect decorates it.
@@ -480,6 +483,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   damageAbsorbed: ["jk-armor-absorb", 300, "card-<targetId> | hero-<side>"],
   damageNullified: ["jk-pool-pulse", 400, "card-<instanceId>"],
   armorGained: ["jk-badge-tick", 300, "hero-<side>"],
+  armorWorn: ["jk-badge-tick", 300, "hero-<side>"],
   jadeChanged: ["jk-badge-tick", 200, "hero-<side>"],
   secretChosen: ["jk-badge-fade", 300, "hero-<side>"],
   secretRevealed: ["jk-badge-fade", 400, "hero-<side>"],
@@ -523,9 +527,9 @@ describe("B1 the fx column of ANIMATIONS", () => {
     }
   });
 
-  it("B1 the 28 rows without an effect have no fx value at all", () => {
+  it("B1 the 29 rows without an effect have no fx value at all", () => {
     const bare = GAME_EVENT_TYPES.filter((t) => S4_RECIPES[t] === null);
-    expect(bare).toHaveLength(28);
+    expect(bare).toHaveLength(29);
     for (const type of bare) expect(ANIMATIONS[type].fx, type).toBeUndefined();
   });
 

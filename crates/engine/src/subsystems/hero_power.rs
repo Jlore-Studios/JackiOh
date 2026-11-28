@@ -24,10 +24,10 @@ use serde_json::{Value, json};
 use indexmap::IndexMap;
 
 use crate::config::{
-    ARMOR_UP_ARMOR, BRAINSTORM_DISCOUNT, DIE_INSECT_DAMAGE, DIE_INSECT_LUCKY, DISCOVER_OPTIONS,
-    END_TIMES_COST, END_TIMES_CUT, END_TIMES_RADIANT_CUT, HERO_POWER_DISCOUNT, LIFE_TAP_DAMAGE,
-    LIFE_TAP_DRAW, PING_DAMAGE, PLUCK_COST, POWERS_THROUGH_V0_5_13G, STEADY_SHOT_RAISE,
-    STITCHING_INGREDIENTS, STITCHING_MAX_COST, TANK_UP_ARMOR,
+    ARMOR_UP_ARMOR, ARMOR_UP_ARMOR_KEPT_5183, BRAINSTORM_DISCOUNT, DIE_INSECT_DAMAGE, DIE_INSECT_LUCKY,
+    DISCOVER_OPTIONS, END_TIMES_COST, END_TIMES_CUT, END_TIMES_RADIANT_CUT, HERO_POWER_DISCOUNT,
+    LIFE_TAP_DAMAGE, LIFE_TAP_DRAW, PING_DAMAGE, PLUCK_COST, POWERS_THROUGH_V0_5_13G, STEADY_SHOT_RAISE,
+    STITCHING_INGREDIENTS, STITCHING_MAX_COST, TANK_UP_ARMOR, TANK_UP_ARMOR_KEPT_5183,
 };
 use crate::damage::DamageTarget;
 use crate::effects::TargetSpec;
@@ -445,17 +445,33 @@ pub fn refresh_power() -> Effect {
     })
 }
 
-/// Armor Up (R757): hero Armor as a player modifier through the opponent's next turn, gone when yours
-/// begins. Tank Up, its Radiant face: Armor your hero keeps, then the power refreshes.
+/// Armor Up (R757, R5183001): Armor your hero keeps, which each hit it meets wears (R5183000); its
+/// Radiant face, Tank Up, gives more and refreshes no more.
 fn armor_up(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
+    let printed = if radiant { TANK_UP_ARMOR } else { ARMOR_UP_ARMOR };
+    let armor = power_number(ctx, ARMOR_PARAM, printed);
+    let gain = crate::effects::gain_hero_armor(json_as(json!({ "amount": armor })));
+    vec![gain]
+}
+
+/// R5183001: Armor Up's label through the fragment that made both faces kept Armor, kept for the
+/// scripts that fold older games (`armor_up_kept_5183`).
+pub const ARMOR_UP_LABEL_KEPT_5183: &str = "Your hero gains {armor} Armor until your next turn.";
+/// R5183001: Tank Up's label as `ARMOR_UP_LABEL_KEPT_5183` keeps Armor Up's.
+pub const TANK_UP_LABEL_KEPT_5183: &str = "Your hero gains {armor} Armor, then this power refreshes.";
+
+/// R767000, R5183001: Armor Up as it ran before #5183, kept for Heroic Power's kept scripts: hero
+/// Armor as a player modifier through the opponent's next turn, gone when yours begins (R757); Tank Up,
+/// its Radiant face, Armor your hero keeps, then the power refreshes.
+pub fn armor_up_kept_5183(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
     if radiant {
-        let armor = power_number(ctx, ARMOR_PARAM, TANK_UP_ARMOR);
+        let armor = power_number(ctx, ARMOR_PARAM, TANK_UP_ARMOR_KEPT_5183);
         return vec![
             crate::effects::gain_hero_armor(json_as(json!({ "amount": armor }))),
             refresh_power(),
         ];
     }
-    let armor = power_number(ctx, ARMOR_PARAM, ARMOR_UP_ARMOR);
+    let armor = power_number(ctx, ARMOR_PARAM, ARMOR_UP_ARMOR_KEPT_5183);
     let opponent = opponent_of(ctx.controller);
     vec![crate::effects::add_player_modifier(json_as(json!({
         "mod": {
@@ -859,8 +875,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
         radiant_title: "Tank Up",
         x: 0,
         x_param: None,
-        label: "Your hero gains {armor} Armor until your next turn.",
-        radiant_label: "Your hero gains {armor} Armor, then this power refreshes.",
+        label: "Your hero gains {armor} Armor.",
+        radiant_label: "Your hero gains {armor} Armor.",
         targets: None,
         build: armor_up,
     },
