@@ -44597,15 +44597,8 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {
-      "5265": {
-        "at": "2026-11-28T03:49:04Z",
-        "why": "Confirmed: the check that the pool has outgrown super.yml's FUZZ_SEEDS is free arithmetic, yet it runs only in the daily test (crates/tools/src/fuzz.rs:8546-8558), whose ignore reason wrongly says the per-pull-request test holds the rule, though that test (fuzz.rs:8521-8541) never reads FUZZ_POOL.len(); it turned the daily run red after #4654 and again after #4988, a person had to edit super.yml b"
-      }
-    },
+    "auto": {},
     "auto_approved": [
-      "2026-11-27T03:08:24Z",
-      "2026-11-27T03:09:48Z",
       "2026-11-28T00:33:19Z",
       "2026-11-28T00:33:19Z",
       "2026-11-28T00:42:41Z",
@@ -44613,7 +44606,8 @@
       "2026-11-28T00:51:50Z",
       "2026-11-28T00:51:50Z",
       "2026-11-28T02:36:22Z",
-      "2026-11-28T02:36:22Z"
+      "2026-11-28T02:36:22Z",
+      "2026-11-28T03:49:05Z"
     ],
     "decided": [
       {
