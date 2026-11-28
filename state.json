@@ -40916,42 +40916,6 @@
       {
         "approver": {
           "family": "claude",
-          "model": "sonnet",
-          "provider": "claude-7",
-          "tier": "medium"
-        },
-        "builder": {
-          "family": "",
-          "provider": ""
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-07T19:02:20Z",
-        "every": 5,
-        "findings": 1,
-        "follow_up": 3412,
-        "head": "9d53a7ba0d2349da2881d6e678c07a33263fefdd",
-        "issue": 3344,
-        "merged_at": "2026-11-07T18:50:49Z",
-        "n": 135,
-        "pr": 3383,
-        "queued_at": "2026-11-07T18:50:49Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-1",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42403042303",
-        "sha": "01c93697dafcb1fc844ce336569801d193f53798",
-        "started_at": "2026-11-07T18:51:56Z",
-        "status": "done",
-        "title": "Patch: quasi-3D cards: a picture's layers stand at depths and tilt with the pointer and the phone, under a glare that follows the light, for every Epic and up",
-        "tries": 0,
-        "verdict": "findings"
-      },
-      {
-        "approver": {
-          "family": "claude",
           "model": "opus",
           "provider": "claude-7",
           "tier": "strong"
@@ -44440,7 +44404,9 @@
           "provider": "claude-7"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-28T02:59:48Z",
         "every": 5,
+        "findings": 0,
         "head": "d7b1debfee8bfe325f0dca5078e087ab8db0c142",
         "issue": 5230,
         "merged_at": "2026-11-28T02:51:40Z",
@@ -44453,12 +44419,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:0b37afcc-1795834343",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/46100183733",
         "sha": "593066692e79d8799c13ebaf96038ea151749896",
         "started_at": "2026-11-28T02:52:41Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: End turn keeps reading a move as left while a card is picked up or an attacker is aimed, so it no longer pulses as if the turn is done and Confirm end turn still asks",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 635
