@@ -484,6 +484,9 @@ fn history_json(
         })
         .collect();
     let placed: BTreeSet<&str> = order.iter().copied().collect();
+    // R5268001: a table that did not change is kept once; each folder's `versions.json` names it.
+    let win_rates = table_map(&patches_dir.join("win_rates"));
+    let card_metrics = table_map(&patches_dir.join("card_metrics"));
     let mut folded = serde_json::Map::new();
     for (step, version) in versions.iter().enumerate() {
         let path = patches_dir.join("deltas").join(format!("{version}.json"));
@@ -531,7 +534,7 @@ fn history_json(
             changed.insert(id.clone(), serde_json::Value::from(at));
         }
         let mut entry = serde_json::json!({ "version": version, "absent": absent, "changed": changed });
-        let table_path = patches_dir.join("win_rates").join(format!("{version}.json"));
+        let table_path = table_file(&win_rates, &patches_dir.join("win_rates"), version);
         if table_path.exists() {
             let table = read_json(&table_path);
             let at = *seen_tables.entry(table.to_string()).or_insert(tables.len());
@@ -551,7 +554,7 @@ fn history_json(
             }
             entry["records"] = serde_json::Value::from(at);
         }
-        let lists_path = patches_dir.join("card_metrics").join(format!("{version}.json"));
+        let lists_path = table_file(&card_metrics, &patches_dir.join("card_metrics"), version);
         if lists_path.exists() {
             let lists = read_json(&lists_path);
             let at = *seen_lists.entry(lists.to_string()).or_insert(card_lists.len());
@@ -585,6 +588,33 @@ fn history_json(
         "fragments": fragments,
     })
     .to_string()
+}
+
+/// R5268001: a table folder's `versions.json`, each version to the stem of the file holding its
+/// table; none is the empty map.
+fn table_map(folder: &Path) -> BTreeMap<String, String> {
+    let path = folder.join("versions.json");
+    if !path.exists() {
+        return BTreeMap::new();
+    }
+    let map = read_json(&path);
+    map.as_object()
+        .unwrap_or_else(|| panic!("{}: not a JSON object", path.display()))
+        .iter()
+        .map(|(version, stem)| {
+            let stem = stem
+                .as_str()
+                .unwrap_or_else(|| panic!("{}: \"{version}\" names no file", path.display()));
+            (version.clone(), stem.to_string())
+        })
+        .collect()
+}
+
+/// R5268001: the file in `folder` holding `version`'s table, through `map`; a version with none
+/// names a file that is not there.
+fn table_file(map: &BTreeMap<String, String>, folder: &Path, version: &str) -> PathBuf {
+    let stem = map.get(version).map_or(version, String::as_str);
+    folder.join(format!("{stem}.json"))
 }
 
 /// R5268000: `$OUT_DIR/deltas.rs`, which only tests include (`src/snapshot_fold.rs`): `DELTAS`, each

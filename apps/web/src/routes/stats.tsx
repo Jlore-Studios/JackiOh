@@ -88,6 +88,7 @@ import {
 import { CREATED_SORT_COLUMNS, CreatedPanel, createdSortOf, type CreatedSort } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
 import { HallPanel } from "../stats/HallPanel.tsx";
+import { FetchLive } from "../stats/FetchLive.tsx";
 import { askAgain, StatsLoadProgress } from "../stats/LoadProgress.tsx";
 import { FindPatchIcon, PatchSearch, olderPatchesLine } from "../stats/PatchSearch.tsx";
 import {
@@ -1675,6 +1676,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               {t("Current patch {patch}", { patch: currentVersion(patchList) })}
             </span>
             <CardTextButton shown={cardText.shown} onToggle={cardText.toggle} />
+            <FetchLive />
           </BackLink>
         </header>
 

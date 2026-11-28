@@ -10,6 +10,11 @@ use super::support::{AI, ai_options, is_legal, register_cards, scenario};
 
 const DECK: [&str; 3] = ["core-008", "core-011", "core-020"];
 
+/// #5246: the player's six cards.
+const SIX: [&str; 6] = [
+    "core-019", "core-019", "core-008", "core-011", "core-020", "core-008",
+];
+
 /// (id, why, the scenario's p1 and p2).
 fn rows() -> Vec<(&'static str, &'static str, Value, Value)> {
     vec![
@@ -42,6 +47,30 @@ fn rows() -> Vec<(&'static str, &'static str, Value, Value)> {
             "Grey Goo: an empty board, so no neighbour of the AI's turns into a copy",
             json!({ "hand": [{ "def": "infiniteassault-211", "radiant": true }], "mana": 3, "library": DECK }),
             json!({ "hand": ["core-011"], "field": ["core-008"], "library": DECK }),
+        ),
+        (
+            "infiniteassault-137",
+            "Patch Tuesday Exploit (#5246): 2 mana to spare and its only play, so its Nerfs on the player's six cards are its gain",
+            json!({ "hand": [{ "def": "infiniteassault-137", "radiant": false }], "mana": 2, "library": DECK }),
+            json!({ "hand": SIX, "library": DECK }),
+        ),
+        (
+            "infiniteassault-137",
+            "Patch Tuesday Exploit (Radiant) (#5246): 2 mana to spare and its only play, so its two Nerfs each on the player's six cards are its gain",
+            json!({ "hand": [{ "def": "infiniteassault-137", "radiant": true }], "mana": 2, "library": DECK }),
+            json!({ "hand": SIX, "library": DECK }),
+        ),
+        (
+            "infiniteassault-130",
+            "Prompt Injection (#5246): 2 mana to spare and its only play, so the misfire on the player's next Spell is its gain",
+            json!({ "hand": [{ "def": "infiniteassault-130", "radiant": false }], "mana": 2, "library": DECK }),
+            json!({ "hand": SIX, "library": DECK }),
+        ),
+        (
+            "infiniteassault-130",
+            "Prompt Injection (Radiant) (#5246): 2 mana to spare and its only play, so the misfires on the player's next two Spells are its gain",
+            json!({ "hand": [{ "def": "infiniteassault-130", "radiant": true }], "mana": 2, "library": DECK }),
+            json!({ "hand": SIX, "library": DECK }),
         ),
     ]
 }
@@ -97,4 +126,38 @@ fn assault_cost_injection_yields_to_better_play() {
             );
         }
     }
+}
+
+/// R5246000 (issue #5246): with a (2) 4/4 beside `id` at 2 mana and the player holding one card, the AI plays
+/// the Unit: the Nerf or the misfire never outweighs a real play.
+fn yields_to_a_2_mana_unit(id: &str) {
+    register_cards();
+    let s = scenario(json!({
+        "seed": "r5246000-yields",
+        "active": AI,
+        "turn": 9,
+        "p1": { "hand": [id, "stand-in (2) 4/4"], "mana": 2, "library": DECK },
+        "p2": { "hand": ["core-011"], "library": DECK },
+    }));
+    let unit = s.card("stand-in (2) 4/4").id.clone();
+    for budget in [AI_GATE_BUDGET, AI_BUDGET] {
+        for seed in ["assault-a", "assault-b"] {
+            let turn = play_ai_turn(s.state(), AI, &mut ai_options(seed, budget));
+            assert!(
+                turn.decisions.iter().any(|decision| matches!(&decision.action,
+                    ActionBody::Play { instance_id, .. } if *instance_id == unit)),
+                "the (2) 4/4 is not played over {id} at {budget:?} on {seed}"
+            );
+        }
+    }
+}
+
+#[test]
+fn r5246000_patch_tuesday_exploit_yields_to_better_play() {
+    yields_to_a_2_mana_unit("infiniteassault-137");
+}
+
+#[test]
+fn r5246000_prompt_injection_yields_to_better_play() {
+    yields_to_a_2_mana_unit("infiniteassault-130");
 }
