@@ -621,10 +621,13 @@ mod r5239005_dearest_first {
 mod r5239006_flashback_without_cry {
     use super::*;
 
-    /// A (1) Spell with Flashback: "Deal 2 damage to the enemy hero", whose Flashback play runs no Cry.
+    /// A (1) 1/1 Unit with Flashback whose Cry deals the enemy hero `CRY_DAMAGE`, and whose Flashback play
+    /// runs no Cry.
     const ECHO_QUIET: &str = "fvhd-echo-quiet";
-    /// The same Spell without the flag.
+    /// The same Unit without the flag.
     const ECHO_LOUD: &str = "fvhd-echo-loud";
+    /// A (1) Spell with Flashback and the flag: "Deal 2 damage to the enemy hero".
+    const ECHO_SPELL: &str = "fvhd-echo-spell";
 
     fn echo(quiet: bool) -> Script {
         Script {
@@ -645,33 +648,44 @@ mod r5239006_flashback_without_cry {
         let flashback = json!([{ "kind": "Flashback" }]);
         vec![
             (
-                def(ECHO_QUIET, 523_760, "Spell", 1, None, flashback.clone()),
+                def(ECHO_QUIET, 523_760, "Unit", 1, Some((1, 1)), flashback.clone()),
                 echo(true),
             ),
-            (def(ECHO_LOUD, 523_761, "Spell", 1, None, flashback), echo(false)),
+            (
+                def(ECHO_LOUD, 523_761, "Unit", 1, Some((1, 1)), flashback.clone()),
+                echo(false),
+            ),
+            (def(ECHO_SPELL, 523_762, "Spell", 1, None, flashback), echo(true)),
         ]
     }
 
-    /// p1 plays `card` from hand, then again from the graveyard by its Flashback; returns the scenario
-    /// and the enemy hero's health between the two plays.
-    fn played_twice(seed: &str, card: &str) -> (Scenario, i32) {
+    /// What `card`'s play from p1's hand deals the enemy hero.
+    fn dealt_from_hand(seed: &str, card: &str) -> i32 {
         install(cards());
         let mut s = board(seed, json!({ "hand": [card, FILLER] }), json!({}));
         let health = hero_health(&s, P2);
-        s.play(card, json!({}));
-        assert_eq!(
-            hero_health(&s, P2),
-            health - CRY_DAMAGE,
-            "a play from hand runs its Cry"
-        );
-        let between = hero_health(&s, P2);
+        s.play(card, json!({ "zone": 1 }));
+        health - hero_health(&s, P2)
+    }
+
+    /// What `card`'s Flashback play from p1's graveyard deals the enemy hero (a Unit to lane 1).
+    fn dealt_by_flashback(seed: &str, card: &str, unit: bool) -> i32 {
+        install(cards());
+        let mut s = board(seed, json!({ "hand": [FILLER], "graveyard": [card] }), json!({}));
+        let health = hero_health(&s, P2);
         let in_graveyard = must(
             s.pile(P1, "graveyard")
                 .into_iter()
                 .find(|landed| landed.def_id == card),
-            "the Spell in the graveyard",
+            "the card in the graveyard",
         );
-        let body: ActionBody = json_as(json!({ "type": "play", "instanceId": in_graveyard.id }));
+        let body: ActionBody = if unit {
+            json_as(json!({
+                "type": "play", "instanceId": in_graveyard.id, "zone": { "row": "units", "lane": 1 }
+            }))
+        } else {
+            json_as(json!({ "type": "play", "instanceId": in_graveyard.id }))
+        };
         s.act(body, P1, "a Flashback play from the graveyard");
         assert!(
             s.last_events().iter().any(|event| matches!(
@@ -681,19 +695,30 @@ mod r5239006_flashback_without_cry {
             )),
             "it was played from the graveyard"
         );
-        (s, between)
+        health - hero_health(&s, P2)
     }
 
     #[test]
     fn r5239006_a_play_that_spends_flashback_runs_no_cry() {
-        let (s, between) = played_twice("r5239006-quiet", ECHO_QUIET);
-        assert_eq!(hero_health(&s, P2), between);
+        assert_eq!(dealt_by_flashback("r5239006-quiet", ECHO_QUIET, true), 0);
     }
 
     #[test]
-    fn r5239006_absent_the_flashback_play_runs_its_cry() {
-        let (s, between) = played_twice("r5239006-loud", ECHO_LOUD);
-        assert_eq!(hero_health(&s, P2), between - CRY_DAMAGE);
+    fn r5239006_a_play_from_hand_runs_its_cry() {
+        assert_eq!(dealt_from_hand("r5239006-hand", ECHO_QUIET), CRY_DAMAGE);
+    }
+
+    #[test]
+    fn r5239006_absent_the_flag_the_flashback_play_runs_its_cry() {
+        assert_eq!(dealt_by_flashback("r5239006-loud", ECHO_LOUD, true), CRY_DAMAGE);
+    }
+
+    #[test]
+    fn r5239006_a_spells_resolution_is_no_cry_and_still_runs() {
+        assert_eq!(
+            dealt_by_flashback("r5239006-spell", ECHO_SPELL, false),
+            CRY_DAMAGE
+        );
     }
 }
 
