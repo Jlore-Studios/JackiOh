@@ -22239,13 +22239,14 @@
       "merge_owner": "claude-6",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-3",
       "queued_at": "2026-11-28T13:16:11Z",
-      "run_id": "46148834773",
+      "run_id": "pending:55c35ad8-1795878901",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 645,
-      "started_at": "2026-11-28T13:16:55Z",
+      "started_at": "2026-11-28T15:15:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -22344,9 +22345,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T15:14:50Z",
+    "at": "2026-11-28T15:15:16Z",
     "url": "",
-    "what": "build #5242 on claude-6"
+    "what": "spot-check #5303 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-28T15:06:38Z",
@@ -45236,7 +45237,15 @@
         "n": 645,
         "pr": 5303,
         "queued_at": "2026-11-28T15:14:38Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:55c35ad8-1795878901",
         "sha": "f5826243b0c72797a397e851dd714edc08e9f5e0",
+        "started_at": "2026-11-28T15:15:16Z",
         "status": "queued",
         "title": "Patch: write the card data JSON one record per line, about 260k fewer lines",
         "tries": 0
