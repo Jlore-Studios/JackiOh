@@ -684,6 +684,7 @@ jobs:
           # it needs failed is left out: the one that failed is listed. The filter's `\(...)` is jq's,
           # not the shell's.
           ended_badly() {
+            # shellcheck disable=SC2016 # $only, $name and $job are jq's variables, not the shell's.
             KIND=$1 gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100" --jq '
               (env.REPORT_ONLY_JOBS | split(",")) as $only
               | .jobs[]
