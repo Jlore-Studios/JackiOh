@@ -19886,7 +19886,9 @@
     },
     "5164": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7227642239"
+      ],
       "failures": 2,
       "forced": false,
       "handoff": {
@@ -19921,9 +19923,7 @@
       ],
       "strikes": 2,
       "suggestion": true,
-      "taken_asks": [
-        "c:7227642239"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "5165": {
