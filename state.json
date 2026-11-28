@@ -22203,15 +22203,8 @@
     "what": "build #5189 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-28T08:10:30Z",
-    "notes": [
-      "delivered review #5281 on claude-1 (run 46124089905): reviewed",
-      "delivered revise #5280 on claude-6 (run 46117485093): built",
-      "delivered build #5189 on claude-4 (run 46116455010): infra (its model job left no upload)",
-      "started review #5280 on claude-6 (run 46124740816)",
-      "started build #5189 on claude-1 (run 46124774042)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-11-28T08:19:14Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -22916,7 +22909,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T08:10:30Z",
+  "loop_tick": "2026-11-28T08:19:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
