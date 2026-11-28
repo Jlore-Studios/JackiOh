@@ -4268,3 +4268,40 @@ mod r4599004_an_exile_aura_arriving_in_the_step_is_the_board_s {
         assert!(found[0].contains(CALL_TO_CHAOS), "{}", found[0]);
     }
 }
+
+// R5262000, R3546002 (I16): FvH #100's "make enemy Units and Field Spells in their hand, deck and graveyard
+// GIGA" grants GIGA to a graveyard card, the size it takes as it next enters the field. R78's reset takes
+// every grant a card held on the field as it leaves, so a GIGA a graveyard card holds was granted there, and
+// I16 keeps it (the fuzz's changed-card Radiant wave found it, `--from 4 --cards core-090 --radiant`, #5222);
+// any other keyword a graveyard card holds is still field state left behind.
+mod r5262000_i16_a_giga_granted_in_a_graveyard {
+    use super::*;
+
+    /// p2's graveyard Vanilla holding `granted`, and what the monitor finds of it.
+    fn found_with(granted: &[&str]) -> Vec<String> {
+        let mut g = scenario(json!({ "p2": { "graveyard": [VANILLA] } }));
+        let id = g.pile(PlayerId::P2, "graveyard")[0].id.clone();
+        find_instance_mut(g.state_mut(), &id)
+            .expect("the graveyard card")
+            .granted_keywords = granted
+            .iter()
+            .map(|kind| json_as::<Keyword>(json!({ "kind": kind })))
+            .collect();
+        let mut monitor = create_invariant_monitor(g.state());
+        monitor.after(&[], g.state())
+    }
+
+    #[test]
+    fn r5262000_i16_keeps_a_giga_granted_in_a_graveyard() {
+        assert_eq!(found_with(&["GIGA"]), no_violations());
+    }
+
+    #[test]
+    fn r5262000_i16_still_finds_any_other_keyword_on_a_graveyard_card() {
+        for granted in [&["Taunt"][..], &["GIGA", "Taunt"][..]] {
+            let found = found_with(granted);
+            assert_eq!(found.len(), 1, "{granted:?}: {found:?}");
+            assert!(found[0].contains("I16 field state off the field"), "{}", found[0]);
+        }
+    }
+}

@@ -723,7 +723,7 @@ describe("the set chips (R380: one format, every set)", () => {
   const setOf = (id: string): string | undefined => CORE_CATALOG[id]?.set;
 
   it("offers one chip per shipped set, Classic+ with a testid of its own", () => {
-    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"]);
+    expect([...FILTER_SETS]).toEqual(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Felinors vs Humans"]);
     expect(FILTER_SETS.map(filterSetId)).toEqual([
       "db-filter-set-core",
       "db-filter-set-classic",
@@ -733,6 +733,7 @@ describe("the set chips (R380: one format, every set)", () => {
       "db-filter-set-stinkyscape",
       "db-filter-set-training-grounds",
       "db-filter-set-stinkyscape-plus",
+      "db-filter-set-felinors-vs-humans",
     ]);
   });
 
@@ -762,8 +763,11 @@ describe("the set chips (R380: one format, every set)", () => {
     // Re-pinned for the Stinkyscape+ release (#3573): its 166 cards join the pool; its 38 tokens never do.
     expect(pool(["Stinkyscape+"])).toHaveLength(deckableIn(["Stinkyscape+"]));
     expect(new Set(pool(["Stinkyscape+"]).map(setOf))).toEqual(new Set(["Stinkyscape+"]));
+    // Re-pinned for the Felinors vs Humans release (#5222): its 197 cards join the pool; its 35 tokens never do.
+    expect(pool(["Felinors vs Humans"])).toHaveLength(deckableIn(["Felinors vs Humans"]));
+    expect(new Set(pool(["Felinors vs Humans"]).map(setOf))).toEqual(new Set(["Felinors vs Humans"]));
     expect(pool([])).toHaveLength(
-      deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"]),
+      deckableIn(["Core", "Classic", "Classic+", "Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+", "Felinors vs Humans"]),
     );
   });
 });
