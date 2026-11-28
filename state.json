@@ -21244,6 +21244,9 @@
         }
       }
     },
+    "5242": {
+      "suggestion": true
+    },
     "5244": {
       "action": "review",
       "asks": [],
@@ -45989,6 +45992,13 @@
         "at": "2026-11-28T12:48:43Z",
         "number": 5302,
         "title": "Patch: classify leaves out only a file's test items, not everything after the first one, so a change to the cards crate's registry and shared card helpers asks for its patch note again",
+        "verdict": "auto-approved",
+        "why": "approved by itself: no one voted on it"
+      },
+      {
+        "at": "2026-11-28T14:20:53Z",
+        "number": 5242,
+        "title": "Patch: Zephrys and the autopilot count a hero's Armor wearing down hit by hit when they look for lethal, and a hit that takes a floored hero to its floor wears its Armor",
         "verdict": "auto-approved",
         "why": "approved by itself: no one voted on it"
       }
