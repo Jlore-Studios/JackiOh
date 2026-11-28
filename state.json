@@ -22137,16 +22137,8 @@
     "what": "suggestions (server) on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-28T12:18:10Z",
-    "notes": [
-      "delivered plan #5300 on claude-7 (run 46142984853): blocked",
-      "started suggest on claude-4 (run 46144085454)",
-      "started suggest on claude-8 (run 46144123141)",
-      "started suggest on claude-4 (run 46144166506)",
-      "started suggest on claude-7 (run 46144207743)",
-      "started suggest on claude-7 (run 46144248441)",
-      "nothing more to start: nothing is queued"
-    ],
+    "at": "2026-11-28T12:27:26Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -22851,7 +22843,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T12:18:10Z",
+  "loop_tick": "2026-11-28T12:27:26Z",
   "machine_disk": {
     "issue": null,
     "reading": {
