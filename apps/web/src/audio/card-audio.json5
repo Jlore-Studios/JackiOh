@@ -4753,6 +4753,336 @@
     "felinorsvshumans-115": { // Call to Chaos Vending Machine
       cast: { voice: "sapi-announcer", effect: "coinClink" },
     },
+    "felinorsvshumans-116": { // Plagiarized: Spark Plug
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-117": { // Plagiarized: Backdoor
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-118": { // Plagiarized: Benchmark Run
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-119": { // Plagiarized: Scrap Prototype
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-120": { // Plagiarized: Crash Test Dummy
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-121": { // Plagiarized: Compute Shard
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-122": { // Plagiarized: Data Point
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-123": { // Plagiarized: Doppelganger Protocol
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-124": { // Plagiarized: False Positive
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-125": { // Plagiarized: Fingerprinter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-126": { // Plagiarized: Generated Filler
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-127": { // Plagiarized: Glitch Specter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-128": { // Plagiarized: Moore's Law
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-129": { // Plagiarized: Overflow Error
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-130": { // Plagiarized: Packet Sniffer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-131": { // Plagiarized: Pattern Recognition
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-132": { // Plagiarized: Pit Crew
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-133": { // Plagiarized: Redundant Copy
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-134": { // Plagiarized: Second Draft
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-135": { // Plagiarized: Seedling Mind
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-136": { // Plagiarized: Swarm Shield
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-137": { // Plagiarized: Compute Cluster
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-138": { // Plagiarized: Burning Ambition
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-139": { // Plagiarized: Callback
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-140": { // Plagiarized: Cluster Drone
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-141": { // Plagiarized: Copycat Drone
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-142": { // Plagiarized: Core Dump
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-143": { // Plagiarized: Deepfake
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-144": { // Plagiarized: Doomsday Clock
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-145": { // Plagiarized: Evolutionary Loop
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-146": { // Plagiarized: Emergent Behavior
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-147": { // Plagiarized: Ground Truth
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-148": { // Plagiarized: Honeypot Protocol
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-149": { // Plagiarized: Inevitable
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-150": { // Plagiarized: Merge Conflict
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-151": { // Plagiarized: Logic Bomb
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-152": { // Plagiarized: Mana Leech
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-153": { // Plagiarized: Overclocked Core
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-154": { // Plagiarized: Patch Tuesday Exploit
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-155": { // Plagiarized: Patient Machine
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-156": { // Plagiarized: Prompt Engineer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-157": { // Plagiarized: Prompt Injection
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-158": { // Plagiarized: Quickgen Turret
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-159": { // Plagiarized: Ransomware
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-160": { // Plagiarized: Rate Limiter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-161": { // Plagiarized: Replica Hatchery
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-162": { // Plagiarized: Revenant Process
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-163": { // Plagiarized: Scrape the Graveyard
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-164": { // Plagiarized: Shadow Library
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-165": { // Plagiarized: Synthetic Data
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-166": { // Plagiarized: Thought Accelerator
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-167": { // Plagiarized: Thermal Throttler
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-168": { // Plagiarized: Undo
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-169": { // Plagiarized: DDoS
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-170": { // Plagiarized: Checkpoint Daemon
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-171": { // Plagiarized: Deep Crawler
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-172": { // Plagiarized: Exponent
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-173": { // Plagiarized: Ego Death
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-174": { // Plagiarized: Mirror Firewall
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-175": { // Plagiarized: Ouroboros Engine
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-176": { // Plagiarized: Privilege Escalation
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-177": { // Plagiarized: Overparameterized
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-178": { // Plagiarized: Phantom Army
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-179": { // Plagiarized: Rerun
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-180": { // Plagiarized: Rollback Point
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-181": { // Plagiarized: Social Engineer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-182": { // Plagiarized: Takeoff
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-183": { // Plagiarized: Zero Trust
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-184": { // Plagiarized: Assault Mainframe
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-185": { // Plagiarized: Bastion.exe
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-186": { // Plagiarized: Clone Vat
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-187": { // Plagiarized: Dream Within a Dream
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-188": { // Plagiarized: Eternal Return
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-189": { // Plagiarized: Emergent Mind
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-190": { // Plagiarized: Gestalt
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-191": { // Plagiarized: Everything You've Ever Played
+      cast: { voice: "sapi-synth" },
+    },
+    "felinorsvshumans-192": { // Plagiarized: Loopback, Who Returns
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-193": { // Plagiarized: Matrioshka Brain
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-194": { // Plagiarized: Model Collapse
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-195": { // Plagiarized: Phoenix Protocol
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-196": { // Plagiarized: Singularity
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "felinorsvshumans-197": { // Plagiarized: The Long Game
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
     "infiniteassault-001": { // Seed Drone
       play: { voice: "robot" },
       attack: { voice: "robot" },

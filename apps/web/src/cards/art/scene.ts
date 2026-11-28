@@ -328,6 +328,24 @@ export function composeScene(recipe: SceneRecipe, seedId: string): SceneShape[] 
   return out;
 }
 
+/** R5264500: one kit part's shape as a face draws it on its own: its path, its palette colour, its opacity, and whether it is outlined. */
+export type DrawnKitShape = { readonly d: string; readonly fill: string; readonly opacity: number; readonly inked: boolean };
+
+/**
+ * R5264500: one kit part drawn alone at `place` from `seedId`'s own stream, outside any recipe (the cat ears a granted
+ * Felinor tag puts on a card, cards/CatEars.tsx), from the tables `loadSceneData()` installed (#4222): none before it.
+ */
+export function drawKitPart(part: SceneryPartId, place: PartPlace, seedId: string): readonly DrawnKitShape[] {
+  if (installed === null) return [];
+  const rng = seededRandom((hashId(seedId) ^ SCENE_SALT) >>> 0);
+  return installed.SCENE_KIT[part].draw(place, rng).map((shape) => ({
+    d: shape.d,
+    fill: SCENE_PALETTE[shape.paint],
+    opacity: round2(shape.opacity),
+    inked: shape.inked === true,
+  }));
+}
+
 /** How many layers and how many distinct parts a scene draws (R3331001's measure). */
 export function sceneUse(shapes: readonly SceneShape[]): { layers: number; parts: number } {
   return { layers: new Set(shapes.map((shape) => shape.layer)).size, parts: new Set(shapes.map((shape) => shape.part)).size };

@@ -11,7 +11,8 @@
 //! runs, carried in the prompt's data, so the second offer reads the same X. Then one `fuse_cards` of both
 //! into this (R77), Radiant modules on the Radiant face (R469), so a Radiant Viral Module's Immutable lands
 //! only once both are in. A second offer with nothing left fuses the one pick. The 0/0 body stands while
-//! the Discovers are open: no state check runs while a prompt is open on a play. After the fusion, from
+//! the Discovers are open: no state check runs while a prompt is open on a play (a trigger resolving in
+//! §10.5's step-4 window, before the Cry, runs one, which collects it). After the fusion, from
 //! the picks alone: Starpiece's Starship Piece is granted to the fused card (which R1852001 keeps), and Twin
 //! summons copies of the whole fused card, one (Radiant two), no Cry (R1). R5262002: the fused card costs
 //! R77's min(X + the modules' costs, 4) and is no X card, so a Radiant Recursion Module's Flashback replay
