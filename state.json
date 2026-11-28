@@ -21971,6 +21971,13 @@
     "5289": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "46126371126",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-28T09:06:30Z",
+        "until": "2026-11-28T09:36:30Z"
+      },
       "failures": 0,
       "forced": true,
       "in_lane": true,
