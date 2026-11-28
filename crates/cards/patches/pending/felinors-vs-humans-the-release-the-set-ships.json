@@ -263,6 +263,14 @@
     "felinorsvshumans-196",
     "felinorsvshumans-197"
   ],
+  "plays": [
+    "classicplus-025",
+    "classicplus-053",
+    "core-042",
+    "stinkyscape-109",
+    "stinkyscape-111",
+    "stinkyscapeplus-025"
+  ],
   "rule": true,
   "visual": true
 }
