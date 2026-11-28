@@ -360,8 +360,17 @@ mod tests {
                     "still one `degraded` event"
                 );
                 match only(&events) {
-                    TuningChange::Keyword { keyword, added, also } => {
-                        assert!(!added);
+                    // R5236011: a Nerf may add Fragile to a Unit, the one keyword it adds on the field,
+                    // so a doubled add stops at one.
+                    TuningChange::Keyword {
+                        keyword,
+                        added: true,
+                        also,
+                    } => {
+                        assert_eq!(keyword.kind(), KeywordKind::Fragile);
+                        assert_eq!(also, None);
+                    }
+                    TuningChange::Keyword { keyword, also, .. } => {
                         let also = also.expect("a doubled remove takes two keywords");
                         assert_eq!(also.len(), 1);
                         for moved in std::iter::once(&keyword).chain(also.iter()) {
@@ -463,8 +472,15 @@ mod tests {
                 let card = s.card(id.as_str()).clone();
                 assert_eq!(tune_multiplier_of(s.state(), &card, TuneDirection::Degrade), 1);
                 match only(&tune(&mut s, &id, TuneDirection::Degrade)) {
-                    TuningChange::Keyword { added, also, .. } => {
-                        assert!(!added);
+                    TuningChange::Keyword {
+                        keyword,
+                        added,
+                        also,
+                    } => {
+                        // R5236011: what a Nerf adds on the field is Fragile.
+                        if added {
+                            assert_eq!(keyword.kind(), KeywordKind::Fragile);
+                        }
                         assert_eq!(also, None, "a plain Nerf moves one keyword");
                         keyword_seen = true;
                     }
