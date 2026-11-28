@@ -21045,6 +21045,13 @@
     "5228": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-28T01:05:21Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 2: the AI's decisions (crates/ai/src/evaluate.rs's Taunt walk, a new EvalWeights flag) and rule 1: a read added in crates/engine/src/damage.rs."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
