@@ -48,12 +48,15 @@ permissions:
 env:
   # Hours each part plays: with its build and its last filing, under GitHub's 6-hour job limit.
   GATHER_HOURS: "5"
-  # Games a file holds, filed as soon as all of them have finished: about six minutes of a part (about
+  # Games a file holds, filed as soon as all of them have finished: about half an hour of a part (about
   # 500 games an hour on four vCPUs at the AI's budget, #5103), so the statistics take a version's
-  # games every few minutes. A game the deadline stops holds back at most the other games of its file,
-  # which are never filed. Each file is one batch in each database (`game_record_batches`), whose
-  # totals are the version's however many.
-  GATHER_FILE_GAMES: "50"
+  # games every few minutes across the five parts. A game the deadline stops holds back at most the
+  # other games of its file, which are never filed. Each file is one batch in each database
+  # (`game_record_batches`), and a batch rewrites every card total its games touch, which at the
+  # All Random deals is most of the catalog's rows however few its games: the database's write load
+  # follows the number of files, not of games. At 50 a file the five parts filed about 50 batches an
+  # hour, and JackiOh-Staging ran through its Disk IO budget (#5274, R5274000); 250 files a fifth as many.
+  GATHER_FILE_GAMES: "250"
   # Seconds between a part's looks for files to file.
   GATHER_POLL_SECONDS: "30"
   # Game numbers each run owns: run r plays from (r - 1) * GATHER_STRIDE + 1.

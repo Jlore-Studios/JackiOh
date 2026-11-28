@@ -5,7 +5,7 @@ use std::sync::Arc;
 use axum::http::HeaderMap;
 use jackioh_server::app::App;
 use jackioh_server::config::{
-    CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX,
+    CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_MAX_AGE_SECONDS, CARD_STATS_MIN_SAMPLE, PLAYER_STATS_BYTES_MAX,
     PLAYER_STATS_CACHE_TTL_SECONDS, PUBLIC_STATS_MIN_LIVE_GAMES, USERNAME_CHANGE_COOLDOWN_MS,
 };
 use jackioh_server::db::store::{UsernameClaim, UsernameClaimOutcome};
@@ -359,7 +359,7 @@ mod r654_public_card_and_player_stats {
         assert_eq!(status, 200);
         assert_eq!(
             cache_control(&headers),
-            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+            Some(format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}").as_str())
         );
 
         assert_eq!(data["gate"]["cleared"], json!(false));
@@ -564,7 +564,7 @@ mod r654_public_card_and_player_stats {
         assert_eq!(status, 200);
         assert_eq!(
             cache_control(&headers),
-            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+            Some(format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}").as_str())
         );
 
         assert_eq!(drill["card"]["id"], "core-001");
@@ -1163,6 +1163,71 @@ mod r1771000_player_stats_account_copy {
     }
 }
 
+mod r5274000_fetch_live {
+    use super::*;
+    use crate::support::deps::{TestAppOptions, add_user, test_app_with};
+    use crate::support::store::fake;
+
+    /// An active dev account (`DEV_PROFILE_IDS`), beside the end-to-end fixtures, whose dev account is
+    /// pending and so refused every dev route.
+    const DEV_ID: &str = "d0000000-0000-4000-8000-000000005274";
+
+    /// The app with `DEV_ID` seeded active and listed, and its token.
+    async fn app_with_an_active_dev() -> (Arc<App>, String) {
+        let app = test_app_with(TestAppOptions {
+            env: vec![("DEV_PROFILE_IDS".to_string(), DEV_ID.to_string())],
+            ..TestAppOptions::default()
+        })
+        .await;
+        fake(&app).lock().await.seed_profile(json!({
+            "id": DEV_ID,
+            "userId": "user-5274",
+            "status": "active",
+            "username": "Dev5274",
+            "usernamePrompted": true,
+        }));
+        let token = add_user(&app, "user-5274", "user-5274@example.test", true);
+        (app, token)
+    }
+
+    fn live_game(id: &str) -> Value {
+        make_game_record(
+            id,
+            RecordOptions {
+                source: Some("live"),
+                ..RecordOptions::default()
+            },
+        )
+    }
+
+    /// R5274000: the figures are kept six hours, so a game filed meanwhile waits for them; a dev account's
+    /// Fetch live lets them go, and the next read answers the games filed since, where anyone else's ask is
+    /// refused and changes nothing.
+    #[tokio::test(start_paused = true)]
+    async fn r5274000_fetch_live_answers_the_games_filed_since_and_is_a_dev_accounts_alone() {
+        let (app, dev) = app_with_an_active_dev().await;
+        insert_records(&app, vec![live_game("live-1")]).await;
+        let (status, _, first) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        assert_eq!(first["totalGames"], json!(1));
+
+        insert_records(&app, vec![live_game("live-2")]).await;
+        for token in [None, Some(USER_TOKEN)] {
+            let (status, _, refused) = request(&app, "POST", "/api/dev/stats-refresh", token, None).await;
+            assert_ne!(status, 200, "{token:?}: {refused}");
+        }
+        let (_, _, kept) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(kept, first, "anyone's ask let the figures go");
+
+        let (status, _, loading) = request(&app, "POST", "/api/dev/stats-refresh", Some(&dev), None).await;
+        assert_eq!(status, 200, "{loading}");
+        assert_eq!(loading["steps"], json!(3));
+        let (status, _, live) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        assert_eq!(live["totalGames"], json!(2));
+    }
+}
+
 mod r978000_kept_card_stats {
     use super::*;
     use std::time::Duration;
@@ -1205,7 +1270,7 @@ mod r978000_kept_card_stats {
         assert_eq!(status, 200);
         assert_eq!(
             cache_control(&headers),
-            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+            Some(format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}").as_str())
         );
         assert_eq!(first["totalGames"], json!(1));
         assert_eq!(first["gate"]["liveGames"], json!(1));
@@ -2428,7 +2493,7 @@ mod r4677000_patches_by_reader {
         assert_eq!(cache_control(&dev_headers), Some("private, no-store"));
         assert_eq!(
             cache_control(&anyone_headers),
-            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+            Some(format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}").as_str())
         );
         for path in [
             "/api/stats/cards",
@@ -2446,7 +2511,7 @@ mod r4677000_patches_by_reader {
                 let expected = if token.is_some() {
                     "private, no-store".to_string()
                 } else {
-                    format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}")
+                    format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}")
                 };
                 assert_eq!(
                     cache_control(&headers),
@@ -2480,7 +2545,7 @@ mod r4675001_play_versions {
 
         let (status, headers, data) = get_public(&app, "/api/stats/versions").await;
         assert_eq!(status, 200);
-        let ttl = format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}");
+        let ttl = format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}");
         assert_eq!(cache_control(&headers), Some(ttl.as_str()));
         assert_eq!(
             keys(&data),
@@ -2640,7 +2705,7 @@ mod r4675001_play_versions {
         let (_, _, whole) = get_public(&app, "/api/stats/versions").await;
         let (status, headers, cut) = get_public(&app, "/api/stats/versions?scope=major").await;
         assert_eq!(status, 200);
-        let ttl = format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}");
+        let ttl = format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}");
         assert_eq!(cache_control(&headers), Some(ttl.as_str()));
         // The body never names the scope.
         assert_eq!(keys(&cut), keys(&whole));
@@ -3705,7 +3770,7 @@ mod r1994000_game_figures {
         assert_eq!(status, 200);
         assert_eq!(
             cache_control(&headers),
-            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+            Some(format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}").as_str())
         );
         assert_eq!(data["patch"], json!(current_patch()));
         assert_eq!(data["source"], "provisional");
@@ -4079,7 +4144,7 @@ mod cache_poisoning {
         let app = test_app().await;
         insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
         let responses = seven_ways(&app, "/api/stats/cards").await;
-        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+        assert_same_bytes(&responses, CARD_STATS_MAX_AGE_SECONDS);
     }
 
     #[tokio::test]
@@ -4087,7 +4152,7 @@ mod cache_poisoning {
         let app = test_app().await;
         insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
         let responses = seven_ways(&app, "/api/stats/cards/core-001").await;
-        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+        assert_same_bytes(&responses, CARD_STATS_MAX_AGE_SECONDS);
     }
 
     #[tokio::test]
@@ -4103,7 +4168,7 @@ mod cache_poisoning {
         let app = test_app().await;
         insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
         let responses = seven_ways(&app, "/api/stats/games").await;
-        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+        assert_same_bytes(&responses, CARD_STATS_MAX_AGE_SECONDS);
     }
 
     #[tokio::test]
@@ -4111,7 +4176,7 @@ mod cache_poisoning {
         let app = test_app().await;
         insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
         let responses = seven_ways(&app, "/api/stats/versions").await;
-        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+        assert_same_bytes(&responses, CARD_STATS_MAX_AGE_SECONDS);
     }
 
     #[tokio::test]
@@ -4878,7 +4943,7 @@ mod r4681001_hall_of_fame {
         assert_eq!(reads_of(&app, &loads, "/api/stats/hall-of-fame").await, (1, 1));
         let (status, headers, data) = get_public(&app, "/api/stats/hall-of-fame").await;
         assert_eq!(status, 200);
-        let ttl = format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}");
+        let ttl = format!("public, max-age={CARD_STATS_MAX_AGE_SECONDS}");
         assert_eq!(cache_control(&headers), Some(ttl.as_str()));
         assert_eq!((&data["pilot"], &data["mode"]), (&json!("merged"), &json!("all")));
         assert_eq!(data["minSample"], json!(CARD_STATS_MIN_SAMPLE));

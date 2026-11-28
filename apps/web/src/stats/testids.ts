@@ -67,6 +67,8 @@ export const statsTestid = {
   patchRefused: "stats-patch-refused",
   /** R3324001: the header's current patch. */
   currentPatch: "stats-current-patch",
+  /** R5274000: a dev account's Fetch live. */
+  fetchLive: "stats-fetch-live",
   summaryTotalGames: "stats-summary-total-games",
   searchInput: "stats-search-input",
   cardsTable: "stats-cards-table",
