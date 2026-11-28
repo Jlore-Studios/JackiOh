@@ -22334,13 +22334,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-1",
         "rejections": [],
-        "reviews": [],
-        "sha": "ffc266741d0f425a23b776a1a01de3bbd80f703f",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-1",
+            "run": "46153603214",
+            "tier": "strong"
+          }
+        ],
+        "sha": "45a1b81c1b05410db970774717a63afefaeb1ee6",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     }
   },
