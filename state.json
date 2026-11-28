@@ -21731,6 +21731,8 @@
       "suggestion": true
     },
     "5266": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-28T02:45:48Z",
@@ -21744,8 +21746,11 @@
         "trail": "mmand\": \"cd /home/runner/work/_temp/work/item-5248/crates/ai/tests/ai; python3 - <<'EOF'\\np='shadow_ban.rs'\\ns=open(p).read()\\ndef rep(a,b,c=1):\\n global s\\n assert s.count(a)==c,(a,s.count(a))\\n\u2026\n- said: Meanwhile, the spec docs.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; cat spec/rulings/R977000.md; cat spec/pending/5231.md; ls spec/pending | head; grep -n 'A `timeout` is a decision' spec/09-architecture/9.9-pra\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; grep -n 'A `timeout` is a decision' spec/09-architecture/9.9-practice-ai.md | cut -d: -f1; grep -o 'A `timeout` is a decision.\\\\{0,700\\\\}' spec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; grep -n 'R977000\\\\|R390' crates/ai/README.md | cut -c1-200; sed -n 39,41p crates/tools/README.md | grep -o '.\\\\{200\\\\}still slow.\\\\{200\\\\}'\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; sed -n 523,545p crates/ai/README.md | cut -c1-220\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; python3 - <<'EOF'\\ndef edit(p,a,b):\\n s=open(p).read(); assert s.count(a)==1,(p,a); open(p,'w').write(s.replace(a,b))\\nedit('crates/ai/README.m\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; cat /tmp/claude-1001/-home-runner-work--temp-work-item-5248/*/tasks/b58u9vw6m.output | tail -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; sleep 100; cat /tmp/claude-1001/-home-runner-work--temp-work-item-5248/*/tasks/b58u9vw6m.output | tail -30; pgrep -f cargo | head -3\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; grep -c r5248000 crates/ai/tests/ai/shadow_ban.rs; git status --short; git diff --stat\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; timeout 590 cargo test -p jackioh-ai --test ai -- r5248000 r977000 face_flags both_faces 2>&1 | tail -30\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; cargo test -p jackioh-ai --test ai -- --list 2>&1 | grep -c .; cargo test -p jackioh-ai --test ai -- --list 2>&1 | grep -i 'retime\\\\|r977000' |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; ls crates/ai/tests/ai | head -30; cat crates/ai/tests/ai.rs | head -30; cargo test -p jackioh-ai --test ai -- --list 2>&1 | grep -i 'shadow' | \u2026\n- said: Shadow_ban is in `ai_slow.rs`.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; timeout 595 cargo test -p jackioh-ai --test ai_slow -- r5248000 r977000 r186 r390 b24 b25 2>&1 | tail -40\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; grep -n 'rawTimeouts' crates/ai/tests/ai/shadow_ban.rs | head -20; sed -n 1195,1220p crates/ai/tests/ai/shadow_ban.rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; sed -n 168,182p crates/ai/tests/ai/shadow_ban.rs; sed -n 1318,1324p crates/ai/tests/ai/shadow_ban.rs; grep -n '^fn stats' -A14 crates/ai/tests/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; python3 - <<'EOF'\\np='crates/ai/tests/ai/shadow_ban.rs'\\ns=open(p).read()\\na=' \\\"rawTimeouts\\\": 0,\\\\n \\\"evalDeltaSum\\\": 0,'\\nassert s.count(a)=\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; cargo test -p jackioh-ai --test ai_slow -- r5248000 2>&1 | grep 'test shadow\\\\|result'; timeout 500 cargo test -p jackioh-ai --test ai_slow -- \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; timeout 590 cargo test -p jackioh-tools sweep:: 2>&1 | grep -v ' ok$' | tail -15\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; sleep 110; tail -15 /tmp/claude-1001/-home-runner-work--temp-work-item-5248/*/tasks/bzvibkp4b.output | cut -c1-200\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; grep 'test result\\\\|FAILED\\\\|r5248000' /tmp/claude-1001/-home-runner-work--temp-work-item-5248/*/tasks/bzvibkp4b.output | head; (cargo jackioh \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; grep -a 'running\\\\|test result: ' /tmp/claude-1001/-home-runner-work--temp-work-item-5248/*/tasks/bzvibkp4b.output | grep -v 'running 0\\\\|0 pas\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; grep -a 'Running' /tmp/claude-1001/-home-runner-work--temp-work-item-5248/*/tasks/bzvibkp4b.output | head -5; timeout 110 cargo test -p jackioh\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; timeout 115 cargo test -p jackioh-tools --bins -- sweep:: 2>&1 | grep -v ' ok$' | tail -12\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; cargo test -p jackioh-tools --bins -- r5248000 2>&1 | grep 'test \\\\|result'; sleep 45; tail -5 /tmp/claude-1001/-home-runner-work--temp-work-it\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; sleep 90; tail -c 600 /tmp/claude-1001/-home-runner-work--temp-work-item-5248/*/tasks/b7jdkdgz4.output; pgrep -fa 'cargo|rustc' | cut -c1-120 |\u2026\n- said: Spec check passes. Now clippy and the other checks.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; (timeout 590 cargo clippy -p jackioh-ai -p jackioh-tools --all-targets -- -D warnings 2>&1 | tail -15) \"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; grep -rln 'raw_timeouts\\\\|face_flags\\\\|AI_SWEEP' crates apps --include=*.rs --include=*.ts | head; (cargo jackioh patches check; cargo jackioh \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; grep -n 'AI_SWEEP\\\\|decision_ms\\\\|decisionMs' crates/ai/tests/ai/surface.rs crates/engine/src/wire/stats.rs | head; grep -rn 'decisionMs' apps/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5248; cat >> .bot-notes.md <<'EOF'\\n\\n## State (build run)\\nAll plan steps done: code, tests, ruling R5248000, pending/5248.md, \\u00a79.9, R977000, R\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the shadow-ban sweep counts a slow decision only when it is clearly over the limit, tells it apart from a game that never ended, and flags only the tier that raised it\"} --> The sweep now counts a re-timed decision as a timeout only above 2,500 ms, coun\u2026"
       },
       "issue": 5248,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-28T03:50:31Z",
         "from_run": "46099651133",
         "gates": [
           {
@@ -21837,7 +21842,11 @@
         "source": "build",
         "until": "2026-11-28T04:19:46Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-28T03:49:46Z",
+      "run_id": "pending:616c09b3-1795837812",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -21856,6 +21865,9 @@
         "provider": "claude-8",
         "run": "46099651133"
       },
+      "started_at": "2026-11-28T03:50:31Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -21869,9 +21881,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T03:22:50Z",
+    "at": "2026-11-28T03:50:31Z",
     "url": "",
-    "what": "suggestions (tests) on claude-8"
+    "what": "review #5266 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-28T03:41:39Z",
