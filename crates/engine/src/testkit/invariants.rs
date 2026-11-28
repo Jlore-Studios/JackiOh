@@ -2233,7 +2233,7 @@ impl TextRecord {
 
 /// I23, R4609003: whether `now` is `was` with keywords appended to its `addKeywords` and nothing else,
 /// each one the step's `keywordGranted` kept for good (`tune::gain_keyword_for_good`: R1870007, R4154202),
-/// a grant Immutable never stopped and no Buff.
+/// a grant of the card's own text, which Immutable never stops (R23, R5226000), and no Buff.
 fn kept_grants_only(was: Option<&Tuning>, now: Option<&Tuning>, kept: &[&Keyword]) -> bool {
     let was = was.cloned().unwrap_or_default();
     let now = now.cloned().unwrap_or_default();

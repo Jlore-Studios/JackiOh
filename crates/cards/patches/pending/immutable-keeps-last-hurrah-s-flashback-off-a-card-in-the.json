@@ -1,0 +1,21 @@
+{
+  "title": "Patch: Immutable keeps Last Hurrah's Flashback off a card in the hand, and its random picks skip Immutable cards",
+  "sources": "issue #5226",
+  "notes": "Issue #5226 (R5226000): a keyword another card gives for good (gainKeywordForGood) is kept off an Immutable card, an Indestructible Unit card's included (R4353000); C #37 Last Hurrah's random picks skip Immutable cards and its Radiant face gives Flashback to every other hand card. A card's own keyword for good (S #154 Dice of Doom) is unchanged (R23). Last Hurrah keeps its old script for replays.",
+  "player": {
+    "title": "Last Hurrah passes Immutable cards by",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Last Hurrah's random picks now fall only on cards that can take Flashback, and its Radiant face gives it to every card in your hand that can take it."
+    ],
+    "text": [],
+    "fixes": [
+      "Last Hurrah no longer gives Flashback to an Immutable card in your hand, such as Phase Wall, Megabase or The Rock."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "classic-037"
+  ]
+}
