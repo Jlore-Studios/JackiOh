@@ -20078,23 +20078,6 @@
       "round_tier": "strong",
       "run_id": "46127787048",
       "runs_on": "ubuntu-latest",
-      "session": {
-        "action": "build",
-        "artifact": 15255339804,
-        "artifact_bytes": 572816,
-        "artifact_name": "work",
-        "at": "2026-11-28T08:49:31Z",
-        "bytes": 720944,
-        "cwd": "/home/runner/work/_temp/work/item-5189",
-        "ended": "interrupted: `claude-1` reached its usage limit",
-        "head": "598cf86c0a6b5cf5c66f6585e7ca888147778b0f",
-        "id": "1ae2dd80-59a6-43fc-9c41-90902d4b2b1b",
-        "kind": "build",
-        "model": "opus",
-        "project": "-home-runner-work--temp-work-item-5189",
-        "provider": "claude-1",
-        "run": "46124774042"
-      },
       "started_at": "2026-11-28T08:51:55Z",
       "stop_requested": false,
       "strike_log": [
