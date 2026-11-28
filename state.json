@@ -46153,7 +46153,7 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-28T05:08:03Z",
+    "idle_since": null,
     "last_area": "ai",
     "last_run": "2026-11-28T05:08:03Z",
     "provider": null,
