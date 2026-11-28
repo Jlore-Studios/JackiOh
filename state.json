@@ -22079,7 +22079,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-6",
-      "run_id": "pending:68f6d157-1795873973",
+      "run_id": "46151836323",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-28T13:53:10Z",
       "stop_requested": false,
