@@ -21038,15 +21038,8 @@
       "taken_asks": []
     },
     "5228": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46091487232",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-28T01:24:25Z",
-        "until": "2026-11-28T01:54:25Z"
-      },
       "difficulty_by": {
         "at": "2026-11-28T01:24:17Z",
         "difficulty": "hard",
@@ -21065,25 +21058,24 @@
         "reason": "planned on opus",
         "trail": "raining/improve.md | head -15\", \"description\": \"Find the screen instructions in improve.md\"}\n- Bash: {\"command\": \"sed -n 48,100p training/improve.md; sed -n 127,160p training/improve.md\", \"description\": \"Read the screen and beyond-the-screen sections\"}\n- Bash: {\"command\": \"sed -n 160,185p training/improve.md\", \"description\": \"Read the rest of Beyond the screen\"}\n- Bash: {\"command\": \"sed -n 140,160p training/improve.md; grep -rn 'JACKIOH_RECORD_PRACTICE_CLAIM' apps/web/src --include=*.ts -l | head -3; grep -rn 'fn r1303002' crates/server/tests -l | head\", \"descriptio\u2026\n- Bash: {\"command\": \"grep -n 'JACKIOH_RECORD_PRACTICE_CLAIM' -B3 -A6 apps/web/src/practice/claim.test.ts | head -40\", \"description\": \"Read how the practice claim fixture is recorded\"}\n- Bash: {\"command\": \"git show --stat 82f4ed4c37 | head -40\", \"description\": \"See what the last AI patch commit touched\"}\n- Bash: {\"command\": \"git show --stat --format='%s' 82f4ed4c37 | grep -v '^ ' | head -3; git show --stat --format='' 82f4ed4c37 | tail -25\", \"description\": \"List the files the last AI patch commit changed\"}\n- Bash: {\"command\": \"grep -n 'classify' crates/tools/README.md | head -20\", \"description\": \"Read classify's documentation lines\"}\n- Bash: {\"command\": \"grep -rn 'core-084' crates/ai/tests crates/engine/tests/rules | head -8; grep -n 'pub const HERO_ARMOR' -A3 crates/engine/src/config.rs\", \"description\": \"Find Going Long usage in tests a\u2026\n- Bash: {\"command\": \"grep -rn '\\\"backrow\\\": \\\\[\\\\s*\\\"core-084\\\"\\\\|backrow.*core-084' crates/ai/tests/ai/*.rs crates/engine/tests/rules/*.rs 2>/dev/null | cut -c1-200 | head -5; grep -rn 'HERO_ARMOR' crates/e\u2026\n- Bash: {\"command\": \"sed -n 284,292p crates/engine/src/config.rs; grep -rln 'core-084' crates/engine/tests/rules/ | head -5; grep -rn '\\\"core-084\\\"' crates/engine/tests/rules/*.rs | cut -c1-220 | head -5\", \"\u2026\n- Bash: {\"command\": \"grep -rln 'core-084\\\\|going_long\\\\|Going Long' crates/engine/tests/rules/ crates/ai/tests/ai/ 2>/dev/null | head -8\", \"description\": \"Find any test file mentioning Going Long\"}\n- Bash: {\"command\": \"grep -n 'core-084\\\\|Going Long' crates/engine/tests/rules/face_down_text.rs crates/engine/tests/rules/rulings_c.rs | cut -c1-250 | head -10\", \"description\": \"Read how Going Long is place\u2026\n- Bash: {\"command\": \"sed -n 40,80p crates/engine/tests/rules/face_down_text.rs; sed -n 3005,3030p crates/engine/tests/rules/rulings_c.rs\", \"description\": \"Read the Going Long placement in tests\"}\n- Bash: {\"command\": \"grep -n 'face_down\\\\|faceDown\\\\|face_up' crates/engine/src/testkit/scenario.rs | head -15\", \"description\": \"Check the scenario backrow's face-up default\"}\n- Bash: {\"command\": \"sed -n 955,975p crates/engine/src/testkit/scenario.rs; grep -n 'fn lasting_text_off' -A15 crates/engine/src/preview.rs | head -22\", \"description\": \"Read backrow placement and lasting_tex\u2026\n- Bash: {\"command\": \"sed -n 415,440p crates/engine/src/testkit/scenario.rs; grep -rn '\\\"faceUp\\\": true' crates/ai/tests/ai/*.rs | head -3\", \"description\": \"Check scenario's field entry serde names\"}\n- Bash: {\"command\": \"ls crates/cards/src/scripts/core/ | grep -i '084\\\\|going' | head; grep -rn '\\\"id\\\": \\\"core-084\\\"' -A4 crates/cards/catalog.json 2>/dev/null | head -6 || true; ls crates/cards/\", \"descrip\u2026\n- Bash: {\"command\": \"grep -rn 'PlayerModifier {' -A4 crates/ai/tests/ai/*.rs | head -12; grep -n 'HeroImmune\\\\|HeroArmor {' crates/engine/src/state.rs | head; grep -n 'pub enum ModifierExpiry' -A10 crates/en\u2026\n- Bash: {\"command\": \"grep -rn 'hero-p1\\\\|hero-{}' crates/ai/tests/ai/*.rs | head -5; grep -n 'pub fn act\\\\b\\\\|pub fn act(' -A12 crates/ai/tests/ai/support.rs; grep -n 'pub fn unit\\\\b\\\\|pub fn unit(' -A8 crat\u2026\n- Bash: {\"command\": \"grep -rn 'projected_hero_damage\\\\|hero_hit_amount\\\\|project_hit' crates/ai/src/*.rs | grep -v '^\\\\s*///' | head -20\", \"description\": \"List the AI's hero-hit projection call sites\"}\n- Bash: {\"command\": \"grep -rln 'fn r4583000' crates | head -5; grep -rn 'assault-sim\\\\|assault_sim' scripts/ci-scope.sh .github/workflows/ci.yml 2>/dev/null | head -5\", \"description\": \"Find the Infinite Assa\u2026\n- Bash: {\"command\": \"grep -n 'fn r4583000' -B3 crates/tools/src/assault_sim.rs | head -20; grep -rn 'assault' .github/workflows/ci.yml | head -5\", \"description\": \"Read the assault band test names and CI usag\u2026\n- Bash: {\"command\": \"sed -n 590,660p crates/tools/src/assault_sim.rs\", \"description\": \"Read the assault band tests\"}\n- Bash: {\"command\": \"grep -n 'reborn_body_read' crates/ai/README.md crates/ai/src/evaluate.rs | head\", \"description\": \"Check other places listing the latest flag\"}\n- Bash: {\"command\": \"sed -n 783,808p crates/engine/src/state.rs; grep -n 'pub use\\\\|ModifierKind\\\\|PlayerModifier' crates/engine/src/testkit/mod.rs | head\", \"description\": \"Check ModifierKind variants and te\u2026\n- Bash: {\"command\": \"sed -n 1,20p crates/ai/tests/ai/attack_hooks.rs | grep '^use'; grep -n '^pub use' crates/engine/src/lib.rs | head\", \"description\": \"Check the imports that bring PlayerModifier into scope\u2026\n- Bash: {\"command\": \"grep -n 'bot' .gitignore | head; grep -n '\\\\-\\\\-save' crates/tools/README.md | cut -c1-400 | head -3\", \"description\": \"Check gitignore patterns and arena's save flag\"}\n- Bash: {\"command\": \"sed -n 1,12p crates/ai/tests/ai/mod.rs\", \"description\": \"Read the AI test module list\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5228/.bot-plan.md\", \"content\": \"# Draft plan #5228 (opus planner, run 2)\\n\\nVerified against code at 82f4ed4c37:\\n- damage.rs: hero_armor_of 125, hero\u2026\n- Bash: {\"command\": \"sed -n 1660,1740p crates/ai/src/evaluate.rs | grep -n 'damage_past_taunts\\\\|attacks.push' ; sed -n 1749,1760p crates/ai/src/evaluate.rs\", \"description\": \"Confirm face_threat feeds the Ta\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule line 2, the AI: it changes the evaluation's Taunt walk in crates/ai/src/evaluate.rs, and also crates/engine/src/damage.rs\"} --> ## Goal The AI's Taunt walk (`soak_past_taunts`, which feeds `face_threat`, the threat and pressure terms, `wall_switches`, `\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-4",
-      "owner_since": "2026-11-28T01:07:19Z",
-      "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
+      "live": "building",
+      "owner": "claude-3",
+      "owner_since": "2026-11-28T01:25:12Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-28T01:24:19Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-4",
+      "provider": "claude-3",
       "queued_at": "2026-11-28T00:42:46Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46091487232",
+      "run_id": "pending:2c2adad9-1795829092",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T01:07:19Z",
+      "started_at": "2026-11-28T01:25:12Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -21293,9 +21285,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T01:17:15Z",
+    "at": "2026-11-28T01:25:12Z",
     "url": "",
-    "what": "build #5226 on claude-3"
+    "what": "build #5228 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-28T01:14:08Z",
