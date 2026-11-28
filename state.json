@@ -20210,6 +20210,7 @@
     "5189": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20234,7 +20235,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-4",
-      "queued_at": "2026-11-27T21:25:39Z",
+      "queued_at": "2026-11-28T08:12:02Z",
       "requested_by": "jgoetzmann",
       "run_id": "46116455010",
       "runs_on": "ubuntu-latest",
