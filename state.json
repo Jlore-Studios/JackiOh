@@ -21532,22 +21532,34 @@
       "taken_asks": []
     },
     "5248": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-8",
+      "owner_since": "2026-11-28T02:37:50Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-28T02:36:34Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:684c7977-1795833450",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-28T02:37:50Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T02:37:17Z",
+    "at": "2026-11-28T02:37:50Z",
     "url": "",
-    "what": "plan #5246 on claude-7"
+    "what": "plan #5248 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-28T02:26:19Z",
