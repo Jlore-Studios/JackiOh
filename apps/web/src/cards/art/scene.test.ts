@@ -265,10 +265,12 @@ describe("R3331000 the five proof cards", () => {
     // (setScenes.test.ts); R3401000: so does every Meditative entry (meditativeScenes.test.ts); R3403000: so do #3403's
     // Stinkyscape entries (stinkyscape91Scenes.test.ts); R3391000: so do Stinkyscape's cards 1 to 90 of its pass, which
     // hold Arg Arg Defender's (stinkyscapeScenes.test.ts); R3352000: and every Classic entry (classicScenes.test.ts);
-    // R4577009: and every Infinite Assault entry (infiniteassault.test.ts).
+    // R4577009: and every Infinite Assault entry (infiniteassault.test.ts); R5264000: and every Felinors vs Humans entry
+    // (felinorsvshumans.test.ts).
     const core = Object.values(CATALOG).filter((card) => card.set === "Core").map((card) => card.id);
     const passes = Object.values(CATALOG).filter((card) => card.set === "Meditative+" || card.set === "Training Grounds" || card.set === "Classic").map((card) => card.id);
-    const checkedElsewhere = (id: string): boolean => id.startsWith("classicplus-") || id.startsWith("meditative-") || id.startsWith("stinkyscapeplus-") || id.startsWith("infiniteassault-");
+    const checkedElsewhere = (id: string): boolean =>
+      id.startsWith("classicplus-") || id.startsWith("meditative-") || id.startsWith("stinkyscapeplus-") || id.startsWith("infiniteassault-") || id.startsWith("felinorsvshumans-");
     expect(Object.keys(SCENE_RECIPES).filter((id) => !checkedElsewhere(id) && !Object.hasOwn(STINKYSCAPE_91_RECIPES, id)).sort()).toEqual(
       [...new Set<string>([...PROOFS, ...core, ...passes, ...Object.keys(STINKYSCAPE_RECIPES)])].sort(),
     );

@@ -102,7 +102,7 @@ mod tests {
         #[test]
         fn r5237005_playing_the_leftmost_or_a_middle_card_draws_nothing() {
             let mut s = tools_out(false, 3, "p1");
-            play_at(&mut s, 0);
+            play_at(&mut s, 1);
             assert_eq!(drawn_by(&s, P1), 0);
             play_at(&mut s, 0);
             // Two cards left: the left one is not the rightmost.
