@@ -135,7 +135,7 @@ function sameHoveredAttack(a: HoveredAttack | undefined, b: HoveredAttack | unde
 }
 
 /**
- * The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `e2e/support/testids.ts` BANNER). R3910000: the
+ * The turn banner, which `Board` does not render: one `turn-banner` (M5-T4, `testid.banner`). R3910000: the
  * events it speaks for are the turn's start, its end by no moves left, its being cut short and the AI's taking it; R3925000:
  * and a loop stopped at the loop cap.
  */

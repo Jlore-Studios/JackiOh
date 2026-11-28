@@ -25,15 +25,9 @@ import {
   routes,
   seedFor,
 } from "../../support/config.ts";
-import {
-  INVITE_CODE_INPUT,
-  INVITE_ERROR,
-  INVITE_NOT_NEEDED,
-  INVITE_PAUSED,
-  INVITE_SUBMIT,
-  ts,
-} from "../../support/testids.ts";
+import { ts } from "../../support/testids.ts";
 import { mintId } from "../../support/commands.ts";
+import { inviteTestid } from "../../../apps/web/src/auth/testids.ts";
 
 /** Not R107's floor: bounds localhost transport spread; M6-T1 owns the tight timing assertion. */
 const TRANSPORT_JITTER_MS = 100;
@@ -203,28 +197,28 @@ describe("10 invite gate — a pending account", () => {
     cy.location("pathname").should("eq", routes.invite());
 
     // A13: assert rendered controls, not only the `/invite` route.
-    cy.get(ts(INVITE_CODE_INPUT)).should("be.visible").and("have.value", "");
-    cy.get(ts(INVITE_CODE_INPUT)).should(
+    cy.get(ts(inviteTestid.input)).should("be.visible").and("have.value", "");
+    cy.get(ts(inviteTestid.input)).should(
       "have.attr",
       "placeholder",
       Array.from({ length: INVITE_CODE_LENGTH / INVITE_CODE_GROUP_SIZE }, () =>
         "X".repeat(INVITE_CODE_GROUP_SIZE),
       ).join(INVITE_CODE_SEPARATOR),
     );
-    cy.get(ts(INVITE_SUBMIT)).should("be.visible").and("be.disabled");
-    cy.get(ts(INVITE_ERROR)).should("not.exist");
-    cy.get(ts(INVITE_PAUSED)).should("not.exist");
-    cy.get(ts(INVITE_NOT_NEEDED)).should("not.exist");
+    cy.get(ts(inviteTestid.submit)).should("be.visible").and("be.disabled");
+    cy.get(ts(inviteTestid.error)).should("not.exist");
+    cy.get(ts(inviteTestid.paused)).should("not.exist");
+    cy.get(ts(inviteTestid.notNeeded)).should("not.exist");
 
     // R104 normalizes lower-case input; this is §9.4's one screen failure.
-    cy.get(ts(INVITE_CODE_INPUT)).type(inviteCodes.missing().toLowerCase());
-    cy.get(ts(INVITE_CODE_INPUT)).should("have.value", inviteCodes.missing());
-    cy.get(ts(INVITE_SUBMIT)).should("not.be.disabled").click();
+    cy.get(ts(inviteTestid.input)).type(inviteCodes.missing().toLowerCase());
+    cy.get(ts(inviteTestid.input)).should("have.value", inviteCodes.missing());
+    cy.get(ts(inviteTestid.submit)).should("not.be.disabled").click();
 
     // R145: render the server's §9.4 rejection verbatim.
-    cy.get(ts(INVITE_ERROR)).should("have.text", REDEMPTION_IDENTICAL_ERROR);
+    cy.get(ts(inviteTestid.error)).should("have.text", REDEMPTION_IDENTICAL_ERROR);
     cy.location("pathname").should("eq", routes.invite());
-    cy.get(ts(INVITE_NOT_NEEDED)).should("not.exist");
+    cy.get(ts(inviteTestid.notNeeded)).should("not.exist");
     me(pendingToken()).should((response) => {
       expect(response.body.profile.status, "a refused code activates nothing").to.eq("pending");
       expect(response.body.needsInviteCode).to.eq(true);

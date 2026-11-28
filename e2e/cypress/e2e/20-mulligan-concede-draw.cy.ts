@@ -10,28 +10,12 @@ import { SETTINGS_STORAGE_KEY } from "../../../apps/web/src/settings/store.ts";
 import { MULLIGAN_CLOCK_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, apiUrl, bearerHeaders, routes, seedFor, server, timeouts } from "../../support/config.ts";
 import {
-  BOARD,
   CLOCK_OPPONENT,
   CLOCK_YOU,
-  CONCEDE,
-  CONCEDE_CANCEL,
-  CONCEDE_CONFIRM,
-  CONCEDE_DIALOG,
-  DRAW_ACCEPT,
-  DRAW_DECLINE,
-  DRAW_OFFER,
-  DRAW_OFFER_STATUS,
-  DRAW_OUTCOME,
   DRAW_TOAST,
-  END_TURN,
-  MULLIGAN_OPPONENT_READY,
-  MULLIGAN_OPPONENT_STATUS,
-  MULLIGAN_WAITING,
-  OFFER_DRAW,
   PROMPT,
   PROMPT_CLOCK,
   PROMPT_SUBMIT,
-  RESULT_OVERLAY,
   handCardId,
   mulliganWaitingCardId,
   promptOf,
@@ -40,6 +24,7 @@ import {
 } from "../../support/testids.ts";
 import type { ActionInput, PlayerId } from "../../support/types.ts";
 import type { ViewPredicate, WsPlayerResult } from "../../support/commands.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 const SEAT_TWO = "seat-two";
 const SEAT_ONE_ID: PlayerId = "p1";
@@ -199,13 +184,13 @@ function browserShowsMulliganClock(): void {
 }
 
 function browserSeesTurnOne(): void {
-  cy.get(ts(BOARD), { timeout: timeouts.view })
+  cy.get(ts(gameTestid.board), { timeout: timeouts.view })
     .should("have.attr", "data-phase", "main")
     .and("have.attr", "data-turn", "1")
     .and("have.attr", "data-active", "you");
-  cy.get(ts(END_TURN), { timeout: timeouts.view }).should("not.be.disabled");
+  cy.get(ts(gameTestid.endTurn), { timeout: timeouts.view }).should("not.be.disabled");
   cy.get(PROMPT).should("not.exist");
-  cy.get(ts(MULLIGAN_WAITING)).should("not.exist");
+  cy.get(ts(gameTestid.mulliganWaiting)).should("not.exist");
   // R268: after setup, R79's turn clock replaces the mulligan clock.
   cy.get(ts(PROMPT_CLOCK)).should("not.exist");
   cy.get(ts(CLOCK_YOU))
@@ -231,7 +216,7 @@ function seatTwoSeesTurnOne(): Cypress.Chainable<ViewLike> {
 }
 
 function waitForMyTurn(): void {
-  cy.get(ts(END_TURN), { timeout: timeouts.view }).should("not.be.disabled");
+  cy.get(ts(gameTestid.endTurn), { timeout: timeouts.view }).should("not.be.disabled");
 }
 
 // A room match (§9.5)
@@ -282,7 +267,7 @@ describe("20 — both seats mulligan at once, Concede asks first, and a draw off
     openMatch(SEEDS.seatTwoFirst);
 
     cy.waitForPrompt("mulligan");
-    cy.get(ts(MULLIGAN_OPPONENT_STATUS))
+    cy.get(ts(gameTestid.mulliganOpponentStatus))
       .should("have.attr", "data-ready", "false")
       .and("contain.text", "Opponent is choosing");
     cy.get(ts(PROMPT_SUBMIT)).should("have.text", "Ready");
@@ -327,11 +312,11 @@ describe("20 — both seats mulligan at once, Concede asks first, and a draw off
 
     cy.get(promptOf("mulligan")).should("be.visible");
     cy.get(promptOf("mulligan"))
-      .find(ts(MULLIGAN_OPPONENT_STATUS))
+      .find(ts(gameTestid.mulliganOpponentStatus))
       .should("have.attr", "data-ready", "true")
-      .find(ts(MULLIGAN_OPPONENT_READY))
+      .find(ts(gameTestid.mulliganOpponentReady))
       .should("have.text", "Opponent is ready");
-    cy.get(ts(MULLIGAN_WAITING)).should("not.exist");
+    cy.get(ts(gameTestid.mulliganWaiting)).should("not.exist");
     browserShowsMulliganClock();
     cy.then(() => {
       browserNeverShows(seatTwoHand, "the browser was never sent a card of seat 2's hand");
@@ -363,14 +348,14 @@ describe("20 — both seats mulligan at once, Concede asks first, and a draw off
       cy.settled();
 
       cy.get(PROMPT).should("not.exist");
-      cy.get(ts(MULLIGAN_WAITING), { timeout: timeouts.view })
+      cy.get(ts(gameTestid.mulliganWaiting), { timeout: timeouts.view })
         .should("be.visible")
         .and("contain.text", "Waiting for your opponent…")
         .and("have.attr", "data-returning", "1");
       for (const id of keep) cy.get(ts(mulliganWaitingCardId(id))).should("have.attr", "data-verdict", "keep");
       cy.get(ts(mulliganWaitingCardId(back))).should("have.attr", "data-verdict", "redraw");
       for (const id of hand) cy.get(ts(handCardId(id))).should("exist");
-      cy.get(ts(BOARD)).should("have.attr", "data-phase", "mulligan");
+      cy.get(ts(gameTestid.board)).should("have.attr", "data-phase", "mulligan");
       browserShowsMulliganClock();
 
       seatTwoAwaits({ mulliganOpponentReady: true }).then((view) => {
@@ -393,29 +378,29 @@ describe("20 — both seats mulligan at once, Concede asks first, and a draw off
   it("§2.5 Concede asks first: Keep playing, Escape and a click outside keep the game, and only Concede ends it", () => {
     openMatchAtTurnOne(SEEDS.concede);
 
-    cy.get(ts(CONCEDE)).should("not.be.disabled").click();
-    cy.get(ts(CONCEDE_DIALOG))
+    cy.get(ts(gameTestid.concede)).should("not.be.disabled").click();
+    cy.get(ts(gameTestid.concedeDialog))
       .should("be.visible")
       .and("have.attr", "role", "alertdialog")
       .and("have.attr", "aria-modal", "true")
       .and("contain.text", "Concede this game?")
       .and("contain.text", "Your opponent wins and the game ends here.");
-    cy.focused().should("have.attr", "data-testid", CONCEDE_CANCEL).and("have.text", "Stay");
-    cy.get(ts(CONCEDE_CONFIRM)).should("have.text", "Concede");
+    cy.focused().should("have.attr", "data-testid", gameTestid.concedeCancel).and("have.text", "Stay");
+    cy.get(ts(gameTestid.concedeConfirm)).should("have.text", "Concede");
 
-    cy.get(ts(CONCEDE_CANCEL)).click();
-    cy.get(ts(CONCEDE_DIALOG)).should("not.exist");
-    cy.focused().should("have.attr", "data-testid", CONCEDE);
+    cy.get(ts(gameTestid.concedeCancel)).click();
+    cy.get(ts(gameTestid.concedeDialog)).should("not.exist");
+    cy.focused().should("have.attr", "data-testid", gameTestid.concede);
 
-    cy.get(ts(CONCEDE)).click();
-    cy.get(ts(CONCEDE_DIALOG)).should("be.visible");
+    cy.get(ts(gameTestid.concede)).click();
+    cy.get(ts(gameTestid.concedeDialog)).should("be.visible");
     cy.get("body").type("{esc}");
-    cy.get(ts(CONCEDE_DIALOG)).should("not.exist");
+    cy.get(ts(gameTestid.concedeDialog)).should("not.exist");
 
-    cy.get(ts(CONCEDE)).click();
-    cy.get(ts(CONCEDE_DIALOG)).should("be.visible").parent().click("topLeft");
-    cy.get(ts(CONCEDE_DIALOG)).should("not.exist");
-    cy.get(ts(RESULT_OVERLAY)).should("not.exist");
+    cy.get(ts(gameTestid.concede)).click();
+    cy.get(ts(gameTestid.concedeDialog)).should("be.visible").parent().click("topLeft");
+    cy.get(ts(gameTestid.concedeDialog)).should("not.exist");
+    cy.get(ts(gameTestid.result)).should("not.exist");
 
     cy.endTurn();
     seatTwoAwaits({ active: SEAT_TWO_ID }).then((view) => {
@@ -426,11 +411,11 @@ describe("20 — both seats mulligan at once, Concede asks first, and a draw off
     });
     waitForMyTurn();
 
-    cy.get(ts(CONCEDE)).click();
-    cy.get(ts(CONCEDE_CONFIRM)).click();
-    cy.get(ts(CONCEDE_DIALOG)).should("not.exist");
+    cy.get(ts(gameTestid.concede)).click();
+    cy.get(ts(gameTestid.concedeConfirm)).click();
+    cy.get(ts(gameTestid.concedeDialog)).should("not.exist");
     cy.expectResult("Loss");
-    cy.get(ts(RESULT_OVERLAY))
+    cy.get(ts(gameTestid.result))
       .should("have.attr", "data-outcome", "loss")
       .and("have.attr", "data-reason", "concede")
       .and("contain.text", "You conceded.");
@@ -452,11 +437,11 @@ describe("20 — both seats mulligan at once, Concede asks first, and a draw off
       expect(refused.ok, "R36: the non-active seat cannot offer a draw").to.eq(false);
     });
 
-    cy.get(ts(OFFER_DRAW)).should("not.be.disabled");
+    cy.get(ts(gameTestid.offerDraw)).should("not.be.disabled");
     cy.offerDraw();
     cy.get(ts(DRAW_TOAST), { timeout: timeouts.view }).should("have.attr", "data-draw", "waiting");
-    cy.get(ts(DRAW_OFFER_STATUS)).should("have.text", "Draw offered — waiting for reply");
-    cy.get(ts(DRAW_OFFER)).should("not.exist");
+    cy.get(ts(gameTestid.drawOfferStatus)).should("have.text", "Draw offered — waiting for reply");
+    cy.get(ts(gameTestid.drawOffer)).should("not.exist");
     seatTwoAwaits({ drawOfferBy: SEAT_ONE_ID }).then((view) => {
       expect(view.drawOffer, "R269: the offer stands on seat 2's view").to.deep.eq({ by: SEAT_ONE_ID });
       expect(view.result, "an offer ends nothing by itself").to.eq(null);
@@ -465,12 +450,12 @@ describe("20 — both seats mulligan at once, Concede asks first, and a draw off
     cy.then(() => {
       seatTwoSends({ type: "answerDraw", accept: false, playerId: SEAT_TWO_ID });
     });
-    cy.get(ts(DRAW_OUTCOME), { timeout: timeouts.view })
+    cy.get(ts(gameTestid.drawOutcome), { timeout: timeouts.view })
       .should("have.attr", "data-outcome", "declined")
       .and("have.text", "Your opponent declined the draw");
     cy.get(ts(DRAW_TOAST)).should("have.attr", "data-draw", "declined");
-    cy.get(ts(DRAW_OFFER_STATUS)).should("not.exist");
-    cy.get(ts(OFFER_DRAW)).should("be.disabled");
+    cy.get(ts(gameTestid.drawOfferStatus)).should("not.exist");
+    cy.get(ts(gameTestid.offerDraw)).should("be.disabled");
     seatTwoAwaits({ drawOfferBy: null }).then((view) => {
       expect(view.drawOffer, "R269: an answered offer no longer stands").to.eq(undefined);
       expect(view.result, "and a declined one ends nothing").to.eq(null);
@@ -488,12 +473,12 @@ describe("20 — both seats mulligan at once, Concede asks first, and a draw off
     });
 
     cy.get(ts(DRAW_TOAST), { timeout: timeouts.view }).should("have.attr", "data-draw", "offered");
-    cy.get(ts(DRAW_OFFER))
+    cy.get(ts(gameTestid.drawOffer))
       .should("be.visible")
       .and("have.attr", "role", "region")
       .and("contain.text", "Your opponent offers a draw");
-    cy.get(ts(DRAW_DECLINE)).should("have.text", "Decline").and("not.be.disabled");
-    cy.get(ts(DRAW_ACCEPT)).should("have.text", "Accept").and("not.be.disabled");
+    cy.get(ts(gameTestid.drawDecline)).should("have.text", "Decline").and("not.be.disabled");
+    cy.get(ts(gameTestid.drawAccept)).should("have.text", "Accept").and("not.be.disabled");
     cy.window({ log: false }).should((win) => {
       type Cue = { kind: string; id?: string; params?: { urgent?: boolean } };
       const audio = (win as unknown as { __jackiohAudio?: { log(): readonly Cue[] } }).__jackiohAudio;
@@ -505,10 +490,10 @@ describe("20 — both seats mulligan at once, Concede asks first, and a draw off
       expect(view.drawOffer, "R269: seat 2's offer stands on its own view").to.deep.eq({ by: SEAT_TWO_ID });
     });
 
-    cy.get(ts(DRAW_ACCEPT)).click();
+    cy.get(ts(gameTestid.drawAccept)).click();
     cy.expectResult("Draw");
-    cy.get(ts(DRAW_OUTCOME)).should("have.attr", "data-outcome", "accepted").and("have.text", "Draw accepted");
-    cy.get(ts(RESULT_OVERLAY))
+    cy.get(ts(gameTestid.drawOutcome)).should("have.attr", "data-outcome", "accepted").and("have.text", "Draw accepted");
+    cy.get(ts(gameTestid.result))
       .should("have.attr", "data-outcome", "draw")
       .and("have.attr", "data-reason", "draw-accepted")
       .and("contain.text", "Game drawn by agreement.");

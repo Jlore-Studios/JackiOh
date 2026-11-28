@@ -28,15 +28,11 @@ export const DRAG_THRESHOLD_PX = 8;
 /** `"ready"` marks a legal card, zone, hero, power, or end turn. */
 export const GLOW_ATTR = "data-glow";
 export const GLOW_READY = "ready";
-/** Face-up cards set this to `"true"` for the yellow glow. */
-export const CONDITION_ATTR = "data-condition-active";
 /** Board value: `"on" | "off"` from the Drag to play setting. */
 export const DRAG_ATTR = "data-drag";
 /** `<html>` value: `"play" | "attack"` while dragging. */
 export const DRAGGING_ATTR = "data-dragging";
 export const ROOT = "html";
-/** End-turn value: `"armed"` while confirmation is pending. */
-export const CONFIRM_ATTR = "data-confirm";
 
 /**
  * Whether a toggle is already chosen. A4: the client marks a picked option with `aria-pressed` (`Prompt.tsx`), the
@@ -53,7 +49,6 @@ export function isPicked($option: JQuery<HTMLElement>): boolean {
 export const SETTINGS_OPEN_GAME = "settings-open-game";
 export const SETTINGS_OPEN_NAV = "settings-open-nav";
 export const SETTINGS_PANEL = "settings-panel";
-export const SETTINGS_SCRIM = "settings-scrim";
 export const SETTINGS_CLOSE = "settings-close";
 export const SETTINGS_RESET = "settings-reset";
 export const SETTINGS_RESET_TAB = "settings-reset-tab";

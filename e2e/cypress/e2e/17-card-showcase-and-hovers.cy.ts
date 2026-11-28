@@ -7,20 +7,8 @@ import catalogJson from "../../../crates/cards/catalog.json";
 import { CARD_NAMES } from "../../support/cards.ts";
 import { CARD_SETTINGS_KEY, seedFor, timeouts } from "../../support/config.ts";
 import {
-  BOARD,
   BROWSABLE,
-  END_TURN,
-  INSPECT_CLOSE,
-  INSPECT_HOVER,
-  INSPECT_LIST_BACK,
-  INSPECT_LIST_CARD,
-  INSPECT_LIST_COUNT,
-  INSPECT_LIST_DETAIL,
-  INSPECT_LIST_HOVER,
-  INSPECT_LIST_SHEET,
-  INSPECT_SHEET,
   LEGAL,
-  LOG,
   LOG_CARD,
   PROMPT,
   PROMPT_SUBMIT,
@@ -37,6 +25,18 @@ import {
   zoneId,
 } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId, Row } from "../../support/types.ts";
+import {
+  INSPECT_CLOSE,
+  INSPECT_HOVER,
+  INSPECT_LIST_BACK,
+  INSPECT_LIST_CARD,
+  INSPECT_LIST_COUNT,
+  INSPECT_LIST_DETAIL,
+  INSPECT_LIST_HOVER,
+  INSPECT_LIST_SHEET,
+  INSPECT_SHEET,
+} from "../../../apps/web/src/cards/inspect/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** Every spec sets a seed (BUILD M8); `--expose seed=…` overrides it. */
 const SEED = seedFor("17-showcase");
@@ -267,8 +267,8 @@ function waitForShowcaseOrHuman(): Cypress.Chainable<Waited> {
     if (view.result !== null) return "over";
     if (doc.querySelector("[data-animating]") !== null) return null;
     if (view.pending?.forYou === true && doc.querySelector(PROMPT) !== null) return "prompt";
-    const endTurn = doc.querySelector<HTMLButtonElement>(ts(END_TURN));
-    const board = doc.querySelector(ts(BOARD));
+    const endTurn = doc.querySelector<HTMLButtonElement>(ts(gameTestid.endTurn));
+    const board = doc.querySelector(ts(gameTestid.board));
     if (view.pending === null && view.phase === "main" && board?.getAttribute("data-active") === "you" && endTurn !== null && !endTurn.disabled) {
       return "turn";
     }
@@ -330,7 +330,7 @@ function untilTheAiPlays(turns = PRACTICE_TURN_BUDGET, prompts = PROMPT_BUDGET):
     }
     expect(turns, "the AI played a card inside the turn budget").to.be.greaterThan(0);
     actOnce(() => {
-      cy.get(ts(END_TURN)).click();
+      cy.get(ts(gameTestid.endTurn)).click();
     });
     untilTheAiPlays(turns - 1, prompts);
   });
@@ -403,7 +403,7 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
       expect(set[0]?.def ?? null, "with no definition").to.eq(null);
       expect(set[0]?.text ?? "", "and no name").to.not.contain(TRAP_NAME);
     });
-    cy.get(ts(LOG)).should(($log) => {
+    cy.get(ts(gameTestid.log)).should(($log) => {
       const opens = $log
         .find(ts(LOG_CARD))
         .toArray()
@@ -421,7 +421,7 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
 
     cy.then(() => {
       const name = nameOf(played.defId);
-      const line = `${ts(LOG)} ${ts(LOG_CARD)}[data-def-id="${played.defId}"]`;
+      const line = `${ts(gameTestid.log)} ${ts(LOG_CARD)}[data-def-id="${played.defId}"]`;
       cy.get(line).first().should("contain.text", name);
 
       cy.get(line).first().trigger("pointerover", { pointerType: "mouse" });
@@ -436,7 +436,7 @@ describe("17 — the opponent's play held up, and the log and the piles looked i
       cy.get(ts(INSPECT_SHEET)).should("not.exist");
     });
 
-    cy.get(`${ts(LOG)} .log-line[data-event="manaChanged"]`).first().find(ts(LOG_CARD)).should("not.exist");
+    cy.get(`${ts(gameTestid.log)} .log-line[data-event="manaChanged"]`).first().find(ts(LOG_CARD)).should("not.exist");
   });
 
   it("a graveyard shows its cards, newest first, on hover and in a dialog on a click, on both seats", () => {

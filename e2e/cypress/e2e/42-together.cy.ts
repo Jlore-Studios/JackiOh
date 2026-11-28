@@ -15,40 +15,13 @@ import {
 import { accounts, apiUrl, bearerHeaders, routes, seedFor, server, timeouts, type E2EAccount } from "../../support/config.ts";
 import { onStep } from "../../support/replays.ts";
 import {
-  CHALLENGE_ACCEPT,
-  CHALLENGE_TOAST,
-  CHAT_CLOSE,
-  CHAT_INPUT,
-  CHAT_MESSAGE,
-  CHAT_PANEL,
-  CHAT_SEND,
   EMOTE_BUBBLE,
   EMOTE_MUTE,
   EMOTE_MUTE_MENU,
-  FRIENDS_BADGE,
-  FRIENDS_BUTTON,
-  FRIENDS_PANEL,
   MATCH_WATCH_REPLAY,
   OPPONENT_AIM,
   OPPONENT_AIM_ARROW,
   REPLAYS_SHARED_WITH_ME,
-  SHARE_FRIEND_OPEN,
-  SHARE_FRIEND_OPTION,
-  SHARE_FRIEND_UNSHARE,
-  TOGETHER_ADD_ERROR,
-  TOGETHER_ADD_INPUT,
-  TOGETHER_ADD_SENT,
-  TOGETHER_ADD_SUBMIT,
-  TOGETHER_CHALLENGE,
-  TOGETHER_CHALLENGE_FORM,
-  TOGETHER_CHALLENGE_SEND,
-  TOGETHER_CHAT_OPEN,
-  TOGETHER_FRIEND_ROW,
-  TOGETHER_MENU,
-  TOGETHER_REQUEST_DECLINE,
-  TOGETHER_REQUEST_ROW,
-  TOGETHER_SHARED_OPEN,
-  TOGETHER_SHARED_ROW,
   togetherTabId,
   heroId,
   togetherChallengeModeId,
@@ -56,6 +29,13 @@ import {
   type QueueMode,
 } from "../../support/testids.ts";
 import type { ActionInput, PlayerId } from "../../support/types.ts";
+import {
+  challengeToastTestid,
+  chatTestid,
+  friendsTestid,
+  shareTestid,
+  togetherTestid,
+} from "../../../apps/web/src/together/testids.ts";
 
 /** Mirrors `paths.together` in apps/web/src/net/navigate.ts. */
 const TOGETHER = "/together";
@@ -148,14 +128,14 @@ function challengesOf(account: E2EAccount): Cypress.Chainable<ChallengesBody> {
 }
 
 function friendRow(profileId: string, status?: string): string {
-  const row = `${ts(TOGETHER_FRIEND_ROW)}[data-profile-id="${profileId}"]`;
+  const row = `${ts(togetherTestid.friendRow)}[data-profile-id="${profileId}"]`;
   return status === undefined ? row : `${row}[data-status="${status}"]`;
 }
 
 /** R3732002: Chat is an item of the row's ⋯ menu, so the row's menu opens first; call it inside `within(row)`. */
 function openChat(): void {
-  cy.get(ts(TOGETHER_MENU)).click();
-  cy.get(ts(TOGETHER_CHAT_OPEN)).click();
+  cy.get(ts(togetherTestid.menu)).click();
+  cy.get(ts(togetherTestid.chatOpen)).click();
 }
 
 function landedOn(pattern: RegExp, timeout: number): Cypress.Chainable<string> {
@@ -352,37 +332,37 @@ describe("42 Friends — friends, chat and challenges between two accounts", () 
     // B54: Friends opens for an active account behind the gate (#1577: visited directly).
     cy.visitAs(one, TOGETHER);
     cy.location("pathname", { timeout: timeouts.view }).should("eq", TOGETHER);
-    cy.get(ts(TOGETHER_ADD_INPUT), { timeout: timeouts.view }).should("be.visible");
+    cy.get(ts(togetherTestid.addInput), { timeout: timeouts.view }).should("be.visible");
 
     // B55: a name nobody holds is refused, in the server's words.
-    cy.get(ts(TOGETHER_ADD_INPUT)).type(UNKNOWN_NAME);
-    cy.get(ts(TOGETHER_ADD_SUBMIT)).click();
-    cy.get(ts(TOGETHER_ADD_ERROR), { timeout: timeouts.view }).should("be.visible").and("not.be.empty");
+    cy.get(ts(togetherTestid.addInput)).type(UNKNOWN_NAME);
+    cy.get(ts(togetherTestid.addSubmit)).click();
+    cy.get(ts(togetherTestid.addError), { timeout: timeouts.view }).should("be.visible").and("not.be.empty");
 
     // B55: a request from seat two shows as incoming within a poll, and Decline ends it.
     cy.then(() => {
       cy.request({ method: "POST", url: apiUrl("/api/friends/requests"), headers: bearerHeaders(two.token), body: { username: oneName } })
         .its("status")
         .should("eq", 201);
-      cy.get(`${ts(TOGETHER_REQUEST_ROW)}[data-direction="incoming"][data-profile-id="${twoId}"]`, { timeout: FRIENDS_TIMEOUT_MS }).within(
+      cy.get(`${ts(togetherTestid.requestRow)}[data-direction="incoming"][data-profile-id="${twoId}"]`, { timeout: FRIENDS_TIMEOUT_MS }).within(
         () => {
-          cy.get(ts(TOGETHER_REQUEST_DECLINE)).click();
+          cy.get(ts(togetherTestid.requestDecline)).click();
         },
       );
-      cy.get(`${ts(TOGETHER_REQUEST_ROW)}[data-profile-id="${twoId}"]`, { timeout: timeouts.view }).should("not.exist");
+      cy.get(`${ts(togetherTestid.requestRow)}[data-profile-id="${twoId}"]`, { timeout: timeouts.view }).should("not.exist");
       friendsOf(two).its("outgoing").should("have.length", 0);
     });
 
     // B55: seat one adds seat two by name#tag; seat two accepts (B45), and the friend row appears.
     cy.then(() => {
-      cy.get(ts(TOGETHER_ADD_INPUT)).clear().type(twoName);
+      cy.get(ts(togetherTestid.addInput)).clear().type(twoName);
     });
-    cy.get(ts(TOGETHER_ADD_SUBMIT)).click();
-    cy.get(ts(TOGETHER_ADD_SENT), { timeout: timeouts.view }).should("be.visible");
+    cy.get(ts(togetherTestid.addSubmit)).click();
+    cy.get(ts(togetherTestid.addSent), { timeout: timeouts.view }).should("be.visible");
     cy.then(() => {
       // R3732002: the request out is on the Requests tab; the friend row comes back on the Friends tab.
       cy.get(ts(togetherTabId("requests"))).click();
-      cy.get(`${ts(TOGETHER_REQUEST_ROW)}[data-direction="outgoing"][data-profile-id="${twoId}"]`, {
+      cy.get(`${ts(togetherTestid.requestRow)}[data-direction="outgoing"][data-profile-id="${twoId}"]`, {
         timeout: timeouts.view,
       }).should("exist");
       cy.get(ts(togetherTabId("friends"))).click();
@@ -404,10 +384,10 @@ describe("42 Friends — friends, chat and challenges between two accounts", () 
     cy.then(() => {
       cy.get(friendRow(twoId)).within(openChat);
     });
-    cy.get(ts(CHAT_PANEL), { timeout: timeouts.view }).should("be.visible");
-    cy.get(ts(CHAT_INPUT)).type(HELLO);
-    cy.get(ts(CHAT_SEND)).click();
-    cy.contains(`${ts(CHAT_MESSAGE)}[data-from="you"]`, HELLO, { timeout: timeouts.view }).should("be.visible");
+    cy.get(ts(chatTestid.panel), { timeout: timeouts.view }).should("be.visible");
+    cy.get(ts(chatTestid.input)).type(HELLO);
+    cy.get(ts(chatTestid.send)).click();
+    cy.contains(`${ts(chatTestid.message)}[data-from="you"]`, HELLO, { timeout: timeouts.view }).should("be.visible");
     cy.then(() => {
       // B53: seat two reads it, being a friend, and answers.
       cy.request<ChatBody>({ method: "GET", url: apiUrl(`/api/chat/${oneId}`), headers: bearerHeaders(two.token) })
@@ -419,9 +399,9 @@ describe("42 Friends — friends, chat and challenges between two accounts", () 
         .its("status")
         .should("eq", 201);
     });
-    cy.contains(`${ts(CHAT_MESSAGE)}[data-from="friend"]`, REPLY, { timeout: CHAT_TIMEOUT_MS }).should("be.visible");
-    cy.get(ts(CHAT_CLOSE)).click();
-    cy.get(ts(CHAT_PANEL)).should("not.exist");
+    cy.contains(`${ts(chatTestid.message)}[data-from="friend"]`, REPLY, { timeout: CHAT_TIMEOUT_MS }).should("be.visible");
+    cy.get(ts(chatTestid.close)).click();
+    cy.get(ts(chatTestid.panel)).should("not.exist");
 
     // B57: seat two challenges seat one (online: its browser sends the heartbeat); the toast's Accept
     // joins the room with the remembered deck and reaches the game (R1831000).
@@ -437,8 +417,8 @@ describe("42 Friends — friends, chat and challenges between two accounts", () 
       });
     });
     cy.then(() => {
-      cy.get(`${ts(CHALLENGE_TOAST)}[data-room-code="${roomCode}"]`, { timeout: CHALLENGE_TIMEOUT_MS }).within(() => {
-        cy.get(ts(CHALLENGE_ACCEPT)).click();
+      cy.get(`${ts(challengeToastTestid.toast)}[data-room-code="${roomCode}"]`, { timeout: CHALLENGE_TIMEOUT_MS }).within(() => {
+        cy.get(ts(challengeToastTestid.accept)).click();
       });
     });
     landedOn(MATCH_PATH, timeouts.view).then((id) => {
@@ -447,7 +427,7 @@ describe("42 Friends — friends, chat and challenges between two accounts", () 
     });
     cy.get(ts(heroId("you")), { timeout: timeouts.view }).should("be.visible");
     // B58, #1831: the board's controls carry the Friends button.
-    cy.get(ts(FRIENDS_BUTTON)).should("be.visible");
+    cy.get(ts(friendsTestid.button)).should("be.visible");
     // B49: joining the room accepted the challenge, so it is open for neither seat any more.
     cy.then(() => {
       challengesOf(two)
@@ -462,15 +442,15 @@ describe("42 Friends — friends, chat and challenges between two accounts", () 
     // the room, and the shell takes seat one to the game (ChallengeToast's follow).
     cy.request({ method: "POST", url: apiUrl("/api/presence"), headers: bearerHeaders(two.token) }).its("status").should("eq", 204);
     cy.visitAs(one, routes.replays());
-    cy.get(ts(FRIENDS_BUTTON), { timeout: timeouts.view }).click();
+    cy.get(ts(friendsTestid.button), { timeout: timeouts.view }).click();
     cy.then(() => {
-      cy.get(`${ts(FRIENDS_PANEL)} ${friendRow(twoId, "online")}`, { timeout: FRIENDS_TIMEOUT_MS }).within(() => {
-        cy.get(ts(TOGETHER_CHALLENGE)).click();
+      cy.get(`${ts(friendsTestid.panel)} ${friendRow(twoId, "online")}`, { timeout: FRIENDS_TIMEOUT_MS }).within(() => {
+        cy.get(ts(togetherTestid.challenge)).click();
       });
     });
-    cy.get(ts(TOGETHER_CHALLENGE_FORM), { timeout: timeouts.view }).should("be.visible");
+    cy.get(ts(togetherTestid.challengeForm), { timeout: timeouts.view }).should("be.visible");
     cy.get(ts(togetherChallengeModeId(MODE))).check();
-    cy.get(ts(TOGETHER_CHALLENGE_SEND)).should("not.be.disabled").click();
+    cy.get(ts(togetherTestid.challengeSend)).should("not.be.disabled").click();
     cy.location("pathname", { timeout: timeouts.view }).should("eq", routes.replays());
     cy.then(() => {
       challengesOf(two).then((body) => {
@@ -680,23 +660,23 @@ describe("42 Friends — friends, chat and challenges between two accounts", () 
         .its("status")
         .should("eq", 201);
     });
-    cy.get(ts(FRIENDS_BADGE), { timeout: UNREAD_TIMEOUT_MS }).should("be.visible");
+    cy.get(ts(friendsTestid.badge), { timeout: UNREAD_TIMEOUT_MS }).should("be.visible");
 
     // B58, #1831: the button opens the friends panel; Chat on seat two's row opens the conversation,
     // with the message that was waiting.
-    cy.get(ts(FRIENDS_BUTTON)).click();
-    cy.get(ts(FRIENDS_PANEL)).should("be.visible");
+    cy.get(ts(friendsTestid.button)).click();
+    cy.get(ts(friendsTestid.panel)).should("be.visible");
     cy.then(() => {
-      cy.get(`${ts(FRIENDS_PANEL)} ${friendRow(twoId)}`, { timeout: timeouts.view }).within(openChat);
-      cy.get(ts(FRIENDS_PANEL)).should("not.exist");
-      cy.get(`${ts(CHAT_PANEL)}[data-friend-id="${twoId}"]`).should("be.visible");
+      cy.get(`${ts(friendsTestid.panel)} ${friendRow(twoId)}`, { timeout: timeouts.view }).within(openChat);
+      cy.get(ts(friendsTestid.panel)).should("not.exist");
+      cy.get(`${ts(chatTestid.panel)}[data-friend-id="${twoId}"]`).should("be.visible");
     });
-    cy.contains(`${ts(CHAT_MESSAGE)}[data-from="friend"]`, `${UNREAD} ${run}`, { timeout: CHAT_TIMEOUT_MS }).should("be.visible");
+    cy.contains(`${ts(chatTestid.message)}[data-from="friend"]`, `${UNREAD} ${run}`, { timeout: CHAT_TIMEOUT_MS }).should("be.visible");
 
     // B58: both ways, mid-match: seat one's message reaches seat two, and seat two's reply the board.
-    cy.get(ts(CHAT_INPUT)).type(`${MID_HELLO} ${run}`);
-    cy.get(ts(CHAT_SEND)).click();
-    cy.contains(`${ts(CHAT_MESSAGE)}[data-from="you"]`, `${MID_HELLO} ${run}`, { timeout: timeouts.view }).should("be.visible");
+    cy.get(ts(chatTestid.input)).type(`${MID_HELLO} ${run}`);
+    cy.get(ts(chatTestid.send)).click();
+    cy.contains(`${ts(chatTestid.message)}[data-from="you"]`, `${MID_HELLO} ${run}`, { timeout: timeouts.view }).should("be.visible");
     cy.then(() => {
       cy.request<ChatBody>({ method: "GET", url: apiUrl(`/api/chat/${oneId}`), headers: bearerHeaders(two.token) })
         .its("body.messages")
@@ -707,10 +687,10 @@ describe("42 Friends — friends, chat and challenges between two accounts", () 
         .its("status")
         .should("eq", 201);
     });
-    cy.contains(`${ts(CHAT_MESSAGE)}[data-from="friend"]`, `${MID_REPLY} ${run}`, { timeout: CHAT_TIMEOUT_MS }).should("be.visible");
-    cy.get(ts(CHAT_CLOSE)).click();
-    cy.get(ts(CHAT_PANEL)).should("not.exist");
-    cy.get(ts(FRIENDS_BADGE), { timeout: timeouts.view }).should("not.exist");
+    cy.contains(`${ts(chatTestid.message)}[data-from="friend"]`, `${MID_REPLY} ${run}`, { timeout: CHAT_TIMEOUT_MS }).should("be.visible");
+    cy.get(ts(chatTestid.close)).click();
+    cy.get(ts(chatTestid.panel)).should("not.exist");
+    cy.get(ts(friendsTestid.badge), { timeout: timeouts.view }).should("not.exist");
     cy.wsPlayer({ action: "view", name: SEAT_TWO }).then((result) => {
       expect(result.view?.result ?? null, "the match was still running while they chatted").to.eq(null);
     });
@@ -722,10 +702,10 @@ describe("42 Friends — friends, chat and challenges between two accounts", () 
     // B52, B59: the replay is shared with seat two from the replay player.
     cy.get(ts(MATCH_WATCH_REPLAY), { timeout: timeouts.view }).click();
     onStep(0);
-    cy.get(ts(SHARE_FRIEND_OPEN)).click();
+    cy.get(ts(shareTestid.open)).click();
     cy.then(() => {
-      cy.get(`${ts(SHARE_FRIEND_OPTION)}[data-profile-id="${twoId}"]`, { timeout: timeouts.view }).click();
-      cy.get(`${ts(SHARE_FRIEND_UNSHARE)}[data-profile-id="${twoId}"]`, { timeout: timeouts.view }).should(
+      cy.get(`${ts(shareTestid.option)}[data-profile-id="${twoId}"]`, { timeout: timeouts.view }).click();
+      cy.get(`${ts(shareTestid.unshare)}[data-profile-id="${twoId}"]`, { timeout: timeouts.view }).should(
         "have.attr",
         "data-shared",
         "true",
@@ -744,8 +724,8 @@ describe("42 Friends — friends, chat and challenges between two accounts", () 
     cy.location("pathname").should("eq", TOGETHER);
     cy.location("search").should("eq", "?section=shared");
     cy.then(() => {
-      cy.get(`${ts(TOGETHER_SHARED_ROW)}[data-match-id="${matchId}"]`, { timeout: timeouts.view }).within(() => {
-        cy.get(ts(TOGETHER_SHARED_OPEN)).click();
+      cy.get(`${ts(togetherTestid.sharedRow)}[data-match-id="${matchId}"]`, { timeout: timeouts.view }).within(() => {
+        cy.get(ts(togetherTestid.sharedOpen)).click();
       });
     });
     onStep(0);

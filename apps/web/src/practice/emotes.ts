@@ -6,16 +6,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { ActionBody, EmoteId, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
+import type { ActionBody, EmoteId, GameEvent, PlayerId, PlayerView, PortraitId } from "@jackioh/shared";
 import { opponentOf, pickPortrait, portraitOrDefault } from "@jackioh/shared";
-import { createEmotePersona, pickPersona, type AiEmote, type EmotePersona } from "@jackioh/ai";
-import { AI_EMOTE } from "@jackioh/ai/config";
 
 import { getAudioEngine } from "../audio/index.ts";
 import { newEventsSince } from "../game/animations.ts";
 import { dealEmoteHands } from "../emotes/deal.ts";
 import { useEmotes, type EmotesApi } from "../emotes/useEmotes.ts";
 import { useSetting } from "../settings/index.ts";
+import { bots, practiceConstants } from "../wasm/index.ts";
+import type { AiEmote } from "../wire/generated/AiEmote.ts";
+import type { BotCall } from "../wire/generated/BotCall.ts";
+import type { PersonaStream } from "../wire/generated/PersonaStream.ts";
 import type { PracticeSnapshot, PracticeStartConfig } from "./protocol.ts";
 
 /** The portraits one game deals (R642), before seats are assigned: `[human, ai]`. */
@@ -41,10 +43,40 @@ export function practicePortraits(config: PracticeStartConfig): { p1: PortraitId
   return config.humanSeat === "p1" ? { p1: human, p2: ai } : { p1: ai, p2: human };
 }
 
-/** R645: the tutorial is always Silent (issue §6); the persona chooses within the AI seat's own hand (R1344). */
+/** R645, R5269000: one game's persona, `jackioh-shared`'s, held as the module last handed it back. */
+type EmotePersona = {
+  onEvents: (fresh: readonly GameEvent[], prev: PlayerView | null, view: PlayerView, now: number) => AiEmote[];
+  /** Player emotes only: the AI cannot reply to a reply. */
+  onPlayerEmote: (emote: EmoteId, now: number) => AiEmote[];
+  onPlayerTurnLong: (view: PlayerView, now: number) => AiEmote[];
+};
+
+/** The persona a `BotCall` of the persona's hands back, with what it sends. */
+function personaAnswer(request: BotCall): { persona: PersonaStream; emotes: AiEmote[] } {
+  const answer = bots(request);
+  if (answer.answer !== "persona") throw new Error(`the persona's ${request.call} answered ${answer.answer}`);
+  return answer;
+}
+
+/**
+ * R645: the tutorial is always Silent (issue §6); the persona chooses within the AI seat's own hand (R1344).
+ * R5269000: it is dealt and rolled by `jackioh-shared`'s module, on a stream of its own the page seeds per
+ * game, apart from the game's seed, the engine's rng and the AI's search.
+ */
 function dealPersona(config: PracticeStartConfig, seat: PlayerId, hand: readonly EmoteId[]): EmotePersona {
-  const persona = config.lesson === undefined ? pickPersona(Math.random) : "silent";
-  return createEmotePersona({ persona, seat, rng: Math.random, hand });
+  const seed = `practice-persona:${Math.random()}`;
+  let stream = personaAnswer({ call: "dealPersona", seed, seat, hand: [...hand], lesson: config.lesson !== undefined }).persona;
+  const roll = (request: BotCall): AiEmote[] => {
+    const answer = personaAnswer(request);
+    stream = answer.persona;
+    return answer.emotes;
+  };
+  return {
+    onEvents: (fresh, prev, view, now) =>
+      roll({ call: "personaEvents", persona: stream, fresh: [...fresh], prev, view, now }),
+    onPlayerEmote: (emote, now) => roll({ call: "personaPlayerEmote", persona: stream, emote, now }),
+    onPlayerTurnLong: (view, now) => roll({ call: "personaTurnLong", persona: stream, view, now }),
+  };
 }
 
 /**
@@ -189,7 +221,7 @@ export function usePracticeEmotes(
       for (const intent of current.persona.onPlayerTurnLong(now, Date.now())) {
         schedule(intent, seat);
       }
-    }, AI_EMOTE.longTurnMs);
+    }, practiceConstants().AI_EMOTE.longTurnMs);
     longTurn.current = { config, turn: view.turn, timer };
     return () => window.clearTimeout(timer);
   }, [view, config, schedule]);

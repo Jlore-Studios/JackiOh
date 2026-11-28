@@ -6,18 +6,9 @@
 import { CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import { seedFor, timeouts } from "../../support/config.ts";
 import { ensureSeat } from "../../support/hotseat.ts";
-import {
-  ANIMATING,
-  END_TURN,
-  ILLEGAL,
-  OFFER_DRAW,
-  animating,
-  cardId,
-  handCardId,
-  heroId,
-  ts,
-} from "../../support/testids.ts";
+import { ANIMATING, ILLEGAL, animating, cardId, handCardId, heroId, ts } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId } from "../../support/types.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** BUILD M8 seed: #96 opens for p2 and #20 makes a grinder affordable before R2's cap. */
 const SEED = seedFor("07-my-pawn-10");
@@ -201,8 +192,8 @@ describe("BUILD M8 07 — My Pawn cancels the lethal swing and an AI plays out t
             cy.settled();
 
             // §8.5 leaves p1 with no legal action; BUILD M5-T2 reflects `legalActions`.
-            cy.get(ts(END_TURN)).should("be.disabled");
-            cy.get(ts(OFFER_DRAW)).should("be.disabled");
+            cy.get(ts(gameTestid.endTurn)).should("be.disabled");
+            cy.get(ts(gameTestid.offerDraw)).should("be.disabled");
             cy.gameState().then((after) => {
               const held = handOf(after, "p1")[0];
               expect(held, "seat 1 still holds cards it cannot play").to.not.eq(undefined);

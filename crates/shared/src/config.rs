@@ -1572,7 +1572,7 @@ pub fn persona_spec(name: PersonaName) -> &'static PersonaSpec {
     }
 }
 
-/// R645: the deal reads each weight in thousandths (TS `pickPersona`'s 1000), whole-number
+/// R645: the deal reads each weight in thousandths, whole-number
 /// thresholds that keep a draw of 0.85 in Silent despite floating-point summation.
 pub const PERSONA_DEAL_STEPS: f64 = 1000.0;
 

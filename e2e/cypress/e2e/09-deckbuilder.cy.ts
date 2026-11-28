@@ -6,6 +6,17 @@ import { CARD_NAMES, TOKEN_NAMES, cardId, tokenId } from "../../support/cards.ts
 import { INSTALLED_TRIO_NAME, mintId, type SavedDecksBody } from "../../support/commands.ts";
 import { accounts, apiUrl, bearerHeaders, constants, deckMirrorKey, routes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
 import {
+  addPoolId,
+  deckCardId,
+  deckCompareChipId,
+  deckRowId,
+  loadoutErrorId,
+  poolCardId,
+  trioRowId,
+  ts,
+} from "../../support/testids.ts";
+import type { FixtureDeck } from "../../support/types.ts";
+import {
   DECK_COMPARE_SELECT,
   DECK_COUNT,
   DECK_EDITOR,
@@ -17,16 +28,7 @@ import {
   TRIO_EDITOR,
   TRIO_VERDICT,
   WORKSHOP,
-  addPoolId,
-  deckCardId,
-  deckCompareChipId,
-  deckRowId,
-  loadoutErrorId,
-  poolCardId,
-  trioRowId,
-  ts,
-} from "../../support/testids.ts";
-import type { FixtureDeck } from "../../support/types.ts";
+} from "../../../apps/web/src/game/deckbuilder/testids.ts";
 
 const DECK_SIZE = constants.DECK_SIZE;
 const MAX_COPIES = constants.MAX_COPIES;

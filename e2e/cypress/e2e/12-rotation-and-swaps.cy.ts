@@ -7,8 +7,9 @@ import { CARDS, CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import type { PlayCardOptions } from "../../support/commands.ts";
 import { seedFor } from "../../support/config.ts";
 import { ensureSeat } from "../../support/hotseat.ts";
-import { BOARD, cardId, ts, zoneId } from "../../support/testids.ts";
+import { cardId, ts, zoneId } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId, Side, ZoneRef } from "../../support/types.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** BUILD M8 seed supplies the ordered trap and unit plays before R2's cap (SPEC §8). */
 const SEED = seedFor("12-rotation-4");
@@ -211,7 +212,7 @@ function expectFitsViewport(
   cards: readonly string[],
 ): void {
   cy.viewport(viewport.width, viewport.height);
-  cy.get(ts(BOARD)).should("be.visible");
+  cy.get(ts(gameTestid.board)).should("be.visible");
   for (const instanceId of cards) {
     cy.get(ts(cardId(instanceId))).should("be.visible");
   }
@@ -223,7 +224,7 @@ function expectFitsViewport(
     );
     expect(doc.body.scrollWidth, `the body fits ${where}`).to.be.at.most(viewport.width);
 
-    const board = doc.querySelector(ts(BOARD));
+    const board = doc.querySelector(ts(gameTestid.board));
     expect(board, "the board is rendered").to.not.eq(null);
     expect(board?.scrollWidth ?? 0, `the board fits ${where}`).to.be.at.most(viewport.width);
     expect(

@@ -1398,8 +1398,8 @@ pub const AI_WIN_RATE: AiWinRate = AiWinRate {
     floor: 0.25,
 };
 
-// R645: the AI's emote personas live in the web client (`apps/web/src/practice/personas.ts`): they
-// are cosmetic only, and none of them reaches the engine, the action log or a game record.
+// R645: the AI's emote personas live in `jackioh-shared` (`bots::persona`, R5269000): they are
+// cosmetic only, and none of them reaches the engine, the action log or a game record.
 
 #[cfg(test)]
 mod tests {
