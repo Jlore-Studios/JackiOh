@@ -44990,12 +44990,7 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {
-      "5284": {
-        "at": "2026-11-28T07:29:07Z",
-        "why": "Confirmed: playVoice (engine.ts:1092) and voiceWanted (engine.ts:765-768) read only mute and voiceOn, never the voice level, so at Voice volume 0 every silent line still dips the music (engine.ts:966-967, 909-912), holds the practice AI on data-speaking for up to 4 s, and keeps the ~18 MB voice prefetch running, while stings (music.ts:248-251), the clock alarm (clockAlarm.ts:78) and intros (R1350,"
-      }
-    },
+    "auto": {},
     "auto_approved": [
       "2026-11-28T00:33:19Z",
       "2026-11-28T00:33:19Z",
@@ -45005,7 +45000,8 @@
       "2026-11-28T00:51:50Z",
       "2026-11-28T02:36:22Z",
       "2026-11-28T02:36:22Z",
-      "2026-11-28T03:49:05Z"
+      "2026-11-28T03:49:05Z",
+      "2026-11-28T07:29:09Z"
     ],
     "decided": [
       {
