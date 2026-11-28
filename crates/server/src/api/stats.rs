@@ -40,9 +40,9 @@
 //! finish for the next read, and `GET /api/stats/loading` answers what that load is doing (its step, how
 //! long it has run, and how long the last one took), never waiting and kept by no cache, for the page's
 //! progress bar.
-//! R5225000: the CPU-bound work of the statistics (`Snapshot::new`, `window_over`) runs on the blocking
-//! pool (`blocking`), so the runtime keeps answering other requests while it runs, and a window's figures
-//! are cut on a task of its own, counted as the load's last step.
+//! R5225000: the CPU-bound work of the statistics (`Snapshot::new`, `window_over`) runs off the runtime's
+//! worker threads (`blocking`), so the runtime keeps answering other requests while it runs, and a window's
+//! figures are cut on a task of its own, counted as the load's last step.
 //! R5040000: `?scope=major` sends the live play versions alone, each cut to the newest major's line
 //! (`major_line_versions`) and read against those rows' own field, one table per scope too.
 //!
@@ -62,6 +62,7 @@ use axum::response::Response;
 use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde_json::{Map, Value, json};
+use tokio::runtime::{Handle, RuntimeFlavor};
 use tokio::sync::OnceCell;
 
 use jackioh_cards::{
@@ -1332,19 +1333,23 @@ impl SnapshotSource {
         ticket.step(LoadStep::CardTotals);
         let totals = totals_in(&self.db, None, false, CardRows::Filed(filing.clone())).await?;
         ticket.step(LoadStep::Snapshot);
-        let snapshot = Arc::new(blocking(move || Snapshot::new(&history, totals, filing)).await?);
+        let snapshot = Arc::new(blocking(|| Snapshot::new(&history, totals, filing)));
         ticket.done = true;
         Ok(snapshot)
     }
 }
 
-/// R5225000: CPU-bound work on the blocking pool, so the runtime's threads keep answering other requests
+/// R5225000: CPU-bound work kept off the runtime's worker threads, so they keep answering other requests
 /// (`GET /api/stats/loading` among them) while it runs. Run in async code, the statistics' work held them:
-/// on staging's quarter of a processor every request waited behind it.
-async fn blocking<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static) -> Result<T, ApiError> {
-    tokio::task::spawn_blocking(work)
-        .await
-        .map_err(|error| ApiError::internal(format!("the card statistics' work stopped: {error}")))
+/// on staging's quarter of a processor every request waited behind it. On a multi-thread runtime, the
+/// server's, `block_in_place` hands the worker's other tasks to another thread for the work's length. A
+/// one-thread runtime (a test's paused clock) has no other thread, so the work runs in place there and the
+/// test's turns stay its own: the blocking pool's real threads would race a paused clock's yields.
+fn blocking<T>(work: impl FnOnce() -> T) -> T {
+    match Handle::try_current().map(|runtime| runtime.runtime_flavor()) {
+        Ok(RuntimeFlavor::MultiThread) => tokio::task::block_in_place(work),
+        _ => work(),
+    }
 }
 
 /// R5225000: what cutting a window's figures from the snapshot reads, owned, so the cut can run on a task
@@ -1361,9 +1366,9 @@ struct WindowCut {
 }
 
 impl WindowCut {
-    /// The window's figures, cut on the blocking pool from the snapshot's totals or, for a patch past the
-    /// snapshot, its own reach loaded now (R4965000). The cut counts as the load's last step, which
-    /// `GET /api/stats/loading` reports; the last load's time stays the snapshot's.
+    /// The window's figures, cut off the runtime's worker threads (`blocking`) from the snapshot's totals
+    /// or, for a patch past the snapshot, its own reach loaded now (R4965000). The cut counts as the load's
+    /// last step, which `GET /api/stats/loading` reports; the last load's time stays the snapshot's.
     async fn window(&self) -> Result<Arc<KeptWindow>, ApiError> {
         let _ticket = LoadTicket::begin_at(Arc::clone(&self.load), LoadStep::Snapshot);
         let own = if self.held.holds(&self.at) {
@@ -1371,14 +1376,17 @@ impl WindowCut {
         } else {
             Some(totals_in(&self.db, None, false, self.held.reach_rows(&self.at)).await?)
         };
-        let held = Arc::clone(&self.held);
-        let (history, at) = (self.history.clone(), self.at.clone());
-        let (source, pilot, mode) = (self.source, self.pilot, self.mode);
-        let window = blocking(move || {
-            let totals = own.as_ref().unwrap_or(&held.totals);
-            window_over(totals, &history, &at, source, pilot, mode)
-        })
-        .await?;
+        let totals = own.as_ref().unwrap_or(&self.held.totals);
+        let window = blocking(|| {
+            window_over(
+                totals,
+                &self.history,
+                &self.at,
+                self.source,
+                self.pilot,
+                self.mode,
+            )
+        });
         Ok(Arc::new(window))
     }
 }
@@ -1950,8 +1958,7 @@ async fn kept_window(
     )
     .await?;
     let own = totals_for(app, Some(at), false, CardRows::All).await?;
-    let (steps, patch) = (history.to_vec(), at.to_string());
-    let mut window = blocking(move || window_over(&own, &steps, &patch, source, pilot, mode)).await?;
+    let mut window = blocking(|| window_over(&own, history, at, source, pilot, mode));
     window.history.clone_from(&shared.history);
     window.patches.clone_from(&shared.patches);
     Ok(Arc::new(window))
@@ -3002,21 +3009,31 @@ mod tests {
     /// How long the timer sleeps before it lets the work go.
     const TIMER: Duration = Duration::from_millis(10);
 
-    /// R5225000: work handed to the blocking pool leaves the runtime free. On a runtime of one thread, a
-    /// timer fires while the work waits on it; work run on the runtime's own thread would hold that thread,
-    /// and the timer would never fire.
-    #[tokio::test(flavor = "current_thread")]
+    /// R5225000: heavy work leaves the runtime free. On a multi-thread runtime of one worker, the work and
+    /// the timer it waits on are both that worker's tasks: `block_in_place` hands the timer to another
+    /// thread, so it fires; work run in place would hold the one worker, and the timer would never fire.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     async fn r5225000_heavy_work_leaves_the_runtime_free() {
         let (tell, heard) = mpsc::channel::<()>();
-        let work = blocking(move || heard.recv_timeout(STUCK).is_ok());
-        let timer = async {
+        let work = tokio::spawn(async move { blocking(move || heard.recv_timeout(STUCK).is_ok()) });
+        let timer = tokio::spawn(async move {
             tokio::time::sleep(TIMER).await;
             tell.send(()).ok();
-        };
-        let (answered, ()) = tokio::join!(work, timer);
+        });
         assert!(
-            answered.expect("the work ran"),
+            work.await.expect("the work ran"),
             "the work waited out its time: the runtime never ran the timer"
         );
+        timer.await.expect("the timer ran");
+    }
+
+    /// R5225000: on a one-thread runtime, a test's paused clock among them, the work runs in place, on the
+    /// thread that asked for it, so a test that yields a few turns finds it done. The blocking pool's real
+    /// threads raced those turns: a series game the sweeper started wrote its match row too late for
+    /// `r333_the_sweeper_runs_every_series_sweep_interval_seconds_on_its_own_and_a_failed_sweep_does_not_stop_it`.
+    #[tokio::test(flavor = "current_thread")]
+    async fn r5225000_a_one_thread_runtime_runs_the_work_in_place() {
+        let asked = std::thread::current().id();
+        assert_eq!(blocking(|| std::thread::current().id()), asked);
     }
 }
