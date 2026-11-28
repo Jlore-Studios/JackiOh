@@ -21904,9 +21904,13 @@
     "what": "plan #5189 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-28T05:47:11Z",
+    "at": "2026-11-28T05:53:12Z",
     "notes": [
-      "#5265 is held for `claude-8` until 23:50 (5-hour usage is 80%, too close to its 85% cap to start a long run (it starts under 80%))"
+      "#5265: `claude-8` can start again, so its hold is lifted",
+      "started build #5265 on claude-8 (run 46114159305)",
+      "started plan #5189 on claude-7 (run 46114191109)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22612,7 +22616,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T05:47:11Z",
+  "loop_tick": "2026-11-28T05:53:12Z",
   "machine_disk": {
     "issue": null,
     "reading": {
