@@ -21822,13 +21822,24 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-6",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-6",
+            "run": "46124740816",
+            "tier": "strong"
+          }
+        ],
         "sha": "ebe7f3fb17c2055262a88777b9ab200652aa118f",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "5281": {
