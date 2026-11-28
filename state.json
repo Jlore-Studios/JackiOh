@@ -21439,6 +21439,18 @@
     "5244": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "at": "2026-11-28T02:35:41Z",
+        "built_by": "claude-7",
+        "by": "`claude` (strong)",
+        "sha": "d7b1debfee8bfe325f0dca5078e087ab8db0c142"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-28T01:06:15Z",
@@ -21454,6 +21466,7 @@
       "issue": 5230,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-28T02:19:12Z",
