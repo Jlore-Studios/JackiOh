@@ -20937,6 +20937,13 @@
     "5226": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-28T00:51:02Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule line 1, engine rules: the change edits `gain_keyword_for_good` in `crates/engine/src/effects/tune.rs`, so it is a rules change, and it adds a ruling and a rules test."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
