@@ -8,7 +8,8 @@
 > work into the three waves the owner asked for:
 >
 > 1. **Wave 1 (#5222):** the engine's new mechanics and every card. The set ships, players can play it, and
->    the AI deals itself none of it (R1390's soft gate).
+>    the AI deals itself none of it (R1390's soft gate). Its release turns the set's row `Shipped` and puts
+>    the set in `AI_DECK_GATED_SETS` (R5222000), with the 63 card intros (R5222001).
 > 2. **Wave 2 (#5223):** the AI deals itself at least 80% of the set: a sweep of record bans at most 1/5 of
 >    its 197 non-token cards (39).
 > 3. **Wave 3 (#5224):** the AI deals itself the whole set: no FvH card in `SHADOW_BAN` or any AI exclusion.

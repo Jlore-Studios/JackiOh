@@ -576,3 +576,35 @@ describe("R1410 a trio's decks carry the Stinkyscape+ set's numbers, 7000 + n (t
     expect(before.slots[1]?.dropped.unknown).toEqual([7064, 7001]);
   });
 });
+
+describe("R1410 R5222000 a trio's decks carry the Felinors vs Humans set's numbers, 8000 + n (the release, issue #5222)", () => {
+  const base = catalog.cards[fixtureCardId(1)] as CardDef;
+  const inSet = (id: string, set: CardDef["set"], index: string): CardDef => ({ ...base, id, index, name: id, set });
+  const nineSets: CatalogSnapshot = {
+    version: catalog.version,
+    cards: {
+      ...catalog.cards,
+      "stinkyscapeplus-064": inSet("stinkyscapeplus-064", "Stinkyscape+", "64"),
+      "felinorsvshumans-001": inSet("felinorsvshumans-001", "Felinors vs Humans", "1"),
+      "felinorsvshumans-197": inSet("felinorsvshumans-197", "Felinors vs Humans", "197"),
+    },
+  };
+  const withoutSet: CatalogSnapshot = {
+    version: catalog.version,
+    cards: Object.fromEntries(Object.entries(nineSets.cards).filter(([, def]) => def.set !== "Felinors vs Humans")),
+  };
+
+  it("R1410 writes a Felinors vs Humans card in a trio's deck and reads it back from its own set", () => {
+    const slots: readonly TrioCodeSlot[] = [
+      { name: "Cats", cards: ["felinorsvshumans-197", fixtureCardId(1), "stinkyscapeplus-064", "felinorsvshumans-001"] },
+      null,
+      null,
+    ];
+    const code = encodeTrioCode("Felinors vs Humans", slots, nineSets);
+    const decoded = expectOk(decodeTrioCode(code, nineSets, null));
+    expect(decoded.slots[0]?.cards).toEqual(["felinorsvshumans-197", fixtureCardId(1), "stinkyscapeplus-064", "felinorsvshumans-001"]);
+    const before = expectOk(decodeTrioCode(code, withoutSet, null));
+    expect(before.slots[0]?.cards).toEqual([fixtureCardId(1), "stinkyscapeplus-064"]);
+    expect(before.slots[0]?.dropped.unknown).toEqual([8197, 8001]);
+  });
+});

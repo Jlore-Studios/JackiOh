@@ -481,8 +481,8 @@ describe("the committed voice files (B35)", () => {
 });
 
 describe("the voice budget (B36)", () => {
-  it("B36 R501 R1448 R1884000 R3596000 fits the whole set into VOICE_BUDGET_BYTES (24 MiB), counted in 4 KiB blocks", () => {
-    expect(VOICE_BUDGET_BYTES, "the budget R3596000 fixes").toBe(24 * 1024 * 1024);
+  it("B36 R501 R1448 R1884000 R3596000 R5222002 fits the whole set into VOICE_BUDGET_BYTES (30 MiB), counted in 4 KiB blocks", () => {
+    expect(VOICE_BUDGET_BYTES, "the budget R5222002 fixes").toBe(30 * 1024 * 1024);
     const sizes = EXPECTED_KEYS.map((key) => sizeOnDisk(key));
     expect(sizes.filter((size) => size === null), "every expected file exists to be measured").toEqual([]);
     const onDisk = sizes.reduce<number>((sum, size) => sum + Math.ceil((size ?? 0) / BLOCK) * BLOCK, 0);

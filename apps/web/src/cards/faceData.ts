@@ -3,7 +3,9 @@
 // at run time: the face model is called through the WebAssembly module (`model.ts`).
 
 import powerWordsJson from "../../../../crates/shared/data/power-words.json";
-import shortFormsJson from "../../../../crates/shared/data/short-forms.json";
+// Only the list of long faces, by name, so the build leaves the short forms themselves (Chinese ones among
+// them, #4180) out of the chunk that re-exports it.
+import { long } from "../../../../crates/shared/data/short-forms.json";
 
 /** §8 #98's fourteen powers, by the view's power name: X, name on each face and words, base and Radiant. */
 export const POWER_WORDS: Readonly<Record<string, { x: number; title: string; radiantTitle: string; base: string; radiant: string }>> = powerWordsJson;
@@ -13,4 +15,4 @@ export const POWER_WORDS: Readonly<Record<string, { x: number; title: string; ra
  * base|radiant". textLimit.test.ts pins this list on every pull request; the B15 and MN09 component specs
  * read it for their clamp diagnostics.
  */
-export const LONG_FACES: readonly string[] = shortFormsJson.long;
+export const LONG_FACES: readonly string[] = long;
