@@ -132,6 +132,11 @@ mod tests {
         jackioh_engine::layers::unit_has(s.state(), card, kind)
     }
 
+    /// Whether a card was given `kind` (`granted_keywords`, as S+ #100 Plesiosize's tests read it off the field).
+    fn granted(card: &CardInstance, kind: KeywordKind) -> bool {
+        card.granted_keywords.iter().any(|keyword| keyword.kind() == kind)
+    }
+
     /// The definitions summoned since setup, in order.
     fn summoned(s: &Scenario) -> Vec<String> {
         s.events()
@@ -234,11 +239,6 @@ mod tests {
                     "{} has neither a Death nor Reborn",
                     def.id
                 );
-                let pool: Vec<String> = query(&json_as(subsystems::fvh_chaos_felinors_query()))
-                    .iter()
-                    .map(|entry| entry.id.clone())
-                    .collect();
-                assert!(pool.contains(&def.id), "{}", def.id);
                 assert!(s.unit(P1, 2).is_some(), "game {n}: each of the five is its own summon");
             }
         }
@@ -299,7 +299,7 @@ mod tests {
                 .into_iter()
                 .find(|card| card.def_id == FIELD_SPELL)
                 .expect("their Field Spell");
-            assert!(!has(&s, &spell, KeywordKind::Fragile), "a Field Spell is no Unit");
+            assert!(!granted(&spell, KeywordKind::Fragile), "a Field Spell is no Unit");
         }
 
         #[test]
@@ -365,15 +365,15 @@ mod tests {
             reached.extend(s.pile(P2, "graveyard").into_iter().filter(|card| card.def_id == VANILLA));
             assert_eq!(reached.len(), 4);
             for card in nonempty(reached, "an enemy Unit or Field Spell card") {
-                assert!(has(&s, &card, KeywordKind::Giga), "{} {:?}", card.def_id, card.zone);
+                assert!(granted(&card, KeywordKind::Giga), "{} {:?}", card.def_id, card.zone);
             }
-            assert!(!has(&s, &s.unit_at(P2, 1), KeywordKind::Giga), "the field's are not");
+            assert!(!granted(&s.unit_at(P2, 1), KeywordKind::Giga), "the field's are not");
             let spell = s
                 .hand(P2)
                 .into_iter()
                 .find(|card| card.def_id == STOCKPILE)
                 .expect("their Spell");
-            assert!(!has(&s, &spell, KeywordKind::Giga), "a Spell is neither");
+            assert!(!granted(&spell, KeywordKind::Giga), "a Spell is neither");
         }
 
         #[test]

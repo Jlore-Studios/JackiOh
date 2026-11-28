@@ -17,6 +17,7 @@ import { svgDataUri } from "../svg.ts";
 import { CLASSIC_DIORAMAS } from "./classic/index.ts";
 import { CLASSICPLUS_DIORAMAS } from "./classicplus/index.ts";
 import { CORE_DIORAMAS } from "./core/index.ts";
+import { FELINORS_VS_HUMANS_DIORAMAS } from "./felinorsvshumans/index.ts";
 import { MEDITATIVE_DIORAMAS } from "./meditative/index.ts";
 import { MEDITATIVEPLUS_DIORAMAS } from "./meditativeplus/index.ts";
 import { DIORAMA_CACHE_MAX, matches, motionStyleOf, picturePieces, type PicturePiece } from "./pieces.ts";
@@ -40,6 +41,7 @@ export const DIORAMAS: ReadonlyMap<string, Diorama> = new Map(
     ...TRAININGGROUNDS_DIORAMAS,
     ...STINKYSCAPEPLUS_DIORAMAS,
     ...INFINITE_ASSAULT_DIORAMAS,
+    ...FELINORS_VS_HUMANS_DIORAMAS,
   ].map((diorama) => [diorama.id, diorama]),
 );
 

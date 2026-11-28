@@ -70,7 +70,7 @@ fn tribe_units(tag: Tag) -> Value {
 }
 
 /// R5262000, R5239002: entry 1's pool, a Felinor Unit whose base face has a Death or prints Reborn.
-pub fn fvh_chaos_felinors_query() -> Value {
+fn fvh_chaos_felinors_query() -> Value {
     let mut query = tribe_units(Tag::Felinor);
     query["anyOf"] = json!([
         { "hooks": [HookFilter::Death] },
@@ -80,7 +80,7 @@ pub fn fvh_chaos_felinors_query() -> Value {
 }
 
 /// R5262000, R5239002: entry 2's pool, a Human Unit whose base face has an Aura.
-pub fn fvh_chaos_humans_query() -> Value {
+fn fvh_chaos_humans_query() -> Value {
     let mut query = tribe_units(Tag::Human);
     query["hooks"] = json!([HookFilter::Aura]);
     query

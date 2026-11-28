@@ -1443,10 +1443,11 @@ fluid-soundfont-gm ffmpeg`); with any of them missing it exits 2.
 Every card's sounds are in `src/audio/card-audio.json5` (R655), a JSON5 file edited by hand, whose
 header explains it: a `voices` bank, an `effects` bank (a procedural recipe from `sfx.ts` at its own
 `pitch` and `gain`, which renders nothing), and `cards`, in catalog order with each card's name in a
-comment beside its id, where each hook (`play`, `attack`, `death`, `cast`, `trigger`; `CARD_HOOKS` in
+comment beside its id, where each hook (`play`, `attack`, `death`, `cast`, `trigger`, `endOfTurn`; `CARD_HOOKS` in
 `constants.ts`) gives a voice line (its `voice`), an `effect`, or both — a `trigger` (R1088) gives
 a voice for a non-empty list of lines, one of which plays when the runner starts the `summoned`
-entry the card caused, and an `emotes` section gives each portrait's voice (R644). The words the
+entry the card caused, an `endOfTurn` (R5264500) plays as its card's End of turn hook's `hookResolving`
+marker arrives, and an `emotes` section gives each portrait's voice (R644). The words the
 lines speak are not in it: they are each card's `voice` and the portraits' `emotes` in
 `crates/cards/card-text.yaml` (#2498), which `cargo test -p jackioh-tools --test export_card_text`
 writes into `src/audio/voice-text.json`. `voiceData.ts` joins the two (`withVoiceText`), checks them
