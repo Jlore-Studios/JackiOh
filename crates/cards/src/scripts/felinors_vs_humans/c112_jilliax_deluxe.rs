@@ -212,6 +212,7 @@ mod tests {
 
     const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
     const HIT_JOB: &str = "core-016"; // Hit Job: destroy a Unit
+    const KWZKA: &str = "stinkyscape-037"; // Kwzka: a trigger on each cheaper enemy Unit played
     const MANA: i32 = 10;
 
     /// p1 plays Jilliax on `radiant`'s face into lane 1 for X = `x`.
@@ -336,6 +337,29 @@ mod tests {
             assert_eq!(fused.id, jilliax.id, "R77: the same instance");
             // 0/0 + Heavy 5/5 + Utility 3/1.
             s.expect_stats(fused.id.as_str(), json!({ "attack": 8, "health": 6 }));
+        }
+
+        /// §10.5's step-4 window runs §4.5's check once a trigger resolves there: an enemy Kwzka's Allure of a
+        /// cheaper Unit played is one, so the 0/0 body is collected before its Cry fuses anything.
+        #[test]
+        fn r5262001_a_trigger_resolving_before_its_cry_collects_the_0_0_body() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [ID, FILLER], "library": filler(6), "mana": MANA },
+                "p2": { "hand": [FILLER], "field": [{ "def": KWZKA, "lane": 1 }], "library": filler(6) },
+            }));
+            s.play(ID, json!({ "zone": 1, "x": 1 }));
+            for _ in 0..PICKS {
+                if s.state().pending.is_none() {
+                    break;
+                }
+                let pick = s.prompt_modes().first().cloned().unwrap_or_default();
+                s.answer(json!(pick));
+            }
+            assert!(s.unit(P1, 1).is_none(), "the 0/0 body was collected");
+            assert!(
+                s.pile(P1, "graveyard").iter().any(|card| card.def_id == ID),
+                "an unfused Jilliax in the graveyard"
+            );
         }
 
         #[test]
