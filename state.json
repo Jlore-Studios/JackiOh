@@ -22099,23 +22099,25 @@
     },
     "5300": {
       "action": "plan",
+      "archived": {
+        "at": "2026-11-28T12:18:52Z",
+        "branch": "",
+        "head": "",
+        "pr": null,
+        "why": "the bot can't read Actions logs or change `.github/`. (1) In run 46140708291, job \"build and deploy to Cloudflare\", confirm the red step is \"the card statistics load\". (2) Land the one-line fix to `.github/actions/check-stats/action.yml` together with its test (Steps 2\u20134). (3) Let production move to a main commit that has #5295: the next daily promotion does it, or `/promote` on the open `production merge` issue does it sooner. Don't use `redeploy`, which runs production's old check again."
+      },
       "asks": [],
-      "in_lane": true,
-      "kind": "build",
       "live": "planning",
-      "owner": "claude-7",
-      "owner_since": "2026-11-28T12:05:57Z",
-      "owner_why": "it plans it",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-28T12:18:42Z",
       "planned_by": "`claude-7` (claude, `opus`, strong)",
       "planned_by_id": "claude-7",
       "planned_tier": "strong",
       "provider": "claude-7",
+      "question": "the bot can't read Actions logs or change `.github/`. (1) In run 46140708291, job \"build and deploy to Cloudflare\", confirm the red step is \"the card statistics load\". (2) Land the one-line fix to `.github/actions/check-stats/action.yml` together with its test (Steps 2\u20134). (3) Let production move to a main commit that has #5295: the next daily promotion does it, or `/promote` on the open `production merge` issue does it sooner. Don't use `redeploy`, which runs production's old check again.",
       "run_id": "46142984853",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-28T12:05:57Z",
-      "stop_requested": false,
       "taken_asks": []
     }
   },
