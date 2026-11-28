@@ -22180,6 +22180,18 @@
     "5303": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "at": "2026-11-28T14:46:13Z",
+        "built_by": "claude-6",
+        "by": "`claude` (strong)",
+        "sha": "e93cb4fdf4d44a60d202959fa418918f0711b84c"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-28T11:39:54Z",
@@ -22195,6 +22207,7 @@
       "issue": 5289,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-6",
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-28T13:16:11Z",
