@@ -19915,12 +19915,8 @@
       "runs_on": "night-vm-agy",
       "started_at": "2026-11-28T02:02:01Z",
       "stop_requested": false,
-      "strike_log": [
-        "the run failed: RuntimeError: the planner on gemini-3.8-flash-high wrote no plan: timed out after 9000s",
-        "the run failed: RuntimeError: the planner on gemini-3.8-flash-high wrote no plan: timed out after 9000s",
-        "the run failed: RuntimeError: the planner on gemini-3.8-flash-high wrote no plan: timed out after 9000s"
-      ],
-      "strikes": 3,
+      "strike_log": [],
+      "strikes": 0,
       "suggestion": true,
       "taken_asks": [
         "c:7227642239"
