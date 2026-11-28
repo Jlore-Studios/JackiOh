@@ -22252,6 +22252,7 @@
       "run_id": "46148834773",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 645,
       "started_at": "2026-11-28T13:16:55Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -45223,9 +45224,33 @@
         "title": "Patch: a card change that outgrows the daily fuzz's seed count fails its own pull request, not the next daily run",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "e93cb4fdf4d44a60d202959fa418918f0711b84c",
+        "issue": 5289,
+        "merged_at": "2026-11-28T15:14:38Z",
+        "n": 645,
+        "pr": 5303,
+        "queued_at": "2026-11-28T15:14:38Z",
+        "sha": "f5826243b0c72797a397e851dd714edc08e9f5e0",
+        "status": "queued",
+        "title": "Patch: write the card data JSON one record per line, about 260k fewer lines",
+        "tries": 0
       }
     ],
-    "count": 644
+    "count": 645
   },
   "statistics": {
     "at": "2026-11-28T15:14:34Z"
