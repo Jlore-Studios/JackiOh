@@ -21555,13 +21555,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-3",
         "rejections": [],
-        "reviews": [],
-        "sha": "7a7d5c5d651125a5c5b216f7b2e0d052028be598",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-3",
+            "run": "46100824715",
+            "tier": "strong"
+          }
+        ],
+        "sha": "7d61207fdd8d26626c13e037fdab6a65dd8c4eac",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "5265": {
