@@ -29,9 +29,24 @@
 //   trigger  a card whose effect summons (R1088): one of its lines plays when the runner starts the
 //            `summoned` entry the card caused, picked by the client's own rng, replacing the
 //            summoned card's own line for that entry
+// and, since R5188000, the recurring hooks, which can fire every turn or many times in one action:
+//   startOfTurn  a start-of-turn hook of the card begins to resolve, on either player's turn
+//   endOfTurn    an end-of-turn hook of it begins to resolve
+//   whenever     one of its Whenever triggers runs, its condition held
+//   activate     one of its Activate abilities runs
+//   hurt         a Unit takes damage and is still on the field when that action ends
+//   hit          damage the card is the source of lands: its Spell's, its effect's or its attack's
+// A recurring hook's effect plays each time it fires (once per animation entry); its line speaks the
+// first time it fires in a game, then at most once a turn per card, about one time in three, and never
+// cuts in on another line.
 // A hook gives a voice line, { voice: "<a voice>" }, which speaks the card's line for that hook in
-// card-text.yaml (a trigger's list of lines), an effect, { effect: "<an effect>" }, or both in one
-// object; with both, the effect starts first. No hook here writes its words: a text or lines fails.
+// card-text.yaml, an effect, { effect: "<an effect>" }, or both in one object; with both, the effect
+// starts first. A line in card-text.yaml may be a list, a pool (R5188000): the client picks one each
+// time, by its own rng, and each renders a file of its own, `<id>-<hook>` for the first (the key a
+// single line has) and `<id>-<hook>2`, `<id>-<hook>3` and on for the rest; a trigger's is always a list,
+// keyed `<id>-trigger1` on. An effect may be a list too, { effect: ["<wind-up>", "<release>", "<tail>"] },
+// played in order, each a short gap after the one before ends. No hook here writes its words: a text or
+// lines fails.
 //
 // To add a card: copy a neighbour's entry to where the catalog puts the card, change the id, and give
 // a Unit a play, an attack and a death voice (R1448), anything else a cast voice, writing the lines in
@@ -399,6 +414,8 @@
     },
     "core-033": { // Unstable Clone Machine
       cast: { voice: "robot", effect: "servoWhirr" },
+      // R5188000: its Activate, an effect alone.
+      activate: { effect: "dataBlips" },
     },
     "core-034": { // Collateral Damage
       cast: { voice: "narrator", effect: "explosion" },
@@ -413,6 +430,8 @@
       play: { voice: "digger" },
       attack: { voice: "digger" },
       death: { voice: "digger" },
+      // R5188000: its start-of-turn hook, an effect alone.
+      startOfTurn: { effect: "crumble" },
     },
     "core-038": { // Quickstriker
       cast: { voice: "announcer" },
@@ -620,6 +639,8 @@
       play: { voice: "elder" },
       attack: { voice: "elder" },
       death: { voice: "elder" },
+      // R5188000: its Whenever, an effect alone.
+      whenever: { effect: "sporePuff" },
     },
     "core-092": { // Felinor Fiender
       play: { voice: "whisper" },
@@ -628,6 +649,8 @@
     },
     "core-093": { // Combo-Index
       cast: { voice: "announcer" },
+      // R5188000: its end-of-turn hook, an effect alone.
+      endOfTurn: { effect: "tickTock" },
     },
     "core-093-1": { // Combo-Fodder
       cast: { voice: "goof" },
