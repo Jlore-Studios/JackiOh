@@ -22150,9 +22150,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T06:51:29Z",
+    "at": "2026-11-28T07:05:57Z",
     "url": "",
-    "what": "review #5281 on claude-8"
+    "what": "suggestions (server) on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-28T06:57:39Z",
@@ -46528,13 +46528,22 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-28T06:58:06Z",
-    "last_area": "ai",
-    "last_run": "2026-11-28T05:07:33Z",
+    "idle_since": "2026-11-28T07:05:57Z",
+    "last_area": "server",
+    "last_run": "2026-11-28T07:05:57Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "server",
+        "count": 2,
+        "last_run": "2026-11-28T07:05:57Z",
+        "provider": "claude-7",
+        "run_id": "pending:32aec090-1795849537",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
