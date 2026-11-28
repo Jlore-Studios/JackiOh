@@ -21976,11 +21976,6 @@
       "owner": "claude-6",
       "owner_since": "2026-11-28T11:39:54Z",
       "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-28T15:10:00Z",
-      "paused": {
-        "at": "2026-11-28T11:39:13Z",
-        "interrupt": "usage",
-        "provider": "claude-3"
-      },
       "pending_request": false,
       "planned_at": "2026-11-28T09:06:23Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
