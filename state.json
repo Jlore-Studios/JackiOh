@@ -22028,12 +22028,15 @@
       "taken_asks": []
     },
     "5289": {
+      "asks": [
+        "c:7236655415"
+      ],
       "failures": 0,
-      "forced": false,
+      "forced": true,
       "interruptions": 0,
       "kind": "build",
       "pending_request": false,
-      "queued_at": "2026-11-28T08:31:44Z",
+      "queued_at": "2026-11-28T08:33:20Z",
       "requested_by": "MaxGoetzmann",
       "stop_requested": false
     }
