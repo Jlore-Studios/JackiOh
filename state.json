@@ -22166,9 +22166,11 @@
         "by": "`claude` (strong)",
         "sha": "60039074ce46e2c7d142a95016df1dd68ff726ff"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-28T05:53:58Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-28T06:48:21Z",
         "family": "claude",
@@ -22178,6 +22180,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; grep -n \\\"mod fuzz_daily_top_up\\\" crates/tools/src/fuzz.rs; sed -n 160,178p crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"sed -n 8471,8580p crates/tools/src/fuzz.rs\"}\n- bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/fuzz.rs'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"none while those are enough) in both waves, up to `DAILY_TOP_UP_MAX`. Past that super.yml's own\\n//! \u2026\n- tool error: <tool_use_error>Error: No such tool available: bash. Tool names are case-sensitive: call Bash instead.</tool_use_error>\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/fuzz.rs'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"none while those are enough) in both waves, up to `DAILY_TOP_UP_MAX`. Past that super.yml's own\\n//! \u2026\n- Bash: {\"command\": \"until grep -q \\\"test result\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-5265/da519245-760c-47dc-ac37-04f71af06580/tasks/bf70ufx1n.output 2>/dev/null; do sleep 10; done; tail -15\u2026\n- Bash: {\"command\": \"cargo fmt --check && echo fmt ok; timeout 580 cargo clippy -p jackioh-tools --all-targets -- -D warnings 2>&1 | tail -5\", \"timeout\": 600000}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a card change that outgrows the daily fuzz's seed count fails its own pull request, not the next daily run\"} --> A card change that grows the fuzz pool past what the nightly run covers now fails its own pull request. It no longer fails the next daily ru\u2026"
       },
+      "interruptions": 0,
       "issue": 5265,
       "kind": "review",
       "live": "reviewing",
