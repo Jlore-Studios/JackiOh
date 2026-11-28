@@ -21855,14 +21855,10 @@
     "what": "build #5164 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-28T04:50:41Z",
+    "at": "2026-11-28T04:58:55Z",
     "notes": [
       "#5265 is held for `claude-8` until 23:50 (5-hour usage is 80%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "delivered plan #5164 on claude-3 (run 46108355948): planned",
-      "delivered review #5218 on claude-6 (run 46093608208): approved",
-      "started build #5164 on claude-6 (run 46109561622)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 80%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-28T06:50:00Z; it takes reviews only; it can start a build or a plan again in 56m; `claude-1` 5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-28T08:00:00Z; it can start a build or a plan again in 3h 06m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` it refused a call; its limit resets at 2026-11-30T00:00:00Z; `agy` 7-day usage is 95%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-12-03T08:58:46Z; it takes reviews only; it can start a build or a plan again in 124h 05m; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #5265 held for `claude-8` until 23:50 (5-hour usage is 80%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered review #5267 on claude-3 (run 46108935705): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22568,7 +22564,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T04:50:41Z",
+  "loop_tick": "2026-11-28T04:58:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
