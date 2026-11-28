@@ -122,6 +122,14 @@
       "row": "Lucky X"
     },
     {
+      "id": "Unlucky",
+      "label": "Unlucky",
+      "rule": "Takes X off this card's Lucky on each luck-based roll; below 0, the roll is repeated that many extra times and the worst kept, a coin keeping tails if any",
+      "section": "§6.1",
+      "aliases": [],
+      "row": "Unlucky X"
+    },
+    {
       "id": "Woozy",
       "label": "Woozy",
       "rule": "Playing this adds X to your Woozy counter, which drops by 1 at your Start of turn; while it is up, new cards may blur",
@@ -150,6 +158,21 @@
       "section": "§6.1",
       "aliases": [],
       "row": "Brittle X"
+    },
+    {
+      "id": "Fragile",
+      "label": "Fragile",
+      "rule": "Any damage that lowers this Unit's Health destroys it",
+      "section": "§6.1",
+      "aliases": []
+    },
+    {
+      "id": "Durability",
+      "label": "Durability",
+      "rule": "This card's Activates can be used X times in all; at 0 a Field Spell goes to the graveyard, and a Unit stays with no Activate left",
+      "section": "§6.1",
+      "aliases": [],
+      "row": "Durability X"
     },
     {
       "id": "Spell Damage",
@@ -454,6 +477,13 @@
       "id": "Evolves when",
       "label": "Evolves when",
       "rule": "When the condition after it comes true, this evolves",
+      "section": "§6.2",
+      "aliases": []
+    },
+    {
+      "id": "Endless Evolve",
+      "label": "Endless Evolve",
+      "rule": "This evolves again every time its condition is met, not only once",
       "section": "§6.2",
       "aliases": []
     },

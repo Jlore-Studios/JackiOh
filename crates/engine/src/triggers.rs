@@ -433,9 +433,12 @@ pub fn trigger_holders_with_hook(
 }
 
 /// R5237006 (FvH #79): whether `card`, answering `hook` from `zone`, runs a granted End of turn: the
-/// end-of-turn hook on the field, with an EndOfTurn grant (`grants::end_of_turn_hook_of` runs it).
+/// end-of-turn hook on the field (a unit zone or the backrow), with an EndOfTurn grant
+/// (`grants::end_of_turn_hook_of` runs it).
 fn granted_end_of_turn(hook: HookName, zone: TriggerZone, card: &CardInstance) -> bool {
-    hook == HookName::EndOfTurn && zone == TriggerZone::Field && crate::grants::has_end_of_turn_grant(card)
+    hook == HookName::EndOfTurn
+        && matches!(zone, TriggerZone::Field | TriggerZone::Backrow)
+        && crate::grants::has_end_of_turn_grant(card)
 }
 
 // 2. The queue.
@@ -1386,7 +1389,8 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
         else {
             return;
         };
-        if holder.script.hook_named(hook.as_str()).is_none() {
+        // R5237006: a granted End of turn runs on a card whose own text has none.
+        if holder.script.hook_named(hook.as_str()).is_none() && !granted_end_of_turn(hook, holder.zone, &card) {
             return;
         }
         // R153, re-read as a trigger is: a card now in a hand or a graveyard no longer registers it.
