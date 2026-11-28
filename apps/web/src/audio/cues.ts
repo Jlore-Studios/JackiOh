@@ -715,7 +715,13 @@ export const SOUND_CUES: { readonly [K in GameEventType]: CueRow<K> } = {
   rolled: { sfx: "chaosRoll", cues: () => [sfx("chaosRoll")] },
 
   // ---- Issue #2783: the event stream says why (R2783000) ----
-  hookResolving: silent("a marker: the hook's own events sound"),
+  // R5264500: an End of turn's marker speaks its card's `endOfTurn` line (FvH #59), a readable card's only (the
+  // sentinel is in no table, R203); every other hook's events sound for it.
+  hookResolving: {
+    sfx: null,
+    silentBecause: "a marker: the hook's own events sound, and an End of turn speaks its card's endOfTurn line",
+    cues: (event, ctx) => (event.hook === "endOfTurn" ? hookCues(ctx, event.defId, "endOfTurn", VOICE_DELAY_MS, VOICE_PRIORITY.play) : NONE),
+  },
 };
 
 /** A row's `cues` widened to any event, so the lookup can take a type this build does not know. */

@@ -123,8 +123,14 @@ mod tests {
             s.answer(pick::id(&theirs));
             s.expect_stats(&wall, json!({ "attack": 2, "health": 6 }));
             s.expect_stats(&theirs, json!({ "attack": 2, "health": 6 }));
-            assert_eq!(tokens_on_field(&s).len(), 2, "a token summoned each time");
-            assert_eq!(tokens_in_hand(&s).len(), 2, "and one added each time");
+            let summoned = tokens_on_field(&s);
+            assert_eq!(summoned.len(), 2, "a token summoned each time");
+            let added = tokens_in_hand(&s);
+            assert_eq!(added.len(), 2, "and one added each time");
+            assert!(
+                summoned.iter().chain(&added).all(|token| !token.radiant),
+                "the token's base face on the Radiant face too"
+            );
         }
     }
 }

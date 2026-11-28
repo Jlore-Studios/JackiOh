@@ -1357,6 +1357,41 @@ describe("R506 patch v0.2.0's moments sound the way they went", () => {
   });
 });
 
+/* R5264500: an End of turn speaks its card's endOfTurn line */
+
+describe("R5264500 an End of turn's marker speaks its card's endOfTurn line", () => {
+  /** FvH #59 Voracious Reader, its End of turn a line and an effect; a Unit with none. */
+  const READER = "felinorsvshumans-059";
+  const lines: CardAudioTable = {
+    ...LINES,
+    effects: { page: { sfx: "castOnDraw", pitch: 1.2, gain: 0.8 } },
+    cards: {
+      ...LINES.cards,
+      [READER]: { kind: "unit", play: { voice: "snob", text: "Shh." }, endOfTurn: { voice: "snob", text: "One more chapter.", effect: "page" } },
+    },
+  };
+  const marker = (defId: string, hook: "endOfTurn" | "startOfTurn" | "death" = "endOfTurn"): GameEvent => ({
+    type: "hookResolving",
+    sourceId: "r1",
+    defId,
+    controller: "p1",
+    hook,
+  });
+
+  it("R5264500 an End of turn plays its effect, then its line at the play's priority", () => {
+    expect(shape(marker(READER), ctx({ lines }))).toEqual([effect(READER, "endOfTurn", VOICE_DELAY_MS), voice(READER, "endOfTurn", VOICE_DELAY_MS + CARD_EFFECT_DELAY_MS)].sort());
+    expect(ranked(marker(READER), ctx({ lines }))).toEqual([`${READER}/endOfTurn!${String(VOICE_PRIORITY.play)}`]);
+  });
+
+  it("R5264500 (R203) every other hook's marker, a card with no endOfTurn and the sentinel stay silent", () => {
+    expect(cuesFor(marker(READER, "startOfTurn"), ctx({ lines }))).toEqual([]);
+    expect(cuesFor(marker(READER, "death"), ctx({ lines }))).toEqual([]);
+    expect(cuesFor(marker(UNIT), ctx({ lines }))).toEqual([]);
+    expect(cuesFor(marker(HIDDEN_DEF_ID), ctx({ lines }))).toEqual([]);
+    expect(SOUND_CUES.hookResolving.sfx).toBeNull();
+  });
+});
+
 /* R655: a hook's effect plays at the moment its line would speak */
 
 describe("R655 a card's hook may carry an effect beside or instead of its line", () => {

@@ -93,7 +93,7 @@ mod tests {
     }
 
     /// The pick reaches p1's hand, Radiant on the Radiant face.
-    fn the_pick_reaches_the_hand(radiant: bool) {
+    fn pick_reaches_hand(radiant: bool) {
         let mut s = played(radiant, "fvh-48-pick");
         let options = discover_options(&s);
         let picked = must(options.first().cloned(), "an option");
@@ -127,7 +127,7 @@ mod tests {
 
         #[test]
         fn the_pick_reaches_the_hand() {
-            the_pick_reaches_the_hand(false);
+            pick_reaches_hand(false);
         }
 
         #[test]
@@ -151,7 +151,7 @@ mod tests {
 
         #[test]
         fn r3549000_the_pick_reaches_the_hand_radiant() {
-            the_pick_reaches_the_hand(true);
+            pick_reaches_hand(true);
         }
 
         #[test]

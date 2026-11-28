@@ -69,21 +69,25 @@ fn manifestor(radiant: bool) -> Script {
             let mut effects: Vec<Effect> = lanes_beside(ctx.self_.as_ref())
                 .into_iter()
                 .map(|lane| {
-                    let mut summon: SummonRandomArgs = json_as(json!({
+                    let mut random: SummonRandomArgs = json_as(json!({
                         "query": { "type": "Unit", "cost": SUMMONED_COST },
                         "lane": lane,
                     }));
                     if radiant {
-                        summon.radiant = Some(true);
+                        random.radiant = Some(true);
                     }
-                    summon_random(summon)
+                    summon_random(random)
                 })
                 .collect();
             // R5259000: one summoned is the one, and nothing is asked.
             effects.push(for_each_card(ForEachCardArgs {
                 cards: Arc::new(|c: &mut EffectContext<'_>| {
                     let summoned = summoned_beside(c);
-                    if summoned.len() == 1 { summoned } else { vec![] }
+                    if summoned.len() == 1 {
+                        summoned
+                    } else {
+                        vec![]
+                    }
                 }),
                 each: Arc::new(|instance_id: &str| {
                     fragile_on(
