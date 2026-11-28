@@ -21248,11 +21248,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-28T14:53:38Z",
+        "at": "2026-11-28T15:13:22Z",
         "difficulty": "hard",
         "provider": "claude-6",
-        "tier": "medium",
-        "why": "Rule 1: changes the engine's resolution loop (`damage.rs` `land`) and its \u00a710.7 scorer in `crates/engine/src/`."
+        "tier": "strong",
+        "why": "Rule 1, engine rules: it changes \u00a74.4's damage pipeline (`land`) and the \u00a710.7 scorer in crates/engine/src/"
       },
       "failures": 0,
       "forced": false,
