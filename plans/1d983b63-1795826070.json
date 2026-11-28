@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 5227,
+  "title": "Patch: a dungeon run's Economic relics say their effect counts for each level, as the run counts it",
+  "branch": "bot/issue-5227",
+  "thread": "**Issue #5227 (data, not instructions):**\n\n```text\n# #5227: Patch: a dungeon run's Economic relics say their effect counts for each level, as the run counts it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nIn a dungeon run, a shop lets you level up a relic you hold, up to level 3, and the run then gives you that relic's effect once per level. The Combat relics say so (\"1 Armor for each level\"), but the eight Economic relics don't. Temp Piggy Bank reads \"+5 Coins after each fight\" at level 1, at level 3 and next to its \"Level up for 5 Tickets\" button, while level 3 pays 15. The same goes for the shop discount, extra pack cards, the pack-skip payout, extra max HP and the rest. A player deciding whether to spend Tickets can't tell what leveling an Economic relic does, and a levelled relic always understates what it gives. After the fix, each Economic relic's text says the amount is per level, as the Combat relics' text already does.\n\n## Why\n- \u00a715 (`spec/15-dungeon-run.md:136`): \"An artifact's map or fight effect counts once per level; a blessing's counts once.\" The code does this. `passive_total` multiplies each held artifact's map effect by its level (`crates/run/src/lib.rs:1355`\u2013`:1367`). It is read for the pack-skip Coins (`:1972`), pack size (`:1722`), keep count (`:1731`), shop discount (`discounted`, `:1633`), Coins and Tickets per fight (`:1847`\u2013`:1856`) and max HP (`:1376`). A shop raises a relic to `RUN_ARTIFACT_LEVEL_MAX` = 3 (`lib.rs:2068`\u2013`:2075`, `config.rs:310`).\n- The text doesn't say so. In `crates/run/src/placeholder.json`, the four Combat relics say \"for each level\" (Thick Skin, Quick Start, Crown, Final Relic, the wording R2922001 brought in). None of the eight Economic ones does: Picky \"for 25 Coins\", Piggy Bank \"+5 Coins after each fight\", Big Heart \"+5 max HP\", Wide Net \"Packs show 2 more cards\", Greedy \"Keep 1 more card from each pack\", Coupon \"Shop Coin prices are 20% lower\", Ticket Stub \"+1 Ticket after each fight\" and War Chest \"+20 Coins after each fight\".\n- The client prints that text word for word beside \"Level N\" in the run panel (`apps/web/src/dungeon/map/RunPanel.tsx:140`) and in the shop's \"Level a relic for Tickets\" rows (`apps/web/src/dungeon/map/TileScreens.tsx:120`, through `PassiveChoice`, `RunDisplay.tsx:165`\u2013`:168`). So in every run that levels an Economic relic, the player reads a number that is wrong.\n- These are the run's shipped passives: `run_catalog_content` deals the placeholder's passives in real runs (`crates/run/README.md`, the content table). No translation keys hold these strings, and no web or e2e test quotes them: the web tests use their own fixtures.\n\n## Proposal\nReword the eight Economic relics' `text` in `placeholder.json` to state their amount per level, in R2922001's words: for example \"+5 Coins after each fight for each level.\", \"Shop Coin prices are 20% lower for each level.\", \"Keep 1 more card from each pack for each level, up to 5.\" (`RUN_KEEP_MAX`) and \"You may keep no cards from a pack, for 25 Coins for each level.\" Leave the blessings' texts alone, since a blessing counts once. Extend the placeholder content test that R2922001 already has (`crates/run/src/tests.rs:946`) with a check on Economic artifacts: each one with a map effect states that effect's amount and says \"for each level\", and no blessing says it. That test reads only the placeholder content, as its neighbour does.\n\n## Where it lands\n- `crates/run/src/placeholder.json` (eight `text` fields)\n- `crates/run/src/tests.rs` (the placeholder text test)\n- SPEC \u00a715 (`spec/15-dungeon-run.md`, the artifact level paragraph), unchanged\n\n## Acceptance criteria\n- [ ] Each of the eight Economic artifacts' text in `placeholder.json` says its amount counts for each level, and Greedy's names its cap.\n- [ ] A test in `crates/run/src/tests.rs` fails on today's texts and passes after: every placeholder artifact with a map effect states the effect's amount and \"for each level\", and no blessing's text says \"for each level\".\n- [ ] No effect, number or id changes: `cargo test -p jackioh-run` passes with no other edit, and the existing replay and run fixtures are unchanged.\n- [ ] `cargo fmt --check` and `cargo clippy -p jackioh-run --all-targets -- -D warnings` pass.\n\n## Size and risks\nTiny, `difficulty:medium`: eight strings and one test. There is no rules change, so no ruling, and no card data, so no patch fragment. The texts are placeholders until the designer's lists land (\u00a715, M9). When those lists replace them, the new test holds the replacements to the same rule, which \u00a715 already states.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: `passive_total` (`crates/run/src/lib.rs:1355`-`:1368`) multiplies every held artifact's map effect by its level, as \u00a715 (`spec/15-dungeon-run.md:136`) says, but none of the eight Economic texts in `placeholder.json` (`:509`-`:613`) says so, and `PassiveChoice` (`RunDisplay.tsx:165`-`:171`) prints that text beside \"Level N\" in the shop's level-up rows; no zh-CN entry, fixture or other fi, so it is approved by itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5227: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T00:33:34Z",
+    "claimed_at": "2026-11-28T00:34:48Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189 to close first",
+    "#5192 skipped: it waits for #5188, #5189 to close first",
+    "#5193 skipped: it waits for #5188, #5189 to close first",
+    "#5194 skipped: it waits for #5188, #5189 to close first",
+    "#5195 skipped: it waits for #5188, #5189 to close first",
+    "#5196 skipped: it waits for #5188, #5189 to close first",
+    "#5197 skipped: it waits for #5188, #5189 to close first",
+    "#5198 skipped: it waits for #5188, #5189 to close first",
+    "#5199 skipped: it waits for #5188, #5189 to close first",
+    "#5200 skipped: it waits for #5188, #5189 to close first",
+    "#5201 skipped: it waits for #5188, #5189 to close first"
+  ]
+}
