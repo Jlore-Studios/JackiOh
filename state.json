@@ -21139,7 +21139,8 @@
       "started_at": "2026-11-28T01:07:52Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 7231898428
     },
     "5230": {
       "action": "build",
