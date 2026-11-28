@@ -9,7 +9,8 @@
 import { inboxTestid } from "../../../apps/web/src/inbox/testids.ts";
 import { PRESENCE_HEARTBEAT_MS, SOCIAL_POLL_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { MENU_SIZES, accounts, apiUrl, bearerHeaders, routes, timeouts, type E2EAccount } from "../../support/config.ts";
-import { CHALLENGE_LATER, CHALLENGE_TOAST, FRIENDS_BUTTON, heroId, ts } from "../../support/testids.ts";
+import { heroId, ts } from "../../support/testids.ts";
+import { challengeToastTestid, friendsTestid } from "../../../apps/web/src/together/testids.ts";
 
 const MATCH_PATH = /^\/match\/([^/]+)$/;
 
@@ -117,7 +118,7 @@ describe("57 — the inbox (issue #3729)", () => {
         .should("eq", 200);
     });
     cy.visitAs(one(), routes.collection());
-    cy.get(ts(FRIENDS_BUTTON), { timeout: FRIENDS_TIMEOUT_MS }).should("be.visible");
+    cy.get(ts(friendsTestid.button), { timeout: FRIENDS_TIMEOUT_MS }).should("be.visible");
     cy.request({ method: "POST", url: apiUrl("/api/presence"), headers: bearerHeaders(one().token) }).its("status").should("eq", 204);
 
     cy.then(() => {
@@ -134,10 +135,10 @@ describe("57 — the inbox (issue #3729)", () => {
 
     // The toast pops on Collection; Later sends it away, and the challenge is still waiting in the inbox.
     cy.then(() => {
-      cy.get(`${ts(CHALLENGE_TOAST)}[data-room-code="${roomCode}"]`, { timeout: SOCIAL_TIMEOUT_MS }).within(() => {
-        cy.get(ts(CHALLENGE_LATER)).click();
+      cy.get(`${ts(challengeToastTestid.toast)}[data-room-code="${roomCode}"]`, { timeout: SOCIAL_TIMEOUT_MS }).within(() => {
+        cy.get(ts(challengeToastTestid.later)).click();
       });
-      cy.get(`${ts(CHALLENGE_TOAST)}[data-room-code="${roomCode}"]`).should("not.exist");
+      cy.get(`${ts(challengeToastTestid.toast)}[data-room-code="${roomCode}"]`).should("not.exist");
     });
     cy.location("pathname").should("eq", routes.collection());
     openInbox();

@@ -374,7 +374,7 @@ const EXPECTED_ORDER: &[&str] = &[
     "Stack",
     "Flexible",
     "GIGA",
-    "Tipsy",
+    "Woozy",
     "Spell Damage",
     "Lucky",
     "Indestructible",
@@ -744,39 +744,14 @@ type Entry = IndexMap<String, Value>;
 
 type Catalog = IndexMap<String, Entry>;
 
-const SNAPSHOTS: &[(&str, &str)] = &[
-    ("v0.1.0", include_str!("../../patches/v0.1.0.json")),
-    ("v0.1.0b", include_str!("../../patches/v0.1.0b.json")),
-    ("v0.1.0c", include_str!("../../patches/v0.1.0c.json")),
-    ("v0.1.0d", include_str!("../../patches/v0.1.0d.json")),
-    ("v0.1.1", include_str!("../../patches/v0.1.1.json")),
-    ("v0.2.0", include_str!("../../patches/v0.2.0.json")),
-    ("v0.2.0b", include_str!("../../patches/v0.2.0b.json")),
-    ("v0.2.1", include_str!("../../patches/v0.2.1.json")),
-    ("v0.2.2", include_str!("../../patches/v0.2.2.json")),
-    ("v0.2.2b", include_str!("../../patches/v0.2.2b.json")),
-    ("v0.2.3", include_str!("../../patches/v0.2.3.json")),
-    ("v0.2.3b", include_str!("../../patches/v0.2.3b.json")),
-    ("v0.2.3c", include_str!("../../patches/v0.2.3c.json")),
-    ("v0.2.3d", include_str!("../../patches/v0.2.3d.json")),
-    ("v0.2.3e", include_str!("../../patches/v0.2.3e.json")),
-    ("v0.2.3f", include_str!("../../patches/v0.2.3f.json")),
-    ("v0.2.4", include_str!("../../patches/v0.2.4.json")),
-    ("v0.2.5", include_str!("../../patches/v0.2.5.json")),
-    ("v0.2.5b", include_str!("../../patches/v0.2.5b.json")),
-    ("v0.2.5c", include_str!("../../patches/v0.2.5c.json")),
-    ("v0.2.5d", include_str!("../../patches/v0.2.5d.json")),
-    ("v0.2.5e", include_str!("../../patches/v0.2.5e.json")),
-];
+/// R5268000: each shipped snapshot as `patches/deltas/` folds to it.
+#[path = "../../src/snapshot_fold.rs"]
+mod snapshot_fold;
 
 const PATCHES_JSON: &str = include_str!("../../patches/patches.json");
 
 fn read_snapshot(version: &str) -> Catalog {
-    match SNAPSHOTS.iter().find(|(shipped, _)| *shipped == version) {
-        Some((_, raw)) => serde_json::from_str(raw)
-            .unwrap_or_else(|error| panic!("patches/{version}.json is not a catalog: {error}")),
-        None => panic!("patches/{version}.json is not compiled into card_text.rs's SNAPSHOTS"),
-    }
+    snapshot_fold::snapshot(version)
 }
 
 fn shipped_versions() -> Vec<String> {

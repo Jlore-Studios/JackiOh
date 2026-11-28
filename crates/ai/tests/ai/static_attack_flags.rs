@@ -19,10 +19,11 @@ const BIG: &str = "core-025";
 const MENACE: &str = "core-019";
 
 /// AI_EVAL with the two flags read off: every swing may hit the hero and every Taunt binds, as before #3909,
-/// and the Taunt walk's old order (R3937000).
+/// and the Taunt walk's old order (R3937000), and the damage riders unread (R5229000).
 const OFF: EvalWeights = EvalWeights {
     static_attack_flags_read: false,
     best_attack_order_past_taunts: false,
+    damage_rider_read: false,
     ..AI_EVAL
 };
 

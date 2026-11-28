@@ -202,6 +202,38 @@ describe("B25 confirm end turn asks twice only while a move is left", () => {
     expect(endTurn()).not.toHaveAttribute("data-confirm");
   });
 
+  it("B25 movesLeft keeps End turn ready and arms the confirm while the highlight lights only a zone", () => {
+    setConfirmEndTurn(true);
+    const onControl = vi.fn();
+    render(
+      <Board
+        view={boardView()}
+        highlight={highlight(["end-turn", "zone-you-units-2"], ["zone-you-units-2"], ["hand-card-h1"])}
+        movesLeft
+        onControl={onControl}
+      />,
+    );
+    expect(endTurn()).toHaveAttribute("data-turn-state", "ready");
+
+    fireEvent.click(endTurn());
+
+    expect(onControl).not.toHaveBeenCalled();
+    expect(endTurn()).toHaveAttribute("data-confirm", "armed");
+  });
+
+  it("B25 movesLeft={false} wins over a highlight that lights a move", () => {
+    setConfirmEndTurn(true);
+    const onControl = vi.fn();
+    render(<Board view={boardView()} highlight={MOVES_LEFT} movesLeft={false} onControl={onControl} />);
+    expect(endTurn()).toHaveAttribute("data-turn-state", "waiting");
+
+    fireEvent.click(endTurn());
+
+    expect(onControl).toHaveBeenCalledTimes(1);
+    expect(onControl).toHaveBeenCalledWith("end-turn");
+    expect(endTurn()).not.toHaveAttribute("data-confirm");
+  });
+
   it("B25 an end-turn the engine did not list never arms and never fires", () => {
     setConfirmEndTurn(true);
     const onControl = vi.fn();

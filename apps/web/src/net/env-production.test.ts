@@ -176,6 +176,14 @@ describe("R1933001 the development lanes file into both projects' card statistic
     expect(filing).toMatch(/production\) url=\$\{PRODUCTION_STATS_IMPORT_DATABASE_URL:-\} ;;/u);
     expect(filing).toMatch(/DATABASE_URL=\$url "\$server" stats-import --totals-only "\$file"/u);
   });
+
+  it("R5274000 files the gather lane's games in batches big enough for staging's Disk IO budget", () => {
+    // Each filed file rewrites most of a version's card totals however few its games, so the
+    // databases' write load follows the number of files. At 50 games a file the five parts filed about
+    // 50 batches an hour and JackiOh-Staging ran through its Disk IO budget (2026-11-28).
+    const games = /^ +GATHER_FILE_GAMES: "(\d+)"$/mu.exec(workflowText("gather.yml"))?.[1];
+    expect(Number(games)).toBeGreaterThanOrEqual(200);
+  });
 });
 
 describe("R1933000 production's figures are read through STATS_DATABASE_URL, which no workflow imports through", () => {

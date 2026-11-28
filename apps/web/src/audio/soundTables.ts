@@ -15,7 +15,7 @@ import { VOICE_EMOTE_IDS } from "@jackioh/shared";
 import { currentCatalog } from "../game/currentCatalog.ts";
 
 import { CARD_HOOKS, CARD_HOOK_NAMES, HIDDEN_DEF_ID } from "./constants.ts";
-import { SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
+import { SFX_ELEMENTS, SFX_IDS, SFX_TIMBRES } from "./sfx.ts";
 import type {
   CardAudioEntry,
   CardAudioTable,
@@ -24,9 +24,11 @@ import type {
   CardKind,
   EmoteLineEntry,
   HookAssignment,
+  HookEffect,
   MusicCardEntry,
   MusicManifest,
   Persona,
+  SfxElement,
   SfxId,
   SfxParams,
   SfxTimbre,
@@ -103,7 +105,7 @@ const EFFECT_AMOUNT_RANGE = [0, 100] as const;
 const SAY_FIELDS = ["backend", "say", "rate", "pbas", "pmod", "web", "gain"] as const;
 const SAPI_FIELDS = ["backend", "voice", "rate", "semitones", "filter", "web", "gain"] as const;
 const EFFECT_FIELDS = ["sfx", "pitch", "gain", "params"] as const;
-const PARAM_FIELDS = ["amount", "mine", "timbre", "mythic", "urgent", "release"] as const;
+const PARAM_FIELDS = ["amount", "mine", "timbre", "element", "mythic", "urgent", "release"] as const;
 const ASSIGNMENT_FIELDS = ["voice", "text", "lines", "effect"] as const;
 /** The file's sections, in the order it keeps them. */
 const SECTIONS = ["voices", "effects", "cards"] as const;
@@ -166,6 +168,12 @@ function parseParams(raw: unknown, path: string): SfxParams {
     }
     params.timbre = o.timbre as SfxTimbre;
   }
+  if (o.element !== undefined) {
+    if (typeof o.element !== "string" || !(SFX_ELEMENTS as readonly string[]).includes(o.element)) {
+      fail(`${path}.element`, `unknown element ${JSON.stringify(o.element)} (expected one of ${SFX_ELEMENTS.join(", ")})`);
+    }
+    params.element = o.element as SfxElement;
+  }
   for (const name of ["mine", "mythic", "urgent", "release"] as const) {
     if (o[name] !== undefined) params[name] = flag(o[name], `${path}.${name}`);
   }
@@ -195,10 +203,20 @@ function parseAssignment(
 ): HookAssignment {
   const o = record(raw, path);
   onlyFields(o, path, ASSIGNMENT_FIELDS);
-  let effect: string | undefined;
+  // R5188000: an effect is one name from the bank, or a list of them played in order.
+  let effect: HookEffect | undefined;
   if (o.effect !== undefined) {
-    effect = text(o.effect, `${path}.effect`);
-    if (!Object.hasOwn(effects, effect)) fail(`${path}.effect`, `unknown effect "${effect}"`);
+    const named = (name: unknown, at: string): string => {
+      if (typeof name !== "string" || name.trim() === "") fail(`${path}.effect`, "must be an effect or a non-empty list of effects");
+      if (!Object.hasOwn(effects, name)) fail(at, `unknown effect "${name}"`);
+      return name;
+    };
+    if (Array.isArray(o.effect)) {
+      if (o.effect.length === 0) fail(`${path}.effect`, "must be an effect or a non-empty list of effects");
+      effect = o.effect.map((name, i) => named(name, `${path}.effect[${i}]`));
+    } else {
+      effect = named(o.effect, `${path}.effect`);
+    }
   }
   if (o.voice === undefined) {
     if (o.text !== undefined) fail(`${path}.voice`, "a text needs the voice that speaks it");
@@ -207,11 +225,11 @@ function parseAssignment(
   }
   const voice = text(o.voice, `${path}.voice`);
   if (!Object.hasOwn(voices, voice)) fail(`${path}.voice`, `unknown voice "${voice}"`);
-  // R1088: a trigger lists its lines; any other hook speaks one text.
+  // R1088, R5188000: a hook speaks one text or lists a pool of lines (a trigger always lists them).
   if (o.lines !== undefined) {
     if (!Array.isArray(o.lines) || o.lines.length === 0) fail(`${path}.lines`, "must be a non-empty list of strings");
     const lines = o.lines.map((line, i) => text(line, `${path}.lines[${i}]`));
-    if (o.text !== undefined) fail(`${path}.text`, "a trigger lists its lines instead");
+    if (o.text !== undefined) fail(`${path}.text`, "a hook with a pool lists its lines instead");
     return effect === undefined ? { voice, lines } : { voice, lines, effect };
   }
   const spoken = text(o.text, `${path}.text`);
@@ -399,7 +417,8 @@ export function withVoiceText(raw: unknown, voiceText: unknown): unknown {
         }
         if (!Object.hasOwn(own, hook)) failText(`${defId}.voice.${hook}`, `missing (${FILE} gives the hook a voice)`);
         const { voice, ...rest } = assignment;
-        hooks[hook] = { voice, [hook === "trigger" ? "lines" : "text"]: own[hook], ...rest };
+        // R5188000: a pool, written as a list, fills `lines`, as a trigger's always does (R1088).
+        hooks[hook] = { voice, [hook === "trigger" || Array.isArray(own[hook]) ? "lines" : "text"]: own[hook], ...rest };
       }
       filled[defId] = hooks;
     }

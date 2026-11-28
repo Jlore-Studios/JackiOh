@@ -1277,24 +1277,24 @@ fn i16_a_hand_card_holding_giga_a_half_a_damage_chain_or_evolved_is_one_leftover
     }
 }
 
-/// R3548001: a card drawn while Tipsy is up is stamped before it reaches the hand and may carry the stamp
+/// R3548001: a card drawn while Woozy is up is stamped before it reaches the hand and may carry the stamp
 /// into a library, where nothing reads it; R78's reset takes it as the card leaves the field or reaches a
 /// graveyard or an exile pile.
 #[test]
-fn i16_a_hand_or_library_card_may_hold_a_tipsy_stamp_but_a_graveyard_or_exile_card_may_not() {
-    let stamp = TipsyStamp {
+fn i16_a_hand_or_library_card_may_hold_a_woozy_stamp_but_a_graveyard_or_exile_card_may_not() {
+    let stamp = WoozyStamp {
         player: P1,
         level: 2,
         turn: 1,
     };
-    let mut state = playing("i16-tipsy");
-    state.players[P1].hand[0].tipsy = Some(stamp);
-    state.players[P2].library[0].tipsy = Some(stamp);
+    let mut state = playing("i16-woozy");
+    state.players[P1].hand[0].woozy = Some(stamp);
+    state.players[P2].library[0].woozy = Some(stamp);
     assert_eq!(i16(&state), Vec::<String>::new());
     for zone in [Zone::Graveyard { player: P1 }, Zone::Exile { player: P1 }] {
-        let mut state = playing("i16-tipsy-gone");
+        let mut state = playing("i16-woozy-gone");
         let mut gone = new_instance(&mut state, "fx-2", P1, zone.clone());
-        gone.tipsy = Some(stamp);
+        gone.woozy = Some(stamp);
         let id = gone.id.clone();
         match zone {
             Zone::Graveyard { .. } => state.players[P1].graveyard.push(gone),
@@ -5416,16 +5416,22 @@ mod i23 {
 
     /// `effect` applied as p1's with no card of its own and settled, as a card's effect is (§10.3).
     fn settled(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
+        settled_by(state, None, effect)
+    }
+
+    /// `effect` applied as `source`'s, under its controller (none: p1's with no card of its own), and
+    /// settled, as a card's effect is (§10.3).
+    fn settled_by(state: &mut GameState, source: Option<&CardInstance>, effect: Effect) -> Vec<GameEvent> {
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
         {
             let mut sink = EngineSink::new(state, &mut events, &mut rng);
             {
                 let options = HookOptions {
-                    controller: Some(P1),
+                    controller: Some(source.map_or(P1, |card| card.controller)),
                     ..Default::default()
                 };
-                let mut ctx = make_context(&mut sink, None, options);
+                let mut ctx = make_context(&mut sink, source, options);
                 (effect.apply)(&mut ctx);
             }
             settle(&mut sink, SettleOptions::default());
@@ -6029,17 +6035,31 @@ mod i23 {
             id,
             &["I23 Immutable record changed", "tuning"],
         );
-        // A real keyword kept for good (R1870007, R4154202).
+        // A real keyword kept for good, by the card's own text (R23, R1870007).
+        let gift =
+            || effects::gain_keyword_for_good(json_as(json!({ "keyword": flashback(), "instanceId": id })));
+        let me = find_instance(&state, id).cloned().expect("the holder");
         let mut real = state.clone();
-        let events = settled(
-            &mut real,
-            effects::gain_keyword_for_good(json_as(json!({ "keyword": flashback(), "instanceId": id }))),
-        );
+        let events = settled_by(&mut real, Some(&me), gift());
         assert!(
             find_instance(&real, id).is_some_and(|card| card.tuning.is_some()),
             "{events:?}"
         );
         assert_eq!(i23(&state, &events, &real), Vec::<String>::new());
+        // Another card's is kept off the Immutable card (R5226000).
+        let mut refused = state.clone();
+        let events = settled(&mut refused, gift());
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, GameEvent::KeywordGranted { .. })),
+            "{events:?}"
+        );
+        assert_eq!(
+            find_instance(&refused, id).map(|card| &card.tuning),
+            find_instance(&state, id).map(|card| &card.tuning)
+        );
+        assert_eq!(i23(&state, &events, &refused), Vec::<String>::new());
     }
 
     #[test]

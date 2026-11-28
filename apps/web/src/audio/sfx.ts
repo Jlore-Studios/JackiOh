@@ -6,7 +6,7 @@
 // PITCH (R655) preserves timings; LEVELS (B57) are tested.
 
 import { CHAOS_REVEAL_MAX, IMPACT_AMOUNT_CAP, IMPACT_HEADROOM } from "./constants.ts";
-import type { SfxId, SfxParams, SfxTimbre } from "./types.ts";
+import type { SfxElement, SfxId, SfxParams, SfxTimbre } from "./types.ts";
 import { isAnomalyCode, type AnomalyCode } from "../cards/anomalies.ts";
 import { damageTier, PLAY_IMPACT_TIERS, SLAM_PITCH_SPREAD, UNIT_SLAM } from "../game/damageFeel.ts";
 import { noiseBuffer } from "./noise.ts";
@@ -47,12 +47,19 @@ export const SFX_IDS: readonly SfxId[] = [
   "vaultHiss", "safeChirp", "stoneChime", "magiChord", "lectureRumble", "pressStamp", "corvetteRoar", "popGasp",
   "geigerHum", "wireRatchet", "beamWhine", "rattleSteam", "breechBoom", "flakWind", "crunchJackpot", "choirHulls",
   "hornEcho", "jetSnap", "whiteRing", "hullDrills", "klaxonSputter", "moltenSnarl", "shutterPurr", "venomDrip",
+  // #5190
+  "elementWindUp", "elementBolt", "elementTail", "windUp", "sparkleTail", "hush", "shatter", "morph", "revealGlint",
 ];
 
 /** Every card family a summon or spell may be given (types.ts SfxTimbre), for the tests. */
 export const SFX_TIMBRES: readonly SfxTimbre[] = [
   "human", "felinor", "ky", "cn", "fruit", "chaos", "quickdraw", "token", "field",
   "book", "pancake", "ai",
+];
+
+/** #5190: the elements elementWindUp, elementBolt and elementTail sound as (types.ts SfxElement), for the tests. */
+export const SFX_ELEMENTS: readonly SfxElement[] = [
+  "fire", "frost", "lightning", "arcane", "shadow", "poison", "holy", "physical",
 ];
 
 /** Schedules one sound starting at `at` (context seconds) into `out`; returns its length in seconds. */
@@ -4749,6 +4756,323 @@ const venomDrip: SfxRecipe = (ctx, out, at) => {
   return len;
 };
 
+// #5190: the spell verbs' recipes (card-audio.json5's verb table). Each is driven by its params, so
+// one recipe serves many bank entries: `element` picks an elemental timbre, `amount` how big the build is.
+
+/** The element a recipe sounds as: physical when the params name none. */
+function elementOf(params: SfxParams): SfxElement {
+  return params.element ?? "physical";
+}
+
+/** elementWindUp: the build before an elemental release, longer and higher as `amount` rises. */
+const elementWindUp: SfxRecipe = (ctx, out, at, params) => {
+  const t = amountT(params);
+  const len = 0.3 + 0.3 * t;
+  const lift = 1 + 0.5 * t;
+  const k = kit(ctx, out, at, len);
+  const rise = len * 0.85;
+  switch (elementOf(params)) {
+    case "fire": {
+      const roar = noiseSource(k);
+      const band = biquad(k, "bandpass", 400 * lift, 1.5);
+      glide(k, band.frequency, 1800 * lift, len);
+      chain(roar, band, envelope(k, 0, rise, 0.5, len), out);
+      run(k, roar, 0, len);
+      break;
+    }
+    case "frost":
+      [1760, 2349, 3136].forEach((hz, i) => {
+        const start = len * 0.2 * (i + 1);
+        const glint = tone(k, out, "sine", hz * lift, start, 0.005, 0.18, start + 0.16);
+        glide(k, glint.frequency, hz * lift * 1.25, start + 0.14);
+      });
+      break;
+    case "lightning": {
+      const saw = oscillator(k, "sawtooth", 160 * lift);
+      glide(k, saw.frequency, 900 * lift, len);
+      chain(saw, biquad(k, "lowpass", 2600, 1), modulatedGain(k, "square", 34, 0.5, 0.5), envelope(k, 0, rise, 0.22, len), out);
+      run(k, saw, 0, len);
+      break;
+    }
+    case "arcane":
+      fmBell(k, out, 660 * lift, 2.01, 300, 0, rise, 0.3, len);
+      fmBell(k, out, 990 * lift, 1.5, 200, len * 0.1, rise, 0.2, len);
+      break;
+    case "shadow": {
+      const low = oscillator(k, "triangle", 220 * lift);
+      glide(k, low.frequency, 70, len);
+      const dark = biquad(k, "lowpass", 1200, 1);
+      glide(k, dark.frequency, 180, len);
+      chain(low, dark, envelope(k, 0, rise, 0.5, len), out);
+      run(k, low, 0, len);
+      break;
+    }
+    case "poison": {
+      const times = [0.1, 0.3, 0.5, 0.7, 0.9].map((f) => len * f);
+      clickTrain(k, out, times, 600 * lift, 4, 0.4, 0.07);
+      times.forEach((start, i) => {
+        const blip = tone(k, out, "sine", (260 + 40 * i) * lift, start, 0.004, 0.14, start + 0.08);
+        glide(k, blip.frequency, (460 + 40 * i) * lift, start + 0.06);
+      });
+      break;
+    }
+    case "holy":
+      [392, 587, 784].forEach((hz, i) => {
+        tone(k, out, "sine", hz * lift, len * 0.08 * i, rise, 0.2, len);
+      });
+      break;
+    default: {
+      const dust = noiseSource(k);
+      const low = biquad(k, "lowpass", 300 * lift, 0.8);
+      glide(k, low.frequency, 900 * lift, len);
+      chain(dust, low, envelope(k, 0, rise, 0.6, len), out);
+      run(k, dust, 0, len);
+      tone(k, out, "sine", 90 * lift, 0, rise, 0.3, len);
+    }
+  }
+  return len;
+};
+
+/** elementBolt: the release of an elemental damage; `amount` scales its peak and its low end. */
+const elementBolt: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.7;
+  const t = amountT(params);
+  const peak = 0.35 + 0.35 * t;
+  const k = kit(ctx, out, at, len);
+  tone(k, out, "sine", 70, 0, 0.01, 0.1 + 0.3 * t, 0.4);
+  switch (elementOf(params)) {
+    case "fire": {
+      const roar = noiseSource(k);
+      const fall = biquad(k, "lowpass", 3200, 1);
+      glide(k, fall.frequency, 300, 0.62);
+      chain(roar, fall, envelope(k, 0, 0.01, peak, 0.65), out);
+      run(k, roar, 0, 0.65);
+      break;
+    }
+    case "frost": {
+      const crack = noiseSource(k);
+      chain(crack, biquad(k, "highpass", 5200, 0.7), envelope(k, 0, 0.002, peak, 0.12), out);
+      run(k, crack, 0, 0.12);
+      fmBell(k, out, 2637, 3.5, 400, 0.02, 0.002, peak * 0.5, 0.65);
+      break;
+    }
+    case "lightning": {
+      const zap = oscillator(k, "sawtooth", 1800);
+      glide(k, zap.frequency, 90, 0.22);
+      chain(zap, envelope(k, 0, 0.003, peak * 0.6, 0.25), out);
+      run(k, zap, 0, 0.25);
+      clickTrain(k, out, [0, 0.04, 0.09], 3500, 2, peak, 0.03);
+      break;
+    }
+    case "arcane":
+      [660, 990, 1320].forEach((hz, i) => {
+        const start = 0.05 * i;
+        fmBell(k, out, hz, 1.5, 250, start, 0.004, peak * 0.4, 0.6 + start);
+      });
+      break;
+    case "shadow": {
+      const drop = tone(k, out, "sine", 140, 0, 0.01, peak, 0.5);
+      glide(k, drop.frequency, 40, 0.48);
+      const dull = noiseSource(k);
+      chain(dull, biquad(k, "lowpass", 420, 1), envelope(k, 0, 0.01, peak * 0.6, 0.45), out);
+      run(k, dull, 0, 0.45);
+      break;
+    }
+    case "poison": {
+      const splat = noiseSource(k);
+      const wet = biquad(k, "bandpass", 900, 3);
+      glide(k, wet.frequency, 300, 0.28);
+      chain(splat, wet, envelope(k, 0, 0.01, peak, 0.3), out);
+      run(k, splat, 0, 0.3);
+      const blip = tone(k, out, "sine", 500, 0, 0.005, peak * 0.4, 0.2);
+      glide(k, blip.frequency, 200, 0.18);
+      break;
+    }
+    case "holy":
+      [523, 659, 784, 1047].forEach((hz) => {
+        fmBell(k, out, hz, 2, 150, 0, 0.005, peak * 0.3, 0.65);
+      });
+      break;
+    default: {
+      const thump = tone(k, out, "sine", 110, 0, 0.003, peak * 1.2, 0.25);
+      glide(k, thump.frequency, 45, 0.24);
+      const click = noiseSource(k);
+      chain(click, biquad(k, "bandpass", 1800, 1.2), envelope(k, 0, 0.001, peak, 0.06), out);
+      run(k, click, 0, 0.06);
+      const knock = tone(k, out, "triangle", 260, 0, 0.002, peak * 0.5, 0.1);
+      glide(k, knock.frequency, 130, 0.09);
+    }
+  }
+  return len;
+};
+
+/** elementTail: what an elemental release leaves behind. */
+const elementTail: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.9;
+  const k = kit(ctx, out, at, len);
+  switch (elementOf(params)) {
+    case "fire": {
+      clickTrain(k, out, [0.05, 0.17, 0.24, 0.41, 0.52, 0.7], 2200, 3, 0.3, 0.03);
+      const warm = noiseSource(k);
+      chain(warm, biquad(k, "lowpass", 500, 1), envelope(k, 0, 0.02, 0.12, 0.8), out);
+      run(k, warm, 0, 0.8);
+      break;
+    }
+    case "frost":
+      [3136, 3951, 2637, 4186, 3520].forEach((hz, i) => {
+        const start = 0.14 * i;
+        tone(k, out, "sine", hz, start, 0.003, 0.12, start + 0.2);
+      });
+      break;
+    case "lightning": {
+      const fizz = noiseSource(k);
+      chain(fizz, biquad(k, "highpass", 4000, 0.7), modulatedGain(k, "square", 60, 0.5, 0.5), envelope(k, 0, 0.01, 0.2, 0.8), out);
+      run(k, fizz, 0, 0.8);
+      break;
+    }
+    case "arcane": {
+      const shimmer = tremolo(k, 9, 0.3);
+      chain(shimmer, out);
+      [1047, 1319, 1568].forEach((hz, i) => {
+        const start = 0.1 * i;
+        fmBell(k, shimmer, hz, 3, 120, start, 0.004, 0.14, 0.7 + start);
+      });
+      break;
+    }
+    case "shadow": {
+      const hush = noiseSource(k);
+      chain(hush, biquad(k, "lowpass", 300, 1), envelope(k, 0, 0.1, 0.3, len), out);
+      run(k, hush, 0, len);
+      tone(k, out, "sine", 70, 0, 0.1, 0.2, len);
+      break;
+    }
+    case "poison":
+      [0.05, 0.35, 0.6].forEach((start) => {
+        const drip = tone(k, out, "sine", 900, start, 0.003, 0.18, start + 0.1);
+        glide(k, drip.frequency, 400, start + 0.08);
+      });
+      break;
+    case "holy":
+      fmBell(k, out, 1047, 1, 40, 0, 0.01, 0.2, len);
+      fmBell(k, out, 1568, 1, 40, 0.05, 0.01, 0.12, len);
+      break;
+    default: {
+      const dust = noiseSource(k);
+      chain(dust, biquad(k, "highpass", 1500, 0.7), envelope(k, 0, 0.02, 0.2, 0.6), out);
+      run(k, dust, 0, 0.6);
+    }
+  }
+  return len;
+};
+
+/** windUp: a verb-neutral build, a swell through a rising low-pass; the bank's pitch colours it. */
+const windUp: SfxRecipe = (ctx, out, at, params) => {
+  const t = amountT(params);
+  const len = 0.25 + 0.3 * t;
+  const lift = 1 + 0.5 * t;
+  const k = kit(ctx, out, at, len);
+  const bright = biquad(k, "lowpass", 400, 1);
+  glide(k, bright.frequency, 3200 * lift, len);
+  chain(bright, envelope(k, 0, len * 0.85, 0.45, len), out);
+  const saw = oscillator(k, "sawtooth", 110 * lift);
+  glide(k, saw.frequency, 330 * lift, len);
+  chain(saw, level(k, 0.5), bright);
+  run(k, saw, 0, len);
+  const sine = oscillator(k, "sine", 220 * lift);
+  glide(k, sine.frequency, 660 * lift, len);
+  chain(sine, level(k, 0.5), bright);
+  run(k, sine, 0, len);
+  const air = noiseSource(k);
+  const sweep = biquad(k, "bandpass", 500, 1);
+  glide(k, sweep.frequency, 2500 * lift, len);
+  chain(air, sweep, envelope(k, 0, len * 0.85, 0.12, len), out);
+  run(k, air, 0, len);
+  return len;
+};
+
+/** Descending bells, high to low, for sparkleTail. */
+const SPARKLE_HZ: readonly number[] = [3136, 2637, 2349, 1976, 1568, 1319, 1047];
+
+/** sparkleTail: a trail of descending high bells, three to seven by `amount`. */
+const sparkleTail: SfxRecipe = (ctx, out, at, params) => {
+  const count = 3 + Math.round(4 * amountT(params));
+  const len = 0.5 + 0.07 * count;
+  const k = kit(ctx, out, at, len);
+  const shimmer = tremolo(k, 8, 0.2);
+  chain(shimmer, out);
+  SPARKLE_HZ.slice(0, count).forEach((hz, i) => {
+    const start = 0.07 * i;
+    fmBell(k, shimmer, hz, 3.5, 120, start, 0.003, 0.14, start + 0.4);
+  });
+  return len;
+};
+
+/** hush: a low tone and soft noise falling away under a closing low-pass. */
+const hush: SfxRecipe = (ctx, out, at) => {
+  const len = 0.9;
+  const k = kit(ctx, out, at, len);
+  const low = tone(k, out, "sine", 110, 0, 0.05, 0.35, len);
+  glide(k, low.frequency, 60, len);
+  const air = noiseSource(k);
+  const close = biquad(k, "lowpass", 1200, 1);
+  glide(k, close.frequency, 200, len);
+  chain(air, close, envelope(k, 0, 0.05, 0.25, len), out);
+  run(k, air, 0, len);
+  return len;
+};
+
+/**
+ * shatter: a noise burst and a run of clicks falling in pitch; `amount` scales it. The burst, the first
+ * clicks and the thump land together in its first 50 ms and render at about 1.9 times `peak`, so `peak`
+ * tops out at 0.45 and the loudest stays under full scale (B15: 0.4 per unit of `t` rendered 1.33 at
+ * amount 25, super run 154).
+ */
+const shatter: SfxRecipe = (ctx, out, at, params) => {
+  const len = 0.6;
+  const t = amountT(params);
+  const peak = 0.3 + 0.15 * t;
+  const k = kit(ctx, out, at, len);
+  const burst = noiseSource(k);
+  chain(burst, biquad(k, "highpass", 2500, 0.7), envelope(k, 0, 0.002, peak, 0.35), out);
+  run(k, burst, 0, 0.35);
+  clickTrain(k, out, [0.02, 0.05], 5000, 3, peak * 0.8, 0.03);
+  clickTrain(k, out, [0.09, 0.13], 3200, 3, peak * 0.7, 0.04);
+  clickTrain(k, out, [0.19, 0.26], 1800, 3, peak * 0.6, 0.05);
+  const thump = tone(k, out, "sine", 120, 0, 0.003, peak * 0.8, 0.3);
+  glide(k, thump.frequency, 50, 0.28);
+  return len;
+};
+
+/** morph: two voices gliding across each other with a warble, ending on a bell. */
+const morph: SfxRecipe = (ctx, out, at) => {
+  const len = 0.7;
+  const k = kit(ctx, out, at, len);
+  const up = tone(k, out, "sine", 220, 0, 0.02, 0.3, 0.45);
+  glide(k, up.frequency, 660, 0.42);
+  vibrato(k, up.frequency, 9, 15, 0, 0.45);
+  const down = tone(k, out, "triangle", 660, 0, 0.02, 0.3, 0.45);
+  glide(k, down.frequency, 220, 0.42);
+  vibrato(k, down.frequency, 7, 12, 0, 0.45);
+  fmBell(k, out, 880, 2, 150, 0.4, 0.01, 0.3, len);
+  return len;
+};
+
+/** revealGlint: noise opening upward, then a rising bell triad. */
+const revealGlint: SfxRecipe = (ctx, out, at) => {
+  const len = 0.8;
+  const k = kit(ctx, out, at, len);
+  const open = noiseSource(k);
+  const band = biquad(k, "bandpass", 800, 2);
+  glide(k, band.frequency, 4000, 0.35);
+  chain(open, band, envelope(k, 0, 0.3, 0.3, 0.4), out);
+  run(k, open, 0, 0.4);
+  [784, 988, 1175].forEach((hz, i) => {
+    const start = 0.25 + 0.08 * i;
+    fmBell(k, out, hz, 2, 100, start, 0.004, 0.2, start + 0.4);
+  });
+  return len;
+};
+
 export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   draw: { recipe: draw, durationMs: 180, gain: 1 },
   play: { recipe: play, durationMs: 260, gain: 0.82 },
@@ -4964,6 +5288,16 @@ export const SFX: { readonly [K in SfxId]: SfxSpec } = {
   moltenSnarl: { recipe: moltenSnarl, durationMs: 1500, gain: 0.53 },
   shutterPurr: { recipe: shutterPurr, durationMs: 1400, gain: 0.68 },
   venomDrip: { recipe: venomDrip, durationMs: 1400, gain: 0.57 },
+  // #5190: the spell verbs' recipes, at a routine card's level (B57).
+  elementWindUp: { recipe: elementWindUp, durationMs: 600, gain: 0.6 },
+  elementBolt: { recipe: elementBolt, durationMs: 700, gain: 0.65 },
+  elementTail: { recipe: elementTail, durationMs: 900, gain: 0.55 },
+  windUp: { recipe: windUp, durationMs: 600, gain: 0.55 },
+  sparkleTail: { recipe: sparkleTail, durationMs: 1000, gain: 0.6 },
+  hush: { recipe: hush, durationMs: 900, gain: 0.6 },
+  shatter: { recipe: shatter, durationMs: 600, gain: 0.65 },
+  morph: { recipe: morph, durationMs: 700, gain: 0.6 },
+  revealGlint: { recipe: revealGlint, durationMs: 800, gain: 0.6 },
 };
 
 /** R655: runs `id`'s recipe shifted by `pitch` (a frequency ratio, 1 as written); returns the unshifted length in seconds. */

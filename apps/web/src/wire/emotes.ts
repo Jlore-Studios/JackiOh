@@ -4,7 +4,7 @@
 // The deck-checked roster (D5, R641), dealt hand (R1341) and rate limit (R643) must match at both
 // separate deployables (§9.2): the hand's and the limit's numbers are the engine's config's,
 // generated into `./engineConfig.ts` and re-exported here (CLAUDE.md rule 9). Practice personas
-// stay in `apps/web/src/practice/personas.ts` (R645).
+// are `jackioh-shared`'s, rolled through the module by `practice/emotes.ts` (R645, R5269000).
 
 import { EMOTE_COOLDOWN_MS, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS } from "./engineConfig.ts";
 

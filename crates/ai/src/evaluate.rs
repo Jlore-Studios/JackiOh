@@ -26,10 +26,10 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::afflictions::Affliction;
+use jackioh_engine::afflictions::{Affliction, Riders};
 use jackioh_engine::config::{
     BRITTLE_TICK, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HAND_CAP_MAX, HERO_HEALTH,
-    JADE_ASCEND_AT, JADE_BEAUTY_AT, MAX_MANA, TURN_CAP_PLAYER_TURNS,
+    JADE_ASCEND_AT, JADE_BEAUTY_AT, MAX_MANA, TUNE_HARMFUL_KEYWORDS, TUNE_STAT_TOTAL, TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::evolution::{can_evolve, evolve_now};
@@ -38,21 +38,22 @@ use jackioh_engine::multipliers::{Multiplied, extra_runs};
 use jackioh_engine::{
     ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
     EngineSink, FengShuiOutcome, GameEvent, GameEventType, GameState, Grant, HasHook, HookArgs, HookName,
-    Keyword, KeywordKind, ModifierExpiry, ModifierKind, PLAYER_IDS, Phase, PlayerId, PlayerState, Position,
-    Rng, Row, SandboxOp, SeatOutcome, SettleOptions, Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone,
-    UnitView, Zone, ZoneName, acting_with_flag, active_brittle_count, active_units_of, acts_to_awaken,
-    animated_with_stats, armor_of, attack_restriction, attacks_per_turn, awaken_card, backrow_is_public,
-    board_totals, brittle_due_by, burn_on, cannot_attack, card_at, card_keywords, card_type_of_face,
-    converts_to, credit_lapsing, damage_pool_of, death_hook_of, effective_cost, effective_life, exit_mark,
-    face_of, find_def, find_instance, find_instance_mut, first_entry_zone, flags_of, frozen_next_turn,
-    gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep,
-    is_dormant_starship, is_extra_turn_card, is_giga, is_sick, is_slumbering, is_standing_unit,
-    is_starship_piece, is_temporary_card, is_tradable, left_field_after, legal_actions, lost_refreshes_left,
-    modifier_is_live, new_instance, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource,
-    pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reborn_body_of,
-    reset_instance, script_of, settle, slots_of, stats_with_buffs, stolen_mana_crystals_of, subsystems,
-    sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
+    Keyword, KeywordKind, ModifierExpiry, ModifierKind, NumberedKey, PLAYER_IDS, ParamBetter, Phase,
+    PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions, Slumber, SpawnZone,
+    Tag, TriggerHolder, TriggerZone, UnitView, Zone, ZoneName, acting_with_flag, active_brittle_count,
+    active_units_of, acts_to_awaken, animated_with_stats, armor_of, attack_restriction, attacks_per_turn,
+    awaken_card, backrow_is_public, board_totals, brittle_due_by, burn_on, cannot_attack, card_at,
+    card_keywords, card_type_of_face, converts_to, credit_lapsing, damage_pool_of, death_hook_of,
+    effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
+    first_entry_zone, flags_of, frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of,
+    hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep, is_dormant_starship, is_extra_turn_card, is_giga,
+    is_sick, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, is_tradable,
+    left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, new_instance, outcome_for,
+    owed_mana_of, own_cost, params_of, pays_credits_like_a_resource, pierces, pile_at, plague_on,
+    playable_from_graveyard, query_cost, queue_hook, reborn_body_of, reset_instance, riders_of, script_of,
+    settle, slots_of, stats_with_buffs, stolen_mana_crystals_of, subsystems, sync_fused_scripts,
+    takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view,
+    units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
@@ -849,6 +850,71 @@ fn cost_shift(state: &GameState, card: &CardInstance) -> i32 {
     }
 }
 
+/// R5246000, B3.4, R386: the open Nerfs on a hand `card`, each a step what was written on it made it worse
+/// for its holder: a crystal its `costMod` made it dearer (`cost_shift`; any price hike written on the card
+/// alike, R65), a `TUNE_STAT_TOTAL` or part of one of stats its attack and health together stand below its
+/// face, a keyword it lost that is not harmful or a harmful one it gained (a Nerf's Crater, R2657005), and a
+/// step a numbered keyword, its X or a declared number moved the worse way (more is better for all but
+/// Tribute; a declared number by its `better`). What an Upgrade wrote counts none, and cancels a Nerf on the
+/// same number. A secret Nerf (`hidden_nerfs`, R1845000) is never read, and a card with no definition (a
+/// placeholder) carries none.
+fn hand_nerfs(state: &GameState, card: &CardInstance) -> i32 {
+    if (card.cost_mod == 0 && card.tuning.is_none()) || find_def(Some(state), &card.def_id).is_none() {
+        return 0;
+    }
+    let dearer = cost_shift(state, card).max(0);
+    let Some(tuning) = &card.tuning else {
+        return dearer;
+    };
+    let below = (tuning.attack.unwrap_or(0) + tuning.health.unwrap_or(0))
+        .min(0)
+        .unsigned_abs();
+    let stats = below.div_ceil(TUNE_STAT_TOTAL.unsigned_abs()) as i32;
+    let harmful = |kind: KeywordKind| TUNE_HARMFUL_KEYWORDS.contains(&kind);
+    let lost = tuning
+        .remove_keywords
+        .iter()
+        .flatten()
+        .filter(|kind| !harmful(**kind))
+        .count() as i32;
+    let gained = tuning
+        .add_keywords
+        .iter()
+        .flatten()
+        .filter(|keyword| harmful(keyword.kind()))
+        .count() as i32;
+    let worse = |steps: i32, more_is_worse: bool| {
+        if more_is_worse {
+            steps.max(0)
+        } else {
+            (-steps).max(0)
+        }
+    };
+    let x: i32 = tuning
+        .x
+        .iter()
+        .flatten()
+        .map(|(key, steps)| worse(*steps, key.as_str() == NumberedKey::Tribute.as_str()))
+        .sum();
+    let params = if tuning.numbers.is_some() {
+        params_of(state, &card.def_id)
+    } else {
+        Vec::new()
+    };
+    let numbers: i32 = tuning
+        .numbers
+        .iter()
+        .flatten()
+        .map(|(key, steps)| {
+            let down = params
+                .iter()
+                .any(|param| param.key == *key && param.better == ParamBetter::Down);
+            worse(*steps, down)
+        })
+        .sum();
+    dearer + stats + lost + gained + x + numbers
+}
+
 /// R3695000: a passed line's Float of `float`, at `w.float_discount` a crystal, for each crystal it took
 /// off an own "Float reduces cost" card while that still cost more than the seat's crystals
 /// (`mana.max`, never the handicap, R180). Read after the turn ended, when the cut is on the card's
@@ -1191,6 +1257,17 @@ fn coming_cost_hike(state: &GameState, player: PlayerId, side: &PlayerState) -> 
     total
 }
 
+/// R5246000, R4590001: the misfires waiting on `side`'s next face-up Spells (IA #130 Prompt Injection): its
+/// live `RandomTargetsNextSpell` modifiers, each removed once a Spell spends it.
+fn coming_random_targets(state: &GameState, side: &PlayerState) -> i32 {
+    side.mods
+        .iter()
+        .filter(|modifier| {
+            matches!(modifier.kind, ModifierKind::RandomTargetsNextSpell) && modifier_is_live(state, modifier)
+        })
+        .count() as i32
+}
+
 /// R844, R5122000, §2.3, §9.9: what `side`'s coming refreshes will or will not give: its rider for or
 /// against it, the refreshes it still has to lose against it, and unconditional price hikes against it.
 fn coming_refreshes(state: &GameState, player: PlayerId, side: &PlayerState, w: &EvalWeights) -> f64 {
@@ -1410,6 +1487,26 @@ fn hero_ticks(state: &GameState, player: PlayerId, burn: i32, toxic: i32, w: &Ev
     taken.min(life - 1)
 }
 
+/// R5229000: the life `more_burn` more Burn and `more_toxic` more Toxic on `player`'s hero take over the
+/// coming ticks (`coming_hero_ticks`), past what its counters take already: what a hit's riders cost a
+/// hero it leaves standing (§4.4 step 7).
+pub(crate) fn hero_ticks_added_by(
+    state: &GameState,
+    player: PlayerId,
+    more_burn: i32,
+    more_toxic: i32,
+    w: &EvalWeights,
+) -> i32 {
+    let (burn, toxic) = (hero_burn_of(state, player), hero_toxic_of(state, player));
+    hero_ticks(
+        state,
+        player,
+        burn.saturating_add(more_burn),
+        toxic.saturating_add(more_toxic),
+        w,
+    ) - hero_ticks(state, player, burn, toxic, w)
+}
+
 /// R4064001: the life `amount` more of `kind` on `player`'s hero takes over the coming ticks
 /// (`coming_hero_ticks`), past what its counters take already: what a hit that Burns or is Toxic instead
 /// costs a hero.
@@ -1420,12 +1517,10 @@ pub(crate) fn hero_ticks_added(
     amount: i32,
     w: &EvalWeights,
 ) -> i32 {
-    let (burn, toxic) = (hero_burn_of(state, player), hero_toxic_of(state, player));
-    let (more_burn, more_toxic) = match kind {
-        Affliction::Burn => (burn.saturating_add(amount), toxic),
-        Affliction::Toxic => (burn, toxic.saturating_add(amount)),
-    };
-    hero_ticks(state, player, more_burn, more_toxic, w) - hero_ticks(state, player, burn, toxic, w)
+    match kind {
+        Affliction::Burn => hero_ticks_added_by(state, player, amount, 0, w),
+        Affliction::Toxic => hero_ticks_added_by(state, player, 0, amount, w),
+    }
 }
 
 /// R4064000: what `player`'s damage pools soak of one turn start's ticks, refilled first (the refill,
@@ -1480,9 +1575,10 @@ fn hero_side(state: &GameState, player: PlayerId, ticks: i32, w: &EvalWeights) -
 }
 
 /// Everything on one side but the hero: the board and the cards dormant under its piles, what it has
-/// banked, what its coming refreshes will or will not give, the backrow (an enemy face-down card by the
-/// cost it shows, never a Unit standing there, R2490000), the hand, the cards in its graveyard it may
-/// still play from there (#2928), the library and the fatigue draws it has taken.
+/// banked, what its coming refreshes will or will not give, the misfires waiting on its next Spells
+/// (R5246000), the backrow (an enemy face-down card by the cost it shows, never a Unit standing there,
+/// R2490000), the hand (an enemy's by its size, less the Nerfs written on it, R5246000), the cards in its
+/// graveyard it may still play from there (#2928), the library and the fatigue draws it has taken.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights, prices: &Prices) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
@@ -1497,6 +1593,12 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     // R1224: a debt is coming turns' mana spent early, so it counts against the side that owes it.
     value -= w.owed_mana * f64::from(owed_mana_of(state, player));
     value += coming_refreshes(state, player, side, w);
+    // R5246000: each misfire waiting on the side's next Spell against it, outside `coming_refreshes`, so a
+    // reply that spends one keeps no credit for it (`replied_score`): its play already drew the random
+    // targets. No reading at a zero share (the frozen baseline's).
+    if w.random_targets != 0.0 {
+        value -= w.random_targets * f64::from(coming_random_targets(state, side));
+    }
     // #1086: what the side has banked in state both seats see (R185): Jade steps (R962), extra
     // turns (R846) and the enemy units it has marked (R437; no `unit_worth` call at a zero share).
     value += w.jade_step * f64::from(jade_steps(side.jade.unwrap_or(0)));
@@ -1581,7 +1683,14 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
             value += w.feng_shui_outlook * feng_shui_outlook(state, seat, w);
         }
     } else {
-        let unseen = side.hand.len() as f64 * (w.hand_card + w.hand_per_cost * w.opponent_hand_cost);
+        let mut unseen = side.hand.len() as f64 * (w.hand_card + w.hand_per_cost * w.opponent_hand_cost);
+        // R5246000: each open Nerf on an enemy hand card (`hand_nerfs`) against it, in the hand's doomed share
+        // as the cards are; `redact` drops a hidden card's, so only a line's own and a readable card's count
+        // (R185). No reading at a zero share (the frozen baseline's).
+        if w.enemy_hand_nerf != 0.0 {
+            let nerfs: i32 = side.hand.iter().map(|card| hand_nerfs(state, card)).sum();
+            unseen -= w.enemy_hand_nerf * f64::from(nerfs);
+        }
         value += if doomed {
             (1.0 - w.doomed_hand_discount) * unseen
         } else {
@@ -1613,8 +1722,8 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// (`can_swing`; with `w.deft_defense_attacks` a Deft unit in Defense Position too, R49), ascending by attack.
 /// Taunts soak the attackers they bind (`damage_past_taunts_with`, in the opponent's better order with
 /// `w.best_attack_order_past_taunts`, R3937000; a third with `w.giga_cleave_read`, R4257000); each remaining
-/// attack goes through `subsystems::projected_hero_damage` (armor, which a Pierce hit skips, R346, and the
-/// Anti-oneshot cap), summed.
+/// attack goes through `subsystems::projected_hero_damage` (`projected_hero_damage_worn` with
+/// `w.armor_wear_read`) (armor, which a Pierce hit skips, R346, and the Anti-oneshot cap), summed.
 /// With `w.gauntlet_bars_face_attacks`, an attack `attack_restriction` bars from the hero (a Unit inside The
 /// Gauntlet, R1849005) lands nothing past the Taunts. With `w.brittle_crumbles_before_swing`, a unit its own
 /// Brittle tick destroys first counts none (`crumbles_before_swing`, R3793000), read as at the end of the turn
@@ -1627,7 +1736,9 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// (R4402000), an attacker a Taunt's strike back destroys swings no more, and a Frenzy one that destroys the
 /// Taunt it attacked and survives has its swings back to `attacks_per_turn`; an exile and a Cleave splash's
 /// kill free none. With `w.splash_trample_read` (R4805000), a Cleave splash lands on every unit it strikes,
-/// and a Trample attacker's tramples over each onto the hero.
+/// and a Trample attacker's tramples over each onto the hero. With `w.armor_wear_read` (R5228000), each hit on
+/// the hero, a Trample excess included, meets the hero's Armor less the points the walk's earlier hits wore off
+/// it (R5183000).
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     face_threat_from(state, attacker, w, false)
 }
@@ -1738,7 +1849,7 @@ impl AttackerStand {
     }
 }
 
-/// `damage_past_taunts_with` at `AI_EVAL`'s weights: what the lethal solver's `ready_gap` reads.
+/// `damage_past_taunts_with` at `AI_EVAL`'s weights: what `ready_gap` reads.
 pub fn damage_past_taunts(
     state: &GameState,
     defender: PlayerId,
@@ -1769,7 +1880,12 @@ pub fn damage_past_taunts(
 /// splash's kill free none. With `w.splash_trample_read` (R4805000), a Cleave splash also meets each unit
 /// that binds nothing more (one without Taunt, a Taunt the walk has passed) as the walk left it, spending
 /// the pools, and a Trample attacker's sends what it deals beyond that unit's health to the hero (§4.4
-/// step 9).
+/// step 9). With `w.armor_wear_read` (R5228000), each hit on the hero, a Trample excess included, meets the
+/// hero's Armor less the points the walk's earlier hits wore off it (R5183000). With `w.damage_rider_read`
+/// too (R5229000), each hit on the hero that leaves it life adds its source's Burn rider (§4.4 step 7,
+/// `riders_of`), and that Burn counts as one more unpierced hit after the attacks, the tick at the turn's
+/// end (R4154000), through what the pools and the worn Armor have left; a Toxic rider ticks at the hero's
+/// own turn start (R3540001) and counts nothing here.
 pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
@@ -1838,6 +1954,33 @@ impl WalkPools {
     }
 }
 
+/// R5228000: the hero a walk's hits land on, and the points of its own Armor they have worn off (R5183000).
+struct HeroHits {
+    hero: PlayerId,
+    wear: bool,
+    worn: i32,
+}
+
+impl HeroHits {
+    fn new(hero: PlayerId, w: &EvalWeights) -> Self {
+        Self {
+            hero,
+            wear: w.armor_wear_read,
+            worn: 0,
+        }
+    }
+
+    /// What a hit of `amount` deals the hero (§4.4 steps 2 and 3): through the Armor the walk's earlier hits
+    /// left with `armor_wear_read`, through the whole Armor without it.
+    fn hit(&mut self, state: &GameState, amount: i32, pierce: bool) -> i32 {
+        if self.wear {
+            subsystems::projected_hero_damage_worn(state, self.hero, amount, pierce, &mut self.worn)
+        } else {
+            subsystems::projected_hero_damage(state, self.hero, amount, pierce)
+        }
+    }
+}
+
 /// The order `soak_past_taunts` sends each Taunt's bound attackers in (R3937000, R4257000).
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum WalkOrder {
@@ -1876,6 +2019,8 @@ fn soak_past_taunts(
     let mut total = 0;
     // R4064000: what the defender's pools have left as the walk's hits land, in the order it counts them.
     let mut pool = pools.defender;
+    // R5228000: the Armor the walk's hits have worn off the hero, in the order it counts them.
+    let mut hero = HeroHits::new(defender, w);
     // R4402000: each attacker's standing once a Taunt's strike back meets it, with `w`'s flag only.
     let mut standing: IndexMap<&str, AttackerStand> = IndexMap::new();
     // R4805000: the units a splash meets that bind nothing more (no Taunt, a Taunt the walk has passed, a
@@ -2005,8 +2150,7 @@ fn soak_past_taunts(
             }
             // Step 9: what Trample lands beyond the Taunt's health is a hit on the hero (R63).
             if has_keyword(&keywords, KeywordKind::Trample) && dealt > stands[i].health {
-                let excess =
-                    subsystems::projected_hero_damage(state, defender, dealt - stands[i].health, pierce);
+                let excess = hero.hit(state, dealt - stands[i].health, pierce);
                 total += soaked(&mut pool, excess);
             }
             // The splash belongs to the attack rather than to the hit (R63), so it lands even when the hit on
@@ -2037,7 +2181,7 @@ fn soak_past_taunts(
                             });
                             if let Some(stand) = met.as_mut() {
                                 let (to_hero, kills) =
-                                    splash_onto(state, defender, &from, attack, tramples, stand, &mut pool);
+                                    splash_onto(state, &mut hero, &from, attack, tramples, stand, &mut pool);
                                 total += to_hero;
                                 if kills {
                                     let left = left_behind(state, stand, exiling, w);
@@ -2050,7 +2194,7 @@ fn soak_past_taunts(
                     // Every stand is a Taunt: only Taunts enter the walk, and a Reborn body without one leaves it.
                     let (to_hero, kills) = splash_onto(
                         state,
-                        defender,
+                        &mut hero,
                         &from,
                         attack,
                         tramples,
@@ -2129,6 +2273,10 @@ fn soak_past_taunts(
         i += 1;
     }
 
+    // R5229000, R3540002: a hit the hero survives adds its source's Burn, ticking once, unpierced, at the
+    // turn's end (R4154000). Toxic ticks at the hero's own turn start (R3540001), after the attacks.
+    let hero_life = effective_life(state, defender);
+    let mut rider_burn: i32 = 0;
     for (attacker, hit, may_hit_hero) in &free {
         // R4064001: a hit that Burns or is Toxic instead deals the hero nothing. R4402000: an attacker a
         // strike back destroyed makes no swing.
@@ -2136,10 +2284,14 @@ fn soak_past_taunts(
             continue;
         }
         let pierce = pierces(state, Some(attacker), None);
-        total += soaked(
-            &mut pool,
-            subsystems::projected_hero_damage(state, defender, *hit, pierce),
-        );
+        let dealt = soaked(&mut pool, hero.hit(state, *hit, pierce));
+        total += dealt;
+        if pools.read && w.damage_rider_read && total < hero_life {
+            rider_burn = rider_burn.saturating_add(riders_of(state, attacker).after(dealt).0);
+        }
+    }
+    if rider_burn > 0 {
+        total += soaked(&mut pool, hero.hit(state, rider_burn, false));
     }
     (total, breaker_behind, cleave_behind)
 }
@@ -2156,11 +2308,12 @@ fn dealt_to(state: &GameState, attack: i32, stand: &TauntStand, pierce: bool) ->
 }
 
 /// One Cleave splash of `attack` from `from` on `stand` as the walk left it (§4.4 step 10), through `pool`
-/// (R4064000); with `tramples`, what it deals beyond the stand's health hits `defender`'s hero (step 9, R63).
-/// It pops a shield or takes what it deals off the health. The hero damage, and whether it destroys the stand.
+/// (R4064000); with `tramples`, what it deals beyond the stand's health hits the hero, through the Armor `hero`
+/// has left (step 9, R63, R5228000). It pops a shield or takes what it deals off the health. The hero damage,
+/// and whether it destroys the stand.
 fn splash_onto(
     state: &GameState,
-    defender: PlayerId,
+    hero: &mut HeroHits,
     from: &Side,
     attack: i32,
     tramples: bool,
@@ -2174,8 +2327,7 @@ fn splash_onto(
         return (0, false);
     }
     let to_hero = if tramples && splash.dealt > stand.health {
-        let excess =
-            subsystems::projected_hero_damage(state, defender, splash.dealt - stand.health, from.pierce);
+        let excess = hero.hit(state, splash.dealt - stand.health, from.pierce);
         soaked(pool, excess)
     } else {
         0
@@ -2202,6 +2354,7 @@ fn splashed(state: &GameState, stand: &TauntStand, pool: i32) -> Side {
         exiles: false,
         converts: None,
         pool,
+        riders: Riders::default(),
     }
 }
 

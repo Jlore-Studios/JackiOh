@@ -210,6 +210,18 @@ pub struct AiSearch {
     pub lethal_quick_nodes: i32,
     /// Moves the best-first lethal walk tries from each position it expands, in move order.
     pub lethal_width: i32,
+    /// R5119000: among open positions of the same gap above 0 and the same depth, the best-first lethal
+    /// walk expands first the one whose ready attacks would leave the enemy hero least were no Taunt
+    /// standing (`lethal::Gaps::taunt_free`, read through an open prompt, which spends no attack), so an
+    /// attack on a Taunt the gap already counted its attacker against comes after the moves that keep
+    /// the attacker ready. `false` takes them by age alone, as before.
+    pub lethal_keep_attacks: bool,
+    /// R5119000: the moves the best-first lethal walk may try at and below one child of a position, from
+    /// positions no closer to lethal than that position, before it sets the child aside: the open
+    /// positions below a set-aside child come after every other open position of their gap. While the
+    /// gap stands flat the walk is a dive in move order, and this bounds what one dead child costs it.
+    /// Negative sets nothing aside, as before.
+    pub lethal_dive_moves: i32,
     /// Lines per first action scored after the opponent's reply on determinization 0.
     pub lines_per_action: i32,
     /// R4788000: on a state whose allowance was scaled down (`fat_*`, below), the lethal solver's best-first
@@ -299,6 +311,22 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     lethal_max_depth: 10,
     lethal_quick_nodes: 40,
     lethal_width: 60,
+    // R5119000: on, with `lethal_dive_moves`. Both off are the walk before it, node for node. Mirror 26's
+    // turn-12 lethal rests on this switch, hard-vs-easy 12's turn 21 on its read through a prompt. Fork
+    // screen on improve-dev (both on, this walk on f6ef0c1c88) against the control at f6ef0c1c88: 200
+    // trunk games, 10 forks, 3 live, edge +0.028 (-0.236 to +0.292), no faults, inconclusive (R4319000): kept,
+    // and its scene tests (lethal.rs's and wide_lethal.rs's r5119000_ tests) settle it (training/improve.md,
+    // A screen).
+    lethal_keep_attacks: true,
+    // R5119000: 75 moves, set after a first sweep counted in nodes (40, 60, 75 and 100 on both logged
+    // sets: 40 lost a lethal, 60 to 100 held). Counted in moves, with `lethal_keep_attacks` on, and
+    // measured on both logged sets at 40, 50, 60, 65, 75, 90, 120 and 150: every count from 60 to 150
+    // holds every lethal there. 40 and 50 lose hard-vs-easy 7's turn-18 lethal (R4788000's, 157 nodes).
+    // 200, measured on the three fixtures alone, loses hard-vs-easy 8's turn 12, a named fixture that
+    // rests on this bound, so it sets the upper edge. It is a count, not a share of the walk's allowance:
+    // a share shrinks with a scaled-down allowance (R2575000), and at 0.15, 0.2, 0.33 and 0.5 it lost
+    // R4788000's reach on one of its four logged wide lethals.
+    lethal_dive_moves: 75,
     lines_per_action: 2,
     // R4788000: on. Its deal screen, 400 games on improve-dev against the control at 3a83bd7741, read
     // 200-200, edge 0.0 (0.0 to 0.0), inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 6
@@ -535,6 +563,22 @@ pub struct EvalWeights {
     /// the side it died on (R2618000), and a unit token's summoned X/X kept (R175). Off, the body is the unit
     /// reset to its owner with its printed stats, as before.
     pub reborn_body_read: bool,
+    /// R5228000, #5228: whether the Taunt walk of `damage_past_taunts_with` (so `face_threat`, the threat and
+    /// pressure terms, `wall_switches_priced` and `ready_gap`) wears the defending hero's own Armor 1 per hit it
+    /// meets (§4.4 step 2, R5183000), Trample excesses first and then the free hits, through one count per walk
+    /// (`subsystems::projected_hero_damage_worn`); a Pierce hit, an aura's or a modifier's Armor and a hero
+    /// immune to damage wear nothing. Off, each hit meets the whole Armor, as before.
+    pub armor_wear_read: bool,
+    /// R5229000, #5229: whether the static reads of a hit, read with `pool_and_conversion_read`, follow
+    /// §4.4 step 7's riders (R3540002, R4783001, `riders_of`): a hit that leaves its target standing adds
+    /// the Burn and the Toxic its source's riders state for what it dealt. `blow` reports them on a target
+    /// it leaves standing (`Side.riders`, `Blow.rider_burn`, `Blow.rider_toxic`); `trade_value` prices them
+    /// on the struck unit, its strike back's and its splashes' (`riders_price`); `face_value` adds the life
+    /// their ticks take of a hero the hit does not kill (`hero_ticks_added_by`); and the Taunt walk of
+    /// `damage_past_taunts_with` (so `face_threat`, `ready_gap` and the walls) counts the Burn its hero hits
+    /// leave as one more hit at the turn's end (R4154000). The lethal solver's own walk reads it off, since
+    /// the solver never ends the turn (`lethal::LETHAL_WALK`). Off, no hit adds a counter, as before.
+    pub damage_rider_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -720,6 +764,13 @@ pub struct EvalWeights {
     /// R5122000: per crystal of unconditional price hike on the coming turn (`evaluate::coming_cost_hike`),
     /// scaled by `next_turn_mana` and `AI_TAXED_PLAYS`.
     pub cost_hike: f64,
+    /// R5246000: per open Nerf on an enemy hand card (`evaluate::hand_nerfs`): a crystal its `costMod` made it
+    /// dearer, a `TUNE_STAT_TOTAL` of stats below its face, a keyword lost or a harmful one gained, a step a
+    /// number moved the worse way. A secret Nerf (R1845000) and an Upgrade count none.
+    pub enemy_hand_nerf: f64,
+    /// R5246000, R4590001: per live `RandomTargetsNextSpell` on a side (`evaluate::coming_random_targets`,
+    /// IA #130 Prompt Injection), taken off that side in `material`.
+    pub random_targets: f64,
     /// Per point of faceThreat(enemy) against the seat.
     pub threat_per_damage: f64,
     /// When faceThreat(enemy) >= the seat's life (`effective_life`, R964000), less the pool's coming loss
@@ -775,6 +826,14 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // screen). A deal screen started first was cut by the session's two-hour limit before its tally, with
     // nothing read, so the fork screen, which resumes after a cut, is its one screen.
     reborn_body_read: true,
+    // #5228: on. Its screen, 400 games on improve-dev against the control at 50dd7c8e75, read 198-202, edge
+    // -0.01 (-0.03 to 0.01); inconclusive (R4319000): 4 decided of 200 (won 1, lost 3), 29 diverged; its scene
+    // tests (crates/ai/tests/ai/armor_wear.rs) settle it (training/improve.md, A screen).
+    armor_wear_read: true,
+    // #5229: on. Its screen, 400 games on improve-dev against the control at cce57d1033, read 201-199,
+    // edge 0.005 (-0.028 to 0.038); inconclusive (R4319000): 11 decided of 200 (won 6, lost 5), 35
+    // diverged; its scene tests settle it (training/improve.md, A screen).
+    damage_rider_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -948,6 +1007,19 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // 0.0 (-0.024 to 0.024); inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 0 diverged;
     // its scene tests settle it (training/improve.md, A screen). 0 turns it off (GREEDY_EVAL).
     cost_hike: 1.0,
+    // R5246000 (issue #5246): 0.5, a crystal's `hand_cost_delta`, the price of the same dearer card in the
+    // seat's own hand. Each Nerf a line leaves on an enemy hand card (IA #137 Patch Tuesday Exploit, IA #233
+    // Model Collapse) counts against that player. Its screen, 400 games on improve-dev against the control
+    // 593066692e (`random_targets` at 0), read 201-199, edge +0.005 (-0.005 to +0.015); inconclusive (R4319000):
+    // 1 decided of 200 (won 1, lost 0), 8 diverged; its scene tests settle it (training/improve.md, A screen).
+    // 0 turns it off (GREEDY_EVAL).
+    enemy_hand_nerf: 0.5,
+    // R5246000 (issue #5246): 1.0, five eighths of the 1.6 an unseen card is priced at. A misfire waiting on a
+    // side's next Spell (IA #130 Prompt Injection) counts against that side. Its screen, 400 games on improve-dev
+    // against the control 593066692e (`enemy_hand_nerf` at 0), read 200-200, edge 0.0 (0.0 to 0.0);
+    // inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 0 diverged; its scene tests settle it
+    // (training/improve.md, A screen). 0 turns it off (GREEDY_EVAL).
+    random_targets: 1.0,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,
@@ -1060,7 +1132,8 @@ pub const AI_EVOLVE_PROBE_NODES: usize = 16;
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
 /// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
-/// `giga_cleave_read`, `strike_back_survival_read`, `splash_trample_read`, `reborn_body_read`) is off.
+/// `giga_cleave_read`, `strike_back_survival_read`, `splash_trample_read`, `reborn_body_read`,
+/// `armor_wear_read`, `damage_rider_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -1084,6 +1157,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     strike_back_survival_read: false,
     splash_trample_read: false,
     reborn_body_read: false,
+    armor_wear_read: false,
+    damage_rider_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -1164,6 +1239,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     lost_refresh: 0.0,
     next_turn_mana: 0.0,
     cost_hike: 0.0,
+    enemy_hand_nerf: 0.0,
+    random_targets: 0.0,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,
@@ -1370,8 +1447,8 @@ pub const AI_WIN_RATE: AiWinRate = AiWinRate {
     floor: 0.25,
 };
 
-// R645: the AI's emote personas live in the web client (`apps/web/src/practice/personas.ts`): they
-// are cosmetic only, and none of them reaches the engine, the action log or a game record.
+// R645: the AI's emote personas live in `jackioh-shared` (`bots::persona`, R5269000): they are
+// cosmetic only, and none of them reaches the engine, the action log or a game record.
 
 #[cfg(test)]
 mod tests {

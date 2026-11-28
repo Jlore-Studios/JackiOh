@@ -16,6 +16,8 @@ package plan
 //   - the rest go ahead, oldest first, at most `per_day` in any 24 hours (`suggest.auto_approved`,
 //     the times they did), each at `priority:low` whatever its class opened it with, so it waits
 //     behind everything a person asked for. One past the cap waits for the next tick with room.
+//     `per_day` 0, as committed, caps none: a survey runs only while lanes are spare, so approved
+//     work that fills the queue stops new surveys by itself (#5104).
 //
 // Approving one is queueing it, as a person's `approve` does (`queue.QueueBuild`), so its build is
 // planned, built, reviewed and merged under every gate a person's approval would meet, and `stop`
@@ -64,11 +66,16 @@ func autoApprovedSince(state *pyjson.Object, since time.Time) int {
 // heldBy is who took suggestion `issue` up, so it waits for a person: a 👎 on it, or a comment that
 // is not the bot's own. "" when no one did.
 func heldBy(ctx *hctx.Context, number int, issue *pyjson.Object) string {
+	return heldIn(ctx, issue, ctx.GH.ListComments(number, 100))
+}
+
+// heldIn is `heldBy` over `comments`, the issue's comments already read.
+func heldIn(ctx *hctx.Context, issue *pyjson.Object, comments []*pyjson.Object) string {
 	if issue.Obj("reactions").Int("-1") > 0 {
 		return "a 👎 on it"
 	}
 	bot := strings.ToLower(strings.TrimLeft(ctx.Cfg.BotLogin, "@"))
-	for _, c := range ctx.GH.ListComments(number, 100) {
+	for _, c := range comments {
 		login := py.OrStr(c.Obj("user").Get("login"), "")
 		if strings.ToLower(login) == bot || identity.Carries(c.Str("body"), config.Marker) {
 			continue
@@ -121,7 +128,7 @@ func AutoApprove(ctx *hctx.Context) []string {
 			notes = append(notes, fmt.Sprintf("#%d waits for a person: %s", number, who))
 			continue
 		}
-		if room <= 0 {
+		if auto.PerDay > 0 && room <= 0 {
 			notes = append(notes, fmt.Sprintf("#%d waits: %d approved themselves in the last day already",
 				number, auto.PerDay))
 			break

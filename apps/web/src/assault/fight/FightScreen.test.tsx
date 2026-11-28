@@ -418,6 +418,7 @@ describe("R4582001 a kept fight is picked up, and Menu asks before leaving", () 
   });
 
   it("R4582001 once the fight has its result, Menu sends the report and leaves without asking", async () => {
+    at("/assault");
     const host = fightHost();
     const onAction = vi.fn<(action: AssaultAction) => void>();
     const onLeave = vi.fn();
@@ -431,8 +432,28 @@ describe("R4582001 a kept fight is picked up, and Menu asks before leaving", () 
 
     fireEvent.click(screen.getByTestId(assaultFightTestid.menu));
     expect(onAction).toHaveBeenCalledWith(LOST);
-    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onLeave).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe(paths.play);
     expect(screen.queryByTestId(assaultFightTestid.leaveDialog)).toBeNull();
+    at("/");
+  });
+
+  it("R4582001 a finished fight whose report could not be read still leaves through onLeave and sends nothing", async () => {
+    at("/assault");
+    const host = fightHost(["error"]);
+    const onAction = vi.fn<(action: AssaultAction) => void>();
+    const onLeave = vi.fn();
+    renderFight(host, onAction, onLeave);
+    await screen.findByTestId(assaultFightTestid.screen);
+    concedeOnBoard();
+    await screen.findByTestId(assaultFightTestid.reportError);
+
+    fireEvent.click(screen.getByTestId(assaultFightTestid.menu));
+    expect(onAction).not.toHaveBeenCalled();
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(window.location.pathname).toBe("/assault");
+    at("/");
   });
 });
 
@@ -505,7 +526,8 @@ describe("R4742000 the Assault fight's result panel offers Main menu", () => {
     return proceed;
   }
 
-  it("R4742000 the result panel's Main menu follows Continue, sends the report and calls onLeave", async () => {
+  it("R4742000 the result panel's Main menu follows Continue, sends the report once and goes to the Play menu without calling onLeave", async () => {
+    at("/assault");
     const onAction = vi.fn<(action: AssaultAction) => void>();
     const onLeave = vi.fn();
     const proceed = await finished(onAction, onLeave);
@@ -520,8 +542,10 @@ describe("R4742000 the Assault fight's result panel offers Main menu", () => {
     fireEvent.click(menu);
     expect(onAction).toHaveBeenCalledWith(LOST);
     expect(onAction).toHaveBeenCalledTimes(1);
-    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(onLeave).not.toHaveBeenCalled();
+    expect(window.location.pathname).toBe(paths.play);
     expect(screen.queryByTestId(assaultFightTestid.leaveDialog)).toBeNull();
+    at("/");
   });
 
   it("R4742000 without a way back the panel's Main menu sends the report and goes to the Play menu", async () => {

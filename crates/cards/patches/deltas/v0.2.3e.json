@@ -1,0 +1,26 @@
+{
+  "set": {
+    "classic-t-glitch": {
+      "id": "classic-t-glitch",
+      "index": "T-glitch",
+      "name": "Glitch",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 0,
+      "loc": 3,
+      "base": {
+        "keywords": [],
+        "text": ""
+      },
+      "radiant": {
+        "keywords": [],
+        "text": ""
+      }
+    }
+  }
+}

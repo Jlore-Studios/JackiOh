@@ -76,8 +76,8 @@
 #    apps/web/.env.production is in it (#4094, an owner-decided cut of per-pull-request coverage: the
 #    WASM module and the client embed the catalog, yet web, e2e, the engine's and the AI's groups and every
 #    db line stay off; the push to `main` and the daily super run still run everything). Those files are
-#    crates/cards/patches/'s v*.json, patches.json, shipped.json, index.json, card_metrics/, records/ and
-#    pending/, crates/server/.env.example and apps/web/.env.production, and both patches.json and
+#    crates/cards/patches/'s deltas/, order.json, patches.json, shipped.json, index.json, card_metrics/,
+#    records/ and pending/ (R5268000), crates/server/.env.example and apps/web/.env.production, and both patches.json and
 #    shipped.json must be in the diff, as no other pull request edits them. Any other file in the diff
 #    scopes as below.
 #  - Run web alone: the seven workflows above, so a diff of only these runs `full` and `web` (#5002);
@@ -301,7 +301,8 @@ ships() {
     case "$file" in
       crates/cards/patches/patches.json) saw_patches=true ;;
       crates/cards/patches/shipped.json) saw_shipped=true ;;
-      crates/cards/patches/index.json | crates/cards/patches/v*.json | crates/cards/patches/card_metrics/* | \
+      crates/cards/patches/index.json | crates/cards/patches/deltas/* | crates/cards/patches/order.json | \
+        crates/cards/patches/card_metrics/* | \
         crates/cards/patches/records/* | crates/cards/patches/pending/* | \
         crates/server/.env.example | apps/web/.env.production) ;;
       *) return 1 ;;

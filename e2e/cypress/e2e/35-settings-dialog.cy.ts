@@ -1,7 +1,7 @@
 // Settings-dialog coverage (R633, R634). The shared account changes only background music and ends off.
 
 import { SESSION_STORAGE_KEY, accounts, routes, server, timeouts } from "../../support/config.ts";
-import { WORKSHOP, ts } from "../../support/testids.ts";
+import { ts } from "../../support/testids.ts";
 import {
   SETTINGS_CLOSE,
   SETTINGS_OPEN_NAV,
@@ -14,6 +14,7 @@ import {
   settingsTabId,
   type SettingsSection,
 } from "../../support/ux.ts";
+import { WORKSHOP } from "../../../apps/web/src/game/deckbuilder/testids.ts";
 
 /** In the dialog's order (SECTIONS in apps/web/src/settings/SettingsPanel.tsx). */
 const TABS: readonly SettingsSection[] = ["gameplay", "visuals", "audio"];

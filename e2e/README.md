@@ -83,7 +83,10 @@ the `chrome` Cypress finds is a major in
 `chrome` at Chrome for Testing `PINNED_CHROME_MILESTONE` (154), downloaded once into the repo's
 `.cache/chrome-for-testing/` (Linux x64 only); the run header then says `Chrome for Testing`.
 `E2E_CHROME_PIN=1` does the same off CI, `E2E_CHROME_PIN=0` keeps the system Chrome. Every other
-Chrome and browser launches as found, and a failed download keeps the system Chrome and says why.
+Chrome and browser launches as found. The pin fetches the milestone index, then the archive, up to
+`CFT_ATTEMPTS` (3) times each, `CFT_RETRY_DELAY_MS` (5 s) apart, each attempt cut off after
+`CFT_ATTEMPT_TIMEOUT_MS` (30 s); a pin that still cannot be set up stops the run at its start with the
+reason, since the broken Chrome would fail every spec of it (#5178).
 Drop 155 from the list now the runner image ships 156 and later, and 158 once the Cypress in
 `e2e/package.json` runs the smoke specs on it.
 
@@ -167,7 +170,8 @@ for contract reasons rather than rules reasons.
    seats of 41 and 55 are `support/duos.ts`'s sockets. The component spec `lobby-screen.cy.tsx`
    shoots the lobby, a 2v2's among them, at each of `MENU_SIZES`. All but the component spec are networked, so the server must be up. Their test ids
    (`together-*`, `chat-*`, `lobby-*`, `duos-*`)
-   are `apps/web/README.md`'s list, mirrored in `support/testids.ts`; the
+   are `apps/web/README.md`'s list, imported from the web's `testids.ts` files where it exports them
+   and kept in `support/testids.ts` where it does not (#5269); the
    sockets are `/ws/duos` and `/ws/watch` beside `WS_PATH`, on the same host. Spec 44 watches a
    friend's live game over `/ws/watch`. A watcher holds no seat, so it reseeds and activates
    `e2e-pending` (R144) for the other seat, whose Node socket hears the watcher's emote from the
@@ -181,7 +185,7 @@ for contract reasons rather than rules reasons.
    (`POST /daily-sweep`), and seat one's board says "Lost on time". Both are networked. A daily game
    has no socket: every move is `POST /api/daily/games/:id/actions`, which `support/daily.ts` sends as
    the board does (after the read's `seq`, under a fresh nonce). Their test ids (`daily-*`) are
-   `apps/web/src/daily/testids.ts`'s, mirrored in `support/testids.ts`. Spec 58 (#4039, R4039001) makes
+   `apps/web/src/daily/testids.ts`'s, which the specs import from there (#5269). Spec 58 (#4039, R4039001) makes
    a daily game the same way, opens seat one's Play and waits for its social socket to be live (the
    bell's `data-live="true"`); seat two's move over HTTP then shows seat one "Your move against …" as
    the notification toast (`notification-toast`) and as a `dailyMove` row of the inbox's Recent section

@@ -12,7 +12,7 @@
 //            files (0-2).
 //   effects  the sound effects a card can play. sfx names one of the procedural recipes in sfx.ts
 //            (SFX_IDS); pitch shifts it (1 as written, 0.5 an octave down, 2 an octave up, 0.25-4),
-//            gain trims it (0-2), and params passes the recipe its own options (amount, timbre,
+//            gain trims it (0-2), and params passes the recipe its own options (amount, timbre, element,
 //            mine, mythic, urgent, release). Each play varies the pitch a little.
 //   cards    one entry per catalog card, in catalog order, with the card's name in a comment on
 //            the line of its id. The name is for people; `cargo jackioh names` writes it from the
@@ -29,9 +29,24 @@
 //   trigger  a card whose effect summons (R1088): one of its lines plays when the runner starts the
 //            `summoned` entry the card caused, picked by the client's own rng, replacing the
 //            summoned card's own line for that entry
+// and, since R5188000, the recurring hooks, which can fire every turn or many times in one action:
+//   startOfTurn  a start-of-turn hook of the card begins to resolve, on either player's turn
+//   endOfTurn    an end-of-turn hook of it begins to resolve
+//   whenever     one of its Whenever triggers runs, its condition held
+//   activate     one of its Activate abilities runs
+//   hurt         a Unit takes damage and is still on the field when that action ends
+//   hit          damage the card is the source of lands: its Spell's, its effect's or its attack's
+// A recurring hook's effect plays each time it fires (once per animation entry); its line speaks the
+// first time it fires in a game, then at most once a turn per card, about one time in three, and never
+// cuts in on another line.
 // A hook gives a voice line, { voice: "<a voice>" }, which speaks the card's line for that hook in
-// card-text.yaml (a trigger's list of lines), an effect, { effect: "<an effect>" }, or both in one
-// object; with both, the effect starts first. No hook here writes its words: a text or lines fails.
+// card-text.yaml, an effect, { effect: "<an effect>" }, or both in one object; with both, the effect
+// starts first. A line in card-text.yaml may be a list, a pool (R5188000): the client picks one each
+// time, by its own rng, and each renders a file of its own, `<id>-<hook>` for the first (the key a
+// single line has) and `<id>-<hook>2`, `<id>-<hook>3` and on for the rest; a trigger's is always a list,
+// keyed `<id>-trigger1` on. An effect may be a list too, { effect: ["<wind-up>", "<release>", "<tail>"] },
+// played in order, each a short gap after the one before ends. No hook here writes its words: a text or
+// lines fails.
 //
 // To add a card: copy a neighbour's entry to where the catalog puts the card, change the id, and give
 // a Unit a play, an attack and a death voice (R1448), anything else a cast voice, writing the lines in
@@ -39,6 +54,30 @@
 // changed line, or a line's new voice, has to be rendered: `pnpm --filter @jackioh/web gen:voice` on
 // macOS, or on Windows (or WSL) for a SAPI voice, or a push whose commit message holds `[gen:voice]`,
 // which renders both on GitHub's runners (.github/workflows/voice.yml). Effects render nothing.
+//
+// The spell verbs' effects (#5190), for the card parts (#5187) to pick a Spell, Field Spell, Trap or
+// Field Trap's wind-up, release and tail from. Each is named for what it sounds like; the cards per
+// verb and set are in docs/polish/2-sound.md, "Spell verbs".
+//   verb        wind-up     release          tail          (damage: one row per element, <element>Wind/Release/Tail)
+//   destroy     dreadWind   shatterRelease   hushTail
+//   heal        calmWind    healRelease      sparkleTail
+//   draw        calmWind    drawRelease      sparkleTail
+//   discard     dreadWind   discardRelease   hushTail
+//   summon      surgeWind   summonRelease    sparkleTail
+//   transform   twistWind   morphRelease     ringTail
+//   bounce      twistWind   bounceRelease    ringTail
+//   steal       dreadWind   stealRelease     hushTail
+//   buff        surgeWind   buffRelease      sparkleTail
+//   debuff      dreadWind   debuffRelease    hushTail
+//   lock        snapWind    lockRelease      ringTail
+//   armor       surgeWind   armorRelease     ringTail
+//   mana        calmWind    manaRelease      sparkleTail
+//   shuffle     twistWind   shuffleRelease   ringTail
+//   counter     snapWind    counterRelease   ringTail
+//   reveal      calmWind    revealRelease    sparkleTail
+//   damage      <element>Wind, <element>Release, <element>Tail, for fire, frost, lightning, arcane, shadow, poison, holy, physical.
+//   frost damage doubles as the freeze release (frostRelease).
+//
 {
   voices: {
     alien: { say: "Trinoids", rate: 170, pbas: 45, pmod: 20, web: { pitch: 0.5, rate: 0.9 }, gain: 1.66 },
@@ -186,6 +225,60 @@
     jleaseExplorerSound: { sfx: "summon", pitch: 1.1, params: { amount: 4, timbre: "token" } },
     jleasePackSound: { sfx: "drop", pitch: 1.4 },
     claudesDatacenterSound: { sfx: "reactorPulse", pitch: 0.8, params: { amount: 3 } },
+
+    // #5190: the spell verbs' effects (the verb table above), by what they sound like, never a card.
+    // Damage by element: a wind-up, a release and a tail each.
+    fireWind: { sfx: "elementWindUp", params: { element: "fire", amount: 5 } },
+    fireRelease: { sfx: "elementBolt", params: { element: "fire", amount: 5 } },
+    fireTail: { sfx: "elementTail", params: { element: "fire" } },
+    frostWind: { sfx: "elementWindUp", params: { element: "frost", amount: 5 } },
+    frostRelease: { sfx: "elementBolt", params: { element: "frost", amount: 5 } },
+    frostTail: { sfx: "elementTail", params: { element: "frost" } },
+    lightningWind: { sfx: "elementWindUp", params: { element: "lightning", amount: 5 } },
+    lightningRelease: { sfx: "elementBolt", params: { element: "lightning", amount: 5 } },
+    lightningTail: { sfx: "elementTail", params: { element: "lightning" } },
+    arcaneWind: { sfx: "elementWindUp", params: { element: "arcane", amount: 5 } },
+    arcaneRelease: { sfx: "elementBolt", params: { element: "arcane", amount: 5 } },
+    arcaneTail: { sfx: "elementTail", params: { element: "arcane" } },
+    shadowWind: { sfx: "elementWindUp", params: { element: "shadow", amount: 5 } },
+    shadowRelease: { sfx: "elementBolt", params: { element: "shadow", amount: 5 } },
+    shadowTail: { sfx: "elementTail", params: { element: "shadow" } },
+    poisonWind: { sfx: "elementWindUp", params: { element: "poison", amount: 5 } },
+    poisonRelease: { sfx: "elementBolt", params: { element: "poison", amount: 5 } },
+    poisonTail: { sfx: "elementTail", params: { element: "poison" } },
+    holyWind: { sfx: "elementWindUp", params: { element: "holy", amount: 5 } },
+    holyRelease: { sfx: "elementBolt", params: { element: "holy", amount: 5 } },
+    holyTail: { sfx: "elementTail", params: { element: "holy" } },
+    physicalWind: { sfx: "elementWindUp", params: { element: "physical", amount: 5 } },
+    physicalRelease: { sfx: "elementBolt", params: { element: "physical", amount: 5 } },
+    physicalTail: { sfx: "elementTail", params: { element: "physical" } },
+    // Verb-neutral wind-ups: calm builds gently, surge climbs, dread sinks, twist bends, snap is quick and high.
+    calmWind: { sfx: "windUp", pitch: 1.2, params: { amount: 2 } },
+    surgeWind: { sfx: "windUp", params: { amount: 6 } },
+    dreadWind: { sfx: "windUp", pitch: 0.6, params: { amount: 4 } },
+    twistWind: { sfx: "windUp", params: { amount: 3 } },
+    snapWind: { sfx: "windUp", pitch: 1.8, params: { amount: 1 } },
+    // Tails: sparkle rises and falls in bells, hush falls away low, ring is a short metal ring.
+    sparkleTail: { sfx: "sparkleTail", params: { amount: 5 } },
+    hushTail: { sfx: "hush" },
+    ringTail: { sfx: "armorRing", gain: 0.7 },
+    // Releases, on the recipes that already fit and on the new ones.
+    shatterRelease: { sfx: "shatter", params: { amount: 5 } },
+    healRelease: { sfx: "heal" },
+    drawRelease: { sfx: "draw" },
+    discardRelease: { sfx: "poof", pitch: 1.5 },
+    summonRelease: { sfx: "summon", params: { amount: 3 } },
+    morphRelease: { sfx: "morph" },
+    bounceRelease: { sfx: "returnToHand" },
+    stealRelease: { sfx: "steal" },
+    buffRelease: { sfx: "buff" },
+    debuffRelease: { sfx: "debuff" },
+    lockRelease: { sfx: "lock" },
+    armorRelease: { sfx: "armorClank" },
+    manaRelease: { sfx: "mana", params: { mine: true } },
+    shuffleRelease: { sfx: "riffle" },
+    counterRelease: { sfx: "counterspell" },
+    revealRelease: { sfx: "revealGlint" },
   },
 
   cards: {
@@ -321,6 +414,8 @@
     },
     "core-033": { // Unstable Clone Machine
       cast: { voice: "robot", effect: "servoWhirr" },
+      // R5188000: its Activate, an effect alone.
+      activate: { effect: "dataBlips" },
     },
     "core-034": { // Collateral Damage
       cast: { voice: "narrator", effect: "explosion" },
@@ -335,6 +430,8 @@
       play: { voice: "digger" },
       attack: { voice: "digger" },
       death: { voice: "digger" },
+      // R5188000: its start-of-turn hook, an effect alone.
+      startOfTurn: { effect: "crumble" },
     },
     "core-038": { // Quickstriker
       cast: { voice: "announcer" },
@@ -542,6 +639,8 @@
       play: { voice: "elder" },
       attack: { voice: "elder" },
       death: { voice: "elder" },
+      // R5188000: its Whenever, an effect alone.
+      whenever: { effect: "sporePuff" },
     },
     "core-092": { // Felinor Fiender
       play: { voice: "whisper" },
@@ -550,6 +649,8 @@
     },
     "core-093": { // Combo-Index
       cast: { voice: "announcer" },
+      // R5188000: its end-of-turn hook, an effect alone.
+      endOfTurn: { effect: "tickTock" },
     },
     "core-093-1": { // Combo-Fodder
       cast: { voice: "goof" },

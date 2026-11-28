@@ -986,6 +986,58 @@ fn r2922001_every_placeholder_curse_and_combat_artifact_has_a_fight_effect_its_t
     );
 }
 
+#[test]
+fn placeholder_artifacts_with_a_map_effect_say_it_counts_for_each_level() {
+    // §15: an artifact's map effect counts once per level and a blessing's once, so each artifact's
+    // text states its amount "for each level", as R2922001's Combat texts do, and no blessing's does.
+    let content = content();
+    let amount = |effect: RunEffect| match effect {
+        RunEffect::KeepMore { n }
+        | RunEffect::PackSize { n }
+        | RunEffect::CoinsPerFight { n }
+        | RunEffect::TicketsPerFight { n }
+        | RunEffect::MaxHp { n } => n,
+        RunEffect::Skip { coins } => coins,
+        RunEffect::ShopDiscount { percent } => percent,
+    };
+    for passive in content
+        .passives
+        .iter()
+        .filter(|p| p.kind == RunPassiveKind::Economic)
+    {
+        assert!(passive.effect.is_some(), "{} has a map effect", passive.id);
+    }
+    let (blessings, artifacts): (Vec<_>, Vec<_>) = content
+        .passives
+        .iter()
+        .filter_map(|p| p.effect.map(|effect| (p, effect)))
+        .partition(|(p, _)| p.kind == RunPassiveKind::Blessing);
+    assert!(!artifacts.is_empty() && !blessings.is_empty());
+    for (passive, effect) in artifacts {
+        let (id, text) = (&passive.id, &passive.text);
+        let n = amount(effect);
+        assert!(text.contains(&n.to_string()), "{id}: {text:?} states {n}");
+        assert!(
+            text.contains("for each level"),
+            "{id}: {text:?} says for each level"
+        );
+        if matches!(effect, RunEffect::KeepMore { .. }) {
+            assert!(
+                text.contains(&RUN_KEEP_MAX.to_string()),
+                "{id}: {text:?} names its cap"
+            );
+        }
+    }
+    for (passive, _) in blessings {
+        assert!(
+            !passive.text.contains("for each level"),
+            "{}: {:?} counts once",
+            passive.id,
+            passive.text
+        );
+    }
+}
+
 // The mutation audit (#3513): each test below kills mutants `sh scripts/mutants.sh run` found
 // surviving, by asserting the value the spec states.
 

@@ -4,12 +4,6 @@ import { landingTestid } from "../../../apps/web/src/auth/testids.ts";
 import { seedFor } from "../../support/config.ts";
 import {
   ALMANAC,
-  CARD_POOL,
-  DB_DETAIL_ADD,
-  DB_FILTER_OWNED,
-  DB_RESULT_COUNT,
-  INSPECT_CLOSE,
-  INSPECT_DETAIL,
   NAV_BACK,
   SITE_FOOTER,
   SITE_FOOTER_ALMANAC,
@@ -18,6 +12,13 @@ import {
   poolCardId,
   ts,
 } from "../../support/testids.ts";
+import { INSPECT_CLOSE, INSPECT_DETAIL } from "../../../apps/web/src/cards/inspect/testids.ts";
+import {
+  CARD_POOL,
+  DB_DETAIL_ADD,
+  DB_FILTER_OWNED,
+  DB_RESULT_COUNT,
+} from "../../../apps/web/src/game/deckbuilder/testids.ts";
 
 /** The cost chip the spec filters by, and the words every card it keeps carries in its name (R432). */
 const COST = "1";

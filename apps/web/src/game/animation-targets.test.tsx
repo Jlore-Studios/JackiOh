@@ -129,6 +129,7 @@ function samplesFor(view: PlayerView): { [K in GameEventType]: Extract<GameEvent
     damageAbsorbed: { type: "damageAbsorbed", sourceId: unit, targetId: enemy, absorbed: 2, combat: true },
     damageNullified: { type: "damageNullified", instanceId: enemy, sourceId: unit, targetId: enemy, amount: 2, combat: true },
     armorGained: { type: "armorGained", player: "p1", amount: 2, armor: 2 },
+    armorWorn: { type: "armorWorn", player: "p1", armor: 1 },
     jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
     secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
     secretRevealed: { type: "secretRevealed", player: "p1", secretId: "secret-1", choice: "greed" },

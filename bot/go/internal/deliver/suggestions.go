@@ -2,6 +2,7 @@ package deliver
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	planmod "github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/queue"
 )
 
 // ------------------------------------------------------------------ suggestions
@@ -21,6 +23,9 @@ func (x *Deliverer) Suggestions() {
 	if x.Result.Get("status") == "infra" {
 		x.Chain = false
 	}
+	// First, and whether or not the survey finished: the judge's word on suggestions an earlier
+	// judge never answered (#5104).
+	x.applyRejudged()
 	lane := planmod.SurveyLaneOf(x.Plan) // its own record (#4026), or lane 0 for a plan from before
 	if x.Result.Get("status") != "suggested" {
 		// A survey that did not finish gives its slot back: it is due again as before, and its
@@ -99,16 +104,20 @@ func (x *Deliverer) Suggestions() {
 			if why != "" {
 				why = ": " + strings.TrimRight(why, ".")
 			}
+			// `per_day` 0 caps none, so the footer names a cap only when there is one.
+			capped := ""
+			if auto.PerDay > 0 {
+				capped = fmt.Sprintf(" (at most %d a day; one past that waits for room)", auto.PerDay)
+			}
 			if approve && auto.WaitHours == 0 {
 				footer += fmt.Sprintf("\n\n**Judge:** would approve it%s, so it is approved by itself as it opens, "+
-					"at `priority:low` (at most %d a day; one past that waits for room). `%s stop` takes it "+
-					"back out of the queue.", why, auto.PerDay, config.Slash)
+					"at `priority:low`%s. `%s stop` takes it back out of the queue.", why, capped, config.Slash)
 			} else if approve {
 				due := x.Ctx.Now().Add(time.Duration(auto.WaitHours) * time.Hour)
 				footer += fmt.Sprintf("\n\n**Judge:** would approve it%s. With no vote, no comment and no 👎 on "+
-					"this issue by %s, it is approved by itself at `priority:low` (at most %d a day); "+
+					"this issue by %s, it is approved by itself at `priority:low`%s; "+
 					"comment `reject`, or anything at all, to decide it yourself.", why,
-					planmod.DecisionClock(x.Ctx, due), auto.PerDay)
+					planmod.DecisionClock(x.Ctx, due), capped)
 			} else {
 				footer += fmt.Sprintf("\n\n**Judge:** leaves it to a person%s.", why)
 			}
@@ -148,5 +157,74 @@ func (x *Deliverer) Chain_() {
 	if look.Work {
 		x.Ctx.Dispatch(nil, false, "auto")
 		x.log("dispatched the next run: " + look.Reason)
+	}
+}
+
+// applyRejudged puts the judge's word on each suggestion an earlier judge never answered (the
+// result's `rejudged`, `work.Worker.rejudge`), as a comment carrying `plan.JudgeMarker`, so no later
+// survey judges it again. One it would approve is kept for `plan.AutoApprove`, which queues it as it
+// queues one approved as it opened. One it still could not answer counts a try
+// (`suggest.judge_tries`), and after `plan.RejudgeTries` it is left to a person with a comment that
+// says so. A suggestion a person decided in the meantime (closed, or no longer `bot:suggestion`) is
+// left alone.
+func (x *Deliverer) applyRejudged() {
+	auto := x.Cfg.AutoApprove
+	for _, entry := range objList(x.Result.Get("rejudged")) {
+		number := py.MustInt(entry.Get("number"))
+		issue := x.GH.GetIssue(number)
+		if issue.Get("state") != "open" || !queue.LabelNames(issue)[config.LabelSuggestion] {
+			x.forgetJudgeTries(number)
+			continue
+		}
+		judge := pyjson.Obj(entry.Get("judge"))
+		if judge == nil {
+			tries := 0
+			x.Ctx.Store.Update(func(s *pyjson.Object) any {
+				counts := pyjson.Obj(pyjson.Obj(s.SetDefault("suggest", pyjson.New())).SetDefault("judge_tries", pyjson.New()))
+				tries = py.MustInt(py.Or(counts.Get(strconv.Itoa(number)), 0)) + 1
+				counts.Set(strconv.Itoa(number), tries)
+				return nil
+			}, fmt.Sprintf("suggestion #%d not judged yet", number))
+			if tries < planmod.RejudgeTries {
+				x.log(fmt.Sprintf("#%d: the judge could not answer it (try %d of %d)", number, tries, planmod.RejudgeTries))
+				continue
+			}
+			x.GH.CreateComment(number, fmt.Sprintf("%s could not answer after %d tries, so this suggestion "+
+				"waits for a person's vote: comment `approve` or `reject`.\n\n%s\n%s", planmod.JudgeLine, tries,
+				planmod.JudgeMarker, config.Marker))
+			x.forgetJudgeTries(number)
+			continue
+		}
+		why := strings.TrimRight(py.OrStr(judge.Get("why"), ""), ".")
+		if why != "" {
+			why = ": " + why
+		}
+		if judge.Truthy("approve") {
+			when := "now"
+			if auto.WaitHours > 0 {
+				when = fmt.Sprintf("once it has waited %d hours with no one's vote, comment or 👎", auto.WaitHours)
+			}
+			x.GH.CreateComment(number, fmt.Sprintf("%s would approve it%s. It opened before the judge could "+
+				"answer, so it is approved by itself %s, at `priority:low`. `%s stop` takes it back out of the "+
+				"queue.\n\n%s\n%s", planmod.JudgeLine, why, when, config.Slash, planmod.JudgeMarker, config.Marker))
+			x.Ctx.Store.Update(func(s *pyjson.Object) any {
+				planmod.MarkAutoApprove(s, number, clock.ISO(x.Ctx.Now()), py.OrStr(judge.Get("why"), ""))
+				return nil
+			}, fmt.Sprintf("suggestion #%d may approve itself", number))
+		} else {
+			x.GH.CreateComment(number, fmt.Sprintf("%s leaves it to a person%s.\n\n%s\n%s", planmod.JudgeLine,
+				why, planmod.JudgeMarker, config.Marker))
+		}
+		x.forgetJudgeTries(number)
+	}
+}
+
+// forgetJudgeTries drops suggestion `number`'s count of surveys that could not judge it.
+func (x *Deliverer) forgetJudgeTries(number int) {
+	if x.Ctx.Store.Load().Obj("suggest").Obj("judge_tries").Has(strconv.Itoa(number)) {
+		x.Ctx.Store.Update(func(s *pyjson.Object) any {
+			s.Obj("suggest").Obj("judge_tries").Delete(strconv.Itoa(number))
+			return nil
+		}, fmt.Sprintf("suggestion #%d judged", number))
 	}
 }

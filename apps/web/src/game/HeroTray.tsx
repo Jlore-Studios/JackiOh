@@ -1,6 +1,6 @@
 // #2877: the hero's status tray: its modifiers, secrets and Rift flag in one row hung off the
 // plate, out of flow so the plate keeps one size however many effects the seat carries.
-// #4251: the hero's counters (Luck, Burn, Toxic, Tipsy) ride the same row as labelled chips,
+// #4251: the hero's counters (Luck, Burn, Toxic, Woozy) ride the same row as labelled chips,
 // outside the overflow allowance, so every counter reads at once.
 //
 // The badges read the `SideView` alone and decide nothing (CLAUDE.md rule 7). R169's list stays
@@ -31,17 +31,17 @@ import { secretBadgeText } from "./secrets.ts";
 export const RIFT_SPENT_LABEL = "Rift turn used";
 export const RIFT_SPENT_NOTE = "Temporal Rift has granted this player's one extra turn this game; another Rift grants none";
 
-type CounterKind = "luck" | "burn" | "toxic" | "tipsy";
+type CounterKind = "luck" | "burn" | "toxic" | "woozy";
 
 /**
- * #4251: one of the hero's counters (R987's Luck, R3540000's Burn and Toxic, R3548000's Tipsy)
+ * #4251: one of the hero's counters (R987's Luck, R3540000's Burn and Toxic, R3548000's Woozy)
  * as a labelled chip in the tray, its name as text beside its count, so a touch screen reads
  * which counter it is with no hover. The class, `data-*` attribute and (for Luck) testid are the
  * portrait badges' own, only their parent moved, so no counter hides under the health, Armor or
  * Credits badges; each still draws only above 0.
  */
 function CounterChip({ kind, value }: { kind: CounterKind; value: number }): ReactElement {
-  const name = kind === "luck" ? t("Luck") : kind === "burn" ? t("Burn") : kind === "toxic" ? t("Toxic") : t("Tipsy");
+  const name = kind === "luck" ? t("Luck") : kind === "burn" ? t("Burn") : kind === "toxic" ? t("Toxic") : t("Woozy");
   const title =
     kind === "luck"
       ? t("Luck {luck}: every roll your cards make that keeps a best rolls {luck} more times", { luck: String(value) })
@@ -49,19 +49,19 @@ function CounterChip({ kind, value }: { kind: CounterKind; value: number }): Rea
         ? t("Burn counters")
         : kind === "toxic"
           ? t("Toxic counters")
-          : t("Tipsy counter");
+          : t("Woozy counter");
   return (
     <span
       className={`modifier-badge hero-counter hero-${kind}`}
       data-luck={kind === "luck" ? value : undefined}
       data-burn={kind === "burn" ? value : undefined}
       data-toxic={kind === "toxic" ? value : undefined}
-      data-tipsy={kind === "tipsy" ? value : undefined}
+      data-woozy={kind === "woozy" ? value : undefined}
       data-testid={kind === "luck" ? "hero-luck" : undefined}
       title={title}
       aria-label={`${name} ${String(value)}`}
     >
-      {kind === "tipsy" ? <Icon name="stein" /> : null}
+      {kind === "woozy" ? <Icon name="stein" /> : null}
       <span className="hero-counter-name">{name}</span> <span className="hero-counter-n">{value}</span>
     </span>
   );
@@ -107,7 +107,7 @@ export default function HeroTray({
   if ((seat.luck ?? 0) > 0) counters.push({ kind: "luck", value: seat.luck ?? 0 });
   if ((seat.hero.burn ?? 0) > 0) counters.push({ kind: "burn", value: seat.hero.burn ?? 0 });
   if ((seat.hero.toxic ?? 0) > 0) counters.push({ kind: "toxic", value: seat.hero.toxic ?? 0 });
-  if ((seat.tipsy ?? 0) > 0) counters.push({ kind: "tipsy", value: seat.tipsy ?? 0 });
+  if ((seat.tipsy ?? 0) > 0) counters.push({ kind: "woozy", value: seat.tipsy ?? 0 });
 
   const entries: TrayEntry[] = [
     ...modifiers.map((modifier): TrayEntry => ({ kind: "modifier", modifier })),

@@ -8,6 +8,8 @@ import {
 import { allCardIds, cardId } from "../../support/cards.ts";
 import { mintId } from "../../support/commands.ts";
 import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, timeouts, type E2EAccount } from "../../support/config.ts";
+import { addPoolId, deckCardId, deckRowId, trioCardId, trioOpenDeckId, trioRowId, ts } from "../../support/testids.ts";
+import type { FixtureDeck } from "../../support/types.ts";
 import {
   DECK_CAP,
   DECK_CAP_REASON,
@@ -29,15 +31,7 @@ import {
   TRIO_EDITOR,
   TRIO_VERDICT,
   WORKSHOP,
-  addPoolId,
-  deckCardId,
-  deckRowId,
-  trioCardId,
-  trioOpenDeckId,
-  trioRowId,
-  ts,
-} from "../../support/testids.ts";
-import type { FixtureDeck } from "../../support/types.ts";
+} from "../../../apps/web/src/game/deckbuilder/testids.ts";
 
 function workshopAccount(): E2EAccount {
   return accounts.p2();

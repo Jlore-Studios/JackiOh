@@ -6,8 +6,6 @@
 import { constants, seedFor } from "../../support/config.ts";
 import {
   GAME,
-  MULLIGAN_OPPONENT_READY,
-  MULLIGAN_OPPONENT_STATUS,
   PROMPT,
   RADIANT,
   cardId,
@@ -20,6 +18,7 @@ import {
 } from "../../support/testids.ts";
 import type { GameStateLike, PlayerId, PromptKind } from "../../support/types.ts";
 import { ensureSeat } from "../../support/hotseat.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 const SEEDS = {
   mulligan: seedFor("02-mulligan-0"),
@@ -114,7 +113,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
       const returned = hand.slice(1);
 
       cy.get(ts(GAME)).should("have.attr", "data-viewer", "p1");
-      cy.get(promptOf("mulligan")).find(ts(MULLIGAN_OPPONENT_STATUS)).should("have.attr", "data-ready", "false");
+      cy.get(promptOf("mulligan")).find(ts(gameTestid.mulliganOpponentStatus)).should("have.attr", "data-ready", "false");
 
       // §2.1 / R9: clicks return cards; replacements precede the reshuffle.
       cy.get(promptOf("mulligan"))
@@ -135,9 +134,9 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
       cy.get(ts(GAME)).should("have.attr", "data-viewer", "p2");
       pickerOpensOnce("mulligan");
       cy.get(promptOf("mulligan"))
-        .find(ts(MULLIGAN_OPPONENT_STATUS))
+        .find(ts(gameTestid.mulliganOpponentStatus))
         .should("have.attr", "data-ready", "true")
-        .find(ts(MULLIGAN_OPPONENT_READY))
+        .find(ts(gameTestid.mulliganOpponentReady))
         .should("be.visible");
 
       cy.keepMulligans();

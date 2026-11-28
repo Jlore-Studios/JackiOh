@@ -12,26 +12,9 @@
 
 import { SPECTATE_DELAY_MS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { E2E_RESEED_PATH, accounts, apiUrl, bearerHeaders, inviteCodes, seedFor, server, timeouts, type E2EAccount } from "../../support/config.ts";
-import {
-  EMOTE_MENU,
-  GAME,
-  SIDELINE_EMOTE,
-  SIDELINE_MENU,
-  SIDELINE_STRIP,
-  TOGETHER_FRIEND_ROW,
-  TOGETHER_REQUEST_ACCEPT,
-  TOGETHER_REQUEST_ROW,
-  TOGETHER_ROOT,
-  TOGETHER_WATCH,
-  WATCH_BACK,
-  WATCH_REFUSED,
-  WATCH_SCREEN,
-  WATCH_STATUS,
-  WATCH_WAITING,
-  emoteItemId,
-  heroId,
-  ts,
-} from "../../support/testids.ts";
+import { EMOTE_MENU, GAME, emoteItemId, heroId, ts } from "../../support/testids.ts";
+import { sidelineTestid } from "../../../apps/web/src/sideline/testids.ts";
+import { togetherTestid, watchTestid } from "../../../apps/web/src/together/testids.ts";
 
 /** Mirrors `paths.together` in apps/web/src/net/navigate.ts. */
 const TOGETHER = "/together";
@@ -108,11 +91,11 @@ function untilReceived(name: string, match: (frame: Frame) => boolean, what: str
 }
 
 function friendRow(profileId: string): string {
-  return `${ts(TOGETHER_FRIEND_ROW)}[data-profile-id="${profileId}"]`;
+  return `${ts(togetherTestid.friendRow)}[data-profile-id="${profileId}"]`;
 }
 
 function incomingRequestRow(profileId: string): string {
-  return `${ts(TOGETHER_REQUEST_ROW)}[data-direction="incoming"][data-profile-id="${profileId}"]`;
+  return `${ts(togetherTestid.requestRow)}[data-direction="incoming"][data-profile-id="${profileId}"]`;
 }
 
 /** The watch link a friend row's Watch follows (`watchLink` in apps/web/src/together/watchLink.ts). */
@@ -165,9 +148,9 @@ function framesOf(win: Cypress.AUTWindow): Frame[] {
 
 /** The refused screen, with the way back, and the `forbidden` frame behind it and no view. */
 function expectRefused(): void {
-  cy.get(ts(WATCH_REFUSED), { timeout: timeouts.view }).should("be.visible");
-  cy.get(ts(WATCH_SCREEN)).should("have.attr", "data-connection", "refused");
-  cy.get(ts(WATCH_BACK)).should("be.visible");
+  cy.get(ts(watchTestid.refused), { timeout: timeouts.view }).should("be.visible");
+  cy.get(ts(watchTestid.screen)).should("have.attr", "data-connection", "refused");
+  cy.get(ts(watchTestid.back)).should("be.visible");
   cy.window().should((win) => {
     const frames = framesOf(win);
     expect(
@@ -263,7 +246,7 @@ describe("44 watching a friend's live game", () => {
     // Watch as its primary button, and the click opens the watch screen in the page already loaded.
     cy.then(() => {
       cy.get(incomingRequestRow(oneId)).within(() => {
-        cy.get(ts(TOGETHER_REQUEST_ACCEPT)).click();
+        cy.get(ts(togetherTestid.requestAccept)).click();
       });
       cy.get(friendRow(oneId), { timeout: timeouts.view })
         .should("have.attr", "data-status", "inMatch")
@@ -271,23 +254,23 @@ describe("44 watching a friend's live game", () => {
         // R3732002: Watch is the one button of a row in a game that can be watched.
         .and("have.attr", "data-primary", "watch")
         .within(() => {
-          cy.get(ts(TOGETHER_WATCH)).click();
+          cy.get(ts(togetherTestid.watch)).click();
         });
       cy.location("pathname").should("eq", `/watch/${matchId}`);
       cy.location("search").should("eq", `?${new URLSearchParams({ friend: oneId }).toString()}`);
     });
 
     // B50: the socket is open and the screen waits for the first, delayed, view.
-    cy.get(ts(WATCH_SCREEN)).should("have.attr", "data-connection", "open");
-    cy.get(ts(WATCH_WAITING)).should("be.visible");
+    cy.get(ts(watchTestid.screen)).should("have.attr", "data-connection", "open");
+    cy.get(ts(watchTestid.waiting)).should("be.visible");
 
     // B50: the first view comes SPECTATE_DELAY_MS on, drawn from the friend's seat, read-only.
     cy.then(() => {
-      cy.get(ts(WATCH_STATUS), { timeout: FIRST_VIEW_TIMEOUT_MS })
+      cy.get(ts(watchTestid.status), { timeout: FIRST_VIEW_TIMEOUT_MS })
         .should("have.attr", "data-connection", "open")
         .and("contain.text", oneName);
     });
-    cy.get(ts(WATCH_WAITING)).should("not.exist");
+    cy.get(ts(watchTestid.waiting)).should("not.exist");
     cy.get(ts(GAME)).should("have.attr", "data-replay", "true").and("have.attr", "data-viewer", HOST_SEAT);
     cy.get(ts(heroId("you"))).should("exist");
 
@@ -318,8 +301,8 @@ describe("44 watching a friend's live game", () => {
     cy.then(() => {
       cy.request({ method: "DELETE", url: apiUrl(`/api/friends/${twoId}`), headers: bearerHeaders(one.token) }).its("status").should("eq", 204);
     });
-    cy.get(ts(WATCH_REFUSED), { timeout: timeouts.view }).should("be.visible");
-    cy.get(ts(WATCH_SCREEN)).should("have.attr", "data-connection", "refused");
+    cy.get(ts(watchTestid.refused), { timeout: timeouts.view }).should("be.visible");
+    cy.get(ts(watchTestid.screen)).should("have.attr", "data-connection", "refused");
     cy.window().should((win) => {
       const last = framesOf(win).at(-1);
       expect(last?.type, "B50: the last thing the watcher is sent").to.eq("error");
@@ -331,9 +314,9 @@ describe("44 watching a friend's live game", () => {
       cy.visitAs(two, watchPath(matchId, oneId), { onBeforeLoad: recordWatchFrames });
     });
     expectRefused();
-    cy.get(ts(WATCH_BACK)).click();
+    cy.get(ts(watchTestid.back)).click();
     cy.location("pathname").should("eq", TOGETHER);
-    cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("exist");
+    cy.get(ts(togetherTestid.root), { timeout: timeouts.view }).should("exist");
 
     // Free the accounts for the next spec.
     cy.then(() => {
@@ -392,7 +375,7 @@ describe("44 watching a friend's live game", () => {
     // `two` watches `one` and waits out the delay for the first view.
     cy.then(() => {
       cy.visitAs(two, watchPath(matchId, oneId), { onBeforeLoad: recordWatchFrames });
-      cy.get(ts(WATCH_STATUS), { timeout: FIRST_VIEW_TIMEOUT_MS })
+      cy.get(ts(watchTestid.status), { timeout: FIRST_VIEW_TIMEOUT_MS })
         .should("have.attr", "data-connection", "open")
         .and("contain.text", oneName);
     });
@@ -404,7 +387,7 @@ describe("44 watching a friend's live game", () => {
       const hand = Array.isArray(dealt?.emotes) ? (dealt.emotes as string[]) : [];
       expect(hand.length, "R2990001: the watcher was dealt a hand").to.be.greaterThan(0);
       picked = hand[0] ?? "";
-      cy.get(ts(SIDELINE_MENU)).click();
+      cy.get(ts(sidelineTestid.menu)).click();
       cy.get(`${ts(EMOTE_MENU)} [role="menuitem"]`).then((items) => {
         expect([...items].map((item) => item.getAttribute("data-testid")), "the menu offers the dealt hand").to.deep.eq(hand.map(emoteItemId));
       });
@@ -412,7 +395,7 @@ describe("44 watching a friend's live game", () => {
     cy.then(() => {
       cy.get(`${ts(EMOTE_MENU)} ${ts(emoteItemId(picked))}`).click();
       // Shown at once as the watcher's own, since the server never echoes it.
-      cy.get(`${ts(SIDELINE_STRIP)} ${ts(SIDELINE_EMOTE)}[data-self="true"][data-emote="${picked}"]`).should("contain.text", "You");
+      cy.get(`${ts(sidelineTestid.strip)} ${ts(sidelineTestid.emote)}[data-self="true"][data-emote="${picked}"]`).should("contain.text", "You");
     });
 
     // R2990000: the seat hears it live, under the watcher's name.

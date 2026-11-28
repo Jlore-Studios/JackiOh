@@ -51,6 +51,7 @@ use crate::scripts::core::{
     c080_zao_gao, c081_radiant_saintess, c083_transmogulate, c084_going_long,
     c085_unlicensed_experimentation, c089_corpse_eater, c098_heroic_power,
 };
+use crate::scripts::infinite_assault::c224_rollback_point;
 use crate::scripts::meditative::{
     c001_disruptive_disruptor, c005_death_by_1000_cuts, c007_introspection, c009_joint_filing,
     c010_double_counting, c017_true_craft_a_card, c018_expedition12, c019_1_temporal_rift,
@@ -65,8 +66,8 @@ use crate::scripts::meditative::{
     c097_2_wishing_well, c097_8_prison, c099_paranoia, c102_catboy_maid_ssr,
 };
 use crate::scripts::meditative_plus::{
-    c001_bobs_plan, c002_na_tech, c003_wondrous_wand, c009_magic_amplifier, c019_grubby_gloves,
-    c022_mountaintop_garden, c023_enormous_elderberry,
+    c001_bobs_plan, c002_na_tech, c003_wondrous_wand, c009_magic_amplifier, c012_living_armor_potion,
+    c019_grubby_gloves, c022_mountaintop_garden, c023_enormous_elderberry,
 };
 use crate::scripts::stinkyscape::{
     c004_olivian_expanse, c007_the_greatest_heist, c009_ticketed, c010_1_inner_fire, c010_2_divine_spirit,
@@ -83,7 +84,7 @@ use crate::scripts::stinkyscape::{
     c149_wildar, c153_stimmycheck, c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities,
     c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
     c172_huge_asteroid, c173_abandoned_spice_tower, c176_preemptive_strike, t_drone_corvette,
-    t_drone_interceptor, t_narcor, t_red_narcor,
+    t_drone_interceptor, t_narcor, t_red_narcor, t_reknite,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c007_churnwalker, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie,
@@ -131,7 +132,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R4424000), #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
 /// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price),
 /// #4666 (R4666000), #4844 (R656's help aims on eight buff Spells' targets), #4828 (R4828000), #5048
-/// (R5048000), #4991 (R4991000) and #5106 (R5106000).
+/// (R5048000), #4991 (R4991000), #5106 (R5106000), #5158 (R4594005) and #5226 (R5226000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 /// R4779000: a row's key is that version, or `"fragment:<stem>"` (`FRAGMENT_KEY`), the stem of the
 /// pending fragment that ships the change, which `resolve_kept_key` reads as the version just before
@@ -1597,6 +1598,39 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "fragment:starfleet-commander-and-preemptive-strike-still-discover-a",
         c176_preemptive_strike::script_before_launch_read_once,
     ),
+    // #5183 (R5183001, R5183002, R5183003): Armor Up's 2 until your next turn and Tank Up's refresh, and
+    // Reknite's and Living Armor Potion's Armor until your next turn, before each gave Armor the hero
+    // keeps (R4779000: keyed by the pending fragment).
+    (
+        c098_heroic_power::ID,
+        "fragment:hero-armor-wears-down-by-1-with-each-hit-and-the-armor-cards",
+        c098_heroic_power::script_kept_5183,
+    ),
+    (
+        t_reknite::ID,
+        "fragment:hero-armor-wears-down-by-1-with-each-hit-and-the-armor-cards",
+        t_reknite::script_kept_5183,
+    ),
+    (
+        c012_living_armor_potion::ID,
+        "fragment:hero-armor-wears-down-by-1-with-each-hit-and-the-armor-cards",
+        c012_living_armor_potion::script_kept_5183,
+    ),
+    // #5158 (R4594005): Rollback Point's Radiant face summoned its copies Radiant, before they came back on
+    // their printed face (R4779000: keyed by the pending fragment, so versions shipped while the branch
+    // waits stay covered).
+    (
+        c224_rollback_point::ID,
+        "fragment:radiant-rollback-point-brings-its-units-back-on-their",
+        c224_rollback_point::script_before_printed_face,
+    ),
+    // #5226 (R5226000): Last Hurrah's picks before they passed an Immutable card of the hand over
+    // (R4779000: keyed by the pending fragment).
+    (
+        c037_last_hurrah::ID,
+        "fragment:immutable-keeps-last-hurrah-s-flashback-off-a-card-in-the",
+        c037_last_hurrah::script_kept_5226,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under or the
@@ -2753,8 +2787,10 @@ mod tests {
 
         let oldest = shipped_catalog("v0.1.0").expect("v0.1.0 is carried");
         assert_eq!(oldest.version(), "v0.1.0");
-        let snapshot: CardDefs =
-            serde_json::from_str(include_str!("../patches/v0.1.0.json")).expect("v0.1.0 reads as cards");
+        let snapshot: CardDefs = serde_json::from_value(
+            serde_json::to_value(crate::snapshot_fold::snapshot("v0.1.0")).expect("a snapshot"),
+        )
+        .expect("v0.1.0 reads as cards");
         assert_eq!(
             serde_json::to_value(oldest.defs()).expect("serializes"),
             serde_json::to_value(&snapshot).expect("serializes")
@@ -3156,8 +3192,10 @@ mod tests {
         assert_eq!(shipped_versions(), shipped);
 
         let oldest = catalog_defs_at("v0.1.0").expect("v0.1.0 is carried");
-        let snapshot_v0_1_0: CardDefs =
-            serde_json::from_str(include_str!("../patches/v0.1.0.json")).expect("v0.1.0 reads as cards");
+        let snapshot_v0_1_0: CardDefs = serde_json::from_value(
+            serde_json::to_value(crate::snapshot_fold::snapshot("v0.1.0")).expect("a snapshot"),
+        )
+        .expect("v0.1.0 reads as cards");
         assert_eq!(
             serde_json::to_value(oldest).expect("serializes"),
             serde_json::to_value(&snapshot_v0_1_0).expect("serializes")
@@ -3170,8 +3208,10 @@ mod tests {
             "the newest is carried"
         );
         let v0_3_7b = catalog_defs_at("v0.3.1").expect("v0.3.1 is carried");
-        let snapshot_v0_3_7b: CardDefs =
-            serde_json::from_str(include_str!("../patches/v0.3.1.json")).expect("v0.3.1 reads as cards");
+        let snapshot_v0_3_7b: CardDefs = serde_json::from_value(
+            serde_json::to_value(crate::snapshot_fold::snapshot("v0.3.1")).expect("a snapshot"),
+        )
+        .expect("v0.3.1 reads as cards");
         assert_eq!(
             serde_json::to_value(v0_3_7b).expect("serializes"),
             serde_json::to_value(&snapshot_v0_3_7b).expect("serializes")

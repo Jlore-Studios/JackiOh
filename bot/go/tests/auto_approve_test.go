@@ -5,6 +5,7 @@
 package tests
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -141,18 +142,20 @@ func TestAutoApprove_DecisionsJoinTheWindowEachOnceAsItEnded(t *testing.T) {
 
 // ---------------------------------------------------------------------------- JudgeTests
 
-// waitingFor is the committed `suggestions` with a judge-approved suggestion waiting `hours` for a
-// person before it approves itself (the committed config waits none, #5104).
-func waitingFor(hours int) *pyjson.Object {
+// autoApproveWith is the committed `suggestions` with a judge-approved suggestion waiting
+// `waitHours` for a person before it approves itself, and at most `perDay` approving themselves in
+// any 24 hours (the committed config waits none and caps none, #5104).
+func autoApproveWith(waitHours int, perDay int) *pyjson.Object {
 	suggestions := testsupport.RawConfig().Obj("suggestions").Copy()
 	auto := suggestions.Obj("auto_approve").Copy()
-	auto.Set("wait_hours", hours)
+	auto.Set("wait_hours", waitHours)
+	auto.Set("per_day", perDay)
 	suggestions.Set("auto_approve", auto)
 	return pyjson.New("suggestions", suggestions)
 }
 
 func TestAutoApprove_TheJudgeReadsTheWindowAndItsWordLandsOnTheIssue(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Overrides: waitingFor(24)})
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll, Overrides: autoApproveWith(24, 3)})
 	h.gh.AddIssue(30, fakes.Issue{Title: "Patch: an old idea", Labels: []string{config.LabelSuggestion}})
 	flowAsk(h, 30, "reject\nWhy: nothing acts on it.", 61)
 	testsupport.IdleFor(h.ctx)
@@ -170,7 +173,7 @@ func TestAutoApprove_TheJudgeReadsTheWindowAndItsWordLandsOnTheIssue(t *testing.
 	approve, person := opened["Patch: the AI counts Lifesteal"], opened["Patch: a puzzle mode"]
 	assertIn(t, "**Judge:** would approve it: It fixes a rules bug. With no vote, no comment and no 👎",
 		approve.Str("body"))
-	assertIn(t, "at `priority:low` (at most 3 a day)", approve.Str("body"))
+	assertIn(t, "at `priority:low` (at most 3 a day; one past that waits for room); comment `reject`", approve.Str("body"))
 	assertIn(t, "**Judge:** leaves it to a person: A design call.", person.Str("body"))
 	assertEqual(t, pendingAuto(h), []string{strconv.Itoa(approve.Int("number"))})
 }
@@ -195,7 +198,7 @@ func TestAutoApprove_WithNoWaitTheJudgesApprovalQueuesItAsItOpens(t *testing.T) 
 	}
 	approve, person := byTitle["Patch: the AI counts Lifesteal"], byTitle["Patch: a puzzle mode"]
 	assertIn(t, "**Judge:** would approve it: It fixes a rules bug, confirmed at a.rs:1, so it is approved by "+
-		"itself as it opens, at `priority:low` (at most 3 a day", approve.Str("body"))
+		"itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.", approve.Str("body"))
 	labels := h.gh.LabelNames(approve.Int("number"))
 	assertIn(t, config.LabelBuild, labels)
 	assertIn(t, config.LabelPriorityLow, labels)
@@ -266,12 +269,13 @@ func TestAutoApprove_TheConfigDefaultsToOff(t *testing.T) {
 	assertTrue(t, committed.AutoApprove.Enabled)
 	assertEqual(t, committed.AutoApprove.Window, 100)
 	assertEqual(t, committed.AutoApprove.WaitHours, 0) // #5104: approved as it opens
+	assertEqual(t, committed.AutoApprove.PerDay, 0)    // and none held back by a daily cap
 }
 
 // ---------------------------------------------------------------------------- SweepTests
 
 func TestAutoApprove_ItGoesAheadAfterTheWaitAtLowPriority(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Overrides: waitingFor(24)})
+	h := newFlowHarness(t, flowHarnessOpts{Overrides: autoApproveWith(24, 3)})
 	awaiting(h, 40, 25*time.Hour, config.LabelPriorityMedium)
 	notes := plan.AutoApprove(h.ctx)
 	assertEqual(t, notes, []string{"#40 approved itself"})
@@ -289,7 +293,7 @@ func TestAutoApprove_ItGoesAheadAfterTheWaitAtLowPriority(t *testing.T) {
 }
 
 func TestAutoApprove_NothingBeforeTheWait(t *testing.T) {
-	h := newFlowHarness(t, flowHarnessOpts{Overrides: waitingFor(24)})
+	h := newFlowHarness(t, flowHarnessOpts{Overrides: autoApproveWith(24, 3)})
 	awaiting(h, 40, 23*time.Hour)
 	assertEqual(t, len(plan.AutoApprove(h.ctx)), 0)
 	assertIn(t, config.LabelSuggestion, h.gh.LabelNames(40))
@@ -315,7 +319,7 @@ func TestAutoApprove_ACommentOrAThumbsDownLeavesItToAPerson(t *testing.T) {
 }
 
 func TestAutoApprove_AtMostPerDay(t *testing.T) {
-	h := newFlowHarness(t)
+	h := newFlowHarness(t, flowHarnessOpts{Overrides: autoApproveWith(24, 3)})
 	for n := 50; n < 55; n++ {
 		awaiting(h, n, 30*time.Hour)
 	}
@@ -330,4 +334,143 @@ func TestAutoApprove_AtMostPerDay(t *testing.T) {
 		"#52 waits: 3 approved themselves in the last day already"})
 	assertEqual(t, pendingAuto(h), []string{"52", "53", "54"})
 	assertEqual(t, len(h.ctx.Store.Load().Obj("suggest").List("auto_approved")), 3)
+}
+
+// #5104: with the committed config, `per_day` 0 caps none, so every suggestion the judge would
+// approve goes ahead even after three did in the last day. The cap of 3 held six back on 2026-11-27.
+func TestAutoApprove_WithNoCapEveryOneTheJudgeApprovesGoesAhead(t *testing.T) {
+	h := newFlowHarness(t)
+	for n := 60; n < 65; n++ {
+		awaiting(h, n, time.Minute)
+	}
+	h.ctx.Store.Update(func(s *pyjson.Object) any {
+		s.Obj("suggest").Set("auto_approved", []any{clock.ISO(h.ctx.Now().Add(-4 * time.Hour)),
+			clock.ISO(h.ctx.Now().Add(-3 * time.Hour)), clock.ISO(h.ctx.Now().Add(-2 * time.Hour))})
+		return nil
+	}, "state")
+	notes := plan.AutoApprove(h.ctx)
+	assertEqual(t, notes, []string{"#60 approved itself", "#61 approved itself", "#62 approved itself",
+		"#63 approved itself", "#64 approved itself"})
+	assertEqual(t, len(pendingAuto(h)), 0)
+	for n := 60; n < 65; n++ {
+		assertNotIn(t, config.LabelSuggestion, h.gh.LabelNames(n))
+	}
+}
+
+// ---------------------------------------------------------------------------- RejudgeTests (#5104)
+
+// autoSurveyJudges is a survey that suggests `titles`, and a judge whose calls answer `judges` in
+// order, the last answering every call after.
+func autoSurveyJudges(judges []string, titles ...string) *runner.FakeRunner {
+	items := []string{}
+	for _, title := range titles {
+		items = append(items, pyjson.Dumps(pyjson.New("title", title, "body", "## Why\nx", "class", "ai")))
+	}
+	handlers := map[string][]runner.Handler{
+		"suggest": {workReviewer("<!-- suggestions: [" + strings.Join(items, ",") + "] -->")}}
+	for _, judged := range judges {
+		handlers["judge"] = append(handlers["judge"], workReviewer(judged))
+	}
+	return runner.NewFakeRunner(handlers)
+}
+
+// unjudged adds open suggestion `number`, opened with no judge's word in its footer.
+func unjudged(h *flowHarness, number int, title string) {
+	h.gh.AddIssue(number, fakes.Issue{Title: title, Labels: []string{config.LabelSuggestion},
+		Body: "## Why\nIt fixes a thing.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty."})
+}
+
+func commentsOn(h *flowHarness, number int) string {
+	bodies := []string{}
+	for _, c := range h.ctx.GH.ListComments(number, 100) {
+		bodies = append(bodies, c.Str("body"))
+	}
+	return strings.Join(bodies, "\n\n")
+}
+
+func TestAutoApprove_TheJudgeTriesAgainForWhatItLeftUnanswered(t *testing.T) {
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll})
+	testsupport.IdleFor(h.ctx)
+	r := autoSurveyJudges([]string{
+		`<!-- judgements: [{"n": 1, "verdict": "approve", "why": "A rules bug, confirmed at a.rs:1."}] -->`,
+		`<!-- judgements: [{"n": 1, "verdict": "person", "why": "A design call."}] -->`},
+		"Patch: the first idea", "Patch: the second idea")
+	h.night(r)
+	roles := []string{}
+	for _, c := range r.Calls {
+		roles = append(roles, c.Role)
+	}
+	assertEqual(t, roles, []string{"suggest", "judge", "judge"})
+	retry := r.Calls[2].Prompt
+	assertIn(t, "### Suggestion 1: Patch: the second idea", retry)
+	assertNotIn(t, "Patch: the first idea", retry)
+	byTitle := map[string]*pyjson.Object{}
+	for _, thread := range h.gh.Threads.Values() {
+		byTitle[pyjson.Str(thread.Get("title"))] = thread
+	}
+	assertIn(t, "**Judge:** would approve it: A rules bug, confirmed at a.rs:1",
+		byTitle["Patch: the first idea"].Str("body"))
+	assertIn(t, "**Judge:** leaves it to a person: A design call.", byTitle["Patch: the second idea"].Str("body"))
+}
+
+func TestAutoApprove_ALaterSurveyJudgesASuggestionOpenedWithoutAVerdict(t *testing.T) {
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll})
+	unjudged(h, 70, "Patch: an idea the judge never answered")
+	testsupport.IdleFor(h.ctx)
+	r := autoSurveyJudges([]string{
+		`<!-- judgements: [{"n": 1, "verdict": "approve", "why": "Confirmed at b.rs:2."}] -->`,
+		`<!-- judgements: [{"n": 1, "verdict": "person", "why": "A design call."}] -->`},
+		"Patch: a new idea")
+	h.night(r)
+	first := r.Calls[0]
+	assertEqual(t, first.Role, "judge") // before the survey's own work
+	assertIn(t, "Patch: an idea the judge never answered (already open as #70)", first.Prompt)
+	assertNotIn(t, "Patch: a new idea", first.Prompt)
+	comments := commentsOn(h, 70)
+	assertIn(t, "**Judge:** would approve it: Confirmed at b.rs:2. It opened before the judge could answer, "+
+		"so it is approved by itself now, at `priority:low`.", comments)
+	assertIn(t, plan.JudgeMarker, comments)
+	assertIn(t, "Approved by itself: the judge, which argues against every suggestion", comments)
+	labels := h.gh.LabelNames(70)
+	assertIn(t, config.LabelBuild, labels)
+	assertNotIn(t, config.LabelSuggestion, labels)
+	assertEqual(t, len(plan.Unjudged(h.ctx)), 0)
+}
+
+func TestAutoApprove_AfterThreeTriesTheJudgeLeavesItToAPerson(t *testing.T) {
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll})
+	unjudged(h, 71, "Patch: an idea no judge can answer")
+	for night := 1; night <= plan.RejudgeTries; night++ {
+		testsupport.IdleFor(h.ctx)
+		h.night(autoSurvey("", fmt.Sprintf("Patch: night %d's idea", night))) // no judge: each call fails
+		if night < plan.RejudgeTries {
+			assertNotIn(t, "could not answer", commentsOn(h, 71))
+		}
+	}
+	assertIn(t, "**Judge:** could not answer after 3 tries, so this suggestion waits for a person's vote",
+		commentsOn(h, 71))
+	assertIn(t, config.LabelSuggestion, h.gh.LabelNames(71))
+	for _, left := range plan.Unjudged(h.ctx) {
+		assertTrue(t, left.Int("number") != 71, "#71 is left to a person, not judged again")
+	}
+	assertTrue(t, !h.ctx.Store.Load().Obj("suggest").Obj("judge_tries").Has("71"), "its tries are forgotten")
+}
+
+func TestAutoApprove_UnjudgedSkipsTheJudgedAndTheHeld(t *testing.T) {
+	h := newFlowHarness(t)
+	h.gh.AddIssue(80, fakes.Issue{Title: "Judged as it opened", Labels: []string{config.LabelSuggestion},
+		Body: "## Why\nx\n\n---\nSuggested by @jgoetzmann-bot.\n\n**Judge:** leaves it to a person: no."})
+	for n := 81; n <= 87; n++ {
+		unjudged(h, n, "Idea "+strconv.Itoa(n))
+	}
+	h.ctx.GH.CreateComment(81, "**Judge:** leaves it to a person.\n\n"+plan.JudgeMarker)
+	h.gh.AddComment(82, "Let me think about this one.")
+	h.gh.Threads.Item(83).Set("reactions", pyjson.New("+1", 0, "-1", 1))
+	left := plan.Unjudged(h.ctx)
+	numbers := []int{}
+	for _, l := range left {
+		numbers = append(numbers, l.Int("number"))
+	}
+	assertEqual(t, numbers, []int{84, 85, 86}) // oldest first, at most RejudgeMax
+	assertEqual(t, left[0].Str("body"), "## Why\nIt fixes a thing.")
 }

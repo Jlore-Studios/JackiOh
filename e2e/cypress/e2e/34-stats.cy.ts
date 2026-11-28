@@ -11,22 +11,7 @@ import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { statsTestid } from "../../../apps/web/src/stats/testids.ts";
 import { CARD_NAMES, cardId } from "../../support/cards.ts";
 import { seedFor, viewports } from "../../support/config.ts";
-import {
-  NAV_BACK,
-  SITE_FOOTER,
-  SITE_FOOTER_ALMANAC,
-  SITE_FOOTER_STATS,
-  STATS_CARDS_TABLE,
-  STATS_DRILL_DOWN_CLOSE,
-  STATS_DRILL_DOWN_MODAL,
-  STATS_PLAYERS_TABLE,
-  STATS_SCREEN,
-  STATS_SEARCH_INPUT,
-  STATS_SUMMARY_TILES,
-  STATS_SUMMARY_TOTAL_GAMES,
-  STATS_TAB_PLAYERS,
-  ts,
-} from "../../support/testids.ts";
+import { NAV_BACK, SITE_FOOTER, SITE_FOOTER_ALMANAC, SITE_FOOTER_STATS, ts } from "../../support/testids.ts";
 
 const PROVISIONAL_CARDS_FIXTURE = {
   patch: "v0.2.0",
@@ -205,11 +190,11 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
     cy.get(ts(SITE_FOOTER_STATS)).click();
     cy.location("pathname").should("eq", "/stats");
     cy.title().should("eq", "Statistics · JackiOh");
-    cy.get(ts(STATS_SCREEN)).should("be.visible");
+    cy.get(ts(statsTestid.screen)).should("be.visible");
 
     // R2325000: no provisional banner and no reading notes, even with a provisional source (R661)
     cy.get('[data-testid="stats-provisional-banner"]').should("not.exist");
-    cy.get(ts(STATS_SCREEN))
+    cy.get(ts(statsTestid.screen))
       .should("not.contain.text", "Provisional statistics")
       .and("not.contain.text", "How to read these statistics")
       .and("not.contain.text", "Data source")
@@ -217,31 +202,31 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
 
     // The summary counts the patch's games in one tile — never the gate's live count or the word
     // "live" (R661)
-    cy.get(ts(STATS_SUMMARY_TILES)).should("be.visible").and("not.contain.text", "live");
-    cy.get(ts(STATS_SUMMARY_TOTAL_GAMES))
+    cy.get(ts(statsTestid.summaryTiles)).should("be.visible").and("not.contain.text", "live");
+    cy.get(ts(statsTestid.summaryTotalGames))
       .should("contain.text", "Games on patch v0.2.0")
       .and("contain.text", "1,412");
 
-    cy.get(ts(STATS_CARDS_TABLE)).should("be.visible");
-    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Big D-fender").and("contain.text", "Speciesist");
+    cy.get(ts(statsTestid.cardsTable)).should("be.visible");
+    cy.get(ts(statsTestid.cardsTable)).should("contain.text", "Big D-fender").and("contain.text", "Speciesist");
 
-    cy.get(ts(STATS_SEARCH_INPUT)).type("D-fender");
-    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Big D-fender").and("not.contain.text", "Speciesist");
-    cy.get(ts(STATS_SEARCH_INPUT)).clear();
-    cy.get(ts(STATS_CARDS_TABLE)).should("contain.text", "Speciesist");
+    cy.get(ts(statsTestid.searchInput)).type("D-fender");
+    cy.get(ts(statsTestid.cardsTable)).should("contain.text", "Big D-fender").and("not.contain.text", "Speciesist");
+    cy.get(ts(statsTestid.searchInput)).clear();
+    cy.get(ts(statsTestid.cardsTable)).should("contain.text", "Speciesist");
 
     // Card drill-down modal opens and closes (the title reads the card's catalog name)
-    cy.get(ts(STATS_CARDS_TABLE)).contains("Big D-fender").click();
-    cy.get(ts(STATS_DRILL_DOWN_MODAL)).should("be.visible").and("contain.text", "Big D-fender");
-    cy.get(ts(STATS_DRILL_DOWN_CLOSE)).click();
-    cy.get(ts(STATS_DRILL_DOWN_MODAL)).should("not.exist");
+    cy.get(ts(statsTestid.cardsTable)).contains("Big D-fender").click();
+    cy.get(ts(statsTestid.drillDownModal)).should("be.visible").and("contain.text", "Big D-fender");
+    cy.get(ts(statsTestid.drillDownClose)).click();
+    cy.get(ts(statsTestid.drillDownModal)).should("not.exist");
 
-    cy.get(ts(STATS_TAB_PLAYERS)).click();
-    cy.get(ts(STATS_PLAYERS_TABLE)).should("be.visible");
-    cy.get(ts(STATS_PLAYERS_TABLE)).should("contain.text", "AcePlayer");
-    cy.get(ts(STATS_PLAYERS_TABLE)).should("contain.text", "150");
-    cy.get(ts(STATS_PLAYERS_TABLE)).should("contain.text", "Big D-fender");
-    cy.get(ts(STATS_PLAYERS_TABLE)).should("not.contain.text", "Elo").and("not.contain.text", "Rating");
+    cy.get(ts(statsTestid.tabPlayers)).click();
+    cy.get(ts(statsTestid.playersTable)).should("be.visible");
+    cy.get(ts(statsTestid.playersTable)).should("contain.text", "AcePlayer");
+    cy.get(ts(statsTestid.playersTable)).should("contain.text", "150");
+    cy.get(ts(statsTestid.playersTable)).should("contain.text", "Big D-fender");
+    cy.get(ts(statsTestid.playersTable)).should("not.contain.text", "Elo").and("not.contain.text", "Rating");
 
     cy.get(ts(NAV_BACK)).click();
     cy.location("pathname").should("eq", "/");
@@ -260,7 +245,7 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
     cy.get(ts(statsTestid.versionsTable)).find("tbody tr").should("have.length", 2);
 
     cy.get(ts(statsTestid.versionsTable)).find(`tr[data-version-id="${REPLENISH}~v0.2.6"]`).click();
-    cy.get(ts(STATS_DRILL_DOWN_MODAL)).should("be.visible").and("have.attr", "data-version-id", `${REPLENISH}~v0.2.6`);
+    cy.get(ts(statsTestid.drillDownModal)).should("be.visible").and("have.attr", "data-version-id", `${REPLENISH}~v0.2.6`);
     cy.location("search").should("include", `card=${REPLENISH}`).and("include", "version=v0.2.6");
     cy.get(ts(statsTestid.versionFaces)).find(".patch-face").should("have.length", 2);
     cy.get(ts(statsTestid.versionFigures)).should("contain.text", "52.0%").and("contain.text", "v0.2.6 – v0.6.3c");
@@ -273,8 +258,8 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
     cy.get(ts(statsTestid.versionBefore)).find(ts(statsTestid.versionOpen)).click();
     cy.location("search").should("include", "version=v0.1.0");
     cy.get(ts(statsTestid.versionBefore)).should("contain.text", "None: this is its first version.");
-    cy.get(ts(STATS_DRILL_DOWN_CLOSE)).click();
-    cy.get(ts(STATS_DRILL_DOWN_MODAL)).should("not.exist");
+    cy.get(ts(statsTestid.drillDownClose)).click();
+    cy.get(ts(statsTestid.drillDownModal)).should("not.exist");
     cy.location("search").should("not.include", "version=");
   });
 

@@ -1,0 +1,167 @@
+{
+  "set": {
+    "core-045": {
+      "id": "core-045",
+      "index": "45",
+      "name": "Deft Duelist",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 3,
+      "base": {
+        "attack": 4,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Charge"
+          },
+          {
+            "kind": "Deft"
+          }
+        ],
+        "text": "Charge, Deft"
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Charge"
+          },
+          {
+            "kind": "Armor",
+            "n": 1
+          },
+          {
+            "kind": "Deft"
+          }
+        ],
+        "text": "Charge, Armor 1, Deft"
+      }
+    },
+    "classic-003": {
+      "id": "classic-003",
+      "index": "3",
+      "name": "Book of Heal",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Book"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "heal",
+          "base": 9,
+          "radiant": 18,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        }
+      ],
+      "loc": 9,
+      "base": {
+        "keywords": [],
+        "text": "Heal a target {heal}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Heal a target {heal}."
+      }
+    },
+    "classicplus-010": {
+      "id": "classicplus-010",
+      "index": "10",
+      "name": "New Wraps",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 0,
+      "loc": 7,
+      "base": {
+        "keywords": [],
+        "text": "Give a Unit Reborn."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Give a Unit Reborn. Make it Radiant."
+      }
+    },
+    "classicplus-038-1": {
+      "id": "classicplus-038-1",
+      "index": "38.1",
+      "name": "Solarius-Prime",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Epic",
+      "token": true,
+      "cost": 4,
+      "params": [
+        {
+          "key": "casts",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 8,
+      "base": {
+        "attack": 9,
+        "health": 5,
+        "keywords": [
+          {
+            "kind": "Spell Damage",
+            "n": 3
+          }
+        ],
+        "text": "Spell Damage +3\nCry: Cast {casts|random Spell|random Spells}. Each aims at enemies when it harms and at your side when it helps."
+      },
+      "radiant": {
+        "attack": 18,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Spell Damage",
+            "n": 7
+          }
+        ],
+        "text": "Spell Damage +7\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each aims at enemies when it harms and at your side when it helps."
+      }
+    },
+    "classicplus-040": {
+      "id": "classicplus-040",
+      "index": "40",
+      "name": "Appropriations",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": "X",
+      "loc": 39,
+      "base": {
+        "keywords": [],
+        "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +2X Attack and Rush.\nEducation: Shuffle 2X random Radiant Books into your deck. They have Cast on draw and aim at enemies when they harm and at your side when they help.\nCulture: Each card on your field, in your hand and in your deck has a 10X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +2X Health and Armor X."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Choose one: Military, Education, Culture or Healthcare.\nMilitary: Your Units on the field, in your hand and in your deck get +5X Attack and Rush.\nEducation: Shuffle 5X random Radiant Books into your deck. They have Cast on draw and aim at enemies when they harm and at your side when they help.\nCulture: Each card on your field, in your hand and in your deck has a 25X% chance to become Radiant.\nHealthcare: Your Units on the field, in your hand and in your deck get +7X Health and Armor 2X."
+      }
+    }
+  }
+}

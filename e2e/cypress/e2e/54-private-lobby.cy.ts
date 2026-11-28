@@ -5,20 +5,8 @@
 
 import { ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, apiUrl, bearerHeaders, routes, server, timeouts } from "../../support/config.ts";
-import {
-  LOBBY_CODE,
-  LOBBY_COUNTDOWN,
-  LOBBY_CREATE,
-  LOBBY_PANEL,
-  LOBBY_READY,
-  LOBBY_SEAT,
-  LOBBY_SETTINGS,
-  LOBBY_START,
-  PLAY_LOBBY,
-  PLAY_LOBBY_DIALOG,
-  heroId,
-  ts,
-} from "../../support/testids.ts";
+import { PLAY_LOBBY, PLAY_LOBBY_DIALOG, heroId, ts } from "../../support/testids.ts";
+import { lobbyTestid } from "../../../apps/web/src/lobby/testids.ts";
 
 /** Where Play keeps the mode, deck and trio last used (`PLAY_CHOICE_KEY`, `apps/web/src/routes/play.tsx`, which a spec cannot import: it is a screen). */
 const PLAY_CHOICE_KEY = "jackioh.play.choice";
@@ -46,20 +34,20 @@ describe("54 private lobby — a 1v1 lobby from Create to the board", () => {
     cy.get(ts(PLAY_LOBBY), { timeout: timeouts.view }).should("not.be.disabled").click();
     cy.get(ts(PLAY_LOBBY_DIALOG), { timeout: timeouts.view }).should("be.visible");
     // R3732002: the dialog holds two lobby panels, the duel's and the co-op one's; this is the duel's.
-    cy.get(`${ts(LOBBY_PANEL)}[data-format="duel"]`).find(ts(LOBBY_CREATE)).should("not.be.disabled").click();
+    cy.get(`${ts(lobbyTestid.panel)}[data-format="duel"]`).find(ts(lobbyTestid.create)).should("not.be.disabled").click();
     cy.location("pathname", { timeout: timeouts.view }).should("match", /^\/lobby\/[^/]+$/);
-    cy.get(ts(LOBBY_CODE), { timeout: timeouts.view })
+    cy.get(ts(lobbyTestid.code), { timeout: timeouts.view })
       .invoke("text")
       .then((text) => {
         code = text.trim();
         expect(code, `a lobby's code is ${String(ROOM_CODE_LENGTH)} characters`).to.have.length(ROOM_CODE_LENGTH);
       });
-    cy.get(ts(LOBBY_SETTINGS)).should("have.value", "random");
-    cy.get(ts(LOBBY_START)).should("be.disabled");
+    cy.get(ts(lobbyTestid.settings)).should("have.value", "random");
+    cy.get(ts(lobbyTestid.start)).should("be.disabled");
 
     // R3730001: the host takes the dealt deck and is ready; the guest enters, picks and is ready by the routes.
-    cy.get(ts(LOBBY_READY)).should("not.be.disabled").click();
-    cy.get(ts(LOBBY_READY), { timeout: timeouts.view }).should("have.attr", "data-ready", "true");
+    cy.get(ts(lobbyTestid.ready)).should("not.be.disabled").click();
+    cy.get(ts(lobbyTestid.ready), { timeout: timeouts.view }).should("have.attr", "data-ready", "true");
     cy.then(() => {
       for (const [verb, body] of [
         ["enter", {}],
@@ -69,11 +57,11 @@ describe("54 private lobby — a 1v1 lobby from Create to the board", () => {
         cy.request({ method: "POST", url: apiUrl(`/api/lobbies/${code}/${verb}`), headers: bearerHeaders(guest.token), body });
       }
     });
-    cy.get(`${ts(LOBBY_SEAT)}[data-seat="guest"]`, { timeout: timeouts.view }).should("have.attr", "data-state", "ready");
+    cy.get(`${ts(lobbyTestid.seat)}[data-seat="guest"]`, { timeout: timeouts.view }).should("have.attr", "data-state", "ready");
 
     // R3730002: the Start lights, counts down, and opens the board.
-    cy.get(ts(LOBBY_START), { timeout: timeouts.view }).should("not.be.disabled").click();
-    cy.get(ts(LOBBY_COUNTDOWN), { timeout: timeouts.view }).should("exist");
+    cy.get(ts(lobbyTestid.start), { timeout: timeouts.view }).should("not.be.disabled").click();
+    cy.get(ts(lobbyTestid.countdown), { timeout: timeouts.view }).should("exist");
     cy.location("pathname", { timeout: timeouts.view })
       .should("match", MATCH_PATH)
       .then((pathname) => {

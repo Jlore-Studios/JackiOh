@@ -1,11 +1,12 @@
 //! SPEC §8.10 Stinkyscape 132 Defensive Crystal, a card of the Stinkyscape set.
 //! (2) Unit, Common, 3/6 → 6/12: Starship Piece.
-//! "Death: Your hero gains {heroArmor} Armor." — heroArmor 1, Radiant 2 (R1860006).
+//! "Death: Your hero gains {heroArmor} Armor." — heroArmor 3, Radiant 6 since #5183 (R5183004); 1 and
+//! 2 before (R1860006).
 //!
 //! Engine: Starship Piece: its death fuses a copy into its owner's Dormant Starship, summoned
 //! first if they have none (R1852000). Death (§6.2): `gain_hero_armor`, §6.1's Armor on the hero,
-//! kept for the rest of the game and taken off each hit on the hero, as Meditative #95's "your
-//! hero gains 6 Armor" (R124). The Radiant face runs the same script: its Armor is the declared
+//! taken off each hit on the hero, as Meditative #95's "your hero gains 3 Armor" (R124), each hit it
+//! meets wearing 1 off it (R5183000). The Radiant face runs the same script: its Armor is the declared
 //! `heroArmor` (R386).
 
 use jackioh_engine::prelude::*;
@@ -21,7 +22,7 @@ pub fn script() -> CardScripts {
         })),
         ..Script::default()
     };
-    // One script: the Radiant 2 is the declared `heroArmor`, which `param` reads off the running
+    // One script: the Radiant 6 is the declared `heroArmor`, which `param` reads off the running
     // face; its stats are the catalog's.
     let radiant = base.clone();
     CardScripts { base, radiant }
@@ -49,7 +50,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1860006_death_gives_your_hero_1_armor_then_fuses() {
+        fn r1860006_r5183004_death_gives_your_hero_3_armor_then_fuses() {
             let mut s = scenario(json!({
                 "p1": { "hand": [HIT_JOB, ANCHOR], "mana": 10, "field": [CRYSTAL], "library": filler(4) },
                 "p2": { "hand": [ANCHOR], "library": filler(4) },
@@ -59,7 +60,7 @@ mod tests {
             s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
 
             s.expect_in_zone(CRYSTAL, "graveyard");
-            assert_eq!(armor_of(&s, PlayerId::P1), 1);
+            assert_eq!(armor_of(&s, PlayerId::P1), 3);
             let ship = dormant_starship_of(s.state(), PlayerId::P1).cloned();
             assert!(ship.is_some(), "a piece that died fuses a copy into a Dormant Starship");
         }
@@ -82,7 +83,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r1860006_radiant_death_gives_your_hero_2_armor() {
+        fn r1860006_r5183004_radiant_death_gives_your_hero_6_armor() {
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [HIT_JOB, ANCHOR],
@@ -96,10 +97,10 @@ mod tests {
             s.play(HIT_JOB, json!({ "targets": pick::instance(&me) }));
 
             s.expect_in_zone(CRYSTAL, "graveyard");
-            assert_eq!(armor_of(&s, PlayerId::P1), 2);
+            assert_eq!(armor_of(&s, PlayerId::P1), 6);
         }
 
-        const RADIANT_HERO_ARMOR: i32 = 2;
+        const RADIANT_HERO_ARMOR: i32 = 6;
 
         /// R4334000: a launched Starship holding a Radiant copy gives its hero the Radiant
         /// `heroArmor` when it dies, and shows it.

@@ -7,6 +7,7 @@ import { landingFanCardTestid, landingTestid } from "../../../apps/web/src/auth/
 import { createRng } from "../../../apps/web/src/fx/rng.ts";
 import { SETTINGS_STORAGE_KEY } from "../../../apps/web/src/settings/store.ts";
 import { FX_SETTINGS_KEY, seedFor } from "../../support/config.ts";
+import { SHOWCASE, cardId, libraryId, ts, unrevealedId, zoneId } from "../../support/testids.ts";
 import {
   INSPECT_EXTENDED,
   INSPECT_FACE,
@@ -15,13 +16,7 @@ import {
   INSPECT_HOVER,
   INSPECT_LIST_HOVER,
   INSPECT_NOTE,
-  SHOWCASE,
-  cardId,
-  libraryId,
-  ts,
-  unrevealedId,
-  zoneId,
-} from "../../support/testids.ts";
+} from "../../../apps/web/src/cards/inspect/testids.ts";
 
 const TRAP_SEED = seedFor("03-sheep-19");
 const COMBO_SEED = seedFor("28-combo-16");

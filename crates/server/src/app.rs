@@ -697,6 +697,12 @@ pub static ROUTES: &[Route] = &[
     ),
     (
         "GET",
+        "/api/stats/loading",
+        AuthLevel::None,
+        h!(api::stats::get_loading),
+    ),
+    (
+        "GET",
         "/api/stats/play-rates",
         AuthLevel::None,
         h!(api::stats::get_play_rates),
@@ -791,6 +797,13 @@ pub static ROUTES: &[Route] = &[
         "/api/dev/bar/:bar",
         AuthLevel::Active,
         h!(api::dev::fill_bar),
+    ),
+    // R5274000: `/stats`' Fetch live, which lets go of the card statistics the server keeps.
+    (
+        "POST",
+        "/api/dev/stats-refresh",
+        AuthLevel::Active,
+        h!(api::stats::post_refresh),
     ),
     // Social: watching and shared replays (#939, #940)
     // social/shares.rs (B52). Ahead of `GET /api/replays/:matchId`, which would read `shared` as a

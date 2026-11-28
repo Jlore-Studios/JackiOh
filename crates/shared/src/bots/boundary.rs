@@ -11,13 +11,14 @@ use serde::{Deserialize, Serialize};
 
 use jackioh_engine::WinRateTable;
 use jackioh_engine::validator::CatalogSnapshot;
-use jackioh_engine::wire::ListTotal;
+use jackioh_engine::wire::{EmoteId, GameEvent, ListTotal, PlayerId, PlayerView};
 
 use crate::bots::cosmetics::{BotDraw, CosmeticOwners, Holding, eligible, redraw};
 use crate::bots::fallback::{
     BotMode, RatedGameRecord, TicketRecord, bot_match_gap_passed, bot_matches, choose_bot, choose_bot_pair,
     fallback_due_keyed, fallback_seconds_keyed, hour_of,
 };
+use crate::bots::persona::{AiEmote, PersonaStream};
 use crate::bots::pick::{bot_pick, pick_due_at, pick_is_due, pick_slot};
 use crate::bots::pool::{
     BotDeck, BotFacts, BotLadder, NewBot, PoolChange, bot_target_strength, draw_decks, draw_new_bot,
@@ -224,6 +225,39 @@ pub enum BotCall {
         #[cfg_attr(feature = "ts", ts(type = "number"))]
         now: i64,
     },
+    /// R645, R5269000: the practice AI's persona for `seat`, choosing within `hand` (R1344), dealt on
+    /// `seed`'s own stream; Silent for a lesson. The page holds what it answers and hands it back on
+    /// each of the three calls below.
+    DealPersona {
+        seed: String,
+        seat: PlayerId,
+        hand: Vec<EmoteId>,
+        lesson: bool,
+    },
+    /// R645: what `persona` sends across one view step, `prev` to `view` (`EmotePersona::on_events`).
+    PersonaEvents {
+        persona: Box<PersonaStream>,
+        fresh: Vec<GameEvent>,
+        prev: Option<Box<PlayerView>>,
+        view: Box<PlayerView>,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// R645: the reply `persona` may send to the player's `emote` (`EmotePersona::on_player_emote`).
+    PersonaPlayerEmote {
+        persona: Box<PersonaStream>,
+        emote: EmoteId,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
+    /// R645: what `persona` sends once the player's turn has run `AI_EMOTE.long_turn_ms`
+    /// (`EmotePersona::on_player_turn_long`).
+    PersonaTurnLong {
+        persona: Box<PersonaStream>,
+        view: Box<PlayerView>,
+        #[cfg_attr(feature = "ts", ts(type = "number"))]
+        now: i64,
+    },
 }
 
 /// What a [`BotCall`] answers.
@@ -300,6 +334,11 @@ pub enum BotAnswer {
     /// slots), or none when nothing is due.
     Dressed {
         draw: Option<Box<BotDraw>>,
+    },
+    /// R5269000: the persona as the call left it, to hand back on the next, and the emotes it sends.
+    Persona {
+        persona: Box<PersonaStream>,
+        emotes: Vec<AiEmote>,
     },
 }
 
@@ -417,5 +456,40 @@ pub fn apply(call: BotCall) -> BotAnswer {
         } => BotAnswer::Dressed {
             draw: redraw(&seed, &*bot, BOT_COSMETIC_FITS, registry(), &eligible, now).map(Box::new),
         },
+        BotCall::DealPersona {
+            seed,
+            seat,
+            hand,
+            lesson,
+        } => BotAnswer::Persona {
+            persona: Box::new(PersonaStream::deal(seed, seat, hand, lesson)),
+            emotes: Vec::new(),
+        },
+        BotCall::PersonaEvents {
+            mut persona,
+            fresh,
+            prev,
+            view,
+            now,
+        } => {
+            let emotes = persona.roll(|it, rng| it.on_events(rng, &fresh, prev.as_deref(), &view, now));
+            BotAnswer::Persona { persona, emotes }
+        }
+        BotCall::PersonaPlayerEmote {
+            mut persona,
+            emote,
+            now,
+        } => {
+            let emotes = persona.roll(|it, rng| it.on_player_emote(rng, emote, now));
+            BotAnswer::Persona { persona, emotes }
+        }
+        BotCall::PersonaTurnLong {
+            mut persona,
+            view,
+            now,
+        } => {
+            let emotes = persona.roll(|it, rng| it.on_player_turn_long(rng, &view, now));
+            BotAnswer::Persona { persona, emotes }
+        }
     }
 }

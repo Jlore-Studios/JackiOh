@@ -118,9 +118,10 @@ fn controller_of(target: &DamageTarget) -> PlayerId {
 }
 
 /// §4.4 step 2 for a hero: the Armor on it, every backrow grant (#84 Going Long) at the `HERO_ARMOR`
-/// its face and price select, and R757's modifiers (#98 Armor Up), summed as §6.2's Armor stacks (R124;
-/// a cap takes the smallest). Every reader of hero Armor (the lethal projection, the scorer, §10.8's
-/// hero block) goes through here, so no projection can disagree with the hit (R44).
+/// its face and price select, and R757's modifiers, summed as §6.2's Armor stacks (R124; a cap takes
+/// the smallest). Every reader of hero Armor (the lethal projection, the scorer, §10.8's hero block)
+/// goes through here, so no projection can disagree with the hit (R44). R5183000: only the Armor on
+/// the hero itself wears (`wear_hero_armor`); a grant's and a modifier's stay whole.
 pub fn hero_armor_of(state: &GameState, player: PlayerId) -> i32 {
     let mut sum = state.players[player].hero.armor + modifier_armor_of(state, player);
     for slot in crate::zones::slots_of(player, Row::Backrow) {
@@ -161,6 +162,41 @@ fn modifier_armor_of(state: &GameState, player: PlayerId) -> i32 {
             ModifierKind::HeroArmor { amount } => sum + amount.max(0),
             _ => sum,
         })
+}
+
+/// R5183000: the hero's Armor (`hero_armor_of`) once `worn` points have worn off the Armor on the hero
+/// itself, never more than it holds: a grant's (#84) and a modifier's stay whole.
+fn hero_armor_worn(state: &GameState, player: PlayerId, worn: i32) -> i32 {
+    hero_armor_of(state, player) - worn.clamp(0, state.players[player].hero.armor.max(0))
+}
+
+/// R5183000: whether a hit the Armor on `player`'s hero meets wears it: it holds Armor of its own, and
+/// it is not immune to damage (step 3's cap of 0, Meditative #48, IA #168), whose hit touches nothing.
+fn armor_wears(state: &GameState, player: PlayerId) -> bool {
+    state.players[player].hero.armor > 0 && hero_damage_cap(state, player) != Some(0)
+}
+
+/// R5183000, §4.4 step 2: a hit on a hero that its Armor took something off (`absorbed` above 0, a
+/// hit it took whole included) wears 1 off the Armor the hero holds itself (`hero.armor`: what it
+/// gained and what its seat started with, R2922000), when it holds any; a backrow grant's (#84, R124)
+/// and a modifier's never wear, and a hero immune to damage (a cap of 0, step 3) wears nothing.
+/// Reported by `armorWorn`, the badge's number after, withheld from the trigger loop as
+/// `armorGained` is (R3857000).
+fn wear_hero_armor(sink: &mut DamageSink<'_>, target: &DamageTarget, absorbed: i32) {
+    let DamageTarget::Hero { player } = target else {
+        return;
+    };
+    if absorbed <= 0 || !armor_wears(sink.state, *player) {
+        return;
+    }
+    sink.state.players[*player].hero.armor -= 1;
+    let armor = hero_armor_of(sink.state, *player);
+    sink.events.push(GameEvent::ArmorWorn {
+        player: *player,
+        armor,
+    });
+    let at = sink.events.len() - 1;
+    crate::triggers::withhold_report(sink, at);
 }
 
 /// The cards acting on a player's side (§3.2), each once (`zones::acting_on`): unit pile tops, the
@@ -253,13 +289,19 @@ pub fn hero_damage_divisor(state: &GameState, player: PlayerId) -> i32 {
 /// divisors, rounded up once (R463), then the lowest cap. The pipeline, R44's lethal projection and
 /// the Zephyrs scorer all read a hero's hit here, so no projection disagrees with the hit.
 pub fn hero_hit_amount(state: &GameState, player: PlayerId, amount: i32, pierce: bool) -> i32 {
+    hero_hit_amount_worn(state, player, amount, pierce, 0)
+}
+
+/// R5183000: `hero_hit_amount` once a projection's earlier hits have worn `worn` points off the Armor
+/// on the hero itself (`hero_armor_worn`), as `land` wears it hit by hit.
+fn hero_hit_amount_worn(state: &GameState, player: PlayerId, amount: i32, pierce: bool, worn: i32) -> i32 {
     if amount <= 0 {
         return 0;
     }
     let after_armor = if pierce {
         amount
     } else {
-        (amount - hero_armor_of(state, player)).max(0)
+        (amount - hero_armor_worn(state, player, worn)).max(0)
     };
     let divisor = hero_damage_divisor(state, player);
     // Rounded up, on a non-negative amount and a divisor of at least 1.
@@ -268,6 +310,24 @@ pub fn hero_hit_amount(state: &GameState, player: PlayerId, amount: i32, pierce:
         None => divided,
         Some(cap) => divided.min(cap),
     }
+}
+
+/// R5228000: `hero_hit_amount` for the next of several hits one projection lands on `player`'s hero, `worn`
+/// counting the points its earlier hits wore off the Armor on the hero itself (R5183000). Adds 1 to `worn`
+/// when this hit wears it, as `land` does: it is above 0, does not pierce (R346), and meets Armor of the
+/// hero's own not yet worn on a hero not immune to damage (`armor_wears`). A grant's and a modifier's never wear.
+pub(crate) fn hero_hit_wearing(
+    state: &GameState,
+    player: PlayerId,
+    amount: i32,
+    pierce: bool,
+    worn: &mut i32,
+) -> i32 {
+    let dealt = hero_hit_amount_worn(state, player, amount, pierce, *worn);
+    if amount > 0 && !pierce && *worn < state.players[player].hero.armor && armor_wears(state, player) {
+        *worn += 1;
+    }
+    dealt
 }
 
 /// E6, §4.4 step 0: a player's Spell Damage, summed as Armor sums (a numbered keyword, §10.4): every
@@ -603,6 +663,8 @@ fn land(
         if !indestructible {
             crate::afflictions::afflict(sink, target, kind, amount);
         }
+        // R5183000: Armor met the hit at step 2, so it wears.
+        wear_hero_armor(sink, target, absorbed);
         return Landed::default();
     }
 
@@ -639,6 +701,8 @@ fn land(
             let at = sink.events.len() - 1;
             crate::triggers::withhold_report(sink, at);
         }
+        // R5183000: a hit Armor took part of, or the whole of, wears it.
+        wear_hero_armor(sink, target, absorbed);
         return Landed::default();
     }
 
@@ -726,6 +790,9 @@ fn land(
             .and_then(|flags| flags.via)
             .or(pierced.then_some(KeywordKind::Pierce)),
     });
+    // R5183000: the hit went on past step 4a, so the Armor it met wears; a hit 4a canceled or moved
+    // returned above and wore nothing here, as it spent no pool (R4022000).
+    wear_hero_armor(sink, target, absorbed);
 
     // Step 6 (on-damage triggers) is dispatched by the trigger loop from the `damage` event (§10.3).
 
@@ -1059,16 +1126,19 @@ fn spend_pool(sink: &mut DamageSink<'_>, args: &DamageArgs, soaked: &[PoolSoak])
 
 /// R4032000: what a projection's hits have soaked so far of each side's damage pools (§4.4 step 3b),
 /// so the hits of one attack, and the attackers of one forecast, spend each pool once between them.
+/// R5183000: and how many of its hits each hero's Armor has met, each wearing 1 off the Armor on the
+/// hero itself, as `land` wears it.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ProjectedPools {
     soaked: PerPlayer<i32>,
+    worn: PerPlayer<i32>,
 }
 
 /// R4032000: §4.4 steps 1 to 4 of one hit as `land` reads them after step 0: Divine Shield, Armor
 /// unless it pierces (R346), divisors and caps, a conversion, which deals nothing (step 3a, R3540003),
 /// then what the target side's pools have left past `pools` (step 3b, R3550004), never an
-/// Indestructible Unit's. It writes no state; what the pools soak goes into `pools`. Steps 0a, 0b and
-/// 4a's replacements are not projected.
+/// Indestructible Unit's. It writes no state; what the pools soak goes into `pools`, and so does each
+/// hero hit's wear of its Armor (R5183000). Steps 0a, 0b and 4a's replacements are not projected.
 pub fn project_hit(
     state: &GameState,
     source: Option<&CardInstance>,
@@ -1081,7 +1151,11 @@ pub fn project_hit(
     }
     let pierce = pierces(state, source, None);
     let (side, after) = match target {
-        DamageTarget::Hero { player } => (*player, hero_hit_amount(state, *player, amount, pierce)),
+        // R5183000: a hit the Armor meets wears it for the projection's next hit, as `land` wears it.
+        DamageTarget::Hero { player } => (
+            *player,
+            hero_hit_wearing(state, *player, amount, pierce, &mut pools.worn[*player]),
+        ),
         DamageTarget::Unit { instance } => {
             // R4591004: a hit on a Unit immune to damage lands nothing, as `land` reads it.
             if crate::effects::firewall::units_immune_now(state, instance) {

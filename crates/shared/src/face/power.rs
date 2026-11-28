@@ -145,10 +145,10 @@ mod tests {
             power_text(&power("discover"), true, "Indestructible", &none, None).as_deref(),
             Some("Indestructible\nWitness Value\nActivate: Spend (1): Discover a Radiant Unit.")
         );
-        let armor = [("armor".to_string(), 4)].into_iter().collect();
+        let armor = [("armor".to_string(), 2)].into_iter().collect();
         assert_eq!(
             power_text(&power("armor"), true, "", &armor, None).as_deref(),
-            Some("Tank Up\nActivate: Spend (0): Your hero gains 4 Armor, then this power refreshes.")
+            Some("Tank Up\nActivate: Spend (0): Your hero gains 2 Armor.")
         );
         assert_eq!(power_text(&power("not-a-power"), false, "", &none, None), None);
     }

@@ -9,30 +9,6 @@ import { ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, apiUrl, bearerHeaders, routes, timeouts } from "../../support/config.ts";
 import { DuosSocket, duosPath, endLiveDuos, type DuosViewLike, type Frame, type PlayerViewLike } from "../../support/duos.ts";
 import {
-  DUOS_BOARD,
-  DUOS_CARD_ACTIONS,
-  DUOS_CONCEDE,
-  DUOS_CONCEDE_STATUS,
-  DUOS_OWN_HP,
-  DUOS_PASS,
-  DUOS_PING_MARKER,
-  DUOS_PING_WHEEL,
-  DUOS_POOL,
-  DUOS_PORTAL,
-  DUOS_REPLAY,
-  DUOS_RESULT,
-  DUOS_RESULT_REPLAY,
-  DUOS_TEAMMATE_STRIP,
-  DUOS_WAITING,
-  END_TURN,
-  LOBBY_CODE,
-  LOBBY_COUNTDOWN,
-  LOBBY_CREATE,
-  LOBBY_DECK_SELECT,
-  LOBBY_PANEL,
-  LOBBY_READY,
-  LOBBY_SETTINGS,
-  LOBBY_START,
   PLAY_LOBBY,
   PLAY_LOBBY_DIALOG,
   REPLAY_BACK,
@@ -46,6 +22,9 @@ import {
   heroId,
   ts,
 } from "../../support/testids.ts";
+import { duosTestid } from "../../../apps/web/src/duos/testids.ts";
+import { lobbyTestid } from "../../../apps/web/src/lobby/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** How many of team A's rounds the spec plays through looking for one where the host has a move. */
 const ROUNDS_BUDGET = 6;
@@ -128,21 +107,21 @@ describe("41 duos co-op — two players against the Easy AI", () => {
     cy.visitAs(host, routes.play());
     cy.get(ts(PLAY_LOBBY), { timeout: timeouts.view }).should("not.be.disabled").click();
     cy.get(ts(PLAY_LOBBY_DIALOG), { timeout: timeouts.view }).should("be.visible");
-    cy.get(`${ts(LOBBY_PANEL)}[data-format="coop"]`, { timeout: timeouts.view })
-      .find(ts(LOBBY_CREATE))
+    cy.get(`${ts(lobbyTestid.panel)}[data-format="coop"]`, { timeout: timeouts.view })
+      .find(ts(lobbyTestid.create))
       .should("not.be.disabled")
       .click();
     cy.location("pathname", { timeout: timeouts.view }).should("match", /^\/lobby\/[^/]+$/);
-    cy.get(ts(LOBBY_CODE), { timeout: timeouts.view })
+    cy.get(ts(lobbyTestid.code), { timeout: timeouts.view })
       .invoke("text")
       .then((text) => {
         code = text.trim();
         expect(code, `S6: a lobby's code is ${String(ROOM_CODE_LENGTH)} characters`).to.have.length(ROOM_CODE_LENGTH);
       });
-    cy.get(ts(LOBBY_SETTINGS)).select("easy");
-    cy.get(ts(LOBBY_DECK_SELECT), { timeout: timeouts.view }).should("not.be.disabled").select("random");
-    cy.get(ts(LOBBY_READY)).should("not.be.disabled").click();
-    cy.get(ts(LOBBY_READY), { timeout: timeouts.view }).should("have.attr", "data-ready", "true");
+    cy.get(ts(lobbyTestid.settings)).select("easy");
+    cy.get(ts(lobbyTestid.deckSelect), { timeout: timeouts.view }).should("not.be.disabled").select("random");
+    cy.get(ts(lobbyTestid.ready)).should("not.be.disabled").click();
+    cy.get(ts(lobbyTestid.ready), { timeout: timeouts.view }).should("have.attr", "data-ready", "true");
 
     // R3730001: the guest enters, takes a random deck and is ready, by the lobby's routes.
     cy.then(() => {
@@ -161,8 +140,8 @@ describe("41 duos co-op — two players against the Easy AI", () => {
     });
 
     // R3730002: the host's Start lights once both are ready, and the countdown opens the co-op board.
-    cy.get(ts(LOBBY_START), { timeout: timeouts.view }).should("not.be.disabled").click();
-    cy.get(ts(LOBBY_COUNTDOWN), { timeout: timeouts.view }).should("exist");
+    cy.get(ts(lobbyTestid.start), { timeout: timeouts.view }).should("not.be.disabled").click();
+    cy.get(ts(lobbyTestid.countdown), { timeout: timeouts.view }).should("exist");
     cy.then(() => {
       cy.request<{ matchId: string | null }>({
         method: "GET",
@@ -183,24 +162,24 @@ describe("41 duos co-op — two players against the Easy AI", () => {
     });
 
     // B61: the own duel's board, and both teams' life.
-    cy.get(ts(DUOS_BOARD), { timeout: timeouts.view }).should("have.attr", "data-seat", "a1").and("have.attr", "data-showing", "own");
+    cy.get(ts(duosTestid.board), { timeout: timeouts.view }).should("have.attr", "data-seat", "a1").and("have.attr", "data-showing", "own");
     cy.get(ts(heroId("you"))).should("be.visible");
-    cy.get(ts(DUOS_OWN_HP)).first().should("have.attr", "data-seat", "a1").and("have.attr", "data-spent", "false");
-    cy.get(ts(DUOS_OWN_HP)).should("have.length", 4);
-    cy.get(`${ts(DUOS_POOL)}[data-team="b"]`).should("exist");
+    cy.get(ts(duosTestid.ownHp)).first().should("have.attr", "data-seat", "a1").and("have.attr", "data-spent", "false");
+    cy.get(ts(duosTestid.ownHp)).should("have.length", 4);
+    cy.get(`${ts(duosTestid.pool)}[data-team="b"]`).should("exist");
     cy.wrap(guest).should((seat) => {
       expect(seat.view?.team?.pool, "the team's pool, as the guest's view has it").to.be.a("number");
     });
     cy.then(() => {
-      cy.get(`${ts(DUOS_POOL)}[data-team="a"]`).should("have.attr", "data-value", String(guest.view?.team?.pool));
+      cy.get(`${ts(duosTestid.pool)}[data-team="a"]`).should("have.attr", "data-value", String(guest.view?.team?.pool));
     });
-    cy.get(ts(DUOS_TEAMMATE_STRIP)).should("have.attr", "data-seat", "a2");
+    cy.get(ts(duosTestid.teammateStrip)).should("have.attr", "data-seat", "a2");
 
     // B2: all four mulligans; round 1 opens once they are in.
     cy.keepMulligans();
     guestKeepsMulligan(guest);
     untilHostMayAct(guest, ROUNDS_BUDGET);
-    cy.get(ts(END_TURN), { timeout: timeouts.view }).should("not.be.disabled");
+    cy.get(ts(gameTestid.endTurn), { timeout: timeouts.view }).should("not.be.disabled");
     cy.settled();
 
     // B62: the pass control on a hand card, with its cost and the passes left; B20: the card lands
@@ -212,9 +191,9 @@ describe("41 duos co-op — two players against the Easy AI", () => {
       expect(passesBefore, "the host has passes left").to.be.greaterThan(0);
     });
     cy.get(`[data-testid^="${HAND_CARD_PREFIX}"]`).first().trigger("pointerover", { pointerType: "mouse", force: true });
-    cy.get(ts(DUOS_CARD_ACTIONS)).should("exist");
+    cy.get(ts(duosTestid.cardActions)).should("exist");
     cy.then(() => {
-      cy.get(ts(DUOS_PASS)).should("not.be.disabled").and("contain.text", String(passesBefore)).click();
+      cy.get(ts(duosTestid.pass)).should("not.be.disabled").and("contain.text", String(passesBefore)).click();
     });
     cy.wrap(guest, { timeout: timeouts.view }).should((seat) => {
       expect(ownHandIds(seat.view?.own).length, "B20: the passed card joins the guest's hand").to.eq(guestHand + 1);
@@ -223,9 +202,9 @@ describe("41 duos co-op — two players against the Easy AI", () => {
 
     // B64 / B39: the host pings the enemy hero; the marker is the host's own, and the ping reaches the guest.
     cy.get(ts(heroId("opponent"))).trigger("pointerover", { pointerType: "mouse" });
-    cy.get(ts(DUOS_PING_WHEEL)).should("be.visible");
+    cy.get(ts(duosTestid.pingWheel)).should("be.visible");
     cy.get(ts(duosPingId("killThis"))).click();
-    cy.get(`${ts(DUOS_PING_MARKER)}[data-from="a1"][data-ping="killThis"]`).should("exist");
+    cy.get(`${ts(duosTestid.pingMarker)}[data-from="a1"][data-ping="killThis"]`).should("exist");
     cy.wrap(guest, { timeout: timeouts.view }).should((seat) => {
       const ping = seat.frames.find((frame) => frame.type === "ping");
       expect(ping, "B39: the host's ping is relayed to the teammate").to.not.eq(undefined);
@@ -238,28 +217,28 @@ describe("41 duos co-op — two players against the Easy AI", () => {
     cy.then(() => {
       guest.ping("careful", { duel: 0, at: "hero", side: "p1" });
     });
-    cy.get(`${ts(DUOS_PING_MARKER)}[data-from="a2"][data-ping="careful"]`, { timeout: timeouts.view }).should("exist");
+    cy.get(`${ts(duosTestid.pingMarker)}[data-from="a2"][data-ping="careful"]`, { timeout: timeouts.view }).should("exist");
     cy.then(() => {
       guest.ping("portal", { duel: 1, at: "hero", side: "p1" });
     });
-    cy.get(ts(DUOS_PORTAL), { timeout: timeouts.view }).should("have.attr", "data-flash", "ping");
+    cy.get(ts(duosTestid.portal), { timeout: timeouts.view }).should("have.attr", "data-flash", "ping");
 
     // B63: the portal shows the teammate's own board — their hand among it — and offers nothing.
     cy.wrap(guest).should((seat) => {
       guestCards = ownHandIds(seat.view?.own);
       expect(guestCards.length, "the guest holds cards").to.be.greaterThan(0);
     });
-    cy.get(ts(DUOS_PORTAL)).click();
-    cy.get(ts(DUOS_BOARD)).should("have.attr", "data-showing", "teammate");
+    cy.get(ts(duosTestid.portal)).click();
+    cy.get(ts(duosTestid.board)).should("have.attr", "data-showing", "teammate");
     cy.then(() => {
       cy.get(ts(handCardId(guestCards[0] ?? ""))).should("exist");
     });
-    cy.get(ts(END_TURN)).should("be.disabled");
+    cy.get(ts(gameTestid.endTurn)).should("be.disabled");
     cy.then(() => {
-      cy.get(ts(DUOS_TEAMMATE_STRIP)).should("have.attr", "data-hand", String(guestCards.length));
+      cy.get(ts(duosTestid.teammateStrip)).should("have.attr", "data-hand", String(guestCards.length));
     });
-    cy.get(ts(DUOS_PORTAL)).click();
-    cy.get(ts(DUOS_BOARD)).should("have.attr", "data-showing", "own");
+    cy.get(ts(duosTestid.portal)).click();
+    cy.get(ts(duosTestid.board)).should("have.attr", "data-showing", "own");
 
     // B5, B63: the host ends; while the guest has not, "Waiting for your teammate"; then the round closes.
     cy.then(() => {
@@ -269,7 +248,7 @@ describe("41 duos co-op — two players against the Easy AI", () => {
     });
     cy.then(() => {
       if (!guestStillToEnd) return;
-      cy.get(ts(DUOS_WAITING), { timeout: timeouts.view }).should("be.visible");
+      cy.get(ts(duosTestid.waiting), { timeout: timeouts.view }).should("be.visible");
       cy.wrap(guest, { timeout: timeouts.view }).should((seat) => {
         expect(seat.view?.team?.ended?.[HOST_SLOT], "B5: the host's end is held until the guest's").to.eq(true);
       });
@@ -282,45 +261,45 @@ describe("41 duos co-op — two players against the Easy AI", () => {
     cy.wrap(guest, { timeout: timeouts.game }).should((seat) => {
       expect(seat.view?.round ?? 0, "B5: both ended, so the round closed").to.be.greaterThan(roundOfPass);
     });
-    cy.get(ts(DUOS_WAITING)).should("not.exist");
+    cy.get(ts(duosTestid.waiting)).should("not.exist");
 
     // B11: the host offers to concede, the guest agrees, and the AI team wins.
-    cy.get(ts(DUOS_CONCEDE), { timeout: timeouts.game }).should("not.be.disabled").click();
-    cy.get(ts(DUOS_CONCEDE_STATUS)).should("exist");
+    cy.get(ts(duosTestid.concede), { timeout: timeouts.game }).should("not.be.disabled").click();
+    cy.get(ts(duosTestid.concedeStatus)).should("exist");
     cy.wrap(guest, { timeout: timeouts.view }).should((seat) => {
       expect(seat.view?.concedeOfferedBy, "B11: the offer stands on the teammate's view").to.eq("a1");
     });
     cy.then(() => cy.wrap(guest.act({ kind: "concede" }), { timeout: timeouts.view }));
-    cy.get(ts(DUOS_RESULT), { timeout: timeouts.view }).should("have.attr", "data-outcome", "loss");
+    cy.get(ts(duosTestid.result), { timeout: timeouts.view }).should("have.attr", "data-outcome", "loss");
     cy.wrap(guest, { timeout: timeouts.view }).should((seat) => {
       expect(seat.view?.result?.reason, "B11: the game ends by concede").to.eq("concede");
       expect(seat.view?.result?.winner, "and the other team wins").to.eq("b");
     });
 
     // §13.9 (#965): the result panel's replay, the host's own seat's steps, with nothing live on it.
-    cy.get(ts(DUOS_RESULT_REPLAY)).click();
-    cy.get(ts(DUOS_REPLAY), { timeout: timeouts.view }).should("have.attr", "data-step", "0");
-    cy.get(ts(DUOS_RESULT)).should("not.exist");
-    cy.get(ts(DUOS_CONCEDE)).should("not.exist");
-    cy.get(ts(DUOS_WAITING)).should("not.exist");
+    cy.get(ts(duosTestid.resultReplay)).click();
+    cy.get(ts(duosTestid.replay), { timeout: timeouts.view }).should("have.attr", "data-step", "0");
+    cy.get(ts(duosTestid.result)).should("not.exist");
+    cy.get(ts(duosTestid.concede)).should("not.exist");
+    cy.get(ts(duosTestid.waiting)).should("not.exist");
     cy.get(ts(heroId("opponent"))).trigger("pointerover", { pointerType: "mouse" });
-    cy.get(ts(DUOS_PING_WHEEL)).should("not.exist");
+    cy.get(ts(duosTestid.pingWheel)).should("not.exist");
     cy.get(ts(REPLAY_FORWARD_STEP)).click();
-    cy.get(ts(DUOS_REPLAY)).should("have.attr", "data-step", "1");
+    cy.get(ts(duosTestid.replay)).should("have.attr", "data-step", "1");
     cy.get(ts(REPLAY_BACK_STEP)).click();
-    cy.get(ts(DUOS_REPLAY)).should("have.attr", "data-step", "0");
+    cy.get(ts(duosTestid.replay)).should("have.attr", "data-step", "0");
     cy.get(ts(REPLAY_SCRUBBER))
       .invoke("attr", "max")
       .then((max) => {
         const last = Number(max);
         expect(last, "the replay holds the game's steps").to.be.greaterThan(1);
         cy.get(ts(REPLAY_END)).click();
-        cy.get(ts(DUOS_REPLAY)).should("have.attr", "data-step", String(last));
+        cy.get(ts(duosTestid.replay)).should("have.attr", "data-step", String(last));
         cy.get(ts(REPLAY_SCRUBBER)).should("have.value", String(last));
       });
     cy.get(ts(REPLAY_READOUT)).should("contain.text", "Round");
     cy.get(ts(REPLAY_BACK)).click();
-    cy.get(ts(DUOS_RESULT)).should("have.attr", "data-outcome", "loss");
+    cy.get(ts(duosTestid.result)).should("have.attr", "data-outcome", "loss");
     cy.then(() => {
       guest.close();
     });

@@ -651,8 +651,9 @@ const KEPT_IN_EVERY_PILE: [&str; 3] = ["controller", "memory", "brittle"];
 /// state, which rides it onto the field (`effects/buff.rs`, B5 E38) and which R215 takes as it reaches a
 /// graveyard or an exile pile (`buffs`, `grantedKeywords`, `grants`, `vanilla`, `counters`); a copy's
 /// `statsOverride` and `armorOverride` (R57, R1242, R2198001; R175 reads them before R78's reset takes
-/// them); and the `tipsy` stamp (R3548001) a card is given as it is drawn (`draw.rs`), which only a hand
-/// or the field reads (`tipsy::blur_for`) and a hand card carries into a library.
+/// them); and the Woozy stamp (R3548001), stored as `tipsy` (R5181000), a card is given as it is drawn
+/// (`draw.rs`), which only a hand or the field reads (`woozy::blur_for`) and a hand card carries into a
+/// library.
 const KEPT_IN_HAND_OR_LIBRARY: [&str; 8] = [
     "buffs",
     "grantedKeywords",
@@ -2232,7 +2233,7 @@ impl TextRecord {
 
 /// I23, R4609003: whether `now` is `was` with keywords appended to its `addKeywords` and nothing else,
 /// each one the step's `keywordGranted` kept for good (`tune::gain_keyword_for_good`: R1870007, R4154202),
-/// a grant Immutable never stopped and no Buff.
+/// a grant of the card's own text, which Immutable never stops (R23, R5226000), and no Buff.
 fn kept_grants_only(was: Option<&Tuning>, now: Option<&Tuning>, kept: &[&Keyword]) -> bool {
     let was = was.cloned().unwrap_or_default();
     let now = now.cloned().unwrap_or_default();

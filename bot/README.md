@@ -344,11 +344,23 @@ waiting for a person, and keeps the rest for one:
    it, so it is planned, built, reviewed and merged under every gate, and `/harness stop` takes it
    back out; the bot says so on it. One the judge leaves to a person waits for a person's vote, as
    any suggestion does.
-4. **At `priority:low`, a few a day.** Each goes ahead at `priority:low`, whatever its class
-   opened it with, so it waits behind everything a person asked for, and at most `per_day` (3) go
-   ahead in any 24 hours (`suggest.auto_approved`, the times they did); one past the cap waits for
-   the next sweep with room. Its approval joins the decisions as `auto-approved`, which the judge is
+4. **At `priority:low`, with no daily cap.** Each goes ahead at `priority:low`, whatever its class
+   opened it with, so it waits behind everything a person asked for. `per_day` caps how many go
+   ahead in any 24 hours (`suggest.auto_approved`, the times they did; one past the cap waits for the
+   next sweep with room), and at 0, as committed, caps none (#5104): the old cap of 3 held back six
+   suggestions the judge approved on 2026-11-27. A survey runs only while lanes are spare, so
+   approved work that fills the queue stops new surveys by itself. Its approval joins the decisions as `auto-approved`, which the judge is
    told is no person's decision, so it never learns from its own approvals.
+5. **A suggestion the judge never answered is judged again.** A judge call can fail: the
+   subscription reaches its cap after the survey (`callHeadroom`), the call times out or fails, or
+   its answer gives no verdict for a suggestion. So the run first makes one more fresh call for the
+   ones it left unanswered (`work.JudgeAttempts`, 2), and leaves a step that says which failure it
+   was. One still unanswered opens with no `**Judge:**` line, and the next survey, usually on
+   another subscription, judges it again before its own work (`plan.Unjudged`, the plan's
+   `rejudge`: at most `plan.RejudgeMax`, 3, oldest first; never one a person commented on or 👎'd).
+   Delivery puts the verdict on the issue as a comment carrying `<!-- jackioh-judge -->`, and one
+   it would approve is queued as any other (#5104). After `plan.RejudgeTries` (3) surveys that could
+   not answer it, a comment leaves it to a person (`suggest.judge_tries`).
 
 `enabled: false`, or no `auto_approve` at all, judges nothing and approves nothing. Squishy makes no
 suggestions.

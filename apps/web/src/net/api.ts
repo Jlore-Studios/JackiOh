@@ -2140,6 +2140,33 @@ export function getPlayRates(signal?: AbortSignal): Promise<PlayRatesResponse> {
   return apiRequest<PlayRatesResponse>("/api/stats/play-rates", { signal });
 }
 
+/** R5186000: `GET /api/stats/loading`, what the server's load of the card statistics is doing. */
+export type StatsLoading = {
+  /** Whether the server is loading the card statistics. */
+  loading: boolean;
+  /** The step it is on, from 1, or 0 when it is not loading. */
+  step: number;
+  /** How many steps a load takes. */
+  steps: number;
+  /** How long the load has run, in ms; 0 when it is not loading. */
+  elapsedMs: number;
+  /** How long the last load took, in ms; null before one has finished since the server started. */
+  expectedMs: number | null;
+};
+
+/** R5186000: what the server's load of the card statistics is doing; it never waits on the load. */
+export function getStatsLoading(signal?: AbortSignal): Promise<StatsLoading> {
+  return apiRequest<StatsLoading>("/api/stats/loading", { signal });
+}
+
+/**
+ * R5274000: `POST /api/dev/stats-refresh`, `/stats`' Fetch live: the server lets go of the card statistics it
+ * keeps, so the next reads wait for figures loaded now. A dev account's alone; anyone else is refused.
+ */
+export function devStatsRefresh(token: string): Promise<StatsLoading> {
+  return apiRequest<StatsLoading>("/api/dev/stats-refresh", { method: "POST", token, body: {} });
+}
+
 export type PlayerStatsAccountResponse = {
   stats: Record<string, unknown>;
   isPrivate: boolean;

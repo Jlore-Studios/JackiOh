@@ -63,7 +63,11 @@ export type AssaultFightScreenProps = {
   onAction: (action: AssaultAction) => void;
   /** R4733000: the store's hold for a finished fight's report, called the moment it arrives. */
   onHold: (action: AssaultAction) => void;
-  /** R4582001: the page's way back to its day screen, the attempt still on its fight; absent, Menu leaves to the Play menu. */
+  /**
+   * R4582001: the page's way back to its day screen, the attempt still on its fight. Only the mid-fight Leave and a
+   * finished fight whose report is not read yet use it; a finished fight with its report goes to the Play menu
+   * (R4742000). Absent, Menu leaves to the Play menu.
+   */
   onLeave?: () => void;
   /** Tests: the worker's host; default `createPracticeHost`. */
   hostFactory?: () => PracticeHost;
@@ -219,10 +223,17 @@ export function AssaultFightScreen({ state, day, onAction, onHold, onLeave, host
       setLeaving({ leave: onLeave });
       return;
     }
-    if (!atStake) sendOnce(); // R4582001: a finished fight's report goes to the attempt first
-    if (onLeave === undefined) navigate(paths.play); // mid-fight the leave guard asks (R2972000)
+    // R4582001, R4742000: a finished fight whose report was read sends it and goes to Play, as the dungeon fight does.
+    // The report moves the attempt off the fight, so the day screen `onLeave` shows would be the screen Continue shows.
+    if (!atStake && action !== null) {
+      sendOnce();
+      navigate(paths.play);
+      return;
+    }
+    // The report is still being read or could not be read: keep the way out to the day screen (Resume reopens it).
+    if (onLeave === undefined) navigate(paths.play);
     else onLeave();
-  }, [atStake, onLeave, sendOnce, setLeaving]);
+  }, [action, atStake, onLeave, sendOnce, setLeaving]);
 
   // R5125000: the finished fight, kept on the device as a free game is (R768), watched again from its
   // result. Keyed by the controller, so a fight dealt again never opens the last one's replay; watching
@@ -298,8 +309,8 @@ export function AssaultFightScreen({ state, day, onAction, onHold, onLeave, host
     </>
   );
 
-  // R4582001: out to the day screen, or the Play menu with no way back; mid-fight it asks first,
-  // and leaves once the fight has its result.
+  // R4582001: out to the day screen (mid-fight, after asking), or the Play menu once the fight has its
+  // result and its report is read, and with no way back.
   const menuButton = <FightMenuButton testids={assaultFightTestid} over={over} onClick={onMenu} />;
 
   const board = (

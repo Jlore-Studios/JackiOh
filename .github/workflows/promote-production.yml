@@ -1,21 +1,21 @@
 # Moves production once a day by itself, and sooner on request, never past a red super run (#2750;
 # daily since 2026-11-03, the owners' call), taking its commits from the `_staging` branch (#3275, the
 # owners' call of 2026-11-05). promote-staging.yml moves `_staging` every two hours to main's newest
-# green commit. The daily promotion: when super.yml's daily run on `_staging` passes every job, the
+# green commit. The daily promotion: when super.yml's daily run on `_staging` passes every gating job, the
 # script merges the commit it tested into production (through a pull request super does not run on
 # again) and deploys it to jackioh.com, the site and its game server together. A red run on
 # `_staging` is the night bot's to fix, before everything else it has queued (super.yml's `report`),
 # and production waits for the next run that passes. Sooner: someone comments `/promote` on the open
 # issue labeled `production merge` (or runs this from the Actions tab); the script opens a pull
-# request of staging's commit into production, super runs on it, and it merges once every one of that
-# run's jobs passed. A promotion or a deploy that fails is the night bot's (`report` below).
+# request of staging's commit into production, super runs on it, and it merges once every gating job of
+# that run passed. A promotion or a deploy that fails is the night bot's (`report` below).
 # docs/deploy-cloudflare.md is the plan; scripts/promote-production.sh is the logic (read its header
 # first) and apps/web/src/net/promote-production.test.ts holds it. Staging's site is
 # deploy-staging.yml's, which deploys each move of `_staging`.
 #
 # The `jackioh` Worker serves what the `_production` branch holds, and nothing else. This workflow is
 # the only thing that moves it, and only by merging a pull request whose head is a commit of staging
-# (and so of main) whose push-to-main CI run passed and whose super run passed every job, or, the
+# (and so of main) whose push-to-main CI run passed and whose super run passed every gating job, or, the
 # emergency way, one a person merged with a written reason (`/skip-super <reason>`, or the
 # `skip_super_reason` input), which the issue records. It never force-pushes: a `_production` that carries anything main does not fails
 # the run, loudly, for a human to look at.

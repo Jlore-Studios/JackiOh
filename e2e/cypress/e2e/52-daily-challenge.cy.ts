@@ -17,23 +17,10 @@ import {
   makeFriends,
   profileOf,
 } from "../../support/daily.ts";
-import {
-  DAILY_BOARD,
-  DAILY_CLOCK,
-  DAILY_GAME_ROW,
-  DAILY_SECTION,
-  DAILY_TIME_LEFT,
-  END_TURN,
-  PLAY_DAILY,
-  PLAY_DAILY_BADGE,
-  TOGETHER_CHALLENGE,
-  TOGETHER_CHALLENGE_FORM,
-  TOGETHER_CHALLENGE_SEND,
-  TOGETHER_FRIEND_ROW,
-  dailyModeId,
-  togetherChallengeKindId,
-  ts,
-} from "../../support/testids.ts";
+import { PLAY_DAILY, PLAY_DAILY_BADGE, dailyModeId, togetherChallengeKindId, ts } from "../../support/testids.ts";
+import { dailyTestid } from "../../../apps/web/src/daily/testids.ts";
+import { togetherTestid } from "../../../apps/web/src/together/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** Mirrors `paths.together` in apps/web/src/net/navigate.ts. */
 const TOGETHER = "/together";
@@ -48,11 +35,11 @@ const MOVE_TIMEOUT_MS = SOCIAL_POLL_MS + timeouts.view;
 const MODE = "random";
 
 function gameRow(matchId: string): string {
-  return `${ts(DAILY_GAME_ROW)}[data-match-id="${matchId}"]`;
+  return `${ts(dailyTestid.gameRow)}[data-match-id="${matchId}"]`;
 }
 
 function inSection(section: string, matchId: string): string {
-  return `${ts(DAILY_SECTION)}[data-section="${section}"] ${gameRow(matchId)}`;
+  return `${ts(dailyTestid.section)}[data-section="${section}"] ${gameRow(matchId)}`;
 }
 
 describe("52 Daily games — a friend's daily challenge, and the move passing between them", () => {
@@ -83,16 +70,16 @@ describe("52 Daily games — a friend's daily challenge, and the move passing be
     // #3727: Challenge is offered for any friend, online or not; its dialog's Daily sends a daily challenge.
     cy.visitAs(one, TOGETHER);
     cy.then(() => {
-      cy.get(`${ts(TOGETHER_FRIEND_ROW)}[data-profile-id="${twoId}"]`, { timeout: FRIENDS_TIMEOUT_MS }).within(() => {
-        cy.get(ts(TOGETHER_CHALLENGE)).click();
+      cy.get(`${ts(togetherTestid.friendRow)}[data-profile-id="${twoId}"]`, { timeout: FRIENDS_TIMEOUT_MS }).within(() => {
+        cy.get(ts(togetherTestid.challenge)).click();
       });
     });
-    cy.get(ts(TOGETHER_CHALLENGE_FORM), { timeout: timeouts.view }).should("be.visible");
+    cy.get(ts(togetherTestid.challengeForm), { timeout: timeouts.view }).should("be.visible");
     cy.get(ts(togetherChallengeKindId("daily"))).click();
-    cy.get(ts(TOGETHER_CHALLENGE_FORM)).should("have.attr", "data-kind", "daily");
+    cy.get(ts(togetherTestid.challengeForm)).should("have.attr", "data-kind", "daily");
     cy.get(ts(dailyModeId(MODE)), { timeout: timeouts.view }).click();
-    cy.get(ts(TOGETHER_CHALLENGE_SEND), { timeout: timeouts.view }).should("not.be.disabled").click();
-    cy.get(ts(TOGETHER_CHALLENGE_FORM), { timeout: timeouts.view }).should("not.exist");
+    cy.get(ts(togetherTestid.challengeSend), { timeout: timeouts.view }).should("not.be.disabled").click();
+    cy.get(ts(togetherTestid.challengeForm), { timeout: timeouts.view }).should("not.exist");
     // A daily challenge waits: the challenger stays where they were.
     cy.location("pathname").should("eq", TOGETHER);
 
@@ -134,17 +121,17 @@ describe("52 Daily games — a friend's daily challenge, and the move passing be
     cy.then(() => {
       cy.visitAs(one, routes.daily());
       cy.get(inSection("yourMove", matchId), { timeout: MOVE_TIMEOUT_MS }).within(() => {
-        cy.get(ts(DAILY_TIME_LEFT)).should("contain.text", "Your move");
+        cy.get(ts(dailyTestid.timeLeft)).should("contain.text", "Your move");
         cy.get("a").click();
       });
       cy.location("pathname", { timeout: timeouts.view }).should("eq", routes.dailyGame(matchId));
     });
-    cy.get(ts(DAILY_CLOCK), { timeout: timeouts.view }).should("have.attr", "data-holder", "you").and("contain.text", "Your move");
+    cy.get(ts(dailyTestid.clock), { timeout: timeouts.view }).should("have.attr", "data-holder", "you").and("contain.text", "Your move");
 
     // End turn and send: the move goes to seat two.
-    cy.get(ts(END_TURN), { timeout: timeouts.view }).should("contain.text", "End turn and send").and("not.be.disabled").click();
-    cy.get(ts(DAILY_BOARD), { timeout: timeouts.view }).should("have.attr", "data-has-move", "false");
-    cy.get(ts(DAILY_CLOCK)).should("have.attr", "data-holder", "opponent").and("contain.text", "Their move");
+    cy.get(ts(gameTestid.endTurn), { timeout: timeouts.view }).should("contain.text", "End turn and send").and("not.be.disabled").click();
+    cy.get(ts(dailyTestid.board), { timeout: timeouts.view }).should("have.attr", "data-has-move", "false");
+    cy.get(ts(dailyTestid.clock)).should("have.attr", "data-holder", "opponent").and("contain.text", "Their move");
     cy.then(() => {
       dailyGameOf(two, matchId).its("hasMove").should("eq", true);
     });
@@ -153,8 +140,8 @@ describe("52 Daily games — a friend's daily challenge, and the move passing be
     cy.then(() => {
       dailyEndTurnAs(two, matchId);
     });
-    cy.get(ts(DAILY_BOARD), { timeout: MOVE_TIMEOUT_MS }).should("have.attr", "data-has-move", "true");
-    cy.get(ts(DAILY_CLOCK)).should("have.attr", "data-holder", "you");
+    cy.get(ts(dailyTestid.board), { timeout: MOVE_TIMEOUT_MS }).should("have.attr", "data-has-move", "true");
+    cy.get(ts(dailyTestid.clock)).should("have.attr", "data-holder", "you");
 
     // The Play screen's Daily games carries the count of games waiting on seat one.
     cy.visitAs(one, routes.play());

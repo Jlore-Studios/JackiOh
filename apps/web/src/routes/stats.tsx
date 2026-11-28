@@ -88,6 +88,8 @@ import {
 import { CREATED_SORT_COLUMNS, CreatedPanel, createdSortOf, type CreatedSort } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
 import { HallPanel } from "../stats/HallPanel.tsx";
+import { FetchLive } from "../stats/FetchLive.tsx";
+import { askAgain, StatsLoadProgress } from "../stats/LoadProgress.tsx";
 import { FindPatchIcon, PatchSearch, olderPatchesLine } from "../stats/PatchSearch.tsx";
 import {
   currentVersion,
@@ -913,8 +915,17 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
           }
           // A read that fails behind a kept table leaves it and says nothing.
           if (kept !== undefined) return;
-          setCardStatsError(true);
-          setCardStatsLoading(false);
+          // R5186000: a read that found no answer in time while the server still loads the statistics asks
+          // again, behind the progress bar, rather than saying they didn't load.
+          void askAgain(cause).then((again) => {
+            if (controller.signal.aborted) return;
+            if (again) {
+              setCardStatsAttempt((n) => n + 1);
+              return;
+            }
+            setCardStatsError(true);
+            setCardStatsLoading(false);
+          });
         });
 
       return () => controller.abort();
@@ -1665,6 +1676,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               {t("Current patch {patch}", { patch: currentVersion(patchList) })}
             </span>
             <CardTextButton shown={cardText.shown} onToggle={cardText.toggle} />
+            <FetchLive />
           </BackLink>
         </header>
 
@@ -1808,7 +1820,10 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
             {/* Table or Grid */}
             {cardStatsLoading ? (
-              <Skeleton variant={view === "grid" ? "grid" : "table"} label={t("Loading card statistics…")} />
+              <>
+                <StatsLoadProgress />
+                <Skeleton variant={view === "grid" ? "grid" : "table"} label={t("Loading card statistics…")} />
+              </>
             ) : cardStatsError ? (
               <div className="stats-error">
                 <p>{t("The card statistics didn't load.")}</p>

@@ -317,6 +317,7 @@ async fn r1300000_a_non_dev_gets_403_on_every_dev_route_and_nothing_is_written()
             ("POST", "/api/dev/cosmetics".to_string()),
             ("POST", "/api/dev/clear/everything".to_string()),
             ("POST", "/api/dev/bar/card".to_string()),
+            ("POST", "/api/dev/stats-refresh".to_string()),
         ]
     );
     for (method, path) in &routes {

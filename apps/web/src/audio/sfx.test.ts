@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { PLAY_TIERS_ASCENDING, type PlayType } from "../game/damageFeel.ts";
 import { CHAOS_REVEAL_MAX, EFFECT_PITCH_JITTER, IMPACT_AMOUNT_CAP } from "./constants.ts";
-import { SFX, SFX_IDS, SFX_TIMBRES, noiseBuffer, renderSfx, type SfxRecipe, type SfxSpec } from "./sfx.ts";
+import { SFX, SFX_ELEMENTS, SFX_IDS, SFX_TIMBRES, noiseBuffer, renderSfx, type SfxRecipe, type SfxSpec } from "./sfx.ts";
 import { FakeAudio, FakeNode, type FakeParam, type ParamEvent } from "./test/fakeAudio.ts";
 import type { SfxId, SfxParams } from "./types.ts";
 import { CARD_AUDIO } from "./soundTables.ts";
@@ -64,6 +64,8 @@ const UNION_ORDER: SfxId[] = [
   "vaultHiss", "safeChirp", "stoneChime", "magiChord", "lectureRumble", "pressStamp", "corvetteRoar", "popGasp",
   "geigerHum", "wireRatchet", "beamWhine", "rattleSteam", "breechBoom", "flakWind", "crunchJackpot", "choirHulls",
   "hornEcho", "jetSnap", "whiteRing", "hullDrills", "klaxonSputter", "moltenSnarl", "shutterPurr", "venomDrip",
+  // #5190: the spell verbs' recipes.
+  "elementWindUp", "elementBolt", "elementTail", "windUp", "sparkleTail", "hush", "shatter", "morph", "revealGlint",
 ];
 
 /** The design's durationMs column: each recipe's upper bound over all params. */
@@ -285,6 +287,15 @@ const DURATION_MS: Record<SfxId, number> = {
   moltenSnarl: 1500,
   shutterPurr: 1400,
   venomDrip: 1400,
+  elementWindUp: 600,
+  elementBolt: 700,
+  elementTail: 900,
+  windUp: 600,
+  sparkleTail: 1000,
+  hush: 900,
+  shatter: 600,
+  morph: 700,
+  revealGlint: 800,
 };
 
 const PARAM_SETS: readonly SfxParams[] = [{}, { amount: 1 }, { amount: 25 }, { mine: true }, { tier: "rare" }, { tier: "epic" }];
@@ -1130,5 +1141,62 @@ describe("R3337003 each Anomaly's sting", () => {
       expect(run.made.some((node) => node.kind === "biquad" && node.type === "lowpass"), `${code} low-passes it`).toBe(true);
     }
     expect(stingOf("DH").made.some((node) => node.kind === "oscillator" && node.type === "sawtooth"), "the drones buzz").toBe(true);
+  });
+});
+
+describe("#5190 the spell verb recipes keep the contract", () => {
+  const VERB_IDS: SfxId[] = UNION_ORDER.slice(UNION_ORDER.indexOf("elementWindUp"));
+  const ELEMENT_IDS: SfxId[] = ["elementWindUp", "elementBolt", "elementTail"];
+  const runOf = (id: SfxId, params: SfxParams): Run => runRecipe(`${id} ${JSON.stringify(params)}`, SFX[id].recipe, SFX[id].durationMs, params);
+  const problems = (run: Run): string[] => [
+    ...subsetProblems(run),
+    ...lengthProblems(run),
+    ...scheduleProblems(run),
+    ...stopProblems(run),
+    ...wiringProblems(run),
+    ...rampProblems(run),
+  ];
+  const everyElement = ELEMENT_IDS.flatMap((id) => SFX_ELEMENTS.map((element) => runOf(id, { element })));
+  const everyParam = VERB_IDS.flatMap((id) => [{}, { amount: 1 }, { amount: 25 }, { mine: true }].map((p) => runOf(id, p)));
+
+  it("#5190 the nine recipes are the last of the union, and no more than a dozen were added", () => {
+    expect(VERB_IDS).toHaveLength(9);
+  });
+
+  it("#5190 every recipe keeps B14's clauses with {}, {amount: 1}, {amount: 25} and {mine: true}", () => {
+    expect(everyParam.flatMap(problems)).toEqual([]);
+  });
+
+  it("#5190 the element recipes keep B14's clauses as each of the eight elements", () => {
+    expect(everyElement).toHaveLength(ELEMENT_IDS.length * SFX_ELEMENTS.length);
+    expect(everyElement.flatMap(problems)).toEqual([]);
+  });
+
+  it("#5190 SFX_ELEMENTS lists the eight elements", () => {
+    expect([...SFX_ELEMENTS]).toEqual(["fire", "frost", "lightning", "arcane", "shadow", "poison", "holy", "physical"]);
+  });
+
+  it.each(ELEMENT_IDS)("#5190 %s builds a different graph for each element", (id) => {
+    const signature = (element: SfxParams["element"]): string => {
+      const made = runOf(id, { element }).made;
+      const first = made.find((node) => node.kind === "oscillator");
+      const event = first?.params.get("frequency")?.events[0];
+      const hz = event !== undefined && event.method !== "cancelScheduledValues" ? event.value : undefined;
+      return `${made.map((node) => node.kind).join(",")} ${String(hz)}`;
+    };
+    const signatures = SFX_ELEMENTS.map(signature);
+    expect(new Set(signatures).size, signatures.join("\n")).toBe(SFX_ELEMENTS.length);
+  });
+
+  it("#5190 no element is no different from physical", () => {
+    for (const id of ELEMENT_IDS) {
+      expect(runOf(id, {}).made.map((n) => n.kind), id).toEqual(runOf(id, { element: "physical" }).made.map((n) => n.kind));
+    }
+  });
+
+  it.each(["windUp", "elementWindUp", "sparkleTail"] as const)("#5190 %s builds with amount: longer or more nodes", (id) => {
+    const small = runOf(id, { amount: 1 });
+    const large = runOf(id, { amount: 10 });
+    expect(returnedSeconds(large) > returnedSeconds(small) || large.made.length > small.made.length).toBe(true);
   });
 });

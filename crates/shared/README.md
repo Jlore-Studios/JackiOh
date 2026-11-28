@@ -611,7 +611,7 @@ the machine's (above); these are the modules the machine and the queue are made 
 | `decide` | the move the AI finds at the bot's strength (`decide_styled` after a skill roll), the concession and draw habits of a hidden bot, the aim of a targeted move | R1452, R639000, R747000, R2214000, R2660000, R2660001, R738 |
 | `think` | the think time a person-paced bot waits (R1442's fits and hand-set priors), and the cap on a decision | R1452, R639000 |
 | `signals` | a bot's habits at the end of a game: concede, offer and answer draws, idle a turn, linger for a rematch | R639000, R2660000, R2660001 |
-| `persona` | its emotes: rolls, caps and the rate limit, as data the machine keeps (`EmotePersona` takes its draws as an argument) | R645, R1344 |
+| `persona` | its emotes: rolls, caps and the rate limit, as data the machine keeps (`EmotePersona` takes its draws as an argument); the practice page's too, with the stream it rolls on (`PersonaStream`) | R645, R1344, R5269000 |
 | `aim` | the arrow a person's client would show | R738 |
 | `pick` | its sealed picks in a Conquest series | R641000 |
 | `fallback` | the empty-queue pairing: a ticket's fallback time, which bot it pairs with, two bots' kickoff | R1453, R641000, R1555000 |
@@ -641,8 +641,10 @@ the machine's (above); these are the modules the machine and the queue are made 
 `jackioh-wasm-core`'s `bots(call)` takes one `BotCall` and answers one `BotAnswer`. The calls are `poolTarget`,
 `planPool`, `planGrind`, `newBot`, `botTargetStrength`, `drawDecks`, `drawTrio`, `fallbackSeconds`, `fallbackDue`,
 `hourOf`, `chooseBot`, `chooseBotPair`, `botMatches`, `botMatchGapPassed`, `pickDueAt`, `pickIsDue`, `pickSlot`,
-`botPick`, `eligibleCosmetics` (answered `holdings`) and `redrawCosmetics` (answered `dressed`); `bots::boundary::apply` is the one function behind it, and `tests/bots_boundary.rs` holds it to
-the functions it names. The deals read the catalog the module registered, a cosmetics call the shipped registry
+`botPick`, `eligibleCosmetics` (answered `holdings`) and `redrawCosmetics` (answered `dressed`), and the practice
+page's persona (R5269000): `dealPersona`, then `personaEvents`, `personaPlayerEmote` and `personaTurnLong`, each
+answered `persona` (the `PersonaStream` to hand back on the next call, and the emotes it sends); `bots::boundary::apply` is the one function behind it, and `tests/bots_boundary.rs` holds it to
+the functions it names (`tests/bots_persona.rs` the persona's). The deals read the catalog the module registered, a cosmetics call the shipped registry
 and fits, and a new bot's username is the host's to give. `drawDecks` and `drawTrio` take the win-rate table
 the random decks lean on as `winRates`, which the server hands as its snapshot of its cached card stats;
 omitted, they lean on nothing (R3049002).

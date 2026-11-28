@@ -1,0 +1,34 @@
+{
+  "set": {
+    "meditative-025": {
+      "id": "meditative-025",
+      "index": "25",
+      "name": "Blue-Eyes White Felinor",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Felinor"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "loc": 26,
+      "base": {
+        "attack": 12,
+        "health": 9,
+        "keywords": [],
+        "text": "Tribute 2\nImmune to tribal tag based hate."
+      },
+      "radiant": {
+        "attack": 24,
+        "health": 18,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          }
+        ],
+        "text": "Tribute 2, Immutable\nImmune to tribal tag based hate."
+      }
+    }
+  }
+}

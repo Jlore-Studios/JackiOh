@@ -38419,5 +38419,319 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.15m",
+    "date": "2026-11-27",
+    "title": "Patch: the tier cards and KPIs read the win rates at v0.6.15l",
+    "source": "winrates-refresh.yml: production's windowed card figures at v0.6.15l (R3882000)",
+    "notes": "The win rates of record refresh from the card statistics at v0.6.15l: 799 cards with at least 20 games over their own windows (provisional figures). The tier pools and KPIs read them from this version on (R3538000, R3538001); earlier versions keep theirs, and CN Tech and NA Tech still read each game's snapshot (R3049000).",
+    "player": {
+      "title": "Win rates refreshed",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "3303543d91375217a2a06b41bc8f14eac66e668b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-164"
+    ],
+    "fragment": "the-tier-cards-and-kpis-read-the-win-rates-at-v0-6-15l",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15n",
+    "date": "2026-11-27",
+    "title": "Patch: rename the Tipsy keyword to Woozy",
+    "source": "issue #5181",
+    "notes": "Issue #5181 (R5181000): the Stinkyscape+ keyword Tipsy X is renamed Woozy X (Chinese 晕乎 for 微醺), the name alone: the counter, its decay, the stamp and the blur stay R3548000's and R3548001's. C+ #65.1 Rotten Grape, S+ #6.1 Fine Fermented Grape and S+ T-AI-1 Hallucinated Kiwi print Woozy. The shipped snapshots keep printing Tipsy, which reads as Woozy, and what a game writes keeps the old name (the state's and the views' `tipsy` keys, `tipsyBlur`, the counter kind `tipsy`, the blur's seed stream), so a game filed before the rename replays to the hash, the views and the blur it was filed with. classify's unforced games fuse a Woozy Fruit into C #77 Anti-Magic Monkey, C+ #11 Anime Armor, M #25 Blue-Eyes White Felinor and S #17 Imprisoned Ship Smith (Fruit Launcher's random Fruit among them), and a fused definition carries its ingredients' words, so those four read Woozy there and are claimed as playing differently (R1370000).",
+    "player": {
+      "title": "Tipsy is now Woozy",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Tipsy is renamed Woozy. It works exactly as before: the counter, how it drops each turn and the blurred words are unchanged.",
+        "Rotten Grape, Fine Fermented Grape and Hallucinated Kiwi now say Woozy."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "751ac23f58ac5a6315d41223d22e85253995dd7c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-077",
+      "classicplus-011",
+      "classicplus-065",
+      "meditative-025",
+      "stinkyscape-017",
+      "stinkyscapeplus-006",
+      "stinkyscapeplus-t-ai-01"
+    ],
+    "fragment": "rename-the-tipsy-keyword-to-woozy",
+    "changes": [
+      {
+        "id": "classicplus-065-1",
+        "name": "Rotten Grape",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-006-1",
+        "name": "Fine Fermented Grape",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-t-ai-01",
+        "name": "Hallucinated Kiwi",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.15o",
+    "date": "2026-11-27",
+    "title": "Patch: hero Armor wears down by 1 with each hit, and the Armor cards are rebalanced",
+    "source": "issue #5183",
+    "notes": "Issue #5183 (R5183000): a hero's own Armor, what it gained and what its seat started with, wears 1 with each hit it takes something off (§4.4 step 2, a hit it takes whole included, once the hit is spent at that hero), reported by armorWorn; a backrow grant's Armor (Going Long, Radiant Anti-oneshot Armor), a modifier's and a Unit's never wear, and projections wear it hit by hit. It ends games that stalled against kept hero Armor, which reduced every hit for the rest of the game (R1860006 amended). The owner's numbers: Heroic Power's Armor Up gives Armor the hero keeps, 1 and on Tank Up 2, and Tank Up refreshes no more (R5183001); Reknite gives kept Armor, 1 and 2 (R5183002); Living Armor Potion gives kept Armor, 5 on either face (R5183003); Defensive Crystal 3 and 6, Fortify Flesh 5 to 8, A Glimpse into the Endless Sea's Radiant 8 and The Enigmata's Radiant 8 (R5183004). Heroic Power, Reknite and Living Armor Potion keep their old scripts for replays.",
+    "player": {
+      "title": "Hero Armor wears down",
+      "new": [],
+      "balance": [
+        "Defensive Crystal's Death gives your hero 3 Armor, up from 1 (Radiant 6, up from 2).",
+        "Fortify Flesh gives your hero a random 5 to 8 Armor, up from 3 to 5.",
+        "Radiant A Glimpse into the Endless Sea gives your hero 8 Armor, up from 5.",
+        "Radiant The Enigmata gives your hero 8 Armor, up from 5."
+      ],
+      "changes": [
+        "A hero's Armor now wears down: each hit it reduces, or stops whole, takes 1 off it, so Armor runs out instead of stopping small hits for the rest of the game.",
+        "Armor from a card that stays in play, such as Going Long, does not wear down, and a hit with Pierce goes past Armor without wearing it.",
+        "Heroic Power's Armor Up gives your hero 1 Armor to keep, instead of 2 until your next turn.",
+        "Heroic Power's Tank Up gives your hero 2 Armor to keep, down from 4, and no longer changes into another power.",
+        "Living Armor Potion gives your hero 5 Armor to keep, instead of 5 until the start of your next turn.",
+        "Reknite gives your hero 1 Armor to keep (Radiant 2), instead of until the start of your next turn."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "c16dbd637fa31585fd385ff92e9e912e7a2314d4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-015",
+      "classic-019",
+      "classicplus-011",
+      "classicplus-013",
+      "classicplus-055",
+      "classicplus-058",
+      "classicplus-065",
+      "core-003",
+      "core-024",
+      "core-098",
+      "core-t-coin",
+      "meditative-004",
+      "meditativeplus-002",
+      "meditativeplus-010",
+      "stinkyscape-011",
+      "stinkyscape-021",
+      "stinkyscape-063",
+      "stinkyscape-093",
+      "stinkyscape-098",
+      "stinkyscape-109",
+      "stinkyscape-110",
+      "stinkyscape-111",
+      "stinkyscape-132",
+      "stinkyscape-145",
+      "stinkyscape-t-axnit",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscapeplus-008",
+      "stinkyscapeplus-079",
+      "stinkyscapeplus-080",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-142",
+      "stinkyscapeplus-155",
+      "stinkyscapeplus-t-terminus-starship-ark-of-ashes",
+      "stinkyscapeplus-t-the-enigmata",
+      "traininggrounds-016"
+    ],
+    "fragment": "hero-armor-wears-down-by-1-with-each-hit-and-the-armor-cards",
+    "changes": [
+      {
+        "id": "core-098",
+        "name": "Heroic Power",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditativeplus-012",
+        "name": "Living Armor Potion",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-132",
+        "name": "Defensive Crystal",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-145",
+        "name": "Fortify Flesh",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-reknite",
+        "name": "Reknite",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-079",
+        "name": "A Glimpse into the Endless Sea",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-t-the-enigmata",
+        "name": "The Enigmata",
+        "kind": "changed",
+        "fields": [
+          "radiant.text",
+          "params"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.15p",
+    "date": "2026-11-28",
+    "title": "Patch: Radiant Rollback Point brings its Units back on their printed face, with Rush, not Radiant",
+    "source": "#5158",
+    "notes": "Issue #5158: Rollback Point's Radiant face passed its own face to each summon, so its copies came back Radiant (R4594005). It keeps the script before, keyed by this fragment (R767000, R4779000). No plays claimed: the Infinite Assault is in no shipped set, so no card's statistics restart (R1370000); the fragment ships for the kept script keyed by it (R4844000).",
+    "player": {
+      "title": "Rollback Point's copies come back plain",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Radiant Rollback Point now brings its Units back on their normal faces, with Rush, instead of Radiant."
+      ]
+    },
+    "commits": [
+      "50dd7c8e75f9e99b51d6290da95ff996dda609e4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "radiant-rollback-point-brings-its-units-back-on-their",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15q",
+    "date": "2026-11-28",
+    "title": "Card sound hooks for triggered effects",
+    "source": "issue #5188, PR #5218",
+    "notes": "R5188000: cards may carry sounds for six recurring hooks (startOfTurn, endOfTurn, whenever, activate, hurt, hit), any voiced hook may give a pool of lines and an effect may be a list played in order; the card inspector's voice preview (apps/web/src/cards/inspect/VoicePreview.tsx) labels the six new hooks. Effect-only proof hooks on Gravedigger (start of turn), Combo-Index (end of turn), Fed Fauci (Whenever) and Unstable Clone Machine (Activate). R5188001: the voice budget is 32 MiB, with a four-word cap on new lines, a gzip cap on the sound tables and a census. No voice line is written or rendered, and no card plays differently.",
+    "player": {
+      "title": "Cards that sound when their effects trigger",
+      "new": [
+        "Gravedigger, Combo-Index, Fed Fauci and Unstable Clone Machine now make a sound when their start-of-turn, end-of-turn, Whenever or Activate effect runs."
+      ],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "93301fbc0218d0d2f855078a35f605e0150b935c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "card-sound-hooks-for-triggered-effects",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15r",
+    "date": "2026-11-28",
+    "title": "Patch: Immutable keeps Last Hurrah's Flashback off a card in the hand, and its random picks skip Immutable cards",
+    "source": "issue #5226",
+    "notes": "Issue #5226 (R5226000): a keyword another card gives for good (gainKeywordForGood) is kept off an Immutable card, an Indestructible Unit card's included (R4353000); C #37 Last Hurrah's random picks skip Immutable cards and its Radiant face gives Flashback to every other hand card. A card's own keyword for good (S #154 Dice of Doom) is unchanged (R23). Last Hurrah keeps its old script for replays.",
+    "player": {
+      "title": "Last Hurrah passes Immutable cards by",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Last Hurrah's random picks now fall only on cards that can take Flashback, and its Radiant face gives it to every card in your hand that can take it."
+      ],
+      "text": [],
+      "fixes": [
+        "Last Hurrah no longer gives Flashback to an Immutable card in your hand, such as Phase Wall, Megabase or The Rock."
+      ]
+    },
+    "commits": [
+      "0cb4d6fe2f793eda94361875b5d5c3f870ff3011"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-037"
+    ],
+    "fragment": "immutable-keeps-last-hurrah-s-flashback-off-a-card-in-the",
+    "changes": []
   }
 ]

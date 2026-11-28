@@ -1,0 +1,58 @@
+{
+  "set": {
+    "stinkyscapeplus-040": {
+      "id": "stinkyscapeplus-040",
+      "index": "40",
+      "name": "Mender",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "loc": 43,
+      "base": {
+        "keywords": [],
+        "text": "End of turn: Heal adjacent Units to full."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "End of turn: Heal adjacent Units to full and give them Divine Shield."
+      }
+    },
+    "stinkyscapeplus-059": {
+      "id": "stinkyscapeplus-059",
+      "index": "59",
+      "name": "Mass Driver",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "loc": 60,
+      "base": {
+        "keywords": [],
+        "text": "Activate: In {count|turn|turns} add two Minerals that cost (0) and a Resource to your hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Activate: In {count|turn|turns} add two Radiant Minerals that cost (0) and a Radiant Resource to your hand."
+      },
+      "params": [
+        {
+          "key": "count",
+          "base": 2,
+          "radiant": 2,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    }
+  }
+}
