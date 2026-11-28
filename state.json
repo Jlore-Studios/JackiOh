@@ -21475,6 +21475,13 @@
     "5246": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-28T02:51:57Z",
+        "difficulty": "hard",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "Rule line 2: it changes the AI's evaluation (crates/ai/src/evaluate.rs, config.rs), so its decisions change, and the weights need screens on improve-dev."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
