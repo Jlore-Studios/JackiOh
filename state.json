@@ -21959,9 +21959,7 @@
     },
     "5289": {
       "action": "build",
-      "asks": [
-        "c:7236655415"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": true,
       "handoff": {
@@ -21977,9 +21975,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-3",
-      "owner_since": "2026-11-28T10:12:13Z",
-      "owner_why": "handed off from `claude-4`: `claude-4` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-28T12:00:00Z",
+      "owner": "claude-6",
+      "owner_since": "2026-11-28T11:39:54Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-28T15:10:00Z",
       "paused": {
         "at": "2026-11-28T11:39:13Z",
         "interrupt": "usage",
@@ -21991,11 +21989,11 @@
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-11-28T08:33:20Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "46134046189",
+      "run_id": "pending:c6f12e9c-1795865977",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -22014,9 +22012,11 @@
         "provider": "claude-3",
         "run": "46134046189"
       },
-      "started_at": "2026-11-28T10:12:13Z",
+      "started_at": "2026-11-28T11:39:54Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7236655415"
+      ],
       "verdict_rounds": 0
     },
     "5292": {
@@ -22172,9 +22172,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T11:06:32Z",
+    "at": "2026-11-28T11:39:54Z",
     "url": "",
-    "what": "suggestions (server) on claude-3"
+    "what": "build #5289 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-28T11:32:30Z",
