@@ -21992,7 +21992,16 @@
       "feedback_since": "2026-11-28T07:37:50Z",
       "issue": 5284,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-8",
+        "rejections": [],
+        "reviews": [],
+        "sha": "9c31a6b1ca8fbe97a0c6fa7a604afd1ee66c467b",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
