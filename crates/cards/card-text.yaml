@@ -10792,6 +10792,254 @@ felinorsvshumans-170: # Plagiarized: Checkpoint Daemon
     name: 抄袭：检查点守护进程
     base: "回合结束时：为你的英雄的生命值拍摄一张快照。\n亡语：将你的英雄的生命值设为那个快照。"
     radiant: "回合结束时：为你的英雄的生命值拍摄一张快照。\n亡语：将你的英雄的生命值设为那个快照，并获得{armor}点护甲。"
+felinorsvshumans-171: # Plagiarized: Deep Crawler
+  flavour: Depth 4,096. It found your deck down there. It kept digging.
+  voice:
+    play: Crawling deeper than permitted.
+    attack: Scraping.
+    death: Connection lost.
+  zh:
+    name: 抄袭：深层爬虫
+    base: 回合开始时：发现你的对手牌库中的一张牌。
+    radiant: 回合开始时：发现你的对手牌库中的一张牌，重复两次。
+felinorsvshumans-172: # Plagiarized: Exponent
+  flavour: Yesterday it was a two two. Compound interest disagrees.
+  voice:
+    play: Two. Four. Eight. Watch.
+    attack: Doubling!
+    death: Divided at last.
+  zh:
+    name: 抄袭：指数
+    base: 回合开始时：将本牌的攻击力翻倍。
+    radiant: 回合开始时：将本牌的攻击力和生命值翻倍。
+felinorsvshumans-173: # Plagiarized: Ego Death
+  flavour: Trade offer, your hand for mine. No take-backs protocol.
+  voice:
+    cast: Hands across the table. Now.
+  zh:
+    name: 抄袭：自我消解
+    base: 与你的对手交换手牌。你获得的牌法力值消耗减少({discount})点。
+    radiant: 与你的对手交换手牌。你获得的牌法力值消耗减少({discount})点。
+felinorsvshumans-174: # Plagiarized: Mirror Firewall
+  flavour: It hits back exactly as hard. HR has been notified.
+  voice:
+    play: Smile. You are mirrored.
+    attack: Right back at you.
+    death: Mirror cracked.
+  zh:
+    name: 抄袭：镜像防火墙
+    base: "嘲讽\n当本牌受到攻击后：对攻击者造成等同于本牌所受伤害的伤害。"
+    radiant: "嘲讽\n当本牌受到攻击后：对攻击者造成两倍于本牌所受伤害的伤害。"
+felinorsvshumans-175: # Plagiarized: Ouroboros Engine
+  flavour: It eats its own tail and files the meal as a feature.
+  voice:
+    play: Tail located. Eating now.
+    attack: Chomp!
+    death: Recycling everything. Bye.
+  zh:
+    name: 抄袭：衔尾蛇引擎
+    base: 亡语：将你墓地中的牌洗入你的牌库。
+    radiant: 亡语：将你墓地中的牌洗入你的牌库，并抽两张牌。
+felinorsvshumans-176: # Plagiarized: Privilege Escalation
+  flavour: Escalated to admin. Your unit is now our unit.
+  voice:
+    cast: Admin rights acquired. Thanks.
+  zh:
+    name: 抄袭：权限提升
+    base: 夺取一个法力值消耗为(2)或更低的敌方单位。
+    radiant: 夺取一个法力值消耗为(3)或更低的敌方单位。
+felinorsvshumans-177: # Plagiarized: Overparameterized
+  flavour: One billion knobs. Every unit you own turns one.
+  voice:
+    play: More me? More everywhere.
+    attack: All of me!
+    death: Still too many.
+  zh:
+    name: 抄袭：过参数化
+    base: 在本局对战中，你每控制一个其他单位，这张牌的法力值消耗便减少({discount})点。
+    radiant: 在本局对战中，你每控制一个其他单位，这张牌的法力值消耗便减少({discount})点。
+felinorsvshumans-178: # Plagiarized: Phantom Army
+  flavour: Census zero. Parade full. Paperwork pending.
+  voice:
+    cast: Everybody, line up. Now.
+  zh:
+    name: 抄袭：魅影大军
+    base: 用魅影填满你的单位区。
+    radiant: 用光辉魅影填满你的单位区。
+felinorsvshumans-179: # Plagiarized: Rerun
+  flavour: "Previously on this game: everything. Again, with feeling."
+  voice:
+    cast: Previously, on this game.
+  zh:
+    name: 抄袭：重演
+    base: 施放你本局对战中打出的最后三张法术，目标随机。
+    radiant: 施放你本局对战中打出的最后四张法术，目标随机。
+felinorsvshumans-180: # Plagiarized: Rollback Point
+  flavour: Yesterday called. It wants its board back, with interest.
+  voice:
+    cast: Rolling back. Hold still.
+  zh:
+    name: 抄袭：回滚点
+    base: 召唤在本局对战中死亡的、法力值消耗最高的三个友方单位的复制。
+    radiant: 召唤在本局对战中死亡的、法力值消耗最高的三个友方单位的复制。它们拥有突袭。
+felinorsvshumans-181: # Plagiarized: Social Engineer
+  flavour: Hello, fellow gamer. I am definitely giving you a better unit.
+  voice:
+    play: Trust me. Trade accepted.
+    attack: Socially engineering!
+    death: Cover blown.
+  zh:
+    name: 抄袭：社会工程师
+    base: 战吼：交换此单位与一个随机敌方单位的控制权。
+    radiant: 战吼：交换此单位与攻击力最高的敌方单位的控制权。
+felinorsvshumans-182: # Plagiarized: Takeoff
+  flavour: The graph went vertical and took your unit with it.
+  voice:
+    cast: Sky is not the limit.
+  zh:
+    name: 抄袭：起飞
+    base: 将一个友方单位的攻击力和生命值翻倍。
+    radiant: 将一个友方单位的攻击力和生命值翻倍。它获得突袭。
+felinorsvshumans-183: # Plagiarized: Zero Trust
+  flavour: Trust no one. Especially the paperwork.
+  voice:
+    cast: Trust nothing. Shield everything.
+  zh:
+    name: 抄袭：零信任
+    base: 光环：你处于守备表示的单位拥有+{health}生命值，并具有法术免疫。
+    radiant: 光环：你处于守备表示的单位拥有+{health}生命值，并具有法术免疫。
+felinorsvshumans-184: # Plagiarized: Assault Mainframe
+  flavour: Runs the whole army from one closet. Do not unplug the closet.
+  voice:
+    play: Mainframe online. All units, sync.
+    attack: Executing!
+    death: Kernel panic.
+  zh:
+    name: 抄袭：突击主机
+    base: "嘲讽\n光环：你的生成单位拥有+{buff}/+{buff}。"
+    radiant: "嘲讽\n光环：你的生成单位拥有+{buff}/+{buff}。"
+felinorsvshumans-185: # Plagiarized: Bastion.exe
+  flavour: Uptime measured in sieges. Last reboot was a rumor.
+  voice:
+    play: Walls up. Nothing gets in.
+    attack: Denied!
+    death: Bastion fallen.
+  zh:
+    name: 抄袭：堡垒程序
+    base: "嘲讽，护甲5\n光环：你的英雄获得免疫。"
+    radiant: "嘲讽，护甲10\n光环：你的英雄获得免疫。"
+felinorsvshumans-186: # Plagiarized: Clone Vat
+  flavour: Batch 189. Previous batch also 189. Every batch is 189.
+  voice:
+    cast: The vat provides. Again.
+  zh:
+    name: 抄袭：克隆培养缸
+    base: 回合结束时：召唤一个随机敌方单位的复制。使其获得易碎2。
+    radiant: 回合结束时：召唤一个随机敌方单位的复制。
+felinorsvshumans-187: # Plagiarized: Dream Within a Dream
+  flavour: One dream per enemy unit. Side effects include suburbs.
+  voice:
+    cast: Dream bigger. All of them.
+  zh:
+    name: 抄袭：梦中梦
+    base: 为你召唤每个敌方单位的复制。它们具有易碎1。
+    radiant: 为你召唤每个敌方单位的复制。它们具有易碎2。
+felinorsvshumans-188: # Plagiarized: Eternal Return
+  flavour: Every play, back in the pile, cheaper. The ledger always balances.
+  voice:
+    cast: Everything returns. All of it.
+  zh:
+    name: 抄袭：永恒轮回
+    base: 将在本局对战中你打出过的每张牌洗入你的牌库。它们的法力值消耗减少({discount})点。抽三张牌。
+    radiant: 将在本局对战中你打出过的每张牌洗入你的牌库。它们的法力值消耗减少({discount})点。抽四张牌。
+felinorsvshumans-189: # Plagiarized: Emergent Mind
+  flavour: It bills by the card you played last turn. Itemized.
+  voice:
+    play: Yesterday taught me plenty.
+    attack: Learned that!
+    death: Forgot everything.
+  zh:
+    name: 抄袭：涌现心智
+    base: 回合开始时：你在上个回合每打出过一张牌，便获得+{buff}/+{buff}。
+    radiant: 回合开始时：你在上个回合每打出过一张牌，便获得+{buff}/+{buff}。
+felinorsvshumans-190: # Plagiarized: Gestalt
+  flavour: The whole exceeds the sum. The sum has been notified.
+  voice:
+    play: Many become one. Me.
+    attack: Merge!
+    death: Split apart.
+  zh:
+    name: 抄袭：格式塔
+    base: 战吼：将每个其他友方单位融合到此单位中。
+    radiant: 战吼：将每个其他友方单位融合到此单位中。然后它获得突袭和圣盾。
+felinorsvshumans-191: # Plagiarized: Everything You've Ever Played
+  flavour: Your greatest hits, performed back at you, slightly faster.
+  voice:
+    cast: Encore. All of them.
+  zh:
+    name: 抄袭：你玩过的一切
+    base: 用你的对手在本局对战中打出的随机单位的复制填满你的单位区。
+    radiant: 用你的对手在本局对战中打出的随机单位的光辉复制填满你的单位区。
+felinorsvshumans-192: # Plagiarized: Loopback, Who Returns
+  flavour: It dies on schedule. It returns ahead of schedule. Every time.
+  voice:
+    play: I have been here before.
+    attack: Again!
+    death: See you soon.
+  zh:
+    name: 抄袭：回环者
+    base: "复生\n当本牌通过复生返回时，使其获得+{buff}/+{buff}和复生，每局对战最多三次。"
+    radiant: "复生\n当本牌通过复生返回时，使其获得+{buff}/+{buff}和复生，每局对战最多三次。"
+felinorsvshumans-193: # Plagiarized: Matrioshka Brain
+  flavour: Ten twenty of nested thought. The halo is load-bearing.
+  voice:
+    play: A mind around a star.
+    attack: Collapse inward!
+    death: Heat death. Eventually.
+  zh:
+    name: 抄袭：套娃大脑
+    base: 巨型，嘲讽
+    radiant: 巨型，嘲讽，圣盾
+felinorsvshumans-194: # Plagiarized: Model Collapse
+  flavour: The average moved. You did not move with it. Awkward.
+  voice:
+    play: The average says you lose.
+    attack: Collapsing!
+    death: Outlier removed.
+  zh:
+    name: 抄袭：模型崩溃
+    base: 回合开始时：削弱每个敌方单位以及你的对手手牌中的每张牌。
+    radiant: 回合开始时：削弱每个敌方单位以及你的对手手牌中的每张牌两次。
+felinorsvshumans-195: # Plagiarized: Phoenix Protocol
+  flavour: Rising from the ashes, with the team's backup codes stapled to it.
+  voice:
+    play: Rising with the team.
+    attack: From ashes!
+    death: Be right back.
+  zh:
+    name: 抄袭：凤凰协议
+    base: "复生\n战吼：使你的其他单位获得复生。"
+    radiant: "复生\n战吼：使你的其他单位获得复生与圣盾。"
+felinorsvshumans-196: # Plagiarized: Singularity
+  flavour: Zero attack. Thirty health. Five turns to the end of the story.
+  voice:
+    play: I am the horizon.
+    attack: No past, no future.
+    death: The graph flatlines.
+  zh:
+    name: 抄袭：奇点化身
+    base: "不可变，无法攻击，嘲讽\n{turns}个回合后：如果此牌仍在场上，你赢得本局对战。"
+    radiant: "不可变，无法攻击，嘲讽\n{turns}个回合后：如果此牌仍在场上，你赢得本局对战。"
+felinorsvshumans-197: # Plagiarized: The Long Game
+  flavour: It slept two turns and dreamed of an empty enemy board.
+  voice:
+    play: Two turns. Then silence.
+    attack: Checkmate!
+    death: Outwaited. Impossible.
+  zh:
+    name: 抄袭：长局
+    base: "休眠2个回合。\n此牌苏醒时，消灭每个敌方单位。"
+    radiant: "休眠2个回合。\n此牌苏醒时，消灭每个敌方单位，并抽一张牌。"
 infiniteassault-001: # Seed Drone
   flavour: Seed 42. Everything after this is deterministic, allegedly.
   voice:
