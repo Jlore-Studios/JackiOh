@@ -21568,12 +21568,13 @@
     "what": "plan #5246 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-28T02:44:14Z",
+    "at": "2026-11-28T02:51:22Z",
     "notes": [
-      "delivered plan #5248 on claude-8 (run 46099027461): planned",
-      "started build #5248 on claude-8 (run 46099651133)",
+      "delivered plan #5246 on claude-7 (run 46098983065): planned",
+      "started review #5244 on claude-8 (run 46100183733)",
+      "started plan #5246 on claude-7 (run 46100217893)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22279,7 +22280,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T02:44:14Z",
+  "loop_tick": "2026-11-28T02:51:22Z",
   "machine_disk": {
     "issue": null,
     "reading": {
