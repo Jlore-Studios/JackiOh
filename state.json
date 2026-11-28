@@ -43933,7 +43933,12 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {},
+    "auto": {
+      "5230": {
+        "at": "2026-11-28T00:51:46Z",
+        "why": "Confirmed: `Board.tsx:646` reads `hasMovesLeft(highlight)` from the current selection's highlight, but while a card is being placed `actions.ts:782-801` lights only `zone-\u2026` ids (and an attack on the hero lights `hero-opponent`), neither of which `glow.ts:81-87` counts as a move, so End turn turns to its 'only move left' pulse (R5014000) and the first press sends `end-turn` past Confirm end turn ("
+      }
+    },
     "auto_approved": [
       "2026-11-27T03:08:24Z",
       "2026-11-27T03:09:48Z",
