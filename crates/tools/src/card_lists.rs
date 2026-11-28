@@ -14,7 +14,7 @@ use jackioh_cards::code_lines::{code_lines, reads_card_lists, reads_win_rate_rec
 use serde::{Deserialize, Serialize};
 
 use crate::classify::script_id;
-use crate::patches::patches_io::{Catalog, snapshot_path};
+use crate::patches::patches_io::{Catalog, table_path};
 
 /// The folder beside the snapshots that holds each version's lists, as `win_rates/` holds its table.
 pub(crate) const LISTS_DIR: &str = "card_metrics";
@@ -97,9 +97,10 @@ fn threshold(config: &str, name: &str) -> Result<usize> {
         .with_context(|| format!("{CONFIG_REL} has no `pub const {name}: usize = N;` line"))
 }
 
-/// `card_metrics/<version>.json` under `dir`, the lists `version` shipped with.
+/// The file under `dir` holding the lists `version` shipped with, through `card_metrics/versions.json`
+/// (R5268001); a version that shipped none names a file that is not there.
 pub(crate) fn lists_path(version: &str, dir: &Path) -> Result<PathBuf> {
-    snapshot_path(version, &dir.join(LISTS_DIR))
+    table_path(version, &dir.join(LISTS_DIR))
 }
 
 /// The lists a version's file holds, or `None` with no file.
