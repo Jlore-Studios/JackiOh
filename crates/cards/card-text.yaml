@@ -9526,8 +9526,9 @@ felinorsvshumans-059: # Voracious Reader
   flavour: She finishes a book a turn and complains that the library closes too early.
   voice:
     play: You have to read this one
-    attack: To the library!
+    attack: Shh, I'm reading.
     death: I never finished it.
+    endOfTurn: To the library!
   zh:
     name: 贪婪读者
     base: 回合结束时：抽牌，直到你的手牌达到{cards}张。

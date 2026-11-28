@@ -55,6 +55,9 @@ struct Voice {
     cast: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     trigger: Option<Vec<String>>,
+    // R5264500: the line a card speaks as its End of turn entry runs (FvH #59).
+    #[serde(rename = "endOfTurn", skip_serializing_if = "Option::is_none")]
+    end_of_turn: Option<String>,
 }
 
 /// A card's name and faces in Chinese, and its preview labels' templates (R280).

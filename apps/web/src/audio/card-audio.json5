@@ -4388,6 +4388,7 @@
       play: { voice: "sapi-librarian" },
       attack: { voice: "sapi-librarian" },
       death: { voice: "sapi-librarian" },
+      endOfTurn: { voice: "sapi-librarian" },
     },
     "felinorsvshumans-060": { // Toolmaster Luna
       play: { voice: "diva" },
