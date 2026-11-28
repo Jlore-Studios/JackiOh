@@ -114,6 +114,7 @@ func (x *Worker) suggest() {
 	path := filepath.Join(x.WorkDir, "suggest")
 	wt := git.WorktreeAdd(x.Repo, path, "bot-suggest", x.BaseRef)
 	x.Check()
+	x.rejudge(wt.Cwd)
 	existing := x.Plan.Get("existing")
 	if !pyjson.Truthy(existing) {
 		existing = prompts.Data("(none)", "Issues")
@@ -142,19 +143,81 @@ func (x *Worker) suggest() {
 	x.Result.Set("suggestions", suggestions)
 }
 
+// JudgeAttempts is how many fresh judge calls a run makes for the suggestions still unanswered: the
+// first for all of them, then one more for those it gave no word on (#5104).
+var JudgeAttempts = 2
+
+// rejudge judges the open suggestions an earlier survey's judge never answered (the plan's
+// `rejudge`, `plan.Unjudged`), before this survey's own work can spend the run or the cap it needs,
+// and keeps its word in the result as `rejudged`, one entry an issue, for delivery to put on each
+// (`deliver.Deliverer.applyRejudged`). An interrupt later in the run leaves the entries in place.
+func (x *Worker) rejudge(cwd string) {
+	leftovers := pyjson.Objs(x.Plan.Get("rejudge"))
+	if len(leftovers) == 0 {
+		return
+	}
+	found := make([]*verdicts.Suggestion, len(leftovers))
+	for i, l := range leftovers {
+		found[i] = &verdicts.Suggestion{Title: fmt.Sprintf("%s (already open as #%d)", l.Str("title"),
+			l.Int("number")), Body: l.Str("body")}
+	}
+	judged := x.judge(found, cwd)
+	out := []any{}
+	for i, l := range leftovers {
+		entry := pyjson.New("number", l.Int("number"))
+		if j := judged[i+1]; j != nil {
+			entry.Set("judge", pyjson.New("approve", j.Approve, "why", j.Why))
+		}
+		out = append(out, entry)
+	}
+	x.Result.Set("rejudged", out)
+}
+
 // judge is a survey's second look at its suggestions (`suggestions.auto_approve`,
 // `prompts/judge.md`): a fresh call that argues against each one, reading it against the latest
 // decisions people made on suggestions and the open issues and pull requests the survey read
 // (`existing`, so it sees work already in flight, #5104), and says, of each, whether it would
-// approve it. Its word, by each suggestion's number
-// from 1; none when auto-approval is off or there is nothing to judge. The suggestions matter more
-// than the judge's word on them, so a judge call that fails or stops (a cap, an infra error)
-// leaves every one to a person instead of losing the survey.
+// approve it. Its word, by each suggestion's number from 1; none when auto-approval is off or there
+// is nothing to judge. A call that answers only some of them is followed by a fresh one for the rest,
+// up to `JudgeAttempts` calls, and each way a call can fail leaves a step saying which. The
+// suggestions matter more than the judge's word on them, so one still unanswered opens with none,
+// and a later survey judges it again (`plan.Unjudged`).
 func (x *Worker) judge(found []*verdicts.Suggestion, cwd string) map[int]*verdicts.Judgement {
 	judged := map[int]*verdicts.Judgement{}
 	if !x.Cfg.AutoApprove.Enabled || len(found) == 0 {
 		return judged
 	}
+	missing := make([]int, len(found)) // the numbers from 1 still unanswered
+	for i := range found {
+		missing[i] = i + 1
+	}
+	for attempt := 1; attempt <= JudgeAttempts && len(missing) > 0; attempt++ {
+		batch := make([]*verdicts.Suggestion, len(missing))
+		for i, n := range missing {
+			batch[i] = found[n-1]
+		}
+		got := x.judgeOnce(batch, cwd, attempt)
+		still := []int{}
+		for i, n := range missing {
+			if j := got[i+1]; j != nil {
+				judged[n] = j
+			} else {
+				still = append(still, n)
+			}
+		}
+		if len(got) > 0 && len(still) > 0 {
+			x.Step("judge", fmt.Sprintf("the judge answered %d of %d (try %d)", len(missing)-len(still),
+				len(missing), attempt), pyjson.New())
+		}
+		missing = still
+	}
+	return judged
+}
+
+// judgeOnce is one fresh judge call on `found`, its word by their numbers from 1. A call that is
+// refused, fails or times out answers none, with a step saying why.
+func (x *Worker) judgeOnce(found []*verdicts.Suggestion, cwd string, attempt int) map[int]*verdicts.Judgement {
+	judged := map[int]*verdicts.Judgement{}
 	var listed []string
 	for i, s := range found {
 		kind := s.Kind
@@ -176,11 +239,21 @@ func (x *Worker) judge(found []*verdicts.Suggestion, cwd string) map[int]*verdic
 		"decided", decided))
 	if err := herr.Try(func() {
 		result := x.Call("judge", prompt, cwd, true, "judge the survey's suggestions", false)
-		if result.OK {
+		switch {
+		case result.OK:
 			judged = verdicts.Judgements(result.Text, len(found))
+			if len(judged) == 0 {
+				x.Step("judge", fmt.Sprintf("the judge's answer held no verdicts (try %d)", attempt), pyjson.New())
+			}
+		case result.TimedOut:
+			x.Step("judge", fmt.Sprintf("the judge's call timed out (try %d)", attempt), pyjson.New())
+		default:
+			x.Step("judge", fmt.Sprintf("the judge's call failed (try %d): %s", attempt,
+				py.SliceTo(py.OrStr(result.Error, "no answer"), 200)), pyjson.New())
 		}
 	}); err != nil {
-		x.Step("judge", "the judge did not answer: "+py.SliceTo(err.Error(), 200), pyjson.New())
+		x.Step("judge", fmt.Sprintf("the judge did not answer (try %d): %s", attempt,
+			py.SliceTo(err.Error(), 200)), pyjson.New())
 		return map[int]*verdicts.Judgement{}
 	}
 	return judged
