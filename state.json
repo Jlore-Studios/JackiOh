@@ -21858,7 +21858,7 @@
     "what": "plan #5265 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-28T04:10:49Z",
+    "at": "2026-11-28T04:16:58Z",
     "notes": [
       "#5265 is held for `claude-8` until 23:50 (5-hour usage is 80%, too close to its 85% cap to start a long run (it starts under 80%))"
     ],
@@ -22566,7 +22566,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T04:10:49Z",
+  "loop_tick": "2026-11-28T04:16:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
