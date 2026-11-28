@@ -22174,13 +22174,8 @@
     "what": "suggestions (ai) on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-28T09:38:04Z",
-    "notes": [
-      "delivered suggest on claude-6 (run 46130425778): interrupted",
-      "delivered suggest on claude-6 (run 46130387758): interrupted",
-      "delivered suggest on claude-4 (run 46130348177): interrupted",
-      "delivered build #5289 on claude-4 (run 46129295945): interrupted"
-    ],
+    "at": "2026-11-28T09:45:53Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -22885,7 +22880,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T09:38:04Z",
+  "loop_tick": "2026-11-28T09:45:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
