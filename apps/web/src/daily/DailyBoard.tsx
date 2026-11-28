@@ -30,12 +30,17 @@
 // result with both heroes' life, when it ended, a line saying its moves are no longer kept and Back to daily
 // games. It offers no replay (the log is gone) and no Rematch, and it is read no more.
 //
+// A finished game that is not voided tells the page it paid (R5231000): `announceWallet()` and `reloadOwnProficiency()`,
+// once, as the match screen does (R4977000).
+//
 // CLAUDE.md rule 7: who holds the move, its deadline, what is legal and every refusal are the server's.
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
 import type { ActionBody } from "@jackioh/shared";
 
+import { reloadOwnProficiency } from "../cards/proficiencySync.ts";
+import { announceWallet } from "../economy/wallet.ts";
 import Game from "../game/Game.tsx";
 import { CatalogContext } from "../game/catalog.ts";
 import { MainMenuButton } from "../game/MainMenuButton.tsx";
@@ -236,6 +241,18 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
     heldAutoEndTurn.current = null;
     if ((game.view.autoEndTurn !== false) !== held.enabled) send(held);
   }, [game, sends, send]);
+
+  // R5231000: a finished game that is not voided has paid this account (§9.13, the same write as a live game's, R4977000):
+  // the pill reads the wallet again and the page loads its card proficiency again, once per board
+  // however many reads, rerenders or resends follow. An expired board (R3934000) has no `game` and announces nothing.
+  const paid = game !== null && game.over && game.view.result?.reason !== "voided";
+  const announced = useRef(false);
+  useEffect(() => {
+    if (!paid || announced.current) return;
+    announced.current = true;
+    announceWallet();
+    reloadOwnProficiency();
+  }, [paid]);
 
   if (expired !== null) return <ExpiredGame game={expired} />;
 
