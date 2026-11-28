@@ -21969,17 +21969,8 @@
       "verdict_rounds": 0
     },
     "5289": {
-      "action": "plan",
-      "asks": [
-        "c:7236655415"
-      ],
-      "build_next": {
-        "from_run": "46126371126",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-28T09:06:30Z",
-        "until": "2026-11-28T09:36:30Z"
-      },
+      "action": "build",
+      "asks": [],
       "failures": 0,
       "forced": true,
       "handoff": {
@@ -21991,10 +21982,9 @@
         "reason": "planned on opus",
         "trail": "rep -rn \\\"include_str!\\\\|catalog.json\\\\|patches/\\\" crates/server/src --include=*.rs | grep -v \\\"^\\\\s*//\\\" | head -10; grep -rn \\\"include_str!\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; sed -n 178,200p eslint.config.js; sed -n 1,30p apps/web/src/net/check-assets.test.ts\", \"description\": \"Read eslint mjs block and a scripts test\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; sed -n 5278,5348p crates/tools/src/patches.rs; grep -n \\\"fn shipped_repo\\\\|fn claim_fragment\\\\|fn fragment_for\\\\|fn commit_at\\\\|fn shipped_of\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; awk 'NR>=5420 && NR<=5480 && /fn r[0-9]/' crates/tools/src/patches.rs; grep -n \\\"fn lists_of\\\\|fn win_rates_text\\\" crates/tools/src/patches.rs;\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; grep -n \\\"struct CardLists\\\\|fn lists\\\\b\\\\|pub fn lists(\\\\|LISTS_DIR\\\\|fn read_lists\\\\|fn lists_path\\\" crates/tools/src/card_lists.rs | head; s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; awk 'NR>1380' crates/tools/src/retcon.rs | grep -n \\\"read_to_string\\\\|assert_eq!(\\\\s*$\\\\|to_string_pretty\\\" | awk -F: '{print $1+1380\\\": \\\"$0}'\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; git ls-files -z | xargs -0 wc -l 2>/dev/null | tail -1\", \"description\": \"Count tracked lines before the change\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; git ls-files -z | xargs -0 cat 2>/dev/null | wc -l; git ls-files -z | xargs -0 wc -l 2>/dev/null | grep -c \\\" total$\\\"\", \"description\": \"Count \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; cat > /tmp/plan5289/layout.py <<'EOF'\\nimport json,glob,sys\\nWS=' \\\\n\\\\r\\\\t'; PUN='{}[],:'\\ndef tokens(s):\\n out=[];i=0;n=len(s)\\n while i<n:\\n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; grep -n \\\"prettier\\\\|\\\\\\\"lint\\\\|\\\\\\\"format\\\" package.json apps/web/package.json | head; ls .prettierrc* apps/web/.prettierrc* 2>/dev/null; grep\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; grep -n \\\"fn scratch\\\\|fn temp\\\\|AtomicUsize::new\\\\|temp_dir()\\\" crates/tools/tests/acceptance.rs | head; grep -n \\\"fn repo()\\\" -A 6 crates/too\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; sed -n 366,381p crates/tools/tests/acceptance.rs; sed -n 2183,2192p crates/tools/tests/acceptance.rs\", \"description\": \"Read Scratch helper in a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; sed -n 430,470p crates/cards/build.rs; sed -n 590,650p crates/cards/build.rs\", \"description\": \"Read build.rs history_json and deltas_rs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; sed -n 5741,5760p crates/tools/src/patches.rs; sed -n 6088,6100p crates/tools/src/patches.rs; sed -n 3193,3236p crates/tools/src/patches.rs | g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; sed -n 5810,5990p crates/tools/src/patches.rs | grep -n \\\"read_to_string\\\\|assert_eq!(\\\\|stringify\\\\|fn r\\\" | head -30\", \"description\": \"Scan R\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; sed -n 5936,5965p crates/tools/src/patches.rs\", \"description\": \"Read the real-history least-delta test\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; grep -n \\\"patches.json\\\\|deltas\\\\|PATCHES_REL\\\\|crates/cards/patches\\\" crates/tools/src/claims.rs crates/tools/src/classify.rs | head -20\", \"de\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; sed -n 186,200p crates/tools/src/technical.rs; sed -n 243,275p crates/tools/src/technical.rs\", \"description\": \"Read technical_problems for byte\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; ls spec/ | head -30; grep -rln \\\"deltas/\\\" spec/0*.md spec/0*/ 2>/dev/null | head; grep -rn \\\"pretty\\\\|two-space\\\\|one line\\\" spec/09* 2>/dev/n\u2026\n- Bash: {\"command\": \"cd /tmp/plan5289 && python3 -I -c \\\"\\nexec(open('layout.py').read().split('P=')[0])\\ncases=[('{\\\\\\\"a\\\\\\\":{\\\\\\\"x\\\\\\\":[1,2],\\\\\\\"y\\\\\\\":{\\\\\\\"z\\\\\\\":null}},\\\\\\\"b\\\\\\\":[]}',1),('{\\\\\\\"set\\\\\\\":{\\\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; grep -n \\\"pub fn repo_root\\\" -A 3 crates/tools/src/patches.rs; grep -n \\\"pub struct Args\\\\|derive\\\" crates/tools/src/names.rs | head -3; grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; grep -n \\\"fn repo_root\\\" crates/tools/src/*.rs | head -5; grep -n \\\"^use crate::patches\\\\|use crate::patches::{\\\" crates/tools/src/names.rs cra\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5289/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery file in #5289's table is written a record per line by one layout (`crates/tools/src/json_layout.rs`'s\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count words in plan draft\"}\n- Bash: {\"command\": \"cd /tmp && echo '{\\\"a\\\":1}' | node --input-type=module -e 'import { readFileSync } from \\\"node:fs\\\"; process.stdout.write(JSON.stringify([process.argv.slice(1), readFileSync(0, \\\"utf8\\\")\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5289/.bot-plan.md\", \"old_string\": \"Rule: a container at nesting level < `depth` opens on lines of its own if it is the root and \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5289/.bot-plan.md\", \"old_string\": \"- `json-layout.test.ts` (spawn `process.execPath` with `--input-type=module -e` importing the\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5289; wc -w .bot-plan.md; git status --porcelain | head\", \"description\": \"Recount words and confirm tree untouched\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5289/.bot-plan.md\"}\n- said: ## Goal Every file in #5289's table gets written one record per line by a single layout function: `crates/tools/src/json_layout.rs`'s `layout`, with a JavaScript copy in `apps/web/scripts/json-layout.mjs`. Every writer of those files uses it. A new `cargo jackioh format-json` command rewrites the t\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-28T08:34:23Z",
       "owner_why": "it plans it",
@@ -22007,11 +21997,13 @@
       "provider": "claude-4",
       "queued_at": "2026-11-28T08:33:20Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "46126371126",
+      "run_id": "pending:742acd16-1795857073",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T08:34:23Z",
+      "started_at": "2026-11-28T09:11:30Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7236655415"
+      ]
     },
     "5292": {
       "action": "review",
@@ -22164,9 +22156,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T08:51:55Z",
+    "at": "2026-11-28T09:11:30Z",
     "url": "",
-    "what": "build #5189 on claude-8"
+    "what": "build #5289 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-28T09:04:32Z",
