@@ -20933,6 +20933,9 @@
         "sha": "e3fc7d725226157ed149998eb8c1c3aa7807f69d",
         "tiers": {}
       }
+    },
+    "5226": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -44361,6 +44364,13 @@
         "title": "Patch: Low graphics stills the idle loops the motion budget's revert brought back, and keeps the ones that mark a move",
         "verdict": "came to nothing",
         "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-11-28T00:33:22Z",
+        "number": 5226,
+        "title": "Patch: Immutable keeps Last Hurrah's Flashback off a card in the hand, and its random picks skip Immutable cards",
+        "verdict": "auto-approved",
+        "why": "approved by itself: no one voted on it"
       }
     ],
     "declined": [
