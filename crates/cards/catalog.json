@@ -37261,7 +37261,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 16,
     "base": {
       "attack": 8,
       "health": 8,
@@ -37336,7 +37336,7 @@
         "min": 0
       }
     ],
-    "loc": 1,
+    "loc": 36,
     "base": {
       "keywords": [],
       "text": "Every card in your hand and deck now costs ({setCost})."
@@ -37369,7 +37369,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 42,
     "base": {
       "keywords": [],
       "text": "Set the Attack and Health of your Units to {stats}/{stats}. For the rest of the game, whenever you summon a Unit, set its Attack and Health to {stats}/{stats}."
@@ -37577,7 +37577,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 1,
-    "loc": 1,
+    "loc": 8,
     "base": {
       "attack": 1,
       "health": 1,
@@ -37621,7 +37621,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 0,
-    "loc": 1,
+    "loc": 8,
     "base": {
       "attack": 2,
       "health": 3,
@@ -37648,7 +37648,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 5,
-    "loc": 1,
+    "loc": 8,
     "base": {
       "attack": 20,
       "health": 20,
@@ -37673,7 +37673,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 4,
-    "loc": 1,
+    "loc": 8,
     "base": {
       "attack": 7,
       "health": 2,
@@ -37720,7 +37720,7 @@
     "flavor": "Fire",
     "token": false,
     "cost": 1,
-    "loc": 1,
+    "loc": 8,
     "base": {
       "attack": 5,
       "health": 5,
@@ -37772,7 +37772,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Add a Travertine Stack with Temporary 2 to your hand.\nEmbiggened (+3): Add {stacks} instead, with Temporary 1 to {stacks}."
@@ -37818,7 +37818,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "When you play or discard this: Gain {mana} mana and {credits} Credits, and summon a Travertine Golem."
@@ -37852,7 +37852,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 32,
     "base": {
       "attack": 0,
       "health": 5,
@@ -37889,7 +37889,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 16,
     "base": {
       "attack": 16,
       "health": 22,
@@ -37940,7 +37940,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 23,
     "base": {
       "attack": 4,
       "health": 4,
@@ -37970,7 +37970,7 @@
     "refs": [
       "felinorsvshumans-019-1"
     ],
-    "loc": 1,
+    "loc": 30,
     "base": {
       "keywords": [],
       "text": "Activate: Summon a Wall of Bricks."
@@ -37994,7 +37994,7 @@
     "flavor": "Brute",
     "token": true,
     "cost": 1,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 0,
       "health": 5,
@@ -38047,7 +38047,7 @@
       "felinorsvshumans-020",
       "felinorsvshumans-020-1"
     ],
-    "loc": 1,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Activate: Summon a Ticking Time Bomb."
@@ -38081,7 +38081,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 41,
     "base": {
       "attack": 0,
       "health": 2,
@@ -38477,7 +38477,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 31,
     "base": {
       "keywords": [],
       "text": "Float reduces cost.\nCosts (0) while your hero has exactly 1 health.\nHeal your hero {heal}. Fill your board with random Legendary Units."
@@ -38498,7 +38498,7 @@
     "flavor": "Hustle",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 41,
     "base": {
       "keywords": [
         {
@@ -38529,7 +38529,7 @@
     "flavor": "Brute",
     "token": false,
     "cost": 10,
-    "loc": 1,
+    "loc": 13,
     "base": {
       "attack": 50,
       "health": 50,
@@ -38594,7 +38594,7 @@
     "flavor": "Clout",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 35,
     "base": {
       "attack": 1,
       "health": 1,
@@ -38619,7 +38619,7 @@
     "flavor": "Brute",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 28,
     "base": {
       "keywords": [],
       "text": "End of turn: If you spent all your mana this turn, summon a random Asteroid."
@@ -38640,7 +38640,7 @@
     "flavor": "Brute",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 13,
     "base": {
       "attack": 20,
       "health": 20,
@@ -38734,7 +38734,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 38,
     "base": {
       "attack": 5,
       "health": 8,
@@ -38772,7 +38772,7 @@
         "read": "cry"
       }
     ],
-    "loc": 33,
+    "loc": 35,
     "base": {
       "attack": 3,
       "health": 3,
@@ -38799,7 +38799,7 @@
     "flavor": "Snack",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 39,
     "base": {
       "attack": 2,
       "health": 8,
@@ -38901,7 +38901,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 18,
     "base": {
       "attack": 3,
       "health": 5,
@@ -38932,7 +38932,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 22,
     "base": {
       "attack": 5,
       "health": 4,
@@ -39028,7 +39028,7 @@
     "flavor": "Fire",
     "token": false,
     "cost": 0,
-    "loc": 1,
+    "loc": 11,
     "base": {
       "attack": 1,
       "health": 1,
@@ -39055,7 +39055,7 @@
     "flavor": "Toxic",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 33,
     "base": {
       "attack": 3,
       "health": 4,
@@ -39096,7 +39096,7 @@
     "refs": [
       "felinorsvshumans-049-1"
     ],
-    "loc": 1,
+    "loc": 16,
     "base": {
       "attack": 2,
       "health": 1,
@@ -39135,7 +39135,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 1,
+    "loc": 26,
     "base": {
       "keywords": [
         {
@@ -39183,7 +39183,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 1,
+    "loc": 42,
     "base": {
       "keywords": [
         {
@@ -39260,7 +39260,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 37,
     "base": {
       "attack": 2,
       "health": 4,
@@ -39297,7 +39297,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 34,
     "base": {
       "attack": 1,
       "health": 4,
@@ -39334,7 +39334,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 49,
     "base": {
       "attack": 2,
       "health": 3,
@@ -39421,7 +39421,7 @@
       "felinorsvshumans-057-2",
       "felinorsvshumans-057-3"
     ],
-    "loc": 1,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Add a Kill Command, a Tackling and a Felinor Companion to your hand."
@@ -39465,7 +39465,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 1,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Deal {damage} damage, or {felinorDamage} if you control a Felinor."
@@ -39490,7 +39490,7 @@
     "flavor": "Nerd",
     "token": true,
     "cost": 0,
-    "loc": 1,
+    "loc": 62,
     "base": {
       "keywords": [],
       "text": "Look at the top three cards of your deck. Add one of them to your hand and discard the others."
@@ -39520,7 +39520,7 @@
       "felinorsvshumans-057-5",
       "felinorsvshumans-057-6"
     ],
-    "loc": 1,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Summon a random Wide Felinor, Narrow Felinor or Square Felinor."
@@ -39546,7 +39546,7 @@
     "flavor": "Beast",
     "token": true,
     "cost": 1,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 4,
       "health": 4,
@@ -39584,7 +39584,7 @@
     "flavor": "Beast",
     "token": true,
     "cost": 1,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 4,
       "health": 2,
@@ -39632,7 +39632,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 25,
     "base": {
       "attack": 2,
       "health": 4,
@@ -39662,7 +39662,7 @@
       "felinorsvshumans-057-5",
       "felinorsvshumans-057-6"
     ],
-    "loc": 1,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Summon a Wide Felinor, a Narrow Felinor and a Square Felinor."
@@ -39856,7 +39856,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 21,
     "base": {
       "attack": 12,
       "health": 12,
@@ -39894,7 +39894,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 22,
     "base": {
       "attack": 10,
       "health": 1,
@@ -39921,7 +39921,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 51,
     "base": {
       "attack": 3,
       "health": 4,
@@ -39948,7 +39948,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 1,
-    "loc": 1,
+    "loc": 14,
     "base": {
       "attack": 2,
       "health": 1,
@@ -39989,7 +39989,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Summon a random (1) Cost Felinor and give it +{stats}/+{stats}."
@@ -40023,7 +40023,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 35,
     "base": {
       "attack": 4,
       "health": 2,
@@ -40050,7 +40050,7 @@
     "flavor": "Clout",
     "token": false,
     "cost": 1,
-    "loc": 1,
+    "loc": 37,
     "base": {
       "attack": 3,
       "health": 1,
@@ -40088,7 +40088,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 33,
     "base": {
       "attack": 2,
       "health": 2,
@@ -40138,7 +40138,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 39,
     "base": {
       "attack": 7,
       "health": 7,
@@ -40165,7 +40165,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 3,
-    "loc": 1,
+    "loc": 43,
     "base": {
       "attack": 2,
       "health": 4,
@@ -40197,7 +40197,7 @@
       "felinorsvshumans-072-2",
       "felinorsvshumans-072-3"
     ],
-    "loc": 1,
+    "loc": 19,
     "base": {
       "keywords": [],
       "text": "Add a Wild Growth, a Swipe and a Savage Roar to your hand."
@@ -40232,7 +40232,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 17,
     "base": {
       "keywords": [],
       "text": "Gain {crystals|mana crystal|mana crystals}."
@@ -40276,7 +40276,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 1,
+    "loc": 52,
     "base": {
       "keywords": [
         {
@@ -40319,7 +40319,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 24,
     "base": {
       "keywords": [],
       "text": "Give your Units +{attack} Attack and Deft this turn."
@@ -40363,7 +40363,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 56,
     "base": {
       "attack": 3,
       "health": 2,
@@ -40397,7 +40397,7 @@
       "felinorsvshumans-074-1",
       "felinorsvshumans-079"
     ],
-    "loc": 1,
+    "loc": 27,
     "base": {
       "attack": 2,
       "health": 6,
@@ -40448,7 +40448,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 75,
     "base": {
       "attack": 9,
       "health": 5,
@@ -40556,7 +40556,7 @@
         "min": 1
       }
     ],
-    "loc": 33,
+    "loc": 35,
     "base": {
       "keywords": [],
       "text": "Destroy a Unit. Costs ({discount}) less if you control a Felinor."
@@ -40598,7 +40598,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 40,
     "base": {
       "attack": 6,
       "health": 6,
@@ -40646,7 +40646,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 29,
     "base": {
       "attack": 6,
       "health": 6,
@@ -40681,7 +40681,7 @@
     "flavor": "Clout",
     "token": false,
     "cost": 4,
-    "loc": 1,
+    "loc": 56,
     "base": {
       "attack": 2,
       "health": 8,
@@ -40740,7 +40740,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 57,
     "base": {
       "attack": 2,
       "health": 7,
@@ -40789,7 +40789,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 122,
     "base": {
       "attack": 7,
       "health": 6,
@@ -40884,7 +40884,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 11,
     "base": {
       "attack": 1,
       "health": 1,
@@ -40932,7 +40932,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 37,
     "base": {
       "attack": 4,
       "health": 2,
@@ -40969,7 +40969,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 33,
     "base": {
       "attack": 4,
       "health": 2,
@@ -41027,7 +41027,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 12,
     "base": {
       "attack": 5,
       "health": 3,
@@ -41077,7 +41077,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 4,
-    "loc": 1,
+    "loc": 8,
     "base": {
       "attack": 16,
       "health": 16,
@@ -41112,7 +41112,7 @@
     "flavor": "Physical",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 32,
     "base": {
       "attack": 3,
       "health": 5,
@@ -41140,7 +41140,7 @@
     "token": false,
     "cost": "X",
     "dealsDamage": true,
-    "loc": 1,
+    "loc": 66,
     "base": {
       "keywords": [],
       "text": "Deal X√(log₂X) damage, rounded down, to an enemy. If X is a power of 2, deal it to every enemy instead."
@@ -41163,7 +41163,7 @@
     "flavor": "Nerd",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 16,
     "base": {
       "keywords": [],
       "text": "Aura: Every card's Attack, Health and Cost count as the number of digits they have in binary."
@@ -41195,7 +41195,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 65,
     "base": {
       "attack": 4,
       "health": 10,
@@ -41240,7 +41240,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 16,
     "base": {
       "attack": 4,
       "health": 3,
@@ -41271,7 +41271,7 @@
     "flavor": "Brute",
     "token": false,
     "cost": 2,
-    "loc": 1,
+    "loc": 17,
     "base": {
       "attack": 6,
       "health": 6,
@@ -41309,7 +41309,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 20,
     "base": {
       "attack": 3,
       "health": 5,
@@ -41356,7 +41356,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 20,
     "base": {
       "attack": 1,
       "health": 1,
@@ -41441,7 +41441,7 @@
         "min": 1
       }
     ],
-    "loc": 28,
+    "loc": 30,
     "base": {
       "attack": 4,
       "health": 12,
@@ -41556,7 +41556,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 22,
     "base": {
       "keywords": [],
       "text": "One random effect: Summon {felinors|random Felinor with Death or Reborn|random Felinors with Death or Reborn}; summon {humans|random Human with an Aura|random Humans with an Aura}; give enemy Units on the field, in their hand and in their deck Fragile; cast {plagiarized|random Plagiarized card|random Plagiarized cards}; fill your board with random Radiant Felinors and your opponent's with random Humans; fill your board with random Radiant Humans and your opponent's with random Felinors; make enemy Units and Field Spells in their hand, deck and graveyard GIGA; summon a Radiant Call to Chaos Vending Machine; summon a Felinor Golem and a Human Golem; cast a random Call to Chaos."
@@ -41582,7 +41582,7 @@
     "flavor": "Beast",
     "token": true,
     "cost": 4,
-    "loc": 1,
+    "loc": 27,
     "base": {
       "attack": 5,
       "health": 5,
@@ -41639,7 +41639,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 32,
     "base": {
       "attack": 5,
       "health": 5,
@@ -41839,7 +41839,7 @@
     "flavor": "Beast",
     "token": false,
     "cost": 3,
-    "loc": 1,
+    "loc": 44,
     "base": {
       "attack": 12,
       "health": 12,
@@ -41911,7 +41911,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 16,
     "base": {
       "attack": 1,
       "health": 3,
@@ -42085,7 +42085,7 @@
       "felinorsvshumans-112-8",
       "felinorsvshumans-112-9"
     ],
-    "loc": 1,
+    "loc": 143,
     "base": {
       "attack": 0,
       "health": 1,
@@ -42113,7 +42113,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 0,
-    "loc": 1,
+    "loc": 12,
     "base": {
       "attack": 1,
       "health": 1,
@@ -42149,7 +42149,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 0,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 0,
       "health": 1,
@@ -42197,7 +42197,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 13,
     "base": {
       "attack": 2,
       "health": 2,
@@ -42225,7 +42225,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 1,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 0,
       "health": 1,
@@ -42271,7 +42271,7 @@
         "min": 1
       }
     ],
-    "loc": 1,
+    "loc": 27,
     "base": {
       "attack": 2,
       "health": 2,
@@ -42299,7 +42299,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 2,
-    "loc": 1,
+    "loc": 19,
     "base": {
       "attack": 1,
       "health": 3,
@@ -42327,7 +42327,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 3,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 5,
       "health": 5,
@@ -42355,7 +42355,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 3,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 3,
       "health": 1,
@@ -42400,7 +42400,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 4,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 3,
       "health": 3,
@@ -42428,7 +42428,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 4,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 2,
       "health": 5,
@@ -42473,7 +42473,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 4,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 3,
       "health": 2,
@@ -42530,7 +42530,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 5,
-    "loc": 1,
+    "loc": 18,
     "base": {
       "attack": 6,
       "health": 2,
@@ -42558,7 +42558,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 6,
-    "loc": 1,
+    "loc": 6,
     "base": {
       "attack": 2,
       "health": 2,
@@ -42671,7 +42671,7 @@
       "stinkyscapeplus-142",
       "traininggrounds-039"
     ],
-    "loc": 1,
+    "loc": 42,
     "base": {
       "keywords": [
         {
@@ -43024,7 +43024,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 26,
+    "loc": 27,
     "base": {
       "keywords": [],
       "text": "Add two random (1) Cost Plagiarized Units to your hand. They're Temporary."
@@ -43171,7 +43171,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 121,
+    "loc": 122,
     "base": {
       "keywords": [],
       "text": "Look at the top three cards of your opponent's deck. Add a copy of one to your hand and exile another."
@@ -44303,7 +44303,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 24,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Fill your hand with random Plagiarized cards. They're Temporary."

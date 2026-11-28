@@ -1876,6 +1876,66 @@ mod r817000_a_random_deck_holds_at_most_two_quickdraw_cards {
         }
     }
 
+    /// R5235002: Plagiarized marks the Felinors vs Humans set's frozen copies of Infinite Assault cards, a
+    /// provenance tag as Legacy is, so it is never a theme either: with the held set previewed, a pool whose one
+    /// theme-sized tag it is rolls none (a Plagiarized-themed deck would be a bag of reprints).
+    #[test]
+    fn r5235002_plagiarized_is_never_a_theme_so_a_pool_whose_one_theme_sized_tag_it_is_rolls_none() {
+        register_cards();
+        // R1420's preview opens the held set on this thread exactly as shipping it does.
+        let _preview = jackioh_engine::testkit::preview_every_set();
+        let plagiarized: Vec<String> = query(&CatalogQueryArgs::default())
+            .into_iter()
+            .filter(|def| def.tags.contains(&Tag::Plagiarized))
+            .map(|def| def.id.clone())
+            .collect();
+        assert_eq!(plagiarized.len(), 82);
+        let mut untagged: Vec<String> = query(&CatalogQueryArgs::default())
+            .into_iter()
+            .filter(|def| def.tags.is_empty())
+            .map(|def| def.id.clone())
+            .collect();
+        untagged.sort();
+        let kept: IndexSet<String> = plagiarized
+            .into_iter()
+            .chain(untagged.into_iter().take(DECK_SIZE as usize))
+            .collect();
+        // PREMISE: Plagiarized is the pool's one tag with `minThemeSize` cards, so a rolled theme would be it.
+        let mut counts: IndexMap<String, usize> = IndexMap::new();
+        for id in &kept {
+            for tag in &def_of(None, id).tags {
+                *counts.entry(tag.as_str().to_string()).or_insert(0) += 1;
+            }
+        }
+        let theme_sized: Vec<String> = counts
+            .into_iter()
+            .filter(|(_, count)| *count >= AI_DECK.min_theme_size as usize)
+            .map(|(tag, _)| tag)
+            .collect();
+        assert_eq!(theme_sized, [Tag::Plagiarized.as_str()]);
+        let banned: Vec<String> = ai_pool().into_iter().filter(|id| !kept.contains(id)).collect();
+        let opts = options(json!({ "banned": banned, "gatedSets": [] }));
+        let mut most = 0;
+        for n in 1..=SEEDS {
+            let mut rng = create_rng(&format!("r5235002:theme:{n}"), 0);
+            let deck = build_ai_deck(&mut rng, DECK_SIZE, &opts);
+            assert_eq!(deck.len(), DECK_SIZE as usize, "seed {n}");
+            // The theme's chance and one draw per card, and no draw to pick a theme.
+            assert_eq!(rng.cursor(), DECK_SIZE as u32 + 1, "seed {n}");
+            let held = defs_of(&deck)
+                .iter()
+                .filter(|def| def.tags.contains(&Tag::Plagiarized))
+                .count();
+            most = most.max(held);
+        }
+        // The preview dealt the reprints, a theme's worth in a deck, so the deals measured the tag.
+        assert!(
+            most >= AI_DECK.min_theme_size as usize,
+            "no deck held {} Plagiarized cards (at most {most})",
+            AI_DECK.min_theme_size
+        );
+    }
+
     #[test]
     fn r817000_an_included_quickdraw_card_counts_toward_the_cap_and_is_always_dealt() {
         register_cards();

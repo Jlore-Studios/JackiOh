@@ -59,7 +59,7 @@ The event stream also says why things happen, for the client's cues and never fo
 behind a `damage`, `damageAbsorbed`, `healed`, `destroyed` or `summoned` rides it as `via`, set where
 the keyword applies: Cleave, Trample and First Strike as the hit's route (`DamageFlags.via`, never
 serialized, from `combat.rs` and `damage.rs`'s Trample), Pierce and Lifesteal in `damage.rs`'s steps,
-Poisonous and First Strike's unanswered kill on the `destroyed` through `Frontier.death_via`, and
+Poisonous's, Fragile's (R5236010) and First Strike's unanswered kill on the `destroyed` through `Frontier.death_via`, and
 Reborn in `state_check.rs` (R2783001). `hook_marks.rs` emits `hookResolving` just before each first run
 of a Cry, Death, turn hook, Whenever trigger or Activate (`prompts::run_resume`,
 `state_check::run_death_pass`, `triggers::run_queued_trigger`), withheld from the trigger loop, and
@@ -205,6 +205,28 @@ builds reads its own game's hold without the state (R2201001).
   (`buffThisTurn`) writes `CardInstance.turn_buff`, which layer 4 reads only while its `turn` is now.
   It is absent until set, so old games hash the same. `grant_for_turns` (`grantForTurns`, R5237001)
   pushes a `CardInstance.timed_buffs` entry that holds until its caster has started `turns` more turns.
+- The Felinors vs Humans keywords (§6.1, R5236000–R5236021, R5236031) are three more kinds,
+  `KeywordKind::{Durability, Fragile, Unlucky}` (`Durability { n }` and `Unlucky { n }` numbered). Durability X
+  is `subsystems/activate.rs`: `durability_left` (its X less `CardInstance.durability_spent`, which R78's
+  reset takes off) and `spend_durability`, both in the prelude, the second once at each real use and
+  reported as a `counterChanged` of kind `durability` (`CounterKind::Durability`); `why_ability_unusable`
+  refuses at 0, the settled state check sends a non-Unit permanent at 0 to its graveyard, and
+  `ActivationView.durabilityLeft` carries the count left (`0` once spent; absent without the keyword and on
+  the engine's own abilities). Fragile is `damage.rs` step 7's target-side twin of Poisonous, Unlucky the
+  negative half of `query::lucky_on`. The instance view lists all three among its keywords, Durability as
+  its count left (R5236031).
+- `effects/secret_grant.rs` is the secret grant (R5238001, FvH #46): `grant_keyword_secretly` grants the
+  keyword to its target for real and writes `CardInstance.shownToOpponent` on the target and each decoy, which
+  `view_for` adds to the unit view's keywords for the seat that does not control the card
+  (`keywords_shown_to`) and the AI's redacted copy believes (`believe_secret_grants`), so that seat cannot tell
+  which card holds it; the controller's view shows only the truth.
+- A card that plays on either side (R5238002, FvH #42, `StaticFlags.plays_on_either_side`) names a zone of
+  the other side with `ZoneChoice.player` (absent: the player's own side), and `legal_actions` lists both
+  sides' open zones for it; any other card's play into another side is refused.
+- `cardPlayed.fromHand` (`HandPlace { index, of }`, R5237005) is where in its hand a played card was as it
+  left it, read by `query::played_leftmost` and `played_rightmost`. It is set only in a game holding a
+  Felinors vs Humans card (`recursion_log::fvh_kept`) and `as_rules_read` keeps it, so it moves no other
+  game's hash.
 
 The engine never depends on `jackioh-cards` (only its tests do). An engine test that needs a card's
 behavior uses a test-only script in `tests/rules/fixtures/`, and the real card's test covers the
