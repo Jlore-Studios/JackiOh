@@ -9,7 +9,7 @@
 #               push run runs what that build skipped, #3564). deploy-staging.yml deploys each push
 #               of it to https://staging.jackioh.com.
 #   _production promote-production.yml's: once a day, the commit of staging the daily super run
-#               passed every job on (super.yml runs on staging, scripts/promote-production.sh).
+#               passed every gating job on (super.yml runs on staging, scripts/promote-production.sh).
 # main moves many times an hour, so a gate that tests main chases a moving target; staging holds
 # still between moves, which gives the daily super run one commit to pass and the night bot one
 # commit to fix.

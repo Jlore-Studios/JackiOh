@@ -36,7 +36,7 @@ owners' call of 2026-11-05):
 | --- | --- | --- | --- |
 | `main` | none | every merge, through the merge queue | the five required checks |
 | `_staging` | staging.jackioh.com | every two hours, by fast-forward to a snapshot of `main` (`promote-staging.yml`); while the super run on it is red, only to test the night bot's fix (section 2.2, the freeze) | that commit's push-to-main CI run passed |
-| `_production` | jackioh.com | once a day, to the commit of `_staging` the daily super run tested (`promote-production.yml`) | the super run passed every job on that commit |
+| `_production` | jackioh.com | once a day, to the commit of `_staging` the daily super run tested (`promote-production.yml`) | the super run passed every gating job on that commit (§2.2) |
 
 `_staging` is a pointer to "the commit of main that is live on staging.jackioh.com", and it only ever
 moves forward along main, so every commit on it is a commit of main. `_production` is a pointer to
@@ -74,7 +74,7 @@ The two, like the bots' state branches (`_bot-state`, `_bot-journal`, `_bot-usag
    the default branch, so its one job there starts the run on `_staging`
    (`gh workflow run super.yml --ref _staging`), whose commit is then the one it tests. It runs every
    fuzz seed, the full AI gates, golden, the daily tests, coverage, every e2e spec, the db rehearsal
-   and the notebooks. When every job passed, its completion wakes `promote-production.yml`, which
+   and the notebooks. When every gating job passed, its completion wakes `promote-production.yml`, which
    promotes the commit it tested (the daily promotion, section 2.1): a pull request from
    `promote/<date>-<sha>` into `_production` listing the commits, opened with the Actions token so that
    super does not run on it a second time, and merged at once with a merge commit. When a job failed,
@@ -87,7 +87,7 @@ The two, like the bots' state branches (`_bot-state`, `_bot-journal`, `_bot-usag
    hands it (#3676).
 4. Sooner, by hand: a `/promote` on the open issue labeled `production merge` takes `_staging`'s commit
    (or the commit of `_staging` named) and opens the same pull request,
-   with the bot's token, so the super run runs on it. When every job passed, `promote-production.yml`
+   with the bot's token, so the super run runs on it. When every gating job passed, `promote-production.yml`
    merges it. When one failed, it says so on the issue and the pull request waits, and super's report
    opens "CI: super run failed on a production candidate" for the night bot, as `priority:high` and
    `difficulty:hard`, unless "CI: daily super run failed" is open: then it reports there, and a red run
@@ -107,7 +107,7 @@ seed and log when its sockets return (SPEC §9.5), as after any restart.
 
 Production promotes itself once a day, from the daily super run on `_staging` (the owners' call of
 2026-11-03, on `main` until #3275 moved it to `_staging`; it was by hand only from 2026-11-02, #2750):
-each run on `_staging` that passes every job is promoted once, and a red one promotes nothing until
+each run on `_staging` that passes every gating job is promoted once, and a red one promotes nothing until
 the night bot's fix, once `_staging` has it, lets the next one pass. One
 issue labeled `production merge` is open at a time. Its title says where production stands
 ("Production: commits on main are not live yet", "the super run is testing 1a2b3c4 (#2901)", "the
@@ -134,7 +134,7 @@ Anyone with write access comments on the issue:
 
 | Comment | Effect |
 | --- | --- |
-| `/promote` (or `/fast-forward`) | Opens the promotion pull request of `_staging`'s commit into `_production`. The super run tests it; it merges and deploys once every job passes. |
+| `/promote` (or `/fast-forward`) | Opens the promotion pull request of `_staging`'s commit into `_production`. The super run tests it; it merges and deploys once every gating job passes. |
 | `/promote <sha>` | The same, for that commit of `_staging`. A newer commit of `main` must reach `_staging` first (Actions -> promote staging -> Run workflow). |
 | `/skip-super <reason>` | The emergency way: merges the open pull request, or `_staging`'s commit, now, without the super run. The reason is required; the issue and the pull request record who, why and which commit. |
 | `/cancel` | Closes the open pull request. Nothing merges. |
@@ -157,6 +157,15 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
 
 ### 2.2 The rules the promotion enforces
 
+- Only the gating jobs of a super run hold anything (the owner's call of 2026-11-28, #5207): every
+  job but the report-only ones, fuzz, ai gates, daily tests, coverage and notebooks. A report-only job
+  carries `continue-on-error`, so its failure leaves the run green: staging does not freeze, the daily
+  promotion goes ahead and a promotion pull request merges. Its failure is reported all the same, on
+  its own issue, "CI: super run's report-only jobs failed", handed to the night bot as
+  `priority:high`, and a run whose report-only jobs all pass closes it. From 2026-11-18 to 2026-11-27
+  one run on `_staging` in 24 passed every job, almost always red on a rare finding of a statistical
+  job (a fuzz invariant broken in 1 game of 4,200, a card test that leaned on where a roll landed), so
+  production waited or went by `/skip-super`, which tests nothing. `super.yml`'s header has the rest.
 - While the newest finished super run on `_staging` failed, `_staging` holds still (the freeze, the
   owners' call of 2026-11-10): the schedule and main's green CI runs leave it be until the night bot's
   fix closes the run's issue, "CI: daily super run failed"; then it takes main's newest green commit
@@ -171,7 +180,7 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
   candidate it already has is a no-op, and a `_staging` that holds anything `main` does not fails the
   run. Its ruleset (`infra/github.tf`) refuses deletion and force pushes.
 - The production candidate must be on `_staging` and have a successful push-to-main CI run, and a
-  super run in which every job passed, on `_staging` (the daily promotion) or on its promotion pull
+  super run in which every gating job passed, on `_staging` (the daily promotion) or on its promotion pull
   request, unless a person merged it with `/skip-super` and a reason.
 - `_production` only receives merges of commits of `_staging`: if someone committed to `_production`,
   the run fails and changes nothing. It never force-pushes.
@@ -293,7 +302,7 @@ JackiOh-Production.
   promotion or deploy that fails goes to the night bot too.
 - **Ship to production sooner:** move `_staging` (Actions -> promote staging -> Run workflow) if the
   change is not on it yet, then `/promote` on the production issue. The super run tests the pull
-  request (an hour or so) and it merges and deploys once every job passed. A red job goes to the night
+  request (an hour or so) and it merges and deploys once every gating job passed. A red job goes to the night
   bot as `priority:high`; re-run the failed jobs once it is fixed, or `/promote` again for the newer
   commit.
 - **Ship now (hotfix):** merge the fix, wait for its CI on main, run promote staging, then `/promote`. If the super run is

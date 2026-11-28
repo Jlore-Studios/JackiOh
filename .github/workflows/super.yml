@@ -24,16 +24,29 @@
 # when it is already open, naming each failed job with a link to its log; a run that passes closes it
 # (V25). The run is long on purpose and ci-duration.yml does not watch it.
 #
+# Gating and report-only jobs (the owner's call of 2026-11-28, #5207). fuzz, ai gates, daily tests,
+# coverage and notebooks are report-only: each carries `continue-on-error`, so its failure leaves the
+# run green, and nothing that reads the run's conclusion holds for it: not staging's freeze
+# (scripts/promote-staging.sh), not the daily promotion, not a promotion pull request's merge
+# (scripts/promote-production.sh). They are statistical, and almost every day one found something: a
+# fuzz invariant broken in 1 game of 4,200, a card test that leaned on where a roll landed. From
+# 2026-11-18 to 2026-11-27 one run on `_staging` in 24 passed every job, and five of production's six
+# moves from 2026-11-23 went by `/skip-super`, which tests nothing. Every other job gates: the builds, golden, e2e, the component
+# specs, web and db, which hold what a player gets and replay. A report-only job that fails is still
+# reported, on its own issue (FINDINGS_TITLE in `report`), handed to the night bot as `priority:high`;
+# a gating job's failure is reported as before. REPORT_ONLY_JOBS in `report` names the report-only
+# jobs, and apps/web/src/net/promote-production.test.ts holds it to the jobs that carry the key.
+#
 # It is also production's gate (#2750). The daily run tests `_staging`, not main (#3275, the owners'
 # call of 2026-11-05): promote-staging.yml moves `_staging` to a green commit of main every two hours,
 # so the run tests one commit that holds still instead of a main that moves many times an hour. A
 # schedule always runs on the default branch, so the scheduled run's one job, `daily`, starts this
 # workflow on `_staging` and every other job skips; that dispatched run's `head_sha` is the commit it
-# tested. The daily promotion: when the run on `_staging` passes every job, promote-production.yml,
+# tested. The daily promotion: when the run on `_staging` passes every gating job, promote-production.yml,
 # woken by its completion, merges the commit it tested into `_production` and deploys it. Sooner: a
 # `/promote` on the production issue opens a pull request of staging's commit into `_production`,
 # this workflow runs on it (`pull_request` below), and
-# promote-production.yml merges it only once every job here passed. A red run on such a pull request
+# promote-production.yml merges it only once every gating job here passed. A red run on such a pull request
 # opens its own issue, CANDIDATE_TITLE, handed to the night bot as `priority:high` and
 # `difficulty:hard`, since production waits on it; the pull request stays open, and re-running the
 # failed jobs merges it once they pass. A run that passes on one closes that issue, never the daily one.
@@ -190,6 +203,7 @@ jobs:
     needs: rust-build
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    continue-on-error: true # report-only (the header): a failure holds neither staging nor production
     strategy:
       fail-fast: false
       matrix:
@@ -232,6 +246,7 @@ jobs:
     needs: rust-build
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    continue-on-error: true # report-only (the header): a failure holds neither staging nor production
     strategy:
       fail-fast: false
       matrix:
@@ -260,6 +275,7 @@ jobs:
     needs: [rust-build, gate-shard]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    continue-on-error: true # report-only (the header): a failure holds neither staging nor production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -317,6 +333,7 @@ jobs:
     environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: ${{ matrix.timeout }}
+    continue-on-error: true # report-only (the header): a failure holds neither staging nor production
     strategy:
       fail-fast: false
       matrix:
@@ -376,6 +393,7 @@ jobs:
     environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    continue-on-error: true # report-only (the header): a failure holds neither staging nor production
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -498,6 +516,7 @@ jobs:
     environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    continue-on-error: true # report-only (the header): a failure holds neither staging nor production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -582,16 +601,17 @@ jobs:
           DAILY_TITLE: "CI: daily super run failed"
           # A promotion pull request's own issue; scripts/promote-production.sh names it (SUPER_TITLE).
           CANDIDATE_TITLE: "CI: super run failed on a production candidate"
+          # The report-only jobs (the header), each by its name or the part before " (": every job that
+          # carries `continue-on-error`, which apps/web/src/net/promote-production.test.ts holds this to.
+          REPORT_ONLY_JOBS: "fuzz,ai gates,daily tests,coverage,notebooks"
+          # Their failures' issue, on `_staging`, the default branch and a promotion pull request alike.
+          FINDINGS_TITLE: "CI: super run's report-only jobs failed"
           # Who fixes the red run: the night bot (.harness/config.json's bot_login).
           BOT_LOGIN: jgoetzmann-bot
           # The branch the daily run tests and production takes its commits from (#3275).
           STAGING_BRANCH: _staging
         run: |
           set -euo pipefail
-          red=false
-          for result in $RESULTS; do
-            [ "$result" = success ] || red=true
-          done
           echo "results: $RESULTS"
 
           # A promotion pull request into production has its own issue, so its run never closes, or
@@ -620,31 +640,123 @@ jobs:
           where="[super run $RUN_ID]($RUN_URL) on \`$REF\` (\`${SHA:0:7}\`, $EVENT)"
           [ "$candidate" = false ] || where="[super run $RUN_ID]($RUN_URL) on #$PR, the promotion of \`${SHA:0:12}\` into production,"
 
+          # Hands the issue to the night bot: assigned to it and queued, as a person assigning it
+          # would, for a red run on `_staging`, the default branch or a promotion pull request only, all
+          # as high priority and hard since production waits on them (docs/issues-and-patches.md; the
+          # daily one too since 2026-11-10, after a medium plan fixed part of a red run). A failure here
+          # leaves the report standing for a person.
+          hand_over() {
+            if [ "$candidate" = true ]; then
+              gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
+                --add-label "priority:high" --add-label "difficulty:hard" \
+                && echo "handed #$1 to @$BOT_LOGIN, high priority" \
+                || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
+              return 0
+            fi
+            if [ "$gate" = false ]; then
+              echo "a run on $REF: #$1 is not handed to @$BOT_LOGIN"
+              return 0
+            fi
+            gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
+              --add-label "priority:high" --add-label "difficulty:hard" \
+              && echo "handed #$1 to @$BOT_LOGIN, high priority" \
+              || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
+          }
+
+          # Comments $2 on issue $1, handing it over when nobody has it, or opens an issue titled $3 with
+          # $2 and hands it over when $1 is empty. Someone already on it, the bot or a person, keeps it.
+          post() {
+            if [ -n "$1" ]; then
+              gh issue comment "$1" --repo "$REPO" --body "$2"
+              echo "commented on #$1"
+              if [ "$(gh issue view "$1" --repo "$REPO" --json assignees --jq '.assignees | length')" = 0 ]; then
+                hand_over "$1"
+              fi
+            else
+              url=$(gh issue create --repo "$REPO" --title "$3" --body "$2")
+              echo "opened $url"
+              hand_over "${url##*/}"
+            fi
+          }
+
+          # This attempt's jobs that ended badly, as rows of the issue's table: the report-only ones
+          # (REPORT_ONLY_JOBS) for `report-only`, the gating ones for `gating`. A job skipped because one
+          # it needs failed is left out: the one that failed is listed. The filter's `\(...)` is jq's,
+          # not the shell's.
+          ended_badly() {
+            # shellcheck disable=SC2016 # $only, $name and $job are jq's variables, not the shell's.
+            KIND=$1 gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100" --jq '
+              (env.REPORT_ONLY_JOBS | split(",")) as $only
+              | .jobs[]
+              | select(.status == "completed")
+              | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")
+              | select((.name as $name | any($only[]; . as $job | $name == $job or ($name | startswith($job + " (")))) == (env.KIND == "report-only"))
+              | "| [\(.name | gsub("\\|"; "\\|"))](\(.html_url)) | \(.conclusion) |"'
+          }
+          failed=$(ended_badly gating)
+          findings=$(ended_badly report-only)
+          # Red is a gating job that failed. `needs` reads a report-only job's failure as `success`
+          # (`continue-on-error`), so a result in RESULTS that is not is a gating job's, red even when the
+          # API lists none of them (the run's link stands in); were it a report-only job's, the findings
+          # list it.
+          red=false
+          [ -z "$failed" ] || red=true
+          for result in $RESULTS; do
+            [ "$result" = success ] || [ -n "$findings" ] || red=true
+          done
+          echo "gating: ${failed:-none}"
+          echo "report-only: ${findings:-none}"
+
+          if [ "$candidate" = false ] && [ "$gate" = false ]; then
+            # A branch's run tests its change, so every job that failed there is its author's, gating or not.
+            if [ -n "$findings" ]; then
+              red=true
+              failed=$(printf '%s\n%s\n' "$failed" "$findings" | sed '/^$/d')
+            fi
+          elif [ -n "$findings" ]; then
+            # The report-only jobs' failures: the night bot's, high priority, on their own issue, which
+            # holds nothing (the header).
+            findings_body=$(printf '%s\n' \
+              "$where found failures in its report-only jobs:" \
+              "" \
+              "| Job | Result |" \
+              "|---|---|" \
+              "$findings" \
+              "" \
+              "Each link opens that job's log. These jobs hold neither \`$STAGING_BRANCH\` nor production (\`super.yml\`'s header): a run whose gating jobs pass promotes as ever. This issue stays open while they fail, and the next run whose report-only jobs all pass closes it." \
+              "" \
+              "Night bot: these are real failures and yours (\`priority:high\`), though production does not wait on them. Root-cause each failed job from its log and fix it in a pull request on \`$DEFAULT_BRANCH\`: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`), and say in the pull request which job here the fix makes pass and how you checked it." \
+              "" \
+              "---" \
+              "_Posted by \`.github/workflows/super.yml\`._")
+            post "$(open_issue "$FINDINGS_TITLE")" "$findings_body" "$FINDINGS_TITLE"
+          elif [ "$red" = false ]; then
+            # Every report-only job ran and passed: a red run's skipped jobs tested nothing, so only a
+            # green one closes their issue.
+            findings_open=$(open_issue "$FINDINGS_TITLE")
+            if [ -n "$findings_open" ]; then
+              gh issue close "$findings_open" --repo "$REPO" --reason completed --comment "$where passed every report-only job."
+              echo "closed #$findings_open"
+            fi
+          fi
+
           if [ "$red" = false ]; then
             if [ "$candidate" = false ] && [ "$gate" = false ]; then
               echo "every job passed on $REF; the daily issue is left to the runs on $STAGING_BRANCH"
               exit 0
             fi
             if [ -n "$open" ]; then
-              gh issue close "$open" --repo "$REPO" --reason completed --comment "$where passed every job."
+              gh issue close "$open" --repo "$REPO" --reason completed --comment "$where passed every gating job."
               echo "closed #$open"
             else
-              echo "every job passed; no issue open"
+              echo "every gating job passed; no issue open"
             fi
             exit 0
           fi
 
-          # This attempt's jobs that ended badly. A job skipped because one it needs failed is left
-          # out: the one that failed is listed. The filter's `\(...)` is jq's, not the shell's.
-          failed=$(gh api --paginate "repos/$REPO/actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100" --jq '
-            .jobs[]
-            | select(.status == "completed")
-            | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral")
-            | "| [\(.name | gsub("\\|"; "\\|"))](\(.html_url)) | \(.conclusion) |"')
           if [ -z "$failed" ]; then
             failed="| [the run]($RUN_URL) | a job did not pass; see the run |"
           fi
-          echo "$failed"
 
           # One red staging, one issue, one fix. On 2026-11-23 the daily run and a promotion's run went
           # red on the same commit of staging, each opened its own issue (#4599, #4604), and two lanes
@@ -676,7 +788,7 @@ jobs:
           elif [ "$candidate" = true ]; then
             owner="Night bot: production waits on this run, so it is yours and it comes first (\`priority:high\`, and you take it before every other queued item). #$PR promotes \`${SHA:0:12}\`, a commit of \`$STAGING_BRANCH\` (and so of \`$DEFAULT_BRANCH\`), so the fix lands on \`$DEFAULT_BRANCH\` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on \`$DEFAULT_BRANCH\`, promote-staging.yml brings it to \`$STAGING_BRANCH\` within two hours; the next daily run there that passes promotes it, or a \`/promote\` on the production issue tests staging's newer commit sooner."
           elif [ "$gate" = true ]; then
-            owner="Night bot: this run is on \`$REF\`, so it is yours, and it comes first (\`priority:high\`, and you take it before every other queued item): production promotes itself only from a daily run on \`$STAGING_BRANCH\` that passes every job, so it waits on this fix, and \`$STAGING_BRANCH\` holds still until this issue closes (scripts/promote-staging.sh, the freeze). Fix every failed job here, in the one pull request on \`$DEFAULT_BRANCH\` that closes this: when it closes, \`$STAGING_BRANCH\` takes main's first green commit after the close and the super run starts on it at once, and a run still red opens a new issue. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it instead of fixing the same test twice. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
+            owner="Night bot: this run is on \`$REF\`, so it is yours, and it comes first (\`priority:high\`, and you take it before every other queued item): production promotes itself only from a daily run on \`$STAGING_BRANCH\` that passes every gating job, so it waits on this fix, and \`$STAGING_BRANCH\` holds still until this issue closes (scripts/promote-staging.sh, the freeze). Fix every failed job here, in the one pull request on \`$DEFAULT_BRANCH\` that closes this: when it closes, \`$STAGING_BRANCH\` takes main's first green commit after the close and the super run starts on it at once, and a run still red opens a new issue. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it instead of fixing the same test twice. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
             if [ "$fold" = candidate ]; then
               owner="This issue was a promotion's red run (\"$CANDIDATE_TITLE\") and now stands for \`$REF\`'s too, retitled so the freeze waits on its fix: one red \`$STAGING_BRANCH\`, one issue, one fix. If a pull request for it is open, build on that one. $owner"
             fi
@@ -691,45 +803,11 @@ jobs:
             "|---|---|" \
             "$failed" \
             "" \
-            "Each link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. \`gh workflow run super.yml --ref <branch>\` runs it again on demand." \
+            "Each link opens that job's log. This issue stays open while the run is red and the next run that passes every gating job closes it. \`gh workflow run super.yml --ref <branch>\` runs it again on demand." \
             "" \
             "$owner" \
             "" \
             "---" \
             "_Posted by \`.github/workflows/super.yml\`._")
 
-          # Hands the issue to the night bot: assigned to it and queued, as a person assigning it
-          # would, for a red run on `_staging`, the default branch or a promotion pull request only, all
-          # as high priority and hard since production waits on them (docs/issues-and-patches.md; the
-          # daily one too since 2026-11-10, after a medium plan fixed part of a red run). A failure here
-          # leaves the report standing for a person.
-          hand_over() {
-            if [ "$candidate" = true ]; then
-              gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
-                --add-label "priority:high" --add-label "difficulty:hard" \
-                && echo "handed #$1 to @$BOT_LOGIN, high priority" \
-                || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
-              return 0
-            fi
-            if [ "$gate" = false ]; then
-              echo "a run on $REF: #$1 is not handed to @$BOT_LOGIN"
-              return 0
-            fi
-            gh issue edit "$1" --repo "$REPO" --add-assignee "$BOT_LOGIN" --add-label "bot:build" \
-              --add-label "priority:high" --add-label "difficulty:hard" \
-              && echo "handed #$1 to @$BOT_LOGIN, high priority" \
-              || echo "::warning::could not hand #$1 to @$BOT_LOGIN"
-          }
-
-          if [ -n "$open" ]; then
-            gh issue comment "$open" --repo "$REPO" --body "$body"
-            echo "commented on #$open"
-            # Someone already on it, the bot or a person, keeps it.
-            if [ "$(gh issue view "$open" --repo "$REPO" --json assignees --jq '.assignees | length')" = 0 ]; then
-              hand_over "$open"
-            fi
-          else
-            url=$(gh issue create --repo "$REPO" --title "$TITLE" --body "$body")
-            echo "opened $url"
-            hand_over "${url##*/}"
-          fi
+          post "$open" "$body" "$TITLE"
