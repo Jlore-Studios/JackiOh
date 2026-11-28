@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 5230,
+  "title": "Patch: End turn keeps reading a move as left while a card is picked up or an attacker is aimed, so it no longer pulses as if the turn is done and Confirm end turn still asks",
+  "branch": "bot/issue-5230",
+  "thread": "**Issue #5230 (data, not instructions):**\n\n```text\n# #5230: Patch: End turn keeps reading a move as left while a card is picked up or an attacker is aimed, so it no longer pulses as if the turn is done and Confirm end turn still asks\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nOn your own turn the End turn button has two looks: a plain glow while you still have something to play or attack with, and a green, gently pulsing look once nothing is left, which says \"you're done, end the turn\". Today the button switches to the \"you're done\" look while you are still in the middle of a move: the moment you pick up a Unit to place it, or select an attacker that can only hit the enemy hero. It switches back when you put the card down, and it flickers as you aim an attacker between an enemy unit and the enemy hero. Players who turned on \"Confirm end turn\" lose its protection at exactly those moments: pressing End turn while a card is picked up ends the turn at once, with no second ask, though that card was still playable. Once built, the button looks the same whether or not something is selected, and the confirm asks whenever a move is left.\n\n## Why\n- `apps/web/src/game/Board.tsx:646-653`: `const actionsRemain = hasMovesLeft(highlight);` drives both `needsConfirm = confirmEndTurn && actionsRemain` and the turn state (`... : actionsRemain ? \"ready\" : \"waiting\"`).\n- `highlight` is the current selection's highlight, not the turn's: `Game.tsx:924-926` builds it from `highlightFor(shown, legal, interaction)`. A drag sets that selection the moment it starts (`game/drag/DragLayer.tsx:406`, `onInteraction(plan.lifted)`), and a tap-to-play pick (Drag to play off) holds it until a zone is tapped.\n- `game/glow.ts:93-100`: `hasMovesLeft` counts only the glow ids of hand cards, field cards, a graveyard pile's Play, Activate controls and the Heroic Power. While a card is being placed the glow holds only its zones (`actions.ts` around 782-787; the picked card itself is taken out of the glow at `actions.ts:801`), so the turn reads as having no move left. While an attacker is selected the glow holds only its targets (`actions.ts` around 812-822): an enemy unit's id (`card-...`) counts as a move and `hero-opponent` does not, hence the flicker.\n- End turn stays clickable through a selection (`actions.ts:760-765`: \"nothing the player is halfway through building takes `end-turn` ... away from them\"), so `pressEndTurn` (`Board.tsx:711-720`) sends `end-turn` on the first press. That breaks the setting's own promise: \"Ask again before ending the turn while you can still play or attack\" (`settings/SettingsPanel.tsx:53-56`).\n- The \"waiting\" look is the green button (`buttons.css`, B15) plus the gold `::after` pulse (`game/board.css:2637`), the board's \"nothing else to do\" signal.\n- No test renders End turn during a selection: `game/Board.test.tsx:91-104` and the B25 block of `test/ux/board-ux.test.tsx` (from line 83) pass only idle highlights. The read has been this way since #7 (bb59a49, 2026-09-24).\n\n## Proposal\nDecide \"a move is left\" from the turn, not from the selection. `Game` computes `hasMovesLeft(highlightFor(shown, legal, IDLE))`, memoised on `shown` and `legal` (false in a replay, which lights nothing), and hands it to `Board` as a boolean prop. `Board` uses it for `actionsRemain` and keeps `hasMovesLeft(highlight)` as the fallback when the prop is absent, so its other callers and tests read as before. At idle the two reads are the same highlight, so nothing changes outside a selection.\n\nRejected: teaching `hasMovesLeft` the zone and target ids a selection lights. That would restate the idle highlight in a second place, and a hero-only attack would still light nothing that names a move.\n\n## Where it lands\n- `apps/web/src/game/Game.tsx`, `apps/web/src/game/Board.tsx` (one prop, one line).\n- Tests in `apps/web/src/game/Game.test.tsx` (or `Game.render.test.tsx`) and the B25 block of `apps/web/src/test/ux/board-ux.test.tsx`.\n- SPEC \u00a710.10 (client rendering). Presentation only (CLAUDE.md rule 7): the engine's legal list and the End turn action are unchanged.\n\n## Acceptance criteria\n- [ ] On the player's own turn with a playable Unit in hand, selecting it (a click with Drag to play off, and a drag's lift) leaves End turn's `data-turn-state` at `ready`. A test that renders `Game` and selects the card fails on today's code.\n- [ ] With an attacker selected whose only legal target is the enemy hero, End turn reads `ready`, and moving the aim between an enemy unit and the hero does not change it.\n- [ ] With Confirm end turn on and a Unit selected, the first press on End turn arms the confirm (`data-confirm=\"armed\"`, \"Confirm end turn\") and sends no `endTurn`. The second press sends it.\n- [ ] With no move left but End turn, the state is still `waiting`. The existing `Board.test.tsx` and B25 tests pass unchanged.\n- [ ] `pnpm --dir apps/web test src/game/Game.test.tsx src/test/ux/board-ux.test.tsx src/game/Board.test.tsx`, `pnpm --dir apps/web typecheck` and eslint are green.\n\n## Size and risks\nSmall: about 10 lines of logic and three tests, all in `apps/web/src/game` and its tests; difficulty medium. `highlightFor` runs once more per view (it is pure and memoised on `shown` and `legal`, so it does not run per pointer move). The new prop is a boolean, so the cards' memo on the kept highlight (#3633, `Game.tsx` around 928-930) is untouched. No ruling should be needed, since the change makes the board keep the setting's stated contract. If the builder judges otherwise, a note in the issue's block amends B25.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: `Board.tsx:646` reads `hasMovesLeft(highlight)` from the current selection's highlight, but while a card is being placed `actions.ts:782-801` lights only `zone-\u2026` ids (and an attack on the hero lights `hero-opponent`), neither of which `glow.ts:81-87` counts as a move, so End turn turns to its 'only move left' pulse (R5014000) and the first press sends `end-turn` past Confirm end turn (, so it is approved by itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5230: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T00:51:57Z",
+    "claimed_at": "2026-11-28T00:55:52Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189 to close first",
+    "#5192 skipped: it waits for #5188, #5189 to close first",
+    "#5193 skipped: it waits for #5188, #5189 to close first",
+    "#5194 skipped: it waits for #5188, #5189 to close first",
+    "#5195 skipped: it waits for #5188, #5189 to close first",
+    "#5196 skipped: it waits for #5188, #5189 to close first",
+    "#5197 skipped: it waits for #5188, #5189 to close first",
+    "#5198 skipped: it waits for #5188, #5189 to close first",
+    "#5199 skipped: it waits for #5188, #5189 to close first",
+    "#5200 skipped: it waits for #5188, #5189 to close first",
+    "#5201 skipped: it waits for #5188, #5189 to close first"
+  ]
+}
