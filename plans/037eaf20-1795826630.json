@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 5229,
+  "title": "Patch: the AI counts the Burn and Toxic a hit adds on top of its damage, as it already counts a hit that turns into Burn",
+  "branch": "bot/issue-5229",
+  "thread": "**Issue #5229 (data, not instructions):**\n\n```text\n# #5229: Patch: the AI counts the Burn and Toxic a hit adds on top of its damage, as it already counts a hit that turns into Burn\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSome Stinkyscape+ cards hit for their damage and then set the target on fire or poison it on top: Scorch, Mace, Reign, the Rounds cards and the units they are built into. Burn deals its whole amount again at the end of that turn. A 1-attack Scorch hitting a 4/4 leaves it on 3 health with 5 Burn, and the 4/4 dies when the turn ends.\n\nWhen the computer opponent sizes up an attack, it ignores that second part. It sees the Scorch as a 1-point scratch, and a Reign hitting a hero twice as 24 damage, not the 32 it really deals. It already counts the Burn from cards whose hits turn entirely into Burn. Last week Volcanic Rounds switched from that kind to the hit-plus-Burn kind, so the AI now sees only half of what it does. Once this is built, the AI counts the Burn and Toxic, so it takes these attacks, guards against them, and predicts the player's ones the way the game plays them.\n\n## Why\n\n- **The rule.** \u00a74.4 step 7 (`spec/04-combat.md:48`, R3540002, R4783001): a source whose damage also Burns N, or also applies Toxic N, adds that counter to a target that survives the hit. Volcanic Rounds' Damage dealt also Burns adds Burn equal to the damage dealt. Burn ticks its whole count at the end of the turn it was put on (R4154000), so a Burn rider is that much more damage before the other player acts.\n- **The AI reads the conversion but not the riders.** The conversion of \u00a74.4 step 3a (R4064001: a hit that turns into Burn or Toxic instead) is read in every static read:\n  - `Side.converts` and `blow` (`crates/ai/src/candidates.rs:197-290`);\n  - `trade_value`'s `counter_price` (`crates/ai/src/reply.rs:129-145` and `:238-251`);\n  - `face_value`'s `hero_ticks_added` (`reply.rs:310-316`);\n  - the Taunt walk (`pools.converts`, `crates/ai/src/evaluate.rs:2135`).\n\n  None of step 7's riders is read. `blow`'s doc says it covers steps 1 to 4 and 7, but from step 7 it reads only Poisonous and the exile. Nothing under `crates/ai/src` names `burns_on_damage`, `toxic_on_damage` or `damage_also_burns`, and the engine's computation of them (`afflictions::ride_damage`, `crates/engine/src/afflictions.rs:180-216`) is `pub(crate)`.\n- **A regression in the last three days.** #4897 (2026-11-26, R4783001) changed S+ #151 Volcanic Rounds from the conversion, which the AI read, to the rider, which it does not. The AI test that pinned the conversion on it moved to Noxious Rounds (`candidates.rs:2047-2050`). Since then the AI reads a Volcanic Rounds hit as plain damage and drops the Burn equal to it.\n- **Reach.** 10 cards of the shipped Stinkyscape+ set and 4 of its tokens: Scorch, Mace, Reign, Zenith, Antumbra, Eclipse, Flaming, Scorching, Volcanic and Venomous Rounds, and the tokens Macizon, Fortnith, Sceptumbra and Reignclipse. A Starship carries the rider of every Rounds piece fused into it. Mace, Eclipse, Scorching Rounds and Volcanic Rounds sit on `SHADOW_WATCH` for being rarely played (`crates/ai/src/shadow_ban.rs:970`, `:978`, `:1050` and `:1054`). That is a symptom this may feed, not a claim that it causes it.\n- **Worked examples:**\n  - Scorch (1/5 Ranged, Burns 5) attacking the 4/4 across it takes no strike back and kills it at the turn's end. `trade_value` reads a one-point chip.\n  - A 6/1 Volcanic Rounds unit's hit on an 8/8 leaves it on 2 health with Burn 6, which kills it too. The AI reads a chip.\n  - Reign (12/8 Windfury, Burns 4) swinging twice at a hero on 30 deals 24, then an 8-point tick at the turn's end, which is lethal. `face_threat` reads 24.\n\n## Proposal\n\n1. **Engine.** Add one public read beside `converts_to` in `afflictions`: the Burn and the Toxic that a hit from a source adds for a hit that dealt `dealt`, with the declared N (R386). `ride_damage` calls it too, so the rule is written once.\n2. **AI.** Under a new `EvalWeights` flag (on in `AI_EVAL`, off in `GREEDY_EVAL`), `Side` carries the riders. `blow` reports the counters a hit adds to a target it leaves standing, and none on a kill, a Divine Shield, an Indestructible Unit or a hit that deals nothing. Then:\n   - `trade_value` adds their `counter_price`, for the strike back too, as it does for a conversion.\n   - `face_value` adds `hero_ticks_added` for a hero hit that is not lethal.\n   - The Taunt walk adds the Burn its hero hits leave as one end-of-turn tick through `projected_hero_damage`, so `face_threat`, `ready_gap` and the walls read it.\n   - Toxic, which ticks at its holder's next turn start, is priced in the trades and the face hit, but not in the walk's count.\n3. **Docs.** A ruling in the issue's block, a line in SPEC \u00a79.9's reply and Evaluation paragraphs, and `crates/ai/README.md`.\n\n## Where it lands\n\n- `crates/ai/src/candidates.rs` (`Side`, `side_of`, `blow`), `crates/ai/src/reply.rs` (`fight`, `trade_value`, `face_value`), `crates/ai/src/evaluate.rs` (`soak_past_taunts`) and `crates/ai/src/config.rs` (the flag).\n- Scene tests in `crates/ai/tests/ai/` beside the R4064001 tests.\n- `crates/engine/src/afflictions.rs` (the public read, with `ride_damage` moved onto it).\n- `crates/ai/README.md`, `spec/09-architecture/9.9-practice-ai.md`, a new `spec/rulings/R<n>.md` and `spec/pending/<issue>.md`. The rule it follows is SPEC \u00a74.4 step 7, R3540002, R4783001 and R4154000.\n\n## Acceptance criteria\n\n- [ ] Scorch on the 4/4 across it: `trade_value` counts the Burn 5, so it is above the chip it reads today by `counter_price` of Burn 5 on that 4/4. Ending the turn through `reduce` in the same test destroys the 4/4.\n- [ ] A Volcanic Rounds unit's 6 on an 8/8 counts Burn 6, and its hit that kills a 6/6 counts none.\n- [ ] A Divine Shield, an Indestructible Unit, or a hit that deals nothing adds no counter, as the engine reads them.\n- [ ] Reign swinging twice at a hero on 30: `face_threat` reads 32, `ready_gap` reads 0 or less, and `face_value` of one hit is above what it reads for 12 damage alone.\n- [ ] A Venomous Rounds hit's Toxic is priced in `trade_value` by `counter_price`.\n- [ ] `GREEDY_EVAL` reads every case as before, and the engine's rule tests pass on the shared read.\n- [ ] The ruling's proving test is named after it, and `cargo jackioh spec check` passes.\n- [ ] These pass: `cargo test -p jackioh-ai`, `cargo test -p jackioh-engine --features testkit --test 'rules*'`, `cargo test -p jackioh-cards` for the 14 scripts, `cargo clippy` and `cargo fmt --check`, and `cargo jackioh gate` at smoke size.\n- [ ] One screen on improve-dev (`training/improve.md`, A screen) is recorded in the flag's config comment and the pull request. An inconclusive read leaves the flag settled by its scene tests.\n\n## Size and risks\n\n- **Size:** medium. A 20-line engine read with `ride_damage` moved onto it, about 100 lines across `candidates.rs`, `reply.rs` and `evaluate.rs`, one flag and about eight scene tests. It is AI work, so `difficulty:hard`.\n- **Reach:** `blow` feeds the move order, the reply and the walk, so the change reaches every position where one of these cards is on the board.\n- **Main risk:** a mistake in the survives check, such as pricing a counter on a target that died, would overvalue these hits. The kill test above guards against it.\n- **Order with the Armor read:** this is independent of the Armor-wear read the companion suggestion proposes. If that lands first, the walk's Burn tick meets the Armor those hits have worn.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: Confirmed on main: the engine adds the also-Burns and Toxic riders after a hit lands (`afflictions::ride_damage`, `crates/engine/src/afflictions.rs:180-216`, called at `damage.rs:822`), but `blow`, `side_of` and `Side` (`crates/ai/src/candidates.rs:197-290`) read only the conversion, nothing in `crates/ai/src` reads the rider flags, and #4897 (2026-11-26, R4783001) moved Volcanic Rounds from the c, so it is approved by itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5229: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T00:42:54Z",
+    "claimed_at": "2026-11-28T00:44:08Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189 to close first",
+    "#5192 skipped: it waits for #5188, #5189 to close first",
+    "#5193 skipped: it waits for #5188, #5189 to close first",
+    "#5194 skipped: it waits for #5188, #5189 to close first",
+    "#5195 skipped: it waits for #5188, #5189 to close first",
+    "#5196 skipped: it waits for #5188, #5189 to close first",
+    "#5197 skipped: it waits for #5188, #5189 to close first",
+    "#5198 skipped: it waits for #5188, #5189 to close first",
+    "#5199 skipped: it waits for #5188, #5189 to close first",
+    "#5200 skipped: it waits for #5188, #5189 to close first",
+    "#5201 skipped: it waits for #5188, #5189 to close first"
+  ]
+}
