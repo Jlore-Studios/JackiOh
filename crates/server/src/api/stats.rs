@@ -40,6 +40,9 @@
 //! finish for the next read, and `GET /api/stats/loading` answers what that load is doing (its step, how
 //! long it has run, and how long the last one took), never waiting and kept by no cache, for the page's
 //! progress bar.
+//! R5225000: the CPU-bound work of the statistics (`Snapshot::new`, `window_over`) runs on the blocking
+//! pool (`blocking`), so the runtime keeps answering other requests while it runs, and a window's figures
+//! are cut on a task of its own, counted as the load's last step.
 //! R5040000: `?scope=major` sends the live play versions alone, each cut to the newest major's line
 //! (`major_line_versions`) and read against those rows' own field, one table per scope too.
 //!
@@ -1266,12 +1269,20 @@ struct LoadTicket {
 
 impl LoadTicket {
     fn begin(load: Arc<Mutex<SnapshotLoad>>) -> LoadTicket {
+        LoadTicket::begin_at(load, LoadStep::Records)
+    }
+
+    /// A load under way from `step`. R5225000: a load that begins while another runs (a window's figures
+    /// cut beside the snapshot's load) keeps the first one's start, so the time shown never runs backwards.
+    fn begin_at(load: Arc<Mutex<SnapshotLoad>>, step: LoadStep) -> LoadTicket {
         let started_at = now_ms();
         {
             let mut state = lock(&load);
+            if state.running == 0 {
+                state.started_at = started_at;
+            }
             state.running += 1;
-            state.step = LoadStep::Records as u32;
-            state.started_at = started_at;
+            state.step = step as u32;
         }
         LoadTicket {
             load,
@@ -1321,9 +1332,54 @@ impl SnapshotSource {
         ticket.step(LoadStep::CardTotals);
         let totals = totals_in(&self.db, None, false, CardRows::Filed(filing.clone())).await?;
         ticket.step(LoadStep::Snapshot);
-        let snapshot = Arc::new(Snapshot::new(&history, totals, filing));
+        let snapshot = Arc::new(blocking(move || Snapshot::new(&history, totals, filing)).await?);
         ticket.done = true;
         Ok(snapshot)
+    }
+}
+
+/// R5225000: CPU-bound work on the blocking pool, so the runtime's threads keep answering other requests
+/// (`GET /api/stats/loading` among them) while it runs. Run in async code, the statistics' work held them:
+/// on staging's quarter of a processor every request waited behind it.
+async fn blocking<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static) -> Result<T, ApiError> {
+    tokio::task::spawn_blocking(work)
+        .await
+        .map_err(|error| ApiError::internal(format!("the card statistics' work stopped: {error}")))
+}
+
+/// R5225000: what cutting a window's figures from the snapshot reads, owned, so the cut can run on a task
+/// of its own.
+struct WindowCut {
+    db: Db,
+    held: Arc<Snapshot>,
+    history: Vec<PatchStep>,
+    at: String,
+    source: SourceParam,
+    pilot: PublicStatsPilot,
+    mode: PublicStatsMode,
+    load: Arc<Mutex<SnapshotLoad>>,
+}
+
+impl WindowCut {
+    /// The window's figures, cut on the blocking pool from the snapshot's totals or, for a patch past the
+    /// snapshot, its own reach loaded now (R4965000). The cut counts as the load's last step, which
+    /// `GET /api/stats/loading` reports; the last load's time stays the snapshot's.
+    async fn window(&self) -> Result<Arc<KeptWindow>, ApiError> {
+        let _ticket = LoadTicket::begin_at(Arc::clone(&self.load), LoadStep::Snapshot);
+        let own = if self.held.holds(&self.at) {
+            None
+        } else {
+            Some(totals_in(&self.db, None, false, self.held.reach_rows(&self.at)).await?)
+        };
+        let held = Arc::clone(&self.held);
+        let (history, at) = (self.history.clone(), self.at.clone());
+        let (source, pilot, mode) = (self.source, self.pilot, self.mode);
+        let window = blocking(move || {
+            let totals = own.as_ref().unwrap_or(&held.totals);
+            window_over(totals, &history, &at, source, pilot, mode)
+        })
+        .await?;
+        Ok(Arc::new(window))
     }
 }
 
@@ -1844,25 +1900,27 @@ async fn shipped_window(
         mode,
     };
     let cell = app.card_stats.window_cell(key, snapshot.made_at);
-    let kept = cell
-        .get_or_try_init(|| async {
-            let held = &snapshot.held;
-            if held.holds(at) {
-                return Ok::<_, ApiError>(Arc::new(window_over(
-                    &held.totals,
-                    history,
-                    at,
-                    source,
-                    pilot,
-                    mode,
-                )));
-            }
-            // R4965000: a patch past the snapshot's reads its own reach, loaded now.
-            let own = totals_for(app, None, false, held.reach_rows(at)).await?;
-            Ok(Arc::new(window_over(&own, history, at, source, pilot, mode)))
-        })
-        .await?;
-    Ok(Arc::clone(kept))
+    if let Some(kept) = cell.get() {
+        return Ok(Arc::clone(kept));
+    }
+    // R5225000: the cut runs on a task of its own, as the snapshot loads (R5186000), so a read that gives up
+    // leaves it to finish for the next.
+    let cut = WindowCut {
+        db: app.db.clone(),
+        held: Arc::clone(&snapshot.held),
+        history: history.to_vec(),
+        at: at.to_string(),
+        source,
+        pilot,
+        mode,
+        load: Arc::clone(&app.card_stats.load),
+    };
+    tokio::spawn(async move {
+        let kept = cell.get_or_try_init(|| cut.window()).await?;
+        Ok::<_, ApiError>(Arc::clone(kept))
+    })
+    .await
+    .map_err(|error| ApiError::internal(format!("the card statistics' figures stopped: {error}")))?
 }
 
 /// R1367000: the windowed report at `at`, as kept (`CARD_STATS_CACHE_TTL_SECONDS`): cut from every
@@ -1892,7 +1950,8 @@ async fn kept_window(
     )
     .await?;
     let own = totals_for(app, Some(at), false, CardRows::All).await?;
-    let mut window = window_over(&own, history, at, source, pilot, mode);
+    let (steps, patch) = (history.to_vec(), at.to_string());
+    let mut window = blocking(move || window_over(&own, &steps, &patch, source, pilot, mode)).await?;
     window.history.clone_from(&shared.history);
     window.patches.clone_from(&shared.patches);
     Ok(Arc::new(window))
@@ -2929,4 +2988,35 @@ pub async fn get_players(app: &Arc<App>, req: Req) -> ApiResult {
         json!({ "players": to_json(&players)?, "page": page, "limit": limit }),
         PLAYER_STATS_CACHE_TTL_SECONDS,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    /// How long the test's work waits on the timer before it calls the runtime stuck.
+    const STUCK: Duration = Duration::from_secs(10);
+
+    /// How long the timer sleeps before it lets the work go.
+    const TIMER: Duration = Duration::from_millis(10);
+
+    /// R5225000: work handed to the blocking pool leaves the runtime free. On a runtime of one thread, a
+    /// timer fires while the work waits on it; work run on the runtime's own thread would hold that thread,
+    /// and the timer would never fire.
+    #[tokio::test(flavor = "current_thread")]
+    async fn r5225000_heavy_work_leaves_the_runtime_free() {
+        let (tell, heard) = mpsc::channel::<()>();
+        let work = blocking(move || heard.recv_timeout(STUCK).is_ok());
+        let timer = async {
+            tokio::time::sleep(TIMER).await;
+            tell.send(()).ok();
+        };
+        let (answered, ()) = tokio::join!(work, timer);
+        assert!(
+            answered.expect("the work ran"),
+            "the work waited out its time: the runtime never ran the timer"
+        );
+    }
 }
