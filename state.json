@@ -21958,7 +21958,9 @@
     },
     "5289": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:7236655415"
+      ],
       "failures": 0,
       "forced": true,
       "handoff": {
@@ -22013,9 +22015,7 @@
       },
       "started_at": "2026-11-28T09:11:30Z",
       "stop_requested": false,
-      "taken_asks": [
-        "c:7236655415"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "5292": {
