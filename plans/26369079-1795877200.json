@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 5242,
+  "title": "Patch: Zephrys and the autopilot count a hero's Armor wearing down hit by hit when they look for lethal, and a hit that takes a floored hero to its floor wears its Armor",
+  "branch": "bot/issue-5242",
+  "thread": "**Issue #5242 (data, not instructions):**\n\n```text\n# #5242: Patch: Zephrys and the autopilot count a hero's Armor wearing down hit by hit when they look for lethal, and a hit that takes a floored hero to its floor wears its Armor\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSince 2026-11-27 a hero's Armor wears down by 1 with every hit it absorbs, so a string of small hits gets through Armor faster than it used to. Three parts of the game that look for a winning attack still count Armor as if it never wore down. The first is Zephrys, the card that offers you the \"perfect\" card. The second is Zephrys Zealotism, which builds you a whole hand. The third is the autopilot, the card effect that plays the rest of your turn for you.\n\nExample: the enemy hero has 3 health and 2 Armor, you have a 2-attack Unit ready to attack, and you have 4 mana. A 4-attack Charge Unit wins the game: your first hit takes the Armor down to 1, and the Charge Unit then deals 3. Zephrys doesn't mark that card as the winning one, because it reckons the Charge Unit deals only 2.\n\nOnce this is built, these cards count the Armor wearing down hit by hit, as the game deals it. A second, smaller slip is fixed too: in a tutorial lesson, a hit that brings the protected player's hero down to its lowest allowed health never wears its Armor, though the game's own prediction says it does.\n\n## Why\n\n- R5183000 says: \"Each hit wears 1, whatever the Armor took off it\". Its Projections paragraph has `damage::project_hit` wear the Armor \"hit by hit \u2026 so My Pawn, the lethal glow and the forecast count several hits on one hero as the pipeline deals them\". The \u00a710.7 scorer was not brought along.\n- `crates/engine/src/subsystems/scorer.rs:97-127`: `hero_hit` and `projected_board_damage_in` add up `damage::hero_hit_amount` for each attacker, and every read counts the hero's whole Armor. `hero_hit_amount` (`damage.rs:291`) is `hero_hit_amount_worn(\u2026, 0)`, the read with nothing worn. `lethal_contribution` (`scorer.rs:132-160`) reads the Charge candidate's hit the same way, and the ranking adds the two together (`scorer.rs:795-802`, \u00a710.7's \"lethal available \u2192 max\"). The dry run's lethal flag (`scorer.rs:448`) and the autopilot's (`autopilot.rs:219`) read the same sum.\n- Before #5183, a sum of hits against fixed Armor was exact. Now it undercounts whenever two or more hits meet the Armor:\n  - The example above reads 0 + (4 \u2212 2) = 2 < 3, not lethal. The pipeline deals 0 + 3 = 3.\n  - Three 2-attack Units into 2 Armor read 0. The game deals 0 + 1 + 2 = 3.\n- The scorer tests' only Armor case, `crates/engine/tests/rules/scorer.rs:342-350`, has a single attacker, so no test sees this.\n- The floor slip, in `damage.rs`:\n  - `hero_loses` (line 759) lowers health before `wear_hero_armor` (line 777) runs.\n  - `armor_wears` (lines 175-177) then re-reads `hero_damage_cap`. For a floored hero that cap is `health \u2212 floor` at the current health (lines 247-249).\n  - So a hit that leaves a floored hero exactly on its floor reads a cap of 0 and wears nothing, though R5183000 spares only \"a hero immune to damage (step 3's cap of 0)\".\n  - `project_hit` reads the cap before the hit and does wear the Armor, so the projection and the pipeline disagree. This affects R2201000's lesson human. No test in `hero_floor.rs` or `armor_wear.rs` puts Armor on a floored hero.\n\n## Proposal\n\n1. **One shared helper.** Add a helper in `crates/engine/src/damage.rs` that projects a list of hits `(amount, pierce)` on one hero and wears the Armor as `land` does, reusing `hero_hit_amount_worn` and the `absorbed > 0 && armor_wears` test. A backrow grant's Armor (#84) and a modifier's stay whole, and a Pierce hit neither meets nor wears the Armor. The helper takes the hits smallest first. A player chooses the order of their attacks, and smallest first deals the most: into 3 Armor, a 1 then a 5 deal 0 + 3, while a 5 then a 1 deal 2 + 0. That is what \"damage the board can already send\" means.\n2. **The scorer uses it.** `projected_board_damage_in` gathers each attacker's `(attack, pierces)` and sums them through the helper. The \u00a710.7 ranking projects the board's hits and the Charge candidate's as one series, instead of adding two separate reads. The dry-run and autopilot flags follow, since they call the same function.\n3. **The floor fix.** In `land`, decide whether the hit wears the Armor before `hero_loses` lowers health: read `armor_wears` first and pass the answer to `wear_hero_armor`. A hit that takes a floored hero to its floor then wears the Armor, as `project_hit` already says.\n\nNo new ruling is needed, since R5183000 already states both. Name the tests `r5183000_\u2026` and add any file R5183000's note doesn't list yet to its `proven_in`.\n\nThis changes what Zephrys offers and what the autopilot plays. A stored game in which one of them read a hero's own Armor against two or more hits therefore no longer folds to its hash (R767000), and the patch's fragment claims that, as #5183's did.\n\n## Where it lands\n\n- `crates/engine/src/damage.rs`: `hero_hit_amount_worn`, `armor_wears`, `land`.\n- `crates/engine/src/subsystems/scorer.rs`: `projected_board_damage_in`, `lethal_contribution`, the ranking.\n- `crates/engine/src/subsystems/autopilot.rs`, through the shared function.\n- Tests in `crates/engine/tests/rules/armor_wear.rs` and `crates/engine/tests/rules/scorer.rs`.\n- SPEC \u00a74.4 step 2, \u00a710.7, R5183000, R2201000.\n\n## Acceptance criteria\n\n- [ ] Enemy hero at 3 health with 2 Armor of its own; the viewer has a 2-attack Unit that can attack it, 4 mana and a (4)-cost 4-attack Charge candidate. The ranking gives that candidate `ScorePriority::Lethal`. Today it does not.\n- [ ] `projected_board_damage` of three 2-attack attackers into 2 Armor of the hero's own is 3 (today 0). Hits of 1 and 5 into 3 Armor give 3, the smallest-first order.\n- [ ] Armor from a backrow grant (#84 Going Long) stays whole across the series, and a Pierce attacker's hit neither meets nor wears the Armor.\n- [ ] The single-attacker case at `scorer.rs:342-350` still reads 0.\n- [ ] The autopilot's dry run flags lethal on the board of three 2-attack Units.\n- [ ] A hero with `heroFloor` 1, 5 health and 2 Armor of its own takes a hit of 10: health 1, Armor 1, one `armorWorn` event, and `project_hit` gives the same.\n- [ ] Green: `cargo test -p jackioh-engine --features testkit --test 'rules*' r5183000`, `cargo jackioh spec check`, `cargo jackioh classify --base origin/main --claims`, `cargo fmt --check`, and `cargo clippy -p jackioh-engine --all-targets -- -D warnings`.\n\n## Size and risks\n\n- **Size:** small to medium, about 40 to 80 lines across two engine files plus tests. It touches engine rules, so it rates hard under `docs/issues-and-patches.md`.\n- **Overlap:** none with #5228, which teaches the practice AI in `crates/ai` the same count. This patch fixes the engine's own \u00a710.7 scorer, which `crates/ai` never calls.\n- **Risk:** replays. Stored games in which Zephrys, Zephrys Zealotism or the autopilot read a hero's own Armor against two or more hits retire as a rules change, and the fragment must claim them. The hotseat fixture's fold and the golden traces would catch an unexpected change.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5242: needs a plan; `claude-6` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T14:20:55Z",
+    "claimed_at": "2026-11-28T14:46:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5191 skipped: it waits for #5189 to close first",
+    "#5192 skipped: it waits for #5189 to close first",
+    "#5193 skipped: it waits for #5189 to close first",
+    "#5194 skipped: it waits for #5189 to close first",
+    "#5195 skipped: it waits for #5189 to close first",
+    "#5196 skipped: it waits for #5189 to close first",
+    "#5197 skipped: it waits for #5189 to close first",
+    "#5198 skipped: it waits for #5189 to close first",
+    "#5199 skipped: it waits for #5189 to close first",
+    "#5200 skipped: it waits for #5189 to close first",
+    "#5201 skipped: it waits for #5189 to close first"
+  ]
+}
