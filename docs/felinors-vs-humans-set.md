@@ -187,13 +187,15 @@ private helpers; it may not rename these. "Exists" points at code on `main` toda
   `pub struct TimedBuff { pub player: PlayerId, pub until_turns_started: i32, pub attack: i32, pub
   keywords: Vec<Keyword> }`, read in the layers beside `turn_buff`, cleared by `reset_instance`.
 - `PlayerState.last_float: Option<i32>`, set in turn cleanup beside `unspent_at_end`, never reset;
-  `pub fn float_last_turn(state: &GameState, player: PlayerId) -> i32` in `query.rs`.
+  `pub fn float_last_turn(state: &GameState, player: PlayerId) -> i32` in `query.rs`. Kept only in a
+  game holding a Felinors vs Humans card (`fvh_kept`), so no other game's hash moves.
 - `effects::mana::raise_mana_cap(RaiseManaCapArgs { amount: i32, player: Option<PlayerSpec> }) -> Effect`
   → `PlayerState.mana_cap_bonus: Option<i32>`, added to the cap wherever `Handicap.mana_cap` is read.
 - `Script.stays_sick: Option<HasHook>`, OR-ed into `combat::is_sick` (Old Grum: `|a| !returned_by_reborn(a.self_)`).
 - `pub struct HandPlace { pub index: i32, pub of: i32 }` (0 = leftmost; `of` = hand size before the play)
   and `GameEvent::CardPlayed.from_hand: Option<HandPlace>`; `pub fn played_leftmost(event: &GameEvent) ->
-  bool` and `played_rightmost` in `query.rs`.
+  bool` and `played_rightmost` in `query.rs`. Kept only in a game holding a Felinors vs Humans card
+  (`fvh_kept`), so no other game's hash moves.
 - `Grant.on: Option<GrantOn>`, `pub enum GrantOn { Death, EndOfTurn }` (absent = Death);
   `GrantAbilityArgs.on: Option<GrantOn>`; `grants::end_of_turn_hook_of(state, card) -> Option<Hook>`;
   a field card with an EndOfTurn grant is an end-of-turn holder.
