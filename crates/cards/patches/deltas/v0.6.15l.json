@@ -1,0 +1,1202 @@
+{
+  "set": {
+    "core-046": {
+      "id": "core-046",
+      "index": "46",
+      "name": "Suppressive Aura",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 3
+      },
+      "params": [
+        {
+          "key": "debuff",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "paidDebuff",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 18,
+      "base": {
+        "keywords": [],
+        "text": "Aura: All Units have −{debuff}/−{debuff}.\nEmbiggened (+2): −{paidDebuff}/−{paidDebuff} instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Enemy Units have −{debuff}/−{debuff}.\nEmbiggened (+2): −{paidDebuff}/−{paidDebuff} instead."
+      }
+    },
+    "core-056": {
+      "id": "core-056",
+      "index": "56",
+      "name": "Jilliax",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 3
+      },
+      "loc": 3,
+      "base": {
+        "attack": 3,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Lifesteal"
+          },
+          {
+            "kind": "Divine Shield"
+          }
+        ],
+        "text": "Rush, Taunt, Lifesteal, Divine Shield\nEmbiggened (+1): Equip."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Lifesteal"
+          },
+          {
+            "kind": "Divine Shield"
+          },
+          {
+            "kind": "Reborn"
+          }
+        ],
+        "text": "Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (+1): Equip."
+      }
+    },
+    "core-059": {
+      "id": "core-059",
+      "index": "59",
+      "name": "Unbiased Immigration",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "params": [
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 14,
+      "base": {
+        "keywords": [],
+        "text": "Activate: Add a random card to your hand.\nEmbiggened (+2): It costs ({setCost})."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Activate: Add a random Radiant card to your hand.\nEmbiggened (+2): It costs ({setCost})."
+      }
+    },
+    "core-083": {
+      "id": "core-083",
+      "index": "83",
+      "name": "Transmogulate",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "loc": 47,
+      "base": {
+        "keywords": [],
+        "text": "Replace every card in your hand and deck with a random Legendary.\nEmbiggened (+2): Your board too."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Replace every card in your hand and deck with a random Radiant Legendary.\nEmbiggened (+2): Your board too."
+      }
+    },
+    "core-084": {
+      "id": "core-084",
+      "index": "84",
+      "name": "Going Long",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "params": [
+        {
+          "key": "armor",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "paidArmor",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 8,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (+2): Armor {paidArmor} instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (+2): Armor {paidArmor} instead."
+      }
+    },
+    "classic-035": {
+      "id": "classic-035",
+      "index": "35",
+      "name": "Prep",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": {
+        "base": 0,
+        "embiggen": 2
+      },
+      "params": [
+        {
+          "key": "discount",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 16,
+      "base": {
+        "keywords": [],
+        "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (+2): Also draw a random Spell from your deck."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Your next Spell this turn costs ({discount}) less.\nEmbiggened (+2): Also draw the highest cost Spell from your deck."
+      }
+    },
+    "classicplus-036": {
+      "id": "classicplus-036",
+      "index": "36",
+      "name": "Conjure Bones",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "refs": [
+        "classicplus-036-1"
+      ],
+      "params": [
+        {
+          "key": "count",
+          "base": 7,
+          "radiant": 7,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        },
+        {
+          "key": "paidCount",
+          "base": 14,
+          "radiant": 14,
+          "better": "up",
+          "step": 4,
+          "min": 1
+        }
+      ],
+      "loc": 15,
+      "base": {
+        "keywords": [],
+        "text": "Shuffle {count|Bone Storm|Bone Storms} into your deck.\nEmbiggened (+2): {paidCount} instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Shuffle {count|Radiant Bone Storm|Radiant Bone Storms} into your deck.\nEmbiggened (+2): {paidCount} instead."
+      }
+    },
+    "meditative-021": {
+      "id": "meditative-021",
+      "index": "21",
+      "name": "API Key Fishing",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 0,
+        "embiggen": 1
+      },
+      "refs": [
+        "meditative-021"
+      ],
+      "params": [
+        {
+          "key": "chance",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "max": 100
+        },
+        {
+          "key": "paidChance",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 2,
+          "min": 1,
+          "max": 100
+        }
+      ],
+      "loc": 37,
+      "base": {
+        "keywords": [],
+        "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (+1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (+1): {paidChance}% instead.\nEnd of turn: Add a Radiant API Key Fishing to your hand."
+      }
+    },
+    "meditative-046": {
+      "id": "meditative-046",
+      "index": "46",
+      "name": "Conjure Intellect",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "params": [
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 31,
+      "base": {
+        "keywords": [],
+        "text": "Add a random KY card, a random CN card and a random Book to your hand.\nEmbiggened (+2): They cost ({setCost})."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Add a random Radiant KY card, a random Radiant CN card and a random Radiant Book to your hand.\nEmbiggened (+2): They cost ({setCost})."
+      }
+    },
+    "meditative-081": {
+      "id": "meditative-081",
+      "index": "81",
+      "name": "Deadman's Hand",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 0,
+        "embiggen": 1
+      },
+      "params": [
+        {
+          "key": "chance",
+          "base": 25,
+          "radiant": 100,
+          "better": "up",
+          "step": 6,
+          "min": 1,
+          "max": 100
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 38,
+      "base": {
+        "keywords": [],
+        "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (+1): Each copy has a {chance}% chance to become Radiant."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw {draw|card|cards}.\nEmbiggened (+1): Each copy has a {chance}% chance to become Radiant."
+      }
+    },
+    "meditativeplus-003": {
+      "id": "meditativeplus-003",
+      "index": "3",
+      "name": "Wondrous Wand",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 3
+      },
+      "params": [
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedDraw",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "setCost",
+          "base": 1,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 47,
+      "base": {
+        "keywords": [],
+        "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (+2): Draw {embiggenedDraw} instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (+2): Draw {embiggenedDraw} instead."
+      }
+    },
+    "meditativeplus-004": {
+      "id": "meditativeplus-004",
+      "index": "4",
+      "name": "Jlockeed's Supply Drop",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [
+        "Jlockeed"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "params": [
+        {
+          "key": "turns",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 9,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "cards",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "suppliesCost",
+          "base": 2,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        },
+        {
+          "key": "embiggenedTurns",
+          "base": 5,
+          "radiant": 5,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedDamage",
+          "base": 9,
+          "radiant": 15,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedCards",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 101,
+      "base": {
+        "keywords": [],
+        "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (+2): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or add {embiggenedCards}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (+2): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or fill your hand with them."
+      }
+    },
+    "meditativeplus-005": {
+      "id": "meditativeplus-005",
+      "index": "5",
+      "name": "Spirit Lash",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 0,
+        "embiggen": 1
+      },
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 23,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Flashback"
+          }
+        ],
+        "text": "Flashback\nDeal {damage} damage to all Units.\nEmbiggened (+1): With Lifesteal and Pierce."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Flashback"
+          }
+        ],
+        "text": "Echo 1, Flashback\nDeal {damage} damage to all Units.\nEmbiggened (+1): With Lifesteal and Pierce."
+      }
+    },
+    "meditativeplus-009": {
+      "id": "meditativeplus-009",
+      "index": "9",
+      "name": "Magic Amplifier",
+      "set": "Meditative+",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 2
+      },
+      "params": [
+        {
+          "key": "spellDamage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 30,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (+1): Also has \"Cry: Add a random Spell or Field Spell that deals damage to your hand.\""
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Both players have Spell Damage +{spellDamage}.\nEmbiggened (+1): Also has \"Cry: Add a random Radiant Spell or Field Spell that deals damage to your hand.\""
+      }
+    },
+    "meditativeplus-019": {
+      "id": "meditativeplus-019",
+      "index": "19",
+      "name": "Grubby Gloves",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 2
+      },
+      "params": [
+        {
+          "key": "cards",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 29,
+      "base": {
+        "keywords": [],
+        "text": "Steal the top {cards|card|cards} of your opponent's deck.\nEmbiggened (+1): Steal {cards|random card|random cards} from their hand instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Steal the top {cards|card|cards} of your opponent's deck. They cost ({setCost}).\nEmbiggened (+1): Steal {cards|random card|random cards} from their hand instead."
+      }
+    },
+    "meditativeplus-023": {
+      "id": "meditativeplus-023",
+      "index": "23",
+      "name": "Enormous Elderberry",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [
+        "Fruit"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "params": [
+        {
+          "key": "cards",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedCards",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 23,
+      "base": {
+        "keywords": [],
+        "text": "Add {cards|random embiggen card|random embiggen cards} to your hand. Their Embiggened version costs no extra mana.\nEmbiggened (+2): Add {embiggenedCards} instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Add {cards|random Radiant embiggen card|random Radiant embiggen cards} to your hand. Their Embiggened version costs no extra mana.\nEmbiggened (+2): Add {embiggenedCards} instead."
+      }
+    },
+    "stinkyscape-079": {
+      "id": "stinkyscape-079",
+      "index": "79",
+      "name": "Orca",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 4,
+        "embiggen": 5
+      },
+      "loc": 28,
+      "base": {
+        "attack": 3,
+        "health": 1,
+        "keywords": [
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this.\nEmbiggened (+1): The Miners offered are Radiant."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this, twice.\nEmbiggened (+1): The Miners offered are Radiant."
+      }
+    },
+    "stinkyscape-127": {
+      "id": "stinkyscape-127",
+      "index": "127",
+      "name": "Jlockeed's Siege Tank",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Jlockeed"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 3,
+        "embiggen": 4
+      },
+      "loc": 17,
+      "base": {
+        "attack": 8,
+        "health": 5,
+        "keywords": [],
+        "text": "End of turn: This attacks a random enemy.\nEmbiggened (+1): Starship Piece."
+      },
+      "radiant": {
+        "attack": 16,
+        "health": 10,
+        "keywords": [],
+        "text": "End of turn: This attacks a random enemy.\nEmbiggened (+1): Starship Piece."
+      }
+    },
+    "stinkyscape-128": {
+      "id": "stinkyscape-128",
+      "index": "128",
+      "name": "Jlockeed's Yamato Cannon",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Jlockeed"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 2
+      },
+      "loc": 14,
+      "base": {
+        "attack": 3,
+        "health": 1,
+        "keywords": [
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Cleave"
+          }
+        ],
+        "text": "Ranged, Cleave\nEmbiggened (+1): Starship Piece."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush, Ranged, Cleave\nEmbiggened (+1): Starship Piece."
+      }
+    },
+    "stinkyscape-129": {
+      "id": "stinkyscape-129",
+      "index": "129",
+      "name": "Jlockeed's Missile Pod",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Jlockeed"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 3
+      },
+      "loc": 26,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "End of turn: Deal damage equal to its Attack split among all enemies.\nEmbiggened (+2): Starship Piece."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "End of turn: Deal damage equal to twice its Attack split among all enemies.\nEmbiggened (+2): Starship Piece."
+      }
+    },
+    "stinkyscape-154": {
+      "id": "stinkyscape-154",
+      "index": "154",
+      "name": "Dice of Doom",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [
+        "Quickdraw"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": {
+        "base": 0,
+        "embiggen": 1
+      },
+      "loc": 55,
+      "base": {
+        "keywords": [],
+        "text": "Roll a 100-sided die. If it lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (+1): This also gains Lucky +1 for good."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Roll an 80-sided die twice. If either lands on 67, add every Terminus card to your hand. They cost (0).\nEnd of turn: Add this back to your hand.\nEmbiggened (+1): This also gains Lucky +1 for good."
+      }
+    },
+    "stinkyscapeplus-024": {
+      "id": "stinkyscapeplus-024",
+      "index": "24",
+      "name": "Forced Propagation",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 3
+      },
+      "loc": 62,
+      "base": {
+        "keywords": [],
+        "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck. It keeps no cost changes or buffs.\nEmbiggened (+2): Shuffle {copy2|copy|copies} of it into your deck instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Choose a non-fused card in your hand or field. Shuffle {copy|copy|copies} of it into your deck, then Buff them. It keeps no cost changes or buffs.\nEmbiggened (+2): Shuffle {copy2|copy|copies} of it into your deck instead, then Buff them."
+      },
+      "params": [
+        {
+          "key": "copy",
+          "base": 10,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "copy2",
+          "base": 40,
+          "radiant": 40,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-064": {
+      "id": "stinkyscapeplus-064",
+      "index": "64",
+      "name": "Surge Wall",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 4
+      },
+      "loc": 24,
+      "base": {
+        "attack": 0,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (+3): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/24."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 12,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (+3): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
+      },
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedDamage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-065": {
+      "id": "stinkyscapeplus-065",
+      "index": "65",
+      "name": "Thorium Wall",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 4
+      },
+      "loc": 29,
+      "base": {
+        "attack": 0,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Can't attack, Taunt\nEmbiggened (+3): GIGA, 0/40."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 20,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Armor",
+            "n": 2
+          }
+        ],
+        "text": "Can't attack, Taunt, Armor 2\nEmbiggened (+3): GIGA, 0/80."
+      }
+    },
+    "stinkyscapeplus-066": {
+      "id": "stinkyscapeplus-066",
+      "index": "66",
+      "name": "Plastanium Wall",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 4
+      },
+      "loc": 18,
+      "base": {
+        "attack": 0,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Can't attack, Taunt\nEnd of turn: Gain Divine Shield.\nEmbiggened (+3): GIGA, 0/16."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Armor",
+            "n": 2
+          }
+        ],
+        "text": "Can't attack, Taunt, Armor 2\nEnd of turn: Gain Divine Shield.\nEmbiggened (+3): GIGA, 0/32."
+      }
+    },
+    "stinkyscapeplus-067": {
+      "id": "stinkyscapeplus-067",
+      "index": "67",
+      "name": "Phase Wall",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 4
+      },
+      "loc": 6,
+      "base": {
+        "attack": 0,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          }
+        ],
+        "text": "Immutable, Immune to Spells, Can't attack, Taunt\nEmbiggened (+3): GIGA, 0/24."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 12,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Armor",
+            "n": 2
+          }
+        ],
+        "text": "Immutable, Immune to Spells, Can't attack, Taunt, Armor 2\nEmbiggened (+3): GIGA, 0/48."
+      }
+    },
+    "stinkyscapeplus-096": {
+      "id": "stinkyscapeplus-096",
+      "index": "96",
+      "name": "Open Enrollment",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": {
+        "base": 0,
+        "embiggen": 2
+      },
+      "loc": 32,
+      "base": {
+        "keywords": [],
+        "text": "Fill your hand with random F tier cards (or D tier if none exist).\nEmbiggened (+2): They cost (1) less."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Fill your hand with random Radiant F tier cards (or D tier if none exist).\nEmbiggened (+2): They cost (0)."
+      }
+    },
+    "stinkyscapeplus-138": {
+      "id": "stinkyscapeplus-138",
+      "index": "138",
+      "name": "Delta Definition",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "loc": 25,
+      "base": {
+        "keywords": [],
+        "text": "Add {automa} Automa-δ cards to your hand.\nEmbiggened (+2): They have Tribute 1."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Add {automa} Radiant Automa-δ cards to your hand.\nEmbiggened (+2): They have Tribute 1."
+      },
+      "params": [
+        {
+          "key": "automa",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-139": {
+      "id": "stinkyscapeplus-139",
+      "index": "139",
+      "name": "Operation Omega",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 3
+      },
+      "loc": 25,
+      "base": {
+        "keywords": [],
+        "text": "Add {automa} Automa-Ω cards to your hand.\nEmbiggened (+2): They have Tribute 2."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Add {automa} Radiant Automa-Ω cards to your hand.\nEmbiggened (+2): They have Tribute 2."
+      },
+      "params": [
+        {
+          "key": "automa",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    }
+  }
+}

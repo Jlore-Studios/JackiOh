@@ -1,0 +1,36 @@
+{
+  "set": {
+    "stinkyscapeplus-153": {
+      "id": "stinkyscapeplus-153",
+      "index": "153",
+      "name": "Noxious Rounds",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 16,
+      "base": {
+        "attack": 3,
+        "health": 1,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          }
+        ],
+        "text": "Starship Piece\nDamage dealt is Toxic."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          }
+        ],
+        "text": "Starship Piece\nDamage dealt is Toxic."
+      }
+    }
+  }
+}

@@ -1,0 +1,4014 @@
+{
+  "set": {
+    "core-004": {
+      "id": "core-004",
+      "index": "4",
+      "name": "Gary the Gambler",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "coins",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "perHeads",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "perTails",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 13,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      }
+    },
+    "core-007": {
+      "id": "core-007",
+      "index": "7",
+      "name": "Jewelosco Scarab",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "cry": true
+        }
+      ],
+      "loc": 29,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Discover a (2) Cost card."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Discover a (3) Cost card. It costs ({discount}) less."
+      }
+    },
+    "core-015": {
+      "id": "core-015",
+      "index": "15",
+      "name": "Me and Mr Token",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "core-t-rush"
+      ],
+      "params": [
+        {
+          "key": "tokens",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "cry": true
+        }
+      ],
+      "loc": 11,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Summon a Rush Token."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Summon {tokens|Rush Token|Rush Tokens}."
+      }
+    },
+    "core-021": {
+      "id": "core-021",
+      "index": "21",
+      "name": "Hinder",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "mana",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "discards",
+          "base": 1,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ],
+      "loc": 15,
+      "base": {
+        "keywords": [],
+        "text": "Cast on draw: Your opponent has {mana} less mana next turn. Discard {discards|random card|random cards}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Cast on draw: Your opponent has {mana} less mana next turn."
+      }
+    },
+    "core-023": {
+      "id": "core-023",
+      "index": "23",
+      "name": "Reoccurring Dream",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "chance",
+          "base": 30,
+          "radiant": 40,
+          "better": "up",
+          "step": 10,
+          "min": 1,
+          "max": 100
+        }
+      ],
+      "loc": 33,
+      "base": {
+        "keywords": [],
+        "text": "{chance}% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\n{chance}% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      }
+    },
+    "core-024": {
+      "id": "core-024",
+      "index": "24",
+      "name": "Efficiency Dividend",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": "X",
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        },
+        {
+          "key": "heal",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 46,
+      "base": {
+        "keywords": [],
+        "text": "Choose one: Deal X damage, heal a target {heal}X, or gain X mana next turn.\nEnd of turn: Return this to hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Choose one: Deal {damage}X damage, heal a target {heal}X, or gain X+1 mana next turn.\nEnd of turn: Return this to hand."
+      }
+    },
+    "core-031": {
+      "id": "core-031",
+      "index": "31",
+      "name": "KY's Math Equation",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [
+        "KY"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "dealsDamage": true,
+      "loc": 56,
+      "base": {
+        "keywords": [],
+        "text": "Deal Fib(times played + 1) damage.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal Fib(times played + 3) damage.\nEnd of turn: Return this to hand. It costs (1) more, to a maximum of (4)."
+      }
+    },
+    "core-035": {
+      "id": "core-035",
+      "index": "35",
+      "name": "Lunar Eclipse",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 3,
+          "radiant": 6,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 21,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage. Your next Spell this turn costs ({discount}) less."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage. Your next Spell this turn costs ({discount}) less."
+      }
+    },
+    "core-040": {
+      "id": "core-040",
+      "index": "40",
+      "name": "Echoes of the Forgotten",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "dealsDamage": true,
+      "loc": 18,
+      "base": {
+        "keywords": [],
+        "text": "Start of turn: Deal damage to the enemy hero equal to the cards in your exile. Then exile the bottom card of your deck."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Start of turn: Deal damage to the enemy hero equal to twice the cards in your exile. Then exile the bottom card of your deck."
+      }
+    },
+    "core-042": {
+      "id": "core-042",
+      "index": "42",
+      "name": "Eugenics",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "chance",
+          "base": 30,
+          "radiant": 100,
+          "better": "up",
+          "step": 10,
+          "min": 1,
+          "max": 100,
+          "tunedOn": "base"
+        }
+      ],
+      "loc": 12,
+      "base": {
+        "keywords": [],
+        "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a {chance}% chance to become Radiant."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck becomes Radiant."
+      }
+    },
+    "core-044": {
+      "id": "core-044",
+      "index": "44",
+      "name": "True Strike",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 12,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Pierce\nDeal {damage} damage. Exile this."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Pierce\nDeal {damage} damage. Exile this."
+      }
+    },
+    "core-053": {
+      "id": "core-053",
+      "index": "53",
+      "name": "Reno",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "health",
+          "base": 30,
+          "radiant": 60,
+          "better": "up",
+          "step": 8,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 15,
+      "base": {
+        "attack": 4,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: Heal your hero up to {health} health."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 12,
+        "keywords": [],
+        "text": "Cry: Heal your hero up to {health} health."
+      }
+    },
+    "core-054": {
+      "id": "core-054",
+      "index": "54",
+      "name": "Straaza",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "setCost",
+          "base": 1,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "cry": true
+        }
+      ],
+      "loc": 16,
+      "base": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [],
+        "text": "Cry: Add 2 random (3) Cost Units to your hand. They cost ({setCost})."
+      },
+      "radiant": {
+        "attack": 16,
+        "health": 16,
+        "keywords": [],
+        "text": "Cry: Add 2 random Radiant (3) Cost Units to your hand. They cost ({setCost})."
+      }
+    },
+    "core-068": {
+      "id": "core-068",
+      "index": "68",
+      "name": "Twisted Sorcerer",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "lowDamage",
+          "base": 8,
+          "radiant": 16,
+          "better": "up",
+          "step": 2,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "threshold",
+          "base": 10,
+          "radiant": 10,
+          "better": "up",
+          "step": 2,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 24,
+      "base": {
+        "attack": 5,
+        "health": 5,
+        "keywords": [],
+        "text": "Cry: Deal {damage} damage, or {lowDamage} if your hero has less than {threshold} health."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [],
+        "text": "Cry: Deal {damage} damage, or {lowDamage} if your hero has less than {threshold} health."
+      }
+    },
+    "core-069": {
+      "id": "core-069",
+      "index": "69",
+      "name": "Call to Arms",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "costLimit",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "units",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 13,
+      "base": {
+        "keywords": [],
+        "text": "Recruit {units|Unit|Units} of ({costLimit}) Cost or less."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Recruit {units|Unit|Units} of ({costLimit}) Cost or less."
+      }
+    },
+    "core-070": {
+      "id": "core-070",
+      "index": "70",
+      "name": "Spiteful Stab",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "healthStep",
+          "base": 5,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "perExile",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 24,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
+      }
+    },
+    "core-073": {
+      "id": "core-073",
+      "index": "73",
+      "name": "Anti-oneshot Armor",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "cap",
+          "base": 5,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
+      }
+    },
+    "core-074": {
+      "id": "core-074",
+      "index": "74",
+      "name": "Adaptive UI",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": "X",
+      "refs": [
+        "core-t-ghoul"
+      ],
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        },
+        {
+          "key": "heal",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        },
+        {
+          "key": "ghoul",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 26,
+      "base": {
+        "keywords": [],
+        "text": "Deal X damage. Heal your hero X. Draw X. Summon an X/X Ghoul Token."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage}X damage. Heal your hero {heal}X. Draw {draw}X. Summon a {ghoul}X/{ghoul}X Ghoul Token."
+      }
+    },
+    "core-075": {
+      "id": "core-075",
+      "index": "75",
+      "name": "Infinite Reserves",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 0,
+      "refs": [
+        "core-t-rush"
+      ],
+      "params": [
+        {
+          "key": "draw",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "cry": true
+        }
+      ],
+      "loc": 9,
+      "base": {
+        "keywords": [],
+        "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
+      }
+    },
+    "core-077": {
+      "id": "core-077",
+      "index": "77",
+      "name": "Professor Curvature",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 19,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [],
+        "text": "Cry: (4)+ Cost cards cost ({discount}) less on your next turn."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: (4)+ Cost cards cost ({discount}) less on your next turn."
+      }
+    },
+    "core-080": {
+      "id": "core-080",
+      "index": "80",
+      "name": "Zao Gao",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [
+        "CN"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "core-t-rush"
+      ],
+      "params": [
+        {
+          "key": "discard",
+          "base": 2,
+          "radiant": 2,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "keywords",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "tokens",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 20,
+      "base": {
+        "keywords": [],
+        "text": "Discard {discard|random card|random cards}. Summon {tokens|Rush Token|Rush Tokens}, each with {keywords|random combat keyword|random combat keywords}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Discard {discard|random card|random cards}. Summon {tokens|Radiant Rush Token|Radiant Rush Tokens}, each with {keywords|random combat keyword|random combat keywords}."
+      }
+    },
+    "core-093": {
+      "id": "core-093",
+      "index": "93",
+      "name": "Combo-Index",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 3,
+      "refs": [
+        "core-093-1"
+      ],
+      "dealsDamage": true,
+      "loc": 23,
+      "base": {
+        "keywords": [],
+        "text": "Grade (starts at E).\nEnd of turn: If you played N+ cards this turn, go up a grade and trigger E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Grade (starts at E).\nStart of turn: Add a Combo-Fodder to your hand.\nEnd of turn: If you played N+ cards this turn, go up a grade and trigger E to it. N = the grades from E to the current one.\nE: Copy a random card you played this turn into your hand.\nD: 2 random cards in hand cost (1) less.\nC: Opponent exiles a random hand card.\nB: Make a random card in hand Radiant.\nA: 8 Lifesteal damage to the enemy hero.\nS: Trigger E–A again."
+      }
+    },
+    "core-093-1": {
+      "id": "core-093-1",
+      "index": "93.1",
+      "name": "Combo-Fodder",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 0,
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 14,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Lifesteal"
+          }
+        ],
+        "text": "Lifesteal\nDeal {damage} damage."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lifesteal"
+          }
+        ],
+        "text": "Lifesteal\nDeal {damage} damage."
+      }
+    },
+    "core-098": {
+      "id": "core-098",
+      "index": "98",
+      "name": "Heroic Power",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [
+        "Quickdraw"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 0,
+      "refs": [
+        "core-t-rush",
+        "core-t-felinor",
+        "core-t-ghoul"
+      ],
+      "params": [
+        {
+          "key": "shot",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 2,
+          "min": 1,
+          "power": "burn"
+        },
+        {
+          "key": "tapDraw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "draw"
+        },
+        {
+          "key": "tapDamage",
+          "base": 2,
+          "radiant": 2,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base",
+          "power": "draw"
+        },
+        {
+          "key": "ping",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "ping"
+        },
+        {
+          "key": "stitchCost",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "stitching"
+        },
+        {
+          "key": "armor",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "armor"
+        },
+        {
+          "key": "insect",
+          "base": 8,
+          "radiant": 8,
+          "better": "up",
+          "step": 2,
+          "min": 1,
+          "power": "insect"
+        },
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "brainstorm"
+        },
+        {
+          "key": "fruitCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "power": "pluck"
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 11,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent.\n(1) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(1) Steady Shot: Deal {shot} damage to the enemy hero.\n(2) Ranching: Summon a Rush Token.\n(1) Cat Cafe: Summon a Felinor Token.\n(1) Ping: Pierce. Deal {ping} damage.\n(2) Witness Value: Discover a Unit.\n(2) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(1) Armor Up: Your hero gains {armor} Armor until your next turn.\n(2) Die Insect: Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Trap to summon."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw {tapDraw} from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
+      }
+    },
+    "classic-001": {
+      "id": "classic-001",
+      "index": "1",
+      "name": "Curse of the Forgotten Classic",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 35,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage to the enemy hero for each card in their exile. Draw {draw}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage to the enemy hero for each card in their exile. Draw {draw}. Recruit a card from their exile. If it's a Unit, it attacks the enemy hero at once."
+      }
+    },
+    "classic-002": {
+      "id": "classic-002",
+      "index": "2",
+      "name": "The Trickster",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "discount",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base",
+          "cry": true
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "tunedOn": "radiant",
+          "cry": true
+        }
+      ],
+      "loc": 8,
+      "base": {
+        "attack": 2,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Your next Trap or Field Spell costs ({discount}) less."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Your next Trap or Field Spell costs ({setCost})."
+      }
+    },
+    "classic-007": {
+      "id": "classic-007",
+      "index": "7",
+      "name": "InfiniScepter",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "costLimit",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 38,
+      "base": {
+        "keywords": [],
+        "text": "Cry: Exile a ({costLimit}) Cost or less Spell from your hand.\nActivate: Cast a copy of that Spell."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Cry: Exile a ({costLimit}) Cost or less Spell from your hand.\nActivate: Cast a copy of that Spell."
+      }
+    },
+    "classic-012": {
+      "id": "classic-012",
+      "index": "12",
+      "name": "Book of Blood",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Book"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 7,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Lifesteal"
+          }
+        ],
+        "text": "Lifesteal\nDeal {damage} damage to a Unit."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lifesteal"
+          }
+        ],
+        "text": "Lifesteal\nDeal {damage} damage to a Unit."
+      }
+    },
+    "classic-016": {
+      "id": "classic-016",
+      "index": "16",
+      "name": "Book of Flame",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Book"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 7,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Trample"
+          }
+        ],
+        "text": "Trample\nDeal {damage} damage."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Trample"
+          }
+        ],
+        "text": "Trample\nDeal {damage} damage."
+      }
+    },
+    "classic-019": {
+      "id": "classic-019",
+      "index": "19",
+      "name": "Lizard's Breath",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "mana",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "extraDamage",
+          "base": 4,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 34,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage. Your largest pile adds: Deck, draw {draw}; Graveyard, gain {mana} mana; Exile, deal {extraDamage} more damage. Ties go to the first listed."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage. Your two largest piles add: Deck, draw {draw}; Graveyard, gain {mana} mana; Exile, deal {extraDamage} more damage. Ties go to the first listed."
+      }
+    },
+    "classic-020": {
+      "id": "classic-020",
+      "index": "20",
+      "name": "The Power to Punish",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "discards",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 40,
+      "base": {
+        "keywords": [],
+        "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards}; or choose a Unit, which is destroyed at the start of your next turn."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Activate: Choose one: Deal {damage} damage; your opponent discards {discards|random card|random cards}; or all enemy Units are destroyed at the start of your next turn."
+      }
+    },
+    "classic-022": {
+      "id": "classic-022",
+      "index": "22",
+      "name": "Mid Runner",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "threshold",
+          "base": 4,
+          "radiant": 4,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "bounces",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 32,
+      "base": {
+        "attack": 2,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: If this is in midlane, Tribute it. If you had {threshold} or more mana when you played this, Bounce {bounces|random enemy permanent|random enemy permanents}."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: If this is in midlane, Tribute it. If you had {threshold} or more mana when you played this, Bounce {bounces|random enemy permanent|random enemy permanents}."
+      }
+    },
+    "classic-023": {
+      "id": "classic-023",
+      "index": "23",
+      "name": "Devil's Pact",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "classic-016"
+      ],
+      "params": [
+        {
+          "key": "discards",
+          "base": 666,
+          "radiant": 6,
+          "better": "down",
+          "step": 167,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 30,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Spell Damage",
+            "n": 1
+          }
+        ],
+        "text": "Indestructible, Spell Damage +1\nCry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Book of Flame."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Spell Damage",
+            "n": 2
+          }
+        ],
+        "text": "Indestructible, Spell Damage +2\nCry: Discard {discards|random card|random cards}.\nActivate: This turn, each card you play is replaced by a Radiant Book of Flame."
+      }
+    },
+    "classic-031": {
+      "id": "classic-031",
+      "index": "31",
+      "name": "Cookie Guild",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "costLimit",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "units",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 8,
+      "base": {
+        "attack": 2,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: Recruit {units|Unit|Units} of ({costLimit}) Cost or less."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 8,
+        "keywords": [],
+        "text": "Cry: Recruit {units|Unit|Units} of ({costLimit}) Cost or less."
+      }
+    },
+    "classic-036": {
+      "id": "classic-036",
+      "index": "36",
+      "name": "Burn",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "threshold",
+          "base": 4,
+          "radiant": 4,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 20,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage. If you have {threshold} or more mana left, draw {draw}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage. If your max mana is {threshold} or more, draw {draw}."
+      }
+    },
+    "classic-039": {
+      "id": "classic-039",
+      "index": "39",
+      "name": "Outbreak",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "drawPer",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 33,
+      "base": {
+        "keywords": [],
+        "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at least its cost in Plague Counters, steal it. Otherwise, draw {drawPer} per Plague Counter on it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at least its cost in Plague Counters, steal it. Otherwise, draw {drawPer} per Plague Counter on it."
+      }
+    },
+    "classic-040": {
+      "id": "classic-040",
+      "index": "40",
+      "name": "MC Tech",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "threshold",
+          "base": 4,
+          "radiant": 4,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 36,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [],
+        "text": "Cry: If your opponent controls {threshold} or more permanents, steal a random one."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: If your opponent controls {threshold} or more permanents, steal one of your choice."
+      }
+    },
+    "classic-053": {
+      "id": "classic-053",
+      "index": "53",
+      "name": "Plague Crawler",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 26,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on a permanent.\nWhenever Plague Counters are placed on this, draw {draw}."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on a permanent.\nWhenever Plague Counters are placed on this, draw {draw}."
+      }
+    },
+    "classic-055": {
+      "id": "classic-055",
+      "index": "55",
+      "name": "Book of Wildfire",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Book"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 8,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage.\nEnd of turn: Become a random other Book."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage.\nEnd of turn: Become a random other Radiant Book."
+      }
+    },
+    "classic-056": {
+      "id": "classic-056",
+      "index": "56",
+      "name": "Spell Tyrant",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "spells",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base",
+          "cry": true
+        }
+      ],
+      "loc": 26,
+      "base": {
+        "attack": 5,
+        "health": 5,
+        "keywords": [],
+        "text": "Cry: Choose up to {spells|Spell|Spells} in your graveyard. Cast them, then exile them."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [],
+        "text": "Cry: Cast every Spell in your graveyard, oldest first, then exile them."
+      }
+    },
+    "classic-059": {
+      "id": "classic-059",
+      "index": "59",
+      "name": "Plague Doctor",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Plague"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 25,
+      "base": {
+        "attack": 2,
+        "health": 3,
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this. Then deal damage equal to the number of Plague Counters on the field."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this. Then deal damage equal to the number of Plague Counters on the field."
+      }
+    },
+    "classic-061": {
+      "id": "classic-061",
+      "index": "61",
+      "name": "Plague Bringer Goliath",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 7,
+      "base": {
+        "attack": 7,
+        "health": 7,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Trample"
+          }
+        ],
+        "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      },
+      "radiant": {
+        "attack": 14,
+        "health": 14,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Trample"
+          }
+        ],
+        "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      }
+    },
+    "classic-074": {
+      "id": "classic-074",
+      "index": "74",
+      "name": "Corpse Plantation",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "usesPlague": true,
+      "loc": 12,
+      "base": {
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nActivate: Play a Unit from your graveyard, spending at least 1 Plague Counter as mana."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nActivate: Play a Unit from your graveyard, spending at least 1 Plague Counter as mana."
+      }
+    },
+    "classic-076": {
+      "id": "classic-076",
+      "index": "76",
+      "name": "Plague Bringer",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 5,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      }
+    },
+    "classic-083": {
+      "id": "classic-083",
+      "index": "83",
+      "name": "Flame Lance",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "damage",
+          "base": 10,
+          "radiant": 20,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 7,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Trample"
+          }
+        ],
+        "text": "Trample\nDeal {damage} damage to a Unit."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Trample"
+          }
+        ],
+        "text": "Trample\nDeal {damage} damage to a Unit."
+      }
+    },
+    "classic-085": {
+      "id": "classic-085",
+      "index": "85",
+      "name": "King Wagtoggle",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "recruits",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "cry": true
+        }
+      ],
+      "loc": 7,
+      "base": {
+        "attack": 5,
+        "health": 5,
+        "keywords": [],
+        "text": "Cry: Swap decks with your opponent."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [],
+        "text": "Cry: Swap decks with your opponent. Then Recruit {recruits|card|cards}."
+      }
+    },
+    "classicplus-007": {
+      "id": "classicplus-007",
+      "index": "7",
+      "name": "The House",
+      "set": "Classic+",
+      "type": "Field Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "refs": [
+        "core-003",
+        "classicplus-006"
+      ],
+      "params": [
+        {
+          "key": "tokens",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "usesPlague": true,
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nActivate: Spend a Plague Counter from this to summon a Right-house defender or a Wrong-House Attacker."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nActivate: Spend a Plague Counter from this to summon a Radiant Right-house defender or a Radiant Wrong-House Attacker."
+      }
+    },
+    "classicplus-012-2": {
+      "id": "classicplus-012-2",
+      "index": "12.2",
+      "name": "Death Boil",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [
+        "Pancake",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 1,
+      "params": [
+        {
+          "key": "amount",
+          "base": 6,
+          "radiant": 12,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 17,
+      "base": {
+        "keywords": [],
+        "text": "Deal {amount} damage to an enemy or heal an ally {amount}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {amount} damage to an enemy or heal an ally {amount}."
+      }
+    },
+    "classicplus-012-4": {
+      "id": "classicplus-012-4",
+      "index": "12.4",
+      "name": "Powder Spray",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [
+        "Pancake",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 3,
+          "radiant": 6,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 5,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage to each enemy."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage to each enemy."
+      }
+    },
+    "classicplus-019-3": {
+      "id": "classicplus-019-3",
+      "index": "19.3",
+      "name": "Mid Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "params": [
+        {
+          "key": "heads",
+          "base": 4,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "tails",
+          "base": 2,
+          "radiant": 2,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "oppMana",
+          "base": 1,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 18,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\nCry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      }
+    },
+    "classicplus-020": {
+      "id": "classicplus-020",
+      "index": "20",
+      "name": "Mushroom Power",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "buff",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 13,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Give the Units adjacent to this +{buff}/+{buff}."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: Give the Units adjacent to this +{buff}/+{buff}."
+      }
+    },
+    "classicplus-021": {
+      "id": "classicplus-021",
+      "index": "21",
+      "name": "Whirlwind",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 8,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Pierce\nDeal {damage} damage to all Units."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Pierce\nDeal {damage} damage to all Units.\nEnd of turn: Return this to hand."
+      }
+    },
+    "classicplus-026": {
+      "id": "classicplus-026",
+      "index": "26",
+      "name": "Tommy Tempo",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "actions",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        },
+        {
+          "key": "per",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 12,
+      "base": {
+        "attack": 5,
+        "health": 5,
+        "keywords": [
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Taunt\nCast on draw: End the turn.\nCry: Lose all your mana. Gain +{per}/+{per} per mana lost."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per}/+{per} per mana lost."
+      }
+    },
+    "classicplus-032-3": {
+      "id": "classicplus-032-3",
+      "index": "32.3",
+      "name": "Blade Storm",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Epic",
+      "token": true,
+      "cost": 1,
+      "refs": [
+        "classicplus-021"
+      ],
+      "params": [
+        {
+          "key": "rounds",
+          "base": 30,
+          "radiant": 30,
+          "better": "up",
+          "step": 8,
+          "min": 1,
+          "tunedOn": "radiant"
+        },
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 9,
+      "base": {
+        "keywords": [],
+        "text": "Cast Whirlwind until a Unit dies."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage to all enemy Units. Repeat until a Unit dies, up to {rounds|time|times}."
+      }
+    },
+    "classicplus-036-1": {
+      "id": "classicplus-036-1",
+      "index": "36.1",
+      "name": "Bone Storm",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Rare",
+      "token": true,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 6,
+      "base": {
+        "keywords": [],
+        "text": "Cast on draw: Deal {damage} damage to each enemy."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Echo 1\nCast on draw: Deal {damage} damage to each enemy."
+      }
+    },
+    "classicplus-038-1": {
+      "id": "classicplus-038-1",
+      "index": "38.1",
+      "name": "Solarius Prime",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Prime",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Epic",
+      "token": true,
+      "cost": 4,
+      "params": [
+        {
+          "key": "casts",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 8,
+      "base": {
+        "attack": 9,
+        "health": 5,
+        "keywords": [
+          {
+            "kind": "Spell Damage",
+            "n": 3
+          }
+        ],
+        "text": "Spell Damage +3\nCry: Cast {casts|random Spell|random Spells}. Each aims at enemies when it harms and at your side when it helps."
+      },
+      "radiant": {
+        "attack": 18,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Spell Damage",
+            "n": 6
+          }
+        ],
+        "text": "Spell Damage +6\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each aims at enemies when it harms and at your side when it helps."
+      }
+    },
+    "classicplus-059": {
+      "id": "classicplus-059",
+      "index": "59",
+      "name": "All Purpose Apple",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [
+        "Fruit"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "core-t-rush"
+      ],
+      "params": [
+        {
+          "key": "heal",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 15,
+      "base": {
+        "keywords": [],
+        "text": "Summon a Rush Token. Heal your hero {heal}. Deal {damage} damage."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Summon a Radiant Rush Token. Heal your hero {heal}. Deal {damage} damage."
+      }
+    },
+    "classicplus-065-2": {
+      "id": "classicplus-065-2",
+      "index": "65.2",
+      "name": "Normal Grape",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [
+        "Fruit",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Common",
+      "token": true,
+      "cost": 1,
+      "params": [
+        {
+          "key": "amount",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. It costs ({discount}) less."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {amount} damage to an enemy or heal an ally {amount}.\nDraw {draw}. They cost ({discount}) less."
+      }
+    },
+    "classicplus-065-3": {
+      "id": "classicplus-065-3",
+      "index": "65.3",
+      "name": "Large Grape",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [
+        "Fruit",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Rare",
+      "token": true,
+      "cost": 3,
+      "params": [
+        {
+          "key": "amount",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Deal {amount} damage to an enemy or heal an ally {amount}. Draw {draw}. Each costs ({setCost})."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {amount} damage to an enemy or heal an ally {amount}. Draw {draw}. Each costs ({setCost})."
+      }
+    },
+    "classicplus-068": {
+      "id": "classicplus-068",
+      "index": "68",
+      "name": "Organic Produce",
+      "set": "Classic+",
+      "type": "Field Spell",
+      "tags": [
+        "Fruit"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "fruits",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "tunedOn": "radiant",
+          "cry": true
+        }
+      ],
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Cry: Add {fruits|random Fruit|random Fruits} to your hand.\nAura: Fruits you play are Radiant."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Cry: Add {fruits|random Fruit|random Fruits} to your hand. Each costs ({setCost}).\nAura: Fruits you play are Radiant."
+      }
+    },
+    "classicplus-075": {
+      "id": "classicplus-075",
+      "index": "75",
+      "name": "J-lease J-Jungle EX-plorer",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 3,
+      "refs": [
+        "classicplus-075",
+        "classicplus-075-1"
+      ],
+      "params": [
+        {
+          "key": "packs",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 9,
+      "base": {
+        "attack": 5,
+        "health": 5,
+        "keywords": [],
+        "text": "Cry: Shuffle {packs|J-lease J-Jungle EX-plorer Pack|J-lease J-Jungle EX-plorer Packs} into your deck."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [],
+        "text": "Cry: Shuffle {packs|Radiant J-lease J-Jungle EX-plorer Pack|Radiant J-lease J-Jungle EX-plorer Packs} into your deck."
+      }
+    },
+    "classicplus-078": {
+      "id": "classicplus-078",
+      "index": "78",
+      "name": "Claude's Datacenter",
+      "set": "Classic+",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 13,
+      "base": {
+        "keywords": [],
+        "text": "End of turn: Add a random AI generated card to your hand. It costs ({setCost})."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "End of turn: Add a random Radiant AI generated card to your hand. It costs ({setCost})."
+      }
+    },
+    "classicplus-t-ai-06": {
+      "id": "classicplus-t-ai-06",
+      "index": "T-AI-6",
+      "name": "Datacenter Fire",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [
+        "AI",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 2,
+      "dealsDamage": true,
+      "loc": 15,
+      "base": {
+        "keywords": [],
+        "text": "Destroy all Field Spells. Deal 1 damage to each hero for each one destroyed."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Destroy all enemy Field Spells. Deal 2 damage to the enemy hero for each one destroyed."
+      }
+    },
+    "meditative-001": {
+      "id": "meditative-001",
+      "index": "1",
+      "name": "Disruptive Disruptor",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "mana",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "cry": true
+        }
+      ],
+      "loc": 21,
+      "base": {
+        "keywords": [],
+        "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw {draw|card|cards}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nCry: Draw {draw} and gain {mana} mana."
+      }
+    },
+    "meditative-005": {
+      "id": "meditative-005",
+      "index": "5",
+      "name": "Death by 1000 cuts",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "echo",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 21,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Echo X, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lifesteal"
+          },
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Echo X, Lifesteal, Pierce\nDeal {damage} damage to a Unit. X is {echo|time|times} your max mana."
+      }
+    },
+    "meditative-007": {
+      "id": "meditative-007",
+      "index": "7",
+      "name": "Introspection",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "heal",
+          "base": 3,
+          "radiant": 6,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 49,
+      "base": {
+        "keywords": [],
+        "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "End of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      }
+    },
+    "meditative-008": {
+      "id": "meditative-008",
+      "index": "8",
+      "name": "Reach the Summit",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [
+        "Quickdraw",
+        "Wincon"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "heal",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "discards",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "exiles",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "adds",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 114,
+      "base": {
+        "keywords": [],
+        "text": "Costs (Ascent level). Gain that level's effect, then it goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Costs (Ascent level - 1), never less than (0). Gain that level's effect, then it goes up by 1.\nEnd of turn: Return this to hand.\nAscent 0: Heal your hero {heal}.\nAscent 1: Deal {damage} damage.\nAscent 2: Draw {draw}.\nAscent 3: Your opponent discards {discards|random card|random cards}.\nAscent 4: Exile {exiles|random enemy permanent|random enemy permanents}.\nAscent 5: Add {adds|random Radiant card|random Radiant cards} to your hand. They cost (0).\nAscent 6: Reach for the stars.\nAscent 7: And when they're near...\nAscent 8: Push even harder.\nAscent 9: And you might just...\nAscent 10: Win the game."
+      }
+    },
+    "meditative-012": {
+      "id": "meditative-012",
+      "index": "12",
+      "name": "Fear Mongerer",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "times",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "cry": true
+        }
+      ],
+      "loc": 15,
+      "base": {
+        "attack": 5,
+        "health": 7,
+        "keywords": [],
+        "text": "Cry: Trigger your End of turn effects."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 14,
+        "keywords": [],
+        "text": "Cry: Trigger your End of turn effects {times|time|times}."
+      }
+    },
+    "meditative-015": {
+      "id": "meditative-015",
+      "index": "15",
+      "name": "Smelly Steven",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "surcharge",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 19,
+      "base": {
+        "attack": 5,
+        "health": 5,
+        "keywords": [],
+        "text": "Cry: Your opponent's Spells cost ({surcharge}) more during their next turn."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [],
+        "text": "Cry: Your opponent's Spells cost ({surcharge}) more during their next turn."
+      }
+    },
+    "meditative-022": {
+      "id": "meditative-022",
+      "index": "22",
+      "name": "Mind Games",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "meditative-022-1"
+      ],
+      "params": [
+        {
+          "key": "mana",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "damage",
+          "base": 8,
+          "radiant": 8,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        },
+        {
+          "key": "heal",
+          "base": 8,
+          "radiant": 8,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        },
+        {
+          "key": "armor",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "fortifyCost",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 0,
+          "tunedOn": "radiant"
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 0,
+      "base": {
+        "keywords": [],
+        "text": "Choose Greed, Attack or Defend in secret. Gain its reward at your next turn's start. Add a Fortify Mind to your opponent's hand.\nGreed: Gain {mana} mana and draw {draw}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Choose Greed, Attack or Defend in secret. Gain its reward at your next turn's start. Add a Fortify Mind to your opponent's hand. It costs ({fortifyCost}).\nGreed: Gain {mana} mana and draw {draw}.\nAttack: Deal {damage} damage to each enemy.\nDefend: Heal your hero and each of your Units {heal}. They gain +{armor} Armor."
+      }
+    },
+    "meditative-028": {
+      "id": "meditative-028",
+      "index": "28",
+      "name": "Shade-iris",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "meditative-028-1"
+      ],
+      "params": [
+        {
+          "key": "curses",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 19,
+      "base": {
+        "attack": 7,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: Shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
+      },
+      "radiant": {
+        "attack": 14,
+        "health": 8,
+        "keywords": [],
+        "text": "Cry: Shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
+      }
+    },
+    "meditative-029": {
+      "id": "meditative-029",
+      "index": "29",
+      "name": "Forbiddenous Factory",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "refs": [
+        "meditative-028-1"
+      ],
+      "params": [
+        {
+          "key": "counters",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "curses",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "usesPlague": true,
+      "loc": 29,
+      "base": {
+        "keywords": [],
+        "text": "Cry: Place {counters|Plague Counter|Plague Counters} on this.\nEnd of turn: Spend a Plague Counter from this to shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Cry: Place {counters|Plague Counter|Plague Counters} on this.\nEnd of turn: Spend a Plague Counter from this to shuffle {curses|Ancient Curse|Ancient Curses} into your opponent's deck."
+      }
+    },
+    "meditative-037": {
+      "id": "meditative-037",
+      "index": "37",
+      "name": "CN in a Bottle",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [
+        "CN"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "surcharge",
+          "base": 1,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 23,
+      "base": {
+        "keywords": [],
+        "text": "Cast on draw: Add a random Radiant card to your hand. It costs ({surcharge}) more (up to (4))."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Cast on draw: Add a random Radiant card to your hand. It costs ({setCost})."
+      }
+    },
+    "meditative-038": {
+      "id": "meditative-038",
+      "index": "38",
+      "name": "H1B Printer",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [
+        "CN",
+        "KY"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 18,
+      "base": {
+        "keywords": [],
+        "text": "Start of turn: Add a random Radiant KY or CN card to your hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Start of turn: Add a random Radiant KY or CN card to your hand. It costs ({setCost})."
+      }
+    },
+    "meditative-039-3": {
+      "id": "meditative-039-3",
+      "index": "39.3",
+      "name": "Dud",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [
+        "CN",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Common",
+      "token": true,
+      "cost": 0,
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 15,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage."
+      }
+    },
+    "meditative-045": {
+      "id": "meditative-045",
+      "index": "45",
+      "name": "Knowledge Breaker",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "CN",
+        "KY",
+        "Catalyst"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "meditative-045-1",
+        "meditative-045"
+      ],
+      "params": [
+        {
+          "key": "times",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "cry": true
+        }
+      ],
+      "loc": 41,
+      "base": {
+        "attack": 1,
+        "health": 3,
+        "keywords": [],
+        "text": "Cry: Nerf all other CN and KY cards on the field, in hands and decks.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Divine Shield"
+          }
+        ],
+        "text": "Divine Shield\nCry: Nerf all other CN and KY cards on the field, in hands and decks {times|time|times}.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
+      }
+    },
+    "meditative-045-1": {
+      "id": "meditative-045-1",
+      "index": "45.1",
+      "name": "Knowledge Breaker Prime",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "CN",
+        "KY",
+        "Prime",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 4,
+      "params": [
+        {
+          "key": "traps",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "max": 5,
+          "cry": true
+        }
+      ],
+      "loc": 48,
+      "base": {
+        "attack": 6,
+        "health": 18,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nCry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.\nAura: Your Units have Cloaked."
+      },
+      "radiant": {
+        "attack": 12,
+        "health": 36,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Poisonous"
+          }
+        ],
+        "text": "Rush, Poisonous\nCry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.\nAura: Your Units have Cloaked."
+      }
+    },
+    "meditative-049-1": {
+      "id": "meditative-049-1",
+      "index": "49.1",
+      "name": "YileGPT Prime",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "CN",
+        "Acclaimed",
+        "Prime",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Mythic",
+      "token": true,
+      "cost": 10,
+      "refs": [
+        "classic-018",
+        "classic-t-glitch",
+        "classicplus-078",
+        "meditative-049-2",
+        "meditative-049-3"
+      ],
+      "params": [
+        {
+          "key": "picks",
+          "base": 2,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "max": 5,
+          "tunedOn": "base",
+          "cry": true
+        },
+        {
+          "key": "datacenters",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "glitches",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "cry": true
+        },
+        {
+          "key": "nerfs",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "viruses",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "cry": true
+        },
+        {
+          "key": "radiants",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 149,
+      "base": {
+        "attack": 8,
+        "health": 20,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          }
+        ],
+        "text": "Can't attack\nStart of turn: Make a random permanent of yours Radiant.\nFloat reduces cost.\nCry: Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      },
+      "radiant": {
+        "attack": 16,
+        "health": 40,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Armor",
+            "n": 5
+          }
+        ],
+        "text": "Can't attack, Armor 5\nStart of turn: Make {radiants|random permanent|random permanents} of yours Radiant.\nFloat reduces cost.\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      }
+    },
+    "meditative-058": {
+      "id": "meditative-058",
+      "index": "58",
+      "name": "Permanent Underclassman",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "books",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 43,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [],
+        "text": "Cry: Summon a random (1) Cost Unit. It gains \"Death: Add {books|random Book|random Books} to your hand.\"",
+        "grants": {
+          "bookDeath": "Death: Add {books|random Book|random Books} to your hand."
+        }
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: Summon a random Radiant (1) Cost Unit. It gains \"Death: Add {books|random Radiant Book|random Radiant Books} to your hand.\"",
+        "grants": {
+          "bookDeath": "Death: Add {books|random Radiant Book|random Radiant Books} to your hand."
+        }
+      }
+    },
+    "meditative-073": {
+      "id": "meditative-073",
+      "index": "73",
+      "name": "Plate Packer",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "per",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 14,
+      "base": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: Gain +{per}/+{per} for each Armor on the field, heroes' included."
+      },
+      "radiant": {
+        "attack": 12,
+        "health": 12,
+        "keywords": [],
+        "text": "Cry: Gain +{per}/+{per} for each Armor on the field, heroes' included."
+      }
+    },
+    "meditative-079": {
+      "id": "meditative-079",
+      "index": "79",
+      "name": "Touched by KY",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "KY"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "handSize",
+          "base": 12,
+          "radiant": 12,
+          "better": "up",
+          "step": 1,
+          "min": 11,
+          "max": 14,
+          "cry": true
+        },
+        {
+          "key": "draw",
+          "base": 4,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 22,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw}."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [],
+        "text": "Cry: For the rest of the game, your hand size is {handSize}. Draw {draw}. Each becomes Radiant."
+      }
+    },
+    "meditative-082": {
+      "id": "meditative-082",
+      "index": "82",
+      "name": "Medina Outfitter",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "times",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "cry": true
+        }
+      ],
+      "loc": 17,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Buff every card in your hand."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Buff every card in your hand {times|time|times}."
+      }
+    },
+    "meditative-088": {
+      "id": "meditative-088",
+      "index": "88",
+      "name": "The True Sheep",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "worth",
+          "base": 5,
+          "radiant": 500,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "setCost",
+          "base": 1,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "cry": true
+        }
+      ],
+      "loc": 51,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "Worth {worth|Tribute|Tributes}.\nCry: Discover a card with Tribute. It costs ({setCost})."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Worth {worth|Tribute|Tributes}.\nCry: Discover a Radiant card with Tribute. It costs ({setCost})."
+      }
+    },
+    "meditative-099": {
+      "id": "meditative-099",
+      "index": "99",
+      "name": "Paranoia",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        },
+        {
+          "key": "echo",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 29,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Your Spells have Cloaked.\nCry: Draw {draw}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Your Spells have Cloaked. Spells you reveal have Echo +{echo}.\nCry: Draw {draw}."
+      },
+      "tags": []
+    },
+    "meditativeplus-003": {
+      "id": "meditativeplus-003",
+      "index": "3",
+      "name": "Wondrous Wand",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "params": [
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedDraw",
+          "base": 2,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 47,
+      "base": {
+        "keywords": [],
+        "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (4): Draw {embiggenedDraw} instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Draw {draw|card|cards}. They cost ({setCost}).\nEmbiggened (4): Draw {embiggenedDraw} instead."
+      }
+    },
+    "meditativeplus-004": {
+      "id": "meditativeplus-004",
+      "index": "4",
+      "name": "Supply Drop",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [
+        "Jlockeed"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "params": [
+        {
+          "key": "turns",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 9,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "cards",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "suppliesCost",
+          "base": 2,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        },
+        {
+          "key": "embiggenedTurns",
+          "base": 5,
+          "radiant": 5,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedDamage",
+          "base": 9,
+          "radiant": 15,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedCards",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 101,
+      "base": {
+        "keywords": [],
+        "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (4): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or add {embiggenedCards}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (4): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or fill your hand with them."
+      }
+    },
+    "meditativeplus-005": {
+      "id": "meditativeplus-005",
+      "index": "5",
+      "name": "Spirit Lash",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 0,
+        "embiggen": 1
+      },
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 23,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Echo 1\nDeal {damage} damage to all Units.\nEmbiggened (1): With Lifesteal and Pierce."
+      }
+    },
+    "meditativeplus-010": {
+      "id": "meditativeplus-010",
+      "index": "10",
+      "name": "Medina Grifter",
+      "set": "Meditative+",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "cards",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "cry": true
+        }
+      ],
+      "loc": 24,
+      "base": {
+        "attack": 4,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Steal {cards|random card|random cards} from your opponent's hand."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Steal {cards|random card|random cards} from your opponent's hand. It costs (0)."
+      }
+    },
+    "meditativeplus-017": {
+      "id": "meditativeplus-017",
+      "index": "17",
+      "name": "Dogpile",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 42,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage to an enemy.\nIn your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage to an enemy.\nIn your hand or deck: After another Spell of yours that targeted an enemy resolves, cast this at it."
+      }
+    },
+    "meditativeplus-019": {
+      "id": "meditativeplus-019",
+      "index": "19",
+      "name": "Grubby Gloves",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 2
+      },
+      "params": [
+        {
+          "key": "cards",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 29,
+      "base": {
+        "keywords": [],
+        "text": "Steal the top {cards|card|cards} of your opponent's deck.\nEmbiggened (2): Steal {cards|random card|random cards} from their hand instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Steal the top {cards|card|cards} of your opponent's deck. They cost ({setCost}).\nEmbiggened (2): Steal {cards|random card|random cards} from their hand instead."
+      }
+    },
+    "meditativeplus-024": {
+      "id": "meditativeplus-024",
+      "index": "24",
+      "name": "Bob, Wisconsin's Strongest Soldier",
+      "set": "Meditative+",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 3,
+      "refs": [
+        "core-t-coin"
+      ],
+      "params": [
+        {
+          "key": "coins",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "cry": true
+        }
+      ],
+      "loc": 85,
+      "base": {
+        "attack": 5,
+        "health": 5,
+        "keywords": [],
+        "text": "Cry: Choose one: Freeze all enemy Units; put an enemy Unit into your hand, and your opponent gets {coins|Coin|Coins}; Discover a Unit and make it Radiant; or draw 1 and fill your hand with copies of it."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [],
+        "text": "Cry: Do all of these, in order: Freeze all enemy Units; put an enemy Unit into your hand, and your opponent gets {coins|Coin|Coins}; Discover a Unit and make it Radiant; then draw 1 and fill your hand with copies of it."
+      }
+    }
+  }
+}

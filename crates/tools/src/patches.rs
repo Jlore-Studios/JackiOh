@@ -46,8 +46,8 @@ use self::patches_io::{
     Catalog, CheckFragmentsArgs, NamedFragment, PatchEntry, PendingFragment, PlayerNote, RECORDS_DIR,
     ShippedEntry, check_fragments, differing_ids, fragment_name, fragment_stem, git_blob_hash,
     next_ship_name, player_note_problems, read_fragments, read_patches, read_shipped, read_snapshot,
-    read_win_rates, rebuild_derived, records_path, remove_file, same_win_rates, snapshot_path,
-    win_rates_path, write_json,
+    read_win_rates, rebuild_derived, records_path, remove_file, same_win_rates, snapshot_path, snapshot_text,
+    snapshots, win_rates_path, write_json, write_snapshot,
 };
 use self::versions::name_by_tier;
 use crate::card_lists;
@@ -595,17 +595,21 @@ pub mod patch {
 /// ```text
 ///   patches.json       every shipped patch in ship order: { version, date, title, source, notes,
 ///                      player, changes }; `player` is what players read (R724001)
-///   <version>.json     the whole catalog as that patch left it (a snapshot, not a diff)
+///   deltas/<version>.json  what that patch changed from the one before it: { set, unset } (R5268000)
+///   order.json         every card id ever shipped, in the order each snapshot lists its own
 ///   index.json         GENERATED: for each card id, the versions in which it was added or changed
 ///   shipped.json       every shipped patch's { version, commit, blob }: the commit that shipped it
-///                      and its snapshot file's git blob hash, so the workflow writes data, not source
+///                      and the git blob hash of its snapshot's bytes, so the workflow writes data,
+///                      not source
 ///   pending/           one fragment per patch being built: { version, title, sources, notes, player,
 ///                      cards }
 /// ```
 ///
 /// The order of patches is `patches.json`'s and nothing else: a version is an opaque string, compared
 /// for equality only and never parsed or sorted (R105, R388). `changes` and `index.json` are derived
-/// from the snapshots (`rebuild_derived`), and shipped snapshots are never amended. I/O lives in the
+/// from the snapshots (`rebuild_derived`), and shipped snapshots are never amended. A snapshot, the
+/// whole catalog as its patch left it, is the fold of its delta and every one before it
+/// (`read_snapshot`, `snapshots`; R5268000), never a file of its own. I/O lives in the
 /// tools (CLAUDE.md rule 4); the patch tests read the same files through these.
 pub mod patches_io {
     use std::fs;
@@ -864,10 +868,249 @@ pub mod patches_io {
         serde_json::from_str(&text).with_context(|| format!("{} is not a patch list", path.display()))
     }
 
-    pub fn read_snapshot(version: &str, dir: &Path) -> anyhow::Result<Catalog> {
-        let path = snapshot_path(version, dir)?;
+    /// R5268000: the folder beside `patches.json` that holds each shipped version's delta.
+    pub const DELTAS_DIR: &str = "deltas";
+
+    /// R5268000: every card id a version ever shipped, in the one order each snapshot lists its own.
+    pub const ORDER_FILE: &str = "order.json";
+
+    /// R5268000: what one shipped version changed from the one before it in `patches.json`'s order:
+    /// the entries it added or changed, whole and in its own order (`set`), and the ids it removed
+    /// (`unset`). The first version's delta sets every card it shipped.
+    #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
+    pub struct Delta {
+        #[serde(default)]
+        pub set: Catalog,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        pub unset: Vec<String>,
+    }
+
+    /// R5268000: `deltas/<version>.json` under `dir`.
+    pub fn delta_path(version: &str, dir: &Path) -> anyhow::Result<PathBuf> {
+        snapshot_path(version, &dir.join(DELTAS_DIR))
+    }
+
+    pub fn read_delta(version: &str, dir: &Path) -> anyhow::Result<Delta> {
+        let path = delta_path(version, dir)?;
         let text = fs::read_to_string(&path).with_context(|| format!("{} cannot be read", path.display()))?;
-        serde_json::from_str(&text).with_context(|| format!("{} is not a catalog", path.display()))
+        serde_json::from_str(&text).with_context(|| format!("{} is not a delta", path.display()))
+    }
+
+    /// R5268000: `order.json` under `dir`; none yet is the empty order.
+    pub fn read_order(dir: &Path) -> anyhow::Result<IndexSet<String>> {
+        let path = dir.join(ORDER_FILE);
+        match fs::read_to_string(&path) {
+            Ok(text) => serde_json::from_str(&text)
+                .with_context(|| format!("{} is not a list of ids", path.display())),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(IndexSet::new()),
+            Err(error) => Err(error).with_context(|| format!("{} cannot be read", path.display())),
+        }
+    }
+
+    /// R5268000: the delta that turns `previous` (none before the first version) into `snapshot`:
+    /// every entry whose bytes differ, key order included, and every id `snapshot` dropped.
+    pub fn delta_between(previous: Option<&Catalog>, snapshot: &Catalog) -> Delta {
+        let set = snapshot
+            .iter()
+            .filter(|(id, entry)| {
+                previous
+                    .and_then(|previous| previous.get(*id))
+                    .is_none_or(|was| js::stringify(was) != js::stringify(*entry))
+            })
+            .map(|(id, entry)| (id.clone(), entry.clone()))
+            .collect();
+        let unset = previous.map_or_else(Vec::new, |previous| {
+            previous
+                .keys()
+                .filter(|id| !snapshot.contains_key(*id))
+                .cloned()
+                .collect()
+        });
+        Delta { set, unset }
+    }
+
+    /// R5268000: applies `delta` to `catalog`, which then lists its ids in `order`'s order.
+    pub fn apply_delta(catalog: &mut Catalog, delta: &Delta, order: &IndexSet<String>) -> anyhow::Result<()> {
+        for id in &delta.unset {
+            catalog.shift_remove(id);
+        }
+        let mut added = false;
+        for (id, entry) in &delta.set {
+            if !order.contains(id) {
+                bail!("\"{id}\" has no place in {ORDER_FILE}");
+            }
+            added |= catalog.insert(id.clone(), entry.clone()).is_none();
+        }
+        if added {
+            catalog.sort_by(|a, _, b, _| order.get_index_of(a).cmp(&order.get_index_of(b)));
+        }
+        Ok(())
+    }
+
+    /// R5268000: puts each id of `snapshot` that `order` lacks right after the id before it in
+    /// `snapshot`, then fails unless `order` lists `snapshot`'s ids in `snapshot`'s order: a version
+    /// may add and remove cards, never move a shipped one.
+    pub fn merge_order(order: &mut IndexSet<String>, snapshot: &Catalog) -> anyhow::Result<()> {
+        let mut after: Option<usize> = None;
+        for id in snapshot.keys() {
+            let at = match order.get_index_of(id) {
+                Some(at) => at,
+                None => {
+                    let at = after.map_or(0, |after| after + 1);
+                    order.shift_insert(at, id.clone());
+                    at
+                }
+            };
+            after = Some(at);
+        }
+        let listed: Vec<&String> = order.iter().filter(|id| snapshot.contains_key(*id)).collect();
+        if !listed.iter().copied().eq(snapshot.keys()) {
+            bail!(
+                "the snapshot lists shipped cards in another order than {ORDER_FILE}: a version never moves a shipped card"
+            );
+        }
+        Ok(())
+    }
+
+    /// R5268000: the bytes a snapshot rebuilds to, which `shipped.json`'s `blob` hashes (R646).
+    pub fn snapshot_text(snapshot: &Catalog) -> String {
+        format!("{}\n", js::stringify_pretty(snapshot))
+    }
+
+    /// R5268000: writes `version`'s delta from `previous` (the snapshot of the version before it, none
+    /// for the first) to `snapshot`, placing its new ids in `order.json`. Returns the snapshot's text.
+    pub fn write_snapshot(
+        version: &str,
+        dir: &Path,
+        previous: Option<&Catalog>,
+        snapshot: &Catalog,
+    ) -> anyhow::Result<String> {
+        let mut order = read_order(dir)?;
+        merge_order(&mut order, snapshot).with_context(|| format!("{version} cannot be written"))?;
+        fs::create_dir_all(dir.join(DELTAS_DIR))
+            .with_context(|| format!("{} cannot be created", dir.join(DELTAS_DIR).display()))?;
+        write_json(&dir.join(ORDER_FILE), &order)?;
+        write_json(&delta_path(version, dir)?, &delta_between(previous, snapshot))?;
+        Ok(snapshot_text(snapshot))
+    }
+
+    /// R5268000: every shipped snapshot under `dir`, in `patches.json`'s order, each the fold of its
+    /// version's delta and every one before it.
+    pub fn snapshots(dir: &Path) -> anyhow::Result<Snapshots> {
+        let versions: Vec<String> = read_patches(&dir.join("patches.json"))?
+            .into_iter()
+            .map(|patch| patch.version)
+            .collect();
+        Ok(Snapshots {
+            dir: dir.to_path_buf(),
+            order: read_order(dir)?,
+            versions: versions.into_iter(),
+            current: Catalog::new(),
+        })
+    }
+
+    /// The fold `snapshots` walks.
+    pub struct Snapshots {
+        dir: PathBuf,
+        order: IndexSet<String>,
+        versions: std::vec::IntoIter<String>,
+        current: Catalog,
+    }
+
+    impl Snapshots {
+        /// Folds on to `version`, the snapshot it shipped.
+        pub fn until(mut self, version: &str) -> anyhow::Result<Catalog> {
+            loop {
+                let Some(next) = self.versions.next() else {
+                    bail!("{version} is no shipped version in patches.json");
+                };
+                self.step(&next)?;
+                if next == version {
+                    return Ok(self.current);
+                }
+            }
+        }
+
+        fn step(&mut self, version: &str) -> anyhow::Result<()> {
+            let delta = read_delta(version, &self.dir)?;
+            apply_delta(&mut self.current, &delta, &self.order).with_context(|| format!("{version}'s delta"))
+        }
+    }
+
+    impl Iterator for Snapshots {
+        type Item = anyhow::Result<(String, Catalog)>;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            let version = self.versions.next()?;
+            Some(self.step(&version).map(|()| (version, self.current.clone())))
+        }
+    }
+
+    /// R5268000: the snapshot `version` shipped, folded from the deltas.
+    pub fn read_snapshot(version: &str, dir: &Path) -> anyhow::Result<Catalog> {
+        snapshots(dir)?.until(version)
+    }
+
+    /// R5268000: the shipped versions whose snapshot file was formatted by hand (`"tags": ["Human"]` on
+    /// one line), so the `blob` `shipped.json` keeps for each hashes bytes the fold does not rebuild.
+    /// The fold rebuilds the same JSON, and git keeps the original bytes under that blob.
+    #[cfg(test)]
+    pub const HAND_FORMATTED: &[&str] = &["v0.4.0b", "v0.4.0c", "v0.4.0d"];
+
+    /// R5268000: `patches encode`. Every whole-catalog snapshot file still under `dir`
+    /// (`<version>.json`, as each version was kept before R5268000) becomes that version's delta,
+    /// and its ids join `order.json`. Each is proved before any is deleted: the fold of its delta
+    /// and those before it gives the snapshot back, the same entries in the same order. A version
+    /// with no such file keeps its delta. Returns the versions encoded; a second run encodes none.
+    pub fn encode_history(dir: &Path) -> anyhow::Result<Vec<String>> {
+        let versions: Vec<String> = read_patches(&dir.join("patches.json"))?
+            .into_iter()
+            .map(|patch| patch.version)
+            .collect();
+        let mut order = read_order(dir)?;
+        let mut folded = Catalog::new();
+        let mut encoded = Vec::new();
+        for version in versions {
+            let legacy = snapshot_path(&version, dir)?;
+            let delta = if legacy.exists() {
+                let text = fs::read_to_string(&legacy)
+                    .with_context(|| format!("{} cannot be read", legacy.display()))?;
+                let snapshot: Catalog = serde_json::from_str(&text)
+                    .with_context(|| format!("{} is not a catalog", legacy.display()))?;
+                merge_order(&mut order, &snapshot)
+                    .with_context(|| format!("{} cannot be encoded", legacy.display()))?;
+                let delta = delta_between(Some(&folded).filter(|folded| !folded.is_empty()), &snapshot);
+                let mut check = folded.clone();
+                apply_delta(&mut check, &delta, &order)?;
+                if snapshot_text(&check) != snapshot_text(&snapshot) {
+                    bail!("{}: its delta does not fold back to it", legacy.display());
+                }
+                fs::create_dir_all(dir.join(DELTAS_DIR))
+                    .with_context(|| format!("{} cannot be created", dir.join(DELTAS_DIR).display()))?;
+                write_json(&delta_path(&version, dir)?, &delta)?;
+                encoded.push(legacy);
+                delta
+            } else {
+                read_delta(&version, dir)?
+            };
+            apply_delta(&mut folded, &delta, &order).with_context(|| format!("{version}'s delta"))?;
+        }
+        if encoded.is_empty() {
+            return Ok(Vec::new());
+        }
+        write_json(&dir.join(ORDER_FILE), &order)?;
+        let mut names = Vec::with_capacity(encoded.len());
+        for legacy in encoded {
+            fs::remove_file(&legacy).with_context(|| format!("{} cannot be removed", legacy.display()))?;
+            names.push(
+                legacy
+                    .file_stem()
+                    .and_then(|stem| stem.to_str())
+                    .unwrap_or_default()
+                    .to_string(),
+            );
+        }
+        Ok(names)
     }
 
     /// R1329000: `win_rates/<version>.json` under `dir`, the win-rate table `version` shipped with.
@@ -1064,8 +1307,8 @@ pub mod patches_io {
         let patches = read_patches(&dir.join("patches.json"))?;
         let mut previous: Option<Catalog> = None;
         let mut next = Vec::with_capacity(patches.len());
-        for patch in patches {
-            let snapshot = read_snapshot(&patch.version, dir)?;
+        for (patch, snapshot) in patches.into_iter().zip(snapshots(dir)?) {
+            let (_, snapshot) = snapshot?;
             let changes = diff_catalogs(previous.as_ref(), &snapshot);
             previous = Some(snapshot);
             next.push(PatchEntry { changes, ..patch });
@@ -1731,6 +1974,7 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
     {
         problems.push(format!("the pending fragments cannot ship: {error}"));
     }
+    problems.extend(history_problems(&paths.dir, &patches, &catalog)?);
     problems.extend(includes_problems(&patches));
     problems.extend(reused_fragment_problems(&patches, &files));
     // Every shipped patch carries the note the Patch notes page shows for it (R724001).
@@ -1757,6 +2001,26 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
     Ok(problems)
 }
 
+/// R5268000: the history is kept as deltas: no shipped version keeps a whole-catalog snapshot file
+/// (`<version>.json`, the form before R5268000, which `patches encode` turns into its delta), and
+/// the catalog lists its shipped cards in `order.json`'s order, which every snapshot folds to.
+fn history_problems(dir: &Path, patches: &[PatchEntry], catalog: &Catalog) -> anyhow::Result<Vec<String>> {
+    let mut problems = Vec::new();
+    for patch in patches {
+        if snapshot_path(&patch.version, dir)?.exists() {
+            problems.push(format!(
+                "{}.json is a whole-catalog snapshot: the history keeps deltas, so run `cargo jackioh patches encode` (R5268000)",
+                patch.version
+            ));
+        }
+    }
+    let mut order = patches_io::read_order(dir)?;
+    if let Err(error) = patches_io::merge_order(&mut order, catalog) {
+        problems.push(format!("catalog.json: {error} (R5268000)"));
+    }
+    Ok(problems)
+}
+
 /// R767000: every shipped version but the newest is carried by the cards compiled into this binary,
 /// each with its snapshot's definitions in order, a script for every card and its `win_rates/<version>.json`
 /// table (the empty one with no file, R1329000), so a replay of a game played on it folds under its own
@@ -1776,11 +2040,11 @@ pub fn check_carried(paths: &PatchPaths) -> anyhow::Result<Vec<String>> {
             older.len()
         ));
     }
-    for version in older {
-        let path = snapshot_path(version, &paths.dir)?;
-        let text = fs::read_to_string(&path).with_context(|| format!("{} cannot be read", path.display()))?;
-        let snapshot: jackioh_engine::CardDefs =
-            serde_json::from_str(&text).with_context(|| format!("{} is not a catalog", path.display()))?;
+    for folded in snapshots(&paths.dir)?.take(older.len()) {
+        let (version, snapshot) = folded?;
+        let version = version.as_str();
+        let snapshot: jackioh_engine::CardDefs = serde_json::from_str(&snapshot_text(&snapshot))
+            .with_context(|| format!("{version}'s snapshot is not a catalog"))?;
         let shipped = jackioh_cards::shipped_catalog(version);
         problems.extend(carried_problems(
             version,
@@ -2008,7 +2272,8 @@ struct Proved {
     plays: Vec<String>,
     /// R3944000: on a major, the micros it rolls up.
     includes: Option<Vec<String>>,
-    raw: String,
+    /// The snapshot it ships, as its delta writes it (R5268000).
+    snapshot: Catalog,
     /// R2173000: the version's BUSTED and complicated lists, once it holds a card that reads them.
     lists: Option<String>,
 }
@@ -2149,6 +2414,8 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let current: Catalog = serde_json::from_str(&current_text)
         .with_context(|| format!("{} is not a catalog", paths.catalog.display()))?;
     let mut previous = read_snapshot(&newest.version, &paths.dir)?;
+    // R5268000: each delta is written against the snapshot before it, the newest shipped one first.
+    let mut prior = previous.clone();
     // R3049000: no version ships a win-rate table since #3049; the frozen files under `win_rates/`
     // stay the tables the versions before it shipped with (R1329000).
     // R2173000: a version that holds a card reading the BUSTED or complicated lists ships the lists
@@ -2182,20 +2449,12 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
                 js::stringify(&changed.iter().collect::<Vec<_>>())
             );
         }
-        let raw = if at + 1 == count {
-            if snapshot != current {
-                bail!(
-                    "the pending fragments' claims do not make catalog.json, so the newest snapshot would not be it; nothing was shipped"
-                );
-            }
-            current_text.clone()
-        } else {
-            let mut text = js::stringify_pretty(&snapshot);
-            if current_text.ends_with('\n') {
-                text.push('\n');
-            }
-            text
-        };
+        // The newest snapshot is catalog.json itself, in its order.
+        if at + 1 == count && snapshot != current {
+            bail!(
+                "the pending fragments' claims do not make catalog.json, so the newest snapshot would not be it; nothing was shipped"
+            );
+        }
         let lists = scripts
             .readers
             .iter()
@@ -2209,6 +2468,11 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         )?;
         taken.insert(version.clone());
         newest_name = version.clone();
+        let shipping = if at + 1 == count {
+            current.clone()
+        } else {
+            snapshot.clone()
+        };
         previous = snapshot;
         let includes = if tier == Tier::Major {
             Some(std::mem::take(&mut since_host)).filter(|micros| !micros.is_empty())
@@ -2224,7 +2488,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             tier,
             plays,
             includes,
-            raw,
+            snapshot: shipping,
             lists,
         });
     }
@@ -2244,12 +2508,12 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         tier,
         plays,
         includes,
-        raw,
+        snapshot,
         lists,
     } in proved
     {
-        let path = snapshot_path(&version, &paths.dir)?;
-        fs::write(&path, &raw).with_context(|| format!("{} cannot be written", path.display()))?;
+        let written = write_snapshot(&version, &paths.dir, Some(&prior), &snapshot)?;
+        prior = snapshot;
         let fragment_records = fragment.records;
         let timestamp = git(repo_root, &["log", "-1", "--format=%ct", &commit], &[])?;
         let seconds: i64 = timestamp
@@ -2272,8 +2536,6 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             fragment: Some(fragment_stem(&name).to_string()),
             changes: Vec::new(),
         });
-        let written =
-            fs::read_to_string(&path).with_context(|| format!("{} cannot be read", path.display()))?;
         let card_metrics_blob = match lists {
             Some(lists) => {
                 let lists_path = card_lists::lists_path(&version, &paths.dir)?;
@@ -2487,8 +2749,8 @@ pub fn cut_patch(repo_root: &Path, production: Option<&str>) -> anyhow::Result<C
         .parse()
         .with_context(|| format!("git printed {timestamp:?} as the time of {head}"))?;
 
-    let from = snapshot_path(&newest.version, &paths.dir)?;
-    let raw = fs::read_to_string(&from).with_context(|| format!("{} cannot be read", from.display()))?;
+    // R5268000: the day's patch ships the newest snapshot again, an empty delta.
+    let snapshot = read_snapshot(&newest.version, &paths.dir)?;
     let lists_from = card_lists::lists_path(&newest.version, &paths.dir)?;
     let lists = match fs::read_to_string(&lists_from) {
         Ok(text) => Some(text),
@@ -2500,8 +2762,7 @@ pub fn cut_patch(repo_root: &Path, production: Option<&str>) -> anyhow::Result<C
 
     // The version moves first: a version site that is missing stops the cut before any history is written.
     bump_sites(&version, repo_root)?;
-    let path = snapshot_path(&version, &paths.dir)?;
-    fs::write(&path, &raw).with_context(|| format!("{} cannot be written", path.display()))?;
+    let raw = write_snapshot(&version, &paths.dir, Some(&snapshot), &snapshot)?;
     let card_metrics_blob = match lists {
         Some(lists) => {
             let lists_path = card_lists::lists_path(&version, &paths.dir)?;
@@ -2683,6 +2944,17 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
     if command == Some("retcon") {
         return crate::retcon::run(repo_root, &argv[1..]);
     }
+    if command == Some("encode") {
+        let encoded = patches_io::encode_history(&patch_paths(repo_root).dir)?;
+        match (encoded.first(), encoded.last()) {
+            (Some(first), Some(last)) => println!(
+                "patches encode: {} snapshot file(s), {first} to {last}, are deltas now (R5268000)",
+                encoded.len()
+            ),
+            _ => println!("patches encode: no snapshot file left, nothing changed"),
+        }
+        return Ok(());
+    }
     if command == Some("log") {
         return crate::technical::main(repo_root, &argv[1..]);
     }
@@ -2713,7 +2985,7 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
     }
     if command.is_none() {
         bail!(
-            "usage: patches \"<title>\" [--source …] [--notes …] [--cards <id,...>] [--plays <id,...>] [--rule] | patches check | patches ship | patches cut [--production <ref>]"
+            "usage: patches \"<title>\" [--source …] [--notes …] [--cards <id,...>] [--plays <id,...>] [--rule] | patches check | patches ship | patches cut [--production <ref>] | patches encode"
         );
     }
     let args = parse_fragment_args(argv)?;
@@ -3417,6 +3689,21 @@ mod tests {
                 fs::read_to_string(path).expect("a file")
             }
 
+            /// R5268000: the first version's delta, which sets every card of `base`.
+            fn base_delta(base: &Catalog) -> String {
+                json(&delta_between(None, base))
+            }
+
+            /// R5268000: `base`'s ids, the order every later snapshot keeps.
+            fn base_order(base: &Catalog) -> String {
+                json(&base.keys().collect::<Vec<_>>())
+            }
+
+            /// R5268000: the bytes `version`'s snapshot rebuilds to.
+            fn text_at(dir: &Path, version: &str) -> String {
+                snapshot_text(&read_snapshot(version, dir).expect("a shipped snapshot"))
+            }
+
             fn fragment_args(
                 title: &str,
                 sources: &str,
@@ -3528,7 +3815,8 @@ mod tests {
                             ],
                         )]),
                     ),
-                    ("crates/cards/patches/v0.1.1.json", json(&base)),
+                    ("crates/cards/patches/deltas/v0.1.1.json", base_delta(&base)),
+                    ("crates/cards/patches/order.json", base_order(&base)),
                     (
                         "crates/cards/patches/index.json",
                         json(&index_of(vec![("aaa", vec!["v0.1.1"]), ("bbb", vec!["v0.1.1"])])),
@@ -3574,7 +3862,7 @@ mod tests {
 
                 // One card changed, the held set's cards none: a micro, not a major.
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b"]));
-                let snapshot: Catalog = serde_json::from_str(&read(&dir.join("v0.1.1b.json"))).unwrap();
+                let snapshot: Catalog = serde_json::from_str(&text_at(&dir, "v0.1.1b")).unwrap();
                 assert_eq!(snapshot.keys().collect::<Vec<_>>(), vec!["aaa", "bbb"]);
                 assert_eq!(cost_of(&snapshot, "aaa"), Some(3.0));
                 let catalog: Catalog =
@@ -3622,7 +3910,7 @@ mod tests {
                     read_snapshot("v0.1.1b", &dir).unwrap(),
                     costing(&base, &ids(0, 1), 2)
                 );
-                assert!(!read(&dir.join("v0.1.1b.json")).contains("flavor"));
+                assert!(!text_at(&dir, "v0.1.1b").contains("flavor"));
                 let catalog: Catalog =
                     serde_json::from_str(&read(&root.join("crates/cards/catalog.json"))).unwrap();
                 assert_eq!(catalog["c01"].get("flavor"), Some(&Json::from("Fire")));
@@ -3712,7 +4000,8 @@ mod tests {
                             ],
                         )]),
                     ),
-                    ("crates/cards/patches/v0.1.1.json", json(&base)),
+                    ("crates/cards/patches/deltas/v0.1.1.json", base_delta(&base)),
+                    ("crates/cards/patches/order.json", base_order(&base)),
                     (
                         "crates/cards/patches/index.json",
                         json(&index_of(vec![
@@ -3744,7 +4033,7 @@ mod tests {
                         json(&[ShippedEntry {
                             version: "v0.1.1".to_string(),
                             commit: c0,
-                            blob: git_blob_hash(&read(&dir.join("v0.1.1.json"))),
+                            blob: git_blob_hash(&text_at(&dir, "v0.1.1")),
                             win_rates_blob: None,
                             card_metrics_blob: None,
                             records_blob: None,
@@ -3865,7 +4154,7 @@ mod tests {
                     ShippedEntry {
                         version: "v0.1.1b".to_string(),
                         commit: c1.clone(),
-                        blob: git_blob_hash(&read(&dir.join("v0.1.1b.json"))),
+                        blob: git_blob_hash(&text_at(&dir, "v0.1.1b")),
                         // R3049000: no table ships with a version.
                         win_rates_blob: None,
                         card_metrics_blob: None,
@@ -3972,7 +4261,8 @@ mod tests {
                             ],
                         )]),
                     ),
-                    ("crates/cards/patches/v0.1.1.json", json(&base)),
+                    ("crates/cards/patches/deltas/v0.1.1.json", base_delta(&base)),
+                    ("crates/cards/patches/order.json", base_order(&base)),
                     (
                         "crates/cards/patches/index.json",
                         json(&index_of(vec![("aaa", vec!["v0.1.1"]), ("bbb", vec!["v0.1.1"])])),
@@ -4073,7 +4363,8 @@ mod tests {
                 let mut files = vec![
                     ("crates/cards/catalog.json", json(&base)),
                     ("crates/cards/patches/patches.json", json(&[newest])),
-                    ("crates/cards/patches/v0.1.1y.json", json(&base)),
+                    ("crates/cards/patches/deltas/v0.1.1y.json", base_delta(&base)),
+                    ("crates/cards/patches/order.json", base_order(&base)),
                     (
                         "crates/cards/patches/index.json",
                         json(&index_of(vec![
@@ -4134,7 +4425,8 @@ mod tests {
                             json(&catalog_of(vec![card("aaa", 2)])),
                         ),
                         ("crates/cards/patches/patches.json", json(&[patch])),
-                        ("crates/cards/patches/core-1.json", json(&base)),
+                        ("crates/cards/patches/deltas/core-1.json", base_delta(&base)),
+                        ("crates/cards/patches/order.json", base_order(&base)),
                         ("crates/cards/patches/index.json", json(&index_of(Vec::new()))),
                         (
                             "crates/cards/patches/shipped.json",
@@ -4157,7 +4449,8 @@ mod tests {
                         "crates/cards/patches/patches.json",
                         json(&[base_patch("n", Vec::new())]),
                     ),
-                    ("crates/cards/patches/v0.1.1.json", json(base)),
+                    ("crates/cards/patches/deltas/v0.1.1.json", base_delta(base)),
+                    ("crates/cards/patches/order.json", base_order(base)),
                     ("crates/cards/patches/index.json", json(&index_of(Vec::new()))),
                     ("crates/cards/patches/shipped.json", json(&unshipped("v0.1.1"))),
                 ];
@@ -4518,7 +4811,7 @@ mod tests {
                         ..PlayerNote::default()
                     })
                 );
-                assert_eq!(read(&dir.join("v0.1.2.json")), read(&dir.join("v0.1.1c.json")));
+                assert_eq!(text_at(&dir, "v0.1.2"), text_at(&dir, "v0.1.1c"));
                 assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.1.2"));
                 let shipped = read_shipped(&dir.join("shipped.json")).unwrap();
                 let last = shipped.last().expect("the cut's provenance");
@@ -4806,7 +5099,7 @@ mod tests {
                 let v26 = read_snapshot("v0.1.1c", &dir).unwrap();
                 assert_eq!(v26, third, "the newest snapshot is catalog.json");
                 assert_eq!(
-                    read(&dir.join("v0.1.1c.json")),
+                    text_at(&dir, "v0.1.1c"),
                     read(&root.join("crates/cards/catalog.json"))
                 );
                 let patches = read_patches(&dir.join("patches.json")).unwrap();
@@ -4823,7 +5116,7 @@ mod tests {
                     ]
                 );
                 let shipped = read_shipped(&dir.join("shipped.json")).unwrap();
-                assert_eq!(shipped[1].blob, git_blob_hash(&read(&dir.join("v0.1.1b.json"))));
+                assert_eq!(shipped[1].blob, git_blob_hash(&text_at(&dir, "v0.1.1b")));
                 assert!(read(&root.join("crates/server/.env.example")).contains("CATALOG_VERSION=v0.1.1c"));
                 assert_eq!(check_patches(root).unwrap(), Vec::<String>::new());
             }
@@ -5090,7 +5383,8 @@ mod tests {
                             "crates/cards/patches/patches.json",
                             json(&[base_patch("n", Vec::new())]),
                         ),
-                        ("crates/cards/patches/v0.1.1.json", json(&base)),
+                        ("crates/cards/patches/deltas/v0.1.1.json", base_delta(&base)),
+                        ("crates/cards/patches/order.json", base_order(&base)),
                         ("crates/cards/patches/index.json", json(&index_of(Vec::new()))),
                         (
                             "crates/cards/patches/shipped.json",
@@ -5352,6 +5646,189 @@ mod tests {
                     .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
         }
 
+        // R5268000: the history keeps each version as its delta from the one before it, and a
+        // snapshot is their fold.
+        mod r5268000_the_patch_history_as_deltas {
+            use std::fs;
+            use std::path::Path;
+
+            use super::*;
+            use crate::patches::history_problems;
+            use crate::patches::tests::TempDir;
+
+            fn card(id: &str, cost: i32) -> (String, Object) {
+                (
+                    id.to_string(),
+                    object(vec![("id", Json::from(id)), ("cost", Json::from(cost))]),
+                )
+            }
+
+            fn list(versions: &[&str]) -> String {
+                let entries: Vec<String> = versions
+                    .iter()
+                    .map(|version| {
+                        format!(
+                            "{{\"version\":\"{version}\",\"date\":\"2026-11-28\",\"title\":\"t\",\"source\":\"s\",\"notes\":\"n\"}}"
+                        )
+                    })
+                    .collect();
+                format!("[{}]", entries.join(","))
+            }
+
+            fn ids(catalog: &Catalog) -> Vec<&str> {
+                catalog.keys().map(String::as_str).collect()
+            }
+
+            /// Three versions: the base, one that changes bbb and adds new between aaa and bbb, and
+            /// one that removes aaa.
+            fn three() -> [(&'static str, Catalog); 3] {
+                let v1: Catalog = [card("aaa", 1), card("bbb", 1), card("ccc", 1)]
+                    .into_iter()
+                    .collect();
+                let v2: Catalog = [card("aaa", 1), card("new", 4), card("bbb", 2), card("ccc", 1)]
+                    .into_iter()
+                    .collect();
+                let v3: Catalog = [card("new", 4), card("bbb", 2), card("ccc", 1)]
+                    .into_iter()
+                    .collect();
+                [("v1", v1), ("v2", v2), ("v3", v3)]
+            }
+
+            fn shipped_in(dir: &Path) {
+                fs::write(dir.join("patches.json"), list(&["v1", "v2", "v3"])).unwrap();
+                let mut previous: Option<Catalog> = None;
+                for (version, snapshot) in three() {
+                    write_snapshot(version, dir, previous.as_ref(), &snapshot).unwrap();
+                    previous = Some(snapshot);
+                }
+            }
+
+            #[test]
+            fn r5268000_a_snapshot_is_the_fold_of_its_delta_and_every_one_before_it_its_new_cards_in_place() {
+                let temp = TempDir::new("jackioh-deltas-");
+                let dir = temp.path();
+                shipped_in(dir);
+                for (version, snapshot) in three() {
+                    let folded = read_snapshot(version, dir).unwrap();
+                    assert_eq!(snapshot_text(&folded), snapshot_text(&snapshot), "{version}");
+                }
+                assert_eq!(
+                    ids(&read_snapshot("v2", dir).unwrap()),
+                    ["aaa", "new", "bbb", "ccc"]
+                );
+                // Each delta holds only what its version changed.
+                assert_eq!(ids(&read_delta("v1", dir).unwrap().set), ["aaa", "bbb", "ccc"]);
+                let v2 = read_delta("v2", dir).unwrap();
+                assert_eq!(ids(&v2.set), ["new", "bbb"]);
+                assert!(v2.unset.is_empty());
+                let v3 = read_delta("v3", dir).unwrap();
+                assert!(v3.set.is_empty());
+                assert_eq!(v3.unset, strings(&["aaa"]));
+                assert_eq!(
+                    read_order(dir).unwrap().into_iter().collect::<Vec<_>>(),
+                    strings(&["aaa", "new", "bbb", "ccc"])
+                );
+                // The walk folds every version once, in patches.json's order.
+                let walked: Vec<String> = snapshots(dir).unwrap().map(|each| each.unwrap().0).collect();
+                assert_eq!(walked, strings(&["v1", "v2", "v3"]));
+                assert!(read_snapshot("v4", dir).is_err());
+            }
+
+            #[test]
+            fn r5268000_a_version_never_moves_a_shipped_card() {
+                let [(_, v1), ..] = three();
+                let mut order: IndexSet<String> = v1.keys().cloned().collect();
+                let moved: Catalog = [card("ccc", 1), card("aaa", 1), card("bbb", 1)]
+                    .into_iter()
+                    .collect();
+                let error = merge_order(&mut order, &moved).unwrap_err().to_string();
+                assert!(error.contains("never moves a shipped card"), "{error}");
+                let temp = TempDir::new("jackioh-deltas-moved-");
+                fs::write(temp.path().join("patches.json"), list(&["v1", "v2"])).unwrap();
+                write_snapshot("v1", temp.path(), None, &v1).unwrap();
+                assert!(write_snapshot("v2", temp.path(), Some(&v1), &moved).is_err());
+            }
+
+            #[test]
+            fn r5268000_patches_encode_turns_each_snapshot_file_into_its_delta_once() {
+                let temp = TempDir::new("jackioh-deltas-encode-");
+                let dir = temp.path();
+                fs::write(dir.join("patches.json"), list(&["v1", "v2", "v3"])).unwrap();
+                for (version, snapshot) in three() {
+                    write_json(&snapshot_path(version, dir).unwrap(), &snapshot).unwrap();
+                }
+                assert_eq!(encode_history(dir).unwrap(), strings(&["v1", "v2", "v3"]));
+                for (version, snapshot) in three() {
+                    assert!(
+                        !snapshot_path(version, dir).unwrap().exists(),
+                        "{version}.json is gone"
+                    );
+                    assert_eq!(
+                        snapshot_text(&read_snapshot(version, dir).unwrap()),
+                        snapshot_text(&snapshot)
+                    );
+                }
+                assert_eq!(
+                    encode_history(dir).unwrap(),
+                    Vec::<String>::new(),
+                    "a second run encodes none"
+                );
+            }
+
+            #[test]
+            fn r5268000_the_real_history_keeps_each_version_as_the_least_delta_that_folds_to_it() {
+                let dir = patches_dir();
+                let mut previous: Option<Catalog> = None;
+                let mut listed: IndexSet<String> = IndexSet::new();
+                for folded in snapshots(&dir).unwrap() {
+                    let (version, snapshot) = folded.unwrap();
+                    assert!(!snapshot_path(&version, &dir).unwrap().exists(), "{version}.json");
+                    assert_eq!(
+                        read_delta(&version, &dir).unwrap(),
+                        delta_between(previous.as_ref(), &snapshot),
+                        "{version}'s delta holds only what it changed"
+                    );
+                    listed.extend(snapshot.keys().cloned());
+                    previous = Some(snapshot);
+                }
+                let order = read_order(&dir).unwrap();
+                assert_eq!(
+                    order.len(),
+                    listed.len(),
+                    "order.json places exactly the ids a version shipped"
+                );
+                assert!(listed.iter().all(|id| order.contains(id)));
+            }
+
+            #[test]
+            fn r5268000_patches_check_names_a_snapshot_file_and_a_catalog_that_moves_a_shipped_card() {
+                let temp = TempDir::new("jackioh-deltas-check-");
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                fs::create_dir_all(&dir).unwrap();
+                let [(_, v1), ..] = three();
+                fs::write(dir.join("patches.json"), list(&["v1"])).unwrap();
+                write_snapshot("v1", &dir, None, &v1).unwrap();
+                write_json(&snapshot_path("v1", &dir).unwrap(), &v1).unwrap();
+                let moved: Catalog = [card("ccc", 1), card("aaa", 1), card("bbb", 1)]
+                    .into_iter()
+                    .collect();
+                let patches = read_patches(&dir.join("patches.json")).unwrap();
+                let problems = history_problems(&dir, &patches, &moved).unwrap();
+                assert_eq!(problems.len(), 2, "{problems:?}");
+                assert!(
+                    problems[0].contains("v1.json is a whole-catalog snapshot"),
+                    "{problems:?}"
+                );
+                assert!(problems[1].contains("never moves a shipped card"), "{problems:?}");
+                assert_eq!(
+                    history_problems(&dir, &patches, &v1).unwrap().len(),
+                    1,
+                    "the file alone"
+                );
+            }
+        }
+
         mod r388_card_patch_history_b4_2 {
             use std::fs;
 
@@ -5376,8 +5853,8 @@ mod tests {
                 assert!(versions.iter().any(|version| version == "v0.2.2"));
                 assert_eq!(versions.iter().collect::<IndexSet<_>>().len(), versions.len());
                 for patch in &patches {
-                    let path = snapshot_path(&patch.version, &patches_dir()).unwrap();
-                    assert!(path.exists(), "{}.json", patch.version);
+                    let path = delta_path(&patch.version, &patches_dir()).unwrap();
+                    assert!(path.exists(), "deltas/{}.json", patch.version);
                     assert!(is_iso_date(&patch.date), "{}", patch.version);
                     assert!(!patch.title.is_empty(), "{}", patch.version);
                     assert!(!patch.source.is_empty(), "{}", patch.version);
@@ -5423,14 +5900,23 @@ mod tests {
                     shipped_versions.iter().collect::<IndexSet<_>>().len(),
                     shipped.len()
                 );
-                for entry in &shipped {
+                for (entry, folded) in shipped.iter().zip(snapshots(&patches_dir()).unwrap()) {
                     assert!(is_hex40(&entry.commit), "{} commit", entry.version);
                     assert!(is_hex40(&entry.blob), "{} blob", entry.version);
-                    // The blob is the snapshot file's bytes as git hashes them, so a rewritten
-                    // snapshot fails.
-                    let bytes =
-                        fs::read_to_string(snapshot_path(&entry.version, &patches_dir()).unwrap()).unwrap();
-                    assert_eq!(entry.blob, git_blob_hash(&bytes), "{}.json", entry.version);
+                    // The blob is the snapshot's bytes, as its deltas rebuild them (R5268000), as git
+                    // hashes them, so a rewritten delta fails: with the final newline, or without it
+                    // as a snapshot copied from a catalog.json that had none; the three snapshots
+                    // formatted by hand keep the blob of their original file.
+                    let (version, snapshot) = folded.unwrap();
+                    assert_eq!(version, entry.version);
+                    if !HAND_FORMATTED.contains(&version.as_str()) {
+                        let text = snapshot_text(&snapshot);
+                        let bare = text.strip_suffix('\n').unwrap_or(&text);
+                        assert!(
+                            entry.blob == git_blob_hash(&text) || entry.blob == git_blob_hash(bare),
+                            "{version}: its blob is not its snapshot's bytes"
+                        );
+                    }
                     // R1329000: and its win-rate table's, so a rewritten table fails too; a patch
                     // with no table file, as every one before v0.3.15, has no blob.
                     let table = win_rates_path(&entry.version, &patches_dir()).unwrap();
@@ -6186,8 +6672,8 @@ mod tests {
                     // (v0.2.4, v0.2.5).
                     if !versions.iter().any(|each| each == was) {
                         assert!(
-                            !snapshot_path(was, &patches_dir()).unwrap().exists(),
-                            "{was}.json"
+                            !delta_path(was, &patches_dir()).unwrap().exists(),
+                            "deltas/{was}.json"
                         );
                     }
                 }

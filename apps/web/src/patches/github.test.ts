@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { snapshotReader } from "./deltas.ts";
 import { GITHUB_RELEASE_BODY_LIMIT } from "./constants.ts";
 import {
   DAILY_PATCHES,
@@ -30,7 +31,7 @@ import {
 import { githubReleases, markdownText, type GithubRelease, type GithubReleases, type ShippedRecord } from "./github.ts";
 import { releaseArtPath } from "./releaseArt.ts";
 import { tiers, type Release } from "./releases.ts";
-import type { Patch, Snapshot, TechnicalEntry } from "./source.ts";
+import type { Patch, TechnicalEntry } from "./source.ts";
 
 const SITES = { production: "https://prod.example", staging: "https://staging.example", patchNotes: "/patch-notes" };
 // #3601: the script's run over the whole history, in a process of its own, and what it may print.
@@ -268,7 +269,7 @@ describe("GitHub releases of the real history", () => {
     patches,
     shipped,
     technical: read<TechnicalEntry[]>("technical.json"),
-    snapshot: (version) => read<Snapshot>(`${version}.json`),
+    snapshot: snapshotReader((stem) => read<unknown>(`${stem}.json`)),
     live: new Set(patches.map((patch) => patch.version)),
     sites: SITES,
   });

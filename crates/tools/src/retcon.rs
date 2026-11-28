@@ -34,8 +34,8 @@ use crate::classify::{self, FileChange, Side, Tier};
 use crate::patches::js::{self, Json};
 use crate::patches::patch::bump_sites;
 use crate::patches::patches_io::{
-    Catalog, PatchEntry, git_blob_hash, read_patches, read_shipped, read_snapshot, rebuild_derived,
-    records_path, snapshot_path, win_rates_path, write_json,
+    Catalog, ORDER_FILE, PatchEntry, delta_path, git_blob_hash, read_patches, read_shipped, rebuild_derived,
+    records_path, snapshots, win_rates_path, write_json,
 };
 use crate::patches::versions::name_by_tier;
 use crate::patches::{git, sets_of};
@@ -122,8 +122,8 @@ pub fn compute_map(repo_root: &Path, dir: &Path) -> anyhow::Result<Vec<Renamed>>
     let mut previous: Option<Catalog> = None;
     let mut newest: Option<String> = None;
     let mut map = Vec::with_capacity(patches.len());
-    for PatchEntry { version, commits, .. } in patches {
-        let snapshot = read_snapshot(&version, dir)?;
+    for (PatchEntry { version, commits, .. }, folded) in patches.into_iter().zip(snapshots(dir)?) {
+        let (_, snapshot) = folded?;
         let scripts = script_changes(repo_root, commits.as_deref().unwrap_or_default())?;
         let (tier, plays) = tier_of(previous.as_ref(), &snapshot, &scripts);
         let new = match &newest {
@@ -216,8 +216,8 @@ pub fn compute_scoped_map(dir: &Path, from: &str, rules: &[String]) -> anyhow::R
     let mut previous: Option<Catalog> = None;
     let mut newest: Option<String> = None;
     let mut map = Vec::with_capacity(patches.len());
-    for (at, patch) in patches.into_iter().enumerate() {
-        let snapshot = read_snapshot(&patch.version, dir)?;
+    for ((at, patch), folded) in patches.into_iter().enumerate().zip(snapshots(dir)?) {
+        let (_, snapshot) = folded?;
         let renamed = if at < start {
             Renamed {
                 tier: patch
@@ -366,10 +366,11 @@ fn write_with(
         if patch.version != renamed.old {
             bail!("patches.json changed since the map was made");
         }
-        let snapshot = snapshot_path(&patch.version, &dir)?;
+        // R5268000: a version's delta moves to its new name; it names cards, never versions.
+        let snapshot = delta_path(&patch.version, &dir)?;
         let text = fs::read_to_string(&snapshot)
             .with_context(|| format!("{} cannot be read", snapshot.display()))?;
-        snapshots.push((snapshot, snapshot_path(&renamed.new, &dir)?, text));
+        snapshots.push((snapshot, delta_path(&renamed.new, &dir)?, text));
         let table = win_rates_path(&patch.version, &dir)?;
         if let Ok(text) = fs::read_to_string(&table) {
             tables.push((
@@ -422,7 +423,14 @@ fn write_with(
             .and_then(|name| name.to_str())
             .unwrap_or_default()
             .to_string();
-        let handled = ["patches.json", "shipped.json", "index.json", ALIASES_FILE].contains(&name.as_str())
+        let handled = [
+            "patches.json",
+            "shipped.json",
+            "index.json",
+            ORDER_FILE,
+            ALIASES_FILE,
+        ]
+        .contains(&name.as_str())
             || snapshots.iter().any(|(from, _, _)| *from == path);
         if handled || !path.is_file() || !name.ends_with(".json") {
             continue;
@@ -1444,6 +1452,8 @@ mod tests {
             serde_json::to_string_pretty(&list).expect("JSON"),
         )
         .expect("a list");
+        // R5268000: the history keeps deltas; the fixture's snapshot files become them.
+        crate::patches::patches_io::encode_history(&patches).expect("the fixture's deltas");
         let shipped: Vec<_> = snapshots
             .iter()
             .map(|(version, _)| json!({ "version": version, "commit": "c", "blob": "b" }))
@@ -1563,9 +1573,9 @@ mod tests {
         write_retcon(root, &map).expect("the write");
         let patches = root.join(PATCHES_REL);
         for new in ["v0.1.0", "v0.1.0b", "v0.2.0", "v0.2.0b"] {
-            assert!(patches.join(format!("{new}.json")).exists(), "{new}'s snapshot");
+            assert!(delta_path(new, &patches).unwrap().exists(), "{new}'s delta");
         }
-        assert!(!patches.join("v0.1.3.json").exists());
+        assert!(!delta_path("v0.1.3", &patches).unwrap().exists());
         let list = read_patches(&patches.join("patches.json")).expect("the list");
         assert_eq!(list[2].version, "v0.2.0");
         assert_eq!(list[2].tier, Some(Tier::Major));
@@ -1720,6 +1730,7 @@ mod tests {
             serde_json::to_string_pretty(&list).expect("JSON"),
         )
         .expect("a list");
+        crate::patches::patches_io::encode_history(&patches).expect("the fixture's deltas");
         dir
     }
 

@@ -1,5 +1,6 @@
 // R388: the one seam onto crates/cards/patches/. Each file is its own lazy chunk, loaded once and
 // only when asked for; the order of patches is patches.json's; no data at all is an empty history.
+// R5268000: a snapshot is folded from the deltas under deltas/.
 
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -51,15 +52,17 @@ describe("R388 the patch source", () => {
   });
 
   it("R388 loads nothing until asked, then each file once", async () => {
-    const { loaders, calls } = spyLoaders({ patches: [{ version: "b", changes: [] }], index: {}, b: { "core-001": {} } });
-    const source = sourceFromLoaders(loaders);
+    const { loaders, calls } = spyLoaders({ patches: [{ version: "b", changes: [] }], index: {}, order: ["core-001"] });
+    const deltas = spyLoaders({ b: { set: { "core-001": {} } } });
+    const source = sourceFromLoaders(loaders, deltas.loaders);
     expect(calls).toEqual([]);
     await source.patches();
     await source.patches();
     expect(calls).toEqual(["patches"]);
     expect(await source.snapshot("b")).toEqual({ "core-001": {} });
     await source.snapshot("b");
-    expect(calls).toEqual(["patches", "b"]);
+    expect(calls).toEqual(["patches", "order"]);
+    expect(deltas.calls).toEqual(["b"]);
     expect(await source.snapshot("missing")).toBeNull();
     expect(await source.snapshot("index")).toBeNull();
     expect(await source.snapshot("patches")).toBeNull();
@@ -80,7 +83,29 @@ describe("R388 the patch source", () => {
     await expect(sourceFromLoaders({ patches: () => Promise.resolve({}) }).patches()).rejects.toThrow(/not a list/);
     await expect(sourceFromLoaders({ patches: () => Promise.resolve([{ title: "x" }]) }).patches()).rejects.toThrow(/not a patch/);
     await expect(sourceFromLoaders({ index: () => Promise.resolve([]) }).index()).rejects.toThrow(/not a map/);
-    await expect(sourceFromLoaders({ v1: () => Promise.resolve("x") }).snapshot("v1")).rejects.toThrow(/not a catalog snapshot/);
+    const shipped = { patches: () => Promise.resolve([{ version: "v1", changes: [] }]), order: () => Promise.resolve(["a"]) };
+    await expect(sourceFromLoaders(shipped, { v1: () => Promise.resolve("x") }).snapshot("v1")).rejects.toThrow(/not a delta/);
+    await expect(sourceFromLoaders(shipped, { v1: () => Promise.resolve({ set: { b: {} } }) }).snapshot("v1")).rejects.toThrow(/no place in order.json/);
+  });
+
+  it("R5268000 folds each snapshot from its delta and every one before it, its cards in order.json's order, each delta loaded once", async () => {
+    const { loaders } = spyLoaders({
+      patches: [{ version: "v1", changes: [] }, { version: "v2", changes: [] }, { version: "v3", changes: [] }],
+      order: ["a", "new", "b", "c"],
+    });
+    const deltas = spyLoaders({
+      v1: { set: { a: { name: "A" }, b: { name: "B" }, c: { name: "C" } } },
+      v2: { set: { new: { name: "New" }, b: { name: "B2" } } },
+      v3: { set: {}, unset: ["a"] },
+    });
+    const source = sourceFromLoaders(loaders, deltas.loaders);
+    const v2 = await source.snapshot("v2");
+    expect(Object.keys(v2 ?? {})).toEqual(["a", "new", "b", "c"]);
+    expect(v2?.b?.name).toBe("B2");
+    expect(await source.snapshot("v1")).toEqual({ a: { name: "A" }, b: { name: "B" }, c: { name: "C" } });
+    expect(Object.keys((await source.snapshot("v3")) ?? {})).toEqual(["new", "b", "c"]);
+    expect(deltas.calls).toEqual(["v2", "v1", "v3"]);
+    expect(await source.snapshot("v4")).toBeNull();
   });
 
   it("R388 no patch files at all is an empty history, not an error", async () => {
@@ -113,7 +138,7 @@ describe("R388 the patch source", () => {
     expect(Object.keys((await realPatchSource.snapshot("v0.2.0b")) ?? {})).toHaveLength(317);
   }, 30_000);
 
-  // daily: it loads every shipped snapshot, 134 files and 64 MB on 2026-11-08, so it slows with each
+  // daily: it loads every shipped snapshot, 134 files and 64 MB on 2026-11-08 (deltas since R5268000), so it slows with each
   // `patches ship` and ran past its 30 s on #3443's `web (unit 4/8)` (#3418). Per pull request the case
   // above holds the seam on the history's start and newest end, and crates/tools' patches.rs test
   // `r388_derives_each_patchs_card_by_card_changes_and_the_per_card_index_from_the_snapshots_alone`

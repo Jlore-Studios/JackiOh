@@ -1,0 +1,618 @@
+{
+  "set": {
+    "core-026": {
+      "id": "core-026",
+      "index": "26",
+      "name": "Glowy Jelly Bean",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [
+        "Jelly Bean"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "loc": 12,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Tradable"
+          },
+          {
+            "kind": "Flashback"
+          }
+        ],
+        "text": "Tradable, Flashback\nMake a card in your hand Radiant."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Tradable"
+          },
+          {
+            "kind": "Flashback"
+          }
+        ],
+        "text": "Tradable, Flashback\nMake 2 cards in your hand Radiant."
+      }
+    },
+    "classic-051": {
+      "id": "classic-051",
+      "index": "51",
+      "name": "Back Breaker",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "loc": 7,
+      "base": {
+        "attack": 3,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Stack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Stack, Taunt\nDeath: Destroy every backrow card."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Stack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Stack, Taunt\nDeath: Destroy every enemy backrow card."
+      }
+    },
+    "classicplus-019-1": {
+      "id": "classicplus-019-1",
+      "index": "19.1",
+      "name": "Top Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "loc": 5,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Can't Defend\nOnly Units in this lane can attack this."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Immune to Spells, Can't Defend\nOnly Units in this lane can attack this."
+      }
+    },
+    "classicplus-019-5": {
+      "id": "classicplus-019-5",
+      "index": "19.5",
+      "name": "Bot Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "loc": 23,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "First Strike"
+          }
+        ],
+        "text": "Rush, First Strike\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Charge"
+          },
+          {
+            "kind": "First Strike"
+          }
+        ],
+        "text": "Charge, First Strike\nThis can't go Berserk."
+      }
+    },
+    "meditative-048": {
+      "id": "meditative-048",
+      "index": "48",
+      "name": "Tranquility",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "loc": 18,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Tradable"
+          }
+        ],
+        "text": "Tradable\nEnd the turn. Your hero is immune to damage until your next turn begins. Exile this."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Tradable"
+          }
+        ],
+        "text": "Tradable\nReplenish {refresh} mana. Your hero is immune to damage until your next turn begins. Exile this."
+      },
+      "params": [
+        {
+          "key": "refresh",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ]
+    },
+    "meditative-082": {
+      "id": "meditative-082",
+      "index": "82",
+      "name": "Medina Outfitter",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "times",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "read": "cry"
+        },
+        {
+          "key": "mana",
+          "base": 1,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        }
+      ],
+      "loc": 17,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Buff every card in your hand. You have {mana} less mana next turn."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Buff every card in your hand {times|time|times}. You have {mana} less mana next turn."
+      }
+    },
+    "stinkyscape-033": {
+      "id": "stinkyscape-033",
+      "index": "33",
+      "name": "Drone Core VII",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [
+        "Drone Core"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 6,
+      "refs": [
+        "stinkyscape-t-drone-interceptor",
+        "stinkyscape-t-drone-corvette"
+      ],
+      "params": [
+        {
+          "key": "interceptors",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 22,
+      "base": {
+        "keywords": [],
+        "text": "Float reduces cost.\nSummon a Drone Corvette and {interceptors|Drone Interceptor|Drone Interceptors}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Float reduces cost.\nSummon a Radiant Drone Corvette and {interceptors|Radiant Drone Interceptor|Radiant Drone Interceptors}."
+      }
+    },
+    "stinkyscape-058": {
+      "id": "stinkyscape-058",
+      "index": "58",
+      "name": "Beam v5",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Weapon"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "damage",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        }
+      ],
+      "loc": 52,
+      "base": {
+        "attack": 0,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          }
+        ],
+        "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          }
+        ],
+        "text": "Starship Piece\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      }
+    },
+    "stinkyscape-108": {
+      "id": "stinkyscape-108",
+      "index": "108",
+      "name": "Trila 3",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 3,
+      "loc": 6,
+      "base": {
+        "attack": 7,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          }
+        ],
+        "text": "Starship Piece, Ranged, Windfury"
+      },
+      "radiant": {
+        "attack": 14,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Windfury"
+          }
+        ],
+        "text": "Starship Piece, Ranged, Rush, Windfury"
+      }
+    },
+    "traininggrounds-050": {
+      "id": "traininggrounds-050",
+      "index": "50",
+      "name": "Legacy: Glowy Jelly Bean",
+      "set": "Training Grounds",
+      "type": "Spell",
+      "tags": [
+        "Jelly Bean",
+        "Legacy"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 18,
+      "base": {
+        "keywords": [],
+        "text": "Make a card in your hand Radiant. It costs ({surcharge}) more."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Make a card in your hand Radiant."
+      },
+      "params": [
+        {
+          "key": "surcharge",
+          "base": 1,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ]
+    },
+    "stinkyscapeplus-007": {
+      "id": "stinkyscapeplus-007",
+      "index": "7",
+      "name": "Churnwalker",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 23,
+      "base": {
+        "attack": 3,
+        "health": 15,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 4
+          }
+        ],
+        "text": "Armor 4, Tribute 1\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 30,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 8
+          }
+        ],
+        "text": "Armor 8, Tribute 1\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
+      }
+    },
+    "stinkyscapeplus-016": {
+      "id": "stinkyscapeplus-016",
+      "index": "16",
+      "name": "Servo Surge",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 6,
+      "base": {
+        "attack": 5,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Windfury"
+          }
+        ],
+        "text": "Starship Piece, Windfury"
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Windfury"
+          }
+        ],
+        "text": "Starship Piece, Windfury"
+      }
+    },
+    "stinkyscapeplus-041": {
+      "id": "stinkyscapeplus-041",
+      "index": "41",
+      "name": "Mend Projector",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "health",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 31,
+      "base": {
+        "keywords": [],
+        "text": "End of turn: Heal all your Units to full and give them +{health} Health."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "End of turn: Heal all your Units to full and give them +{health} Health and Divine Shield."
+      }
+    },
+    "stinkyscapeplus-061": {
+      "id": "stinkyscapeplus-061",
+      "index": "61",
+      "name": "Jayaad",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Acclaimed"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 4,
+      "loc": 18,
+      "base": {
+        "attack": 9,
+        "health": 11,
+        "keywords": [],
+        "text": "Cry: Summon Shawarma Law."
+      },
+      "radiant": {
+        "attack": 18,
+        "health": 22,
+        "keywords": [],
+        "text": "Cry: Summon Radiant Shawarma Law."
+      },
+      "refs": [
+        "stinkyscapeplus-061-1"
+      ]
+    },
+    "stinkyscapeplus-062": {
+      "id": "stinkyscapeplus-062",
+      "index": "62",
+      "name": "Overdrive Projector",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 42,
+      "base": {
+        "keywords": [],
+        "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
+      },
+      "params": [
+        {
+          "key": "dormant",
+          "base": 2,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "spellEcho",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-063": {
+      "id": "stinkyscapeplus-063",
+      "index": "63",
+      "name": "Overdrive Dome",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 4,
+      "loc": 42,
+      "base": {
+        "keywords": [],
+        "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
+      },
+      "params": [
+        {
+          "key": "dormant",
+          "base": 2,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "spellEcho",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    }
+  }
+}

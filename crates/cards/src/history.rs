@@ -2780,8 +2780,10 @@ mod tests {
 
         let oldest = shipped_catalog("v0.1.0").expect("v0.1.0 is carried");
         assert_eq!(oldest.version(), "v0.1.0");
-        let snapshot: CardDefs =
-            serde_json::from_str(include_str!("../patches/v0.1.0.json")).expect("v0.1.0 reads as cards");
+        let snapshot: CardDefs = serde_json::from_value(
+            serde_json::to_value(crate::snapshot_fold::snapshot("v0.1.0")).expect("a snapshot"),
+        )
+        .expect("v0.1.0 reads as cards");
         assert_eq!(
             serde_json::to_value(oldest.defs()).expect("serializes"),
             serde_json::to_value(&snapshot).expect("serializes")
@@ -3183,8 +3185,10 @@ mod tests {
         assert_eq!(shipped_versions(), shipped);
 
         let oldest = catalog_defs_at("v0.1.0").expect("v0.1.0 is carried");
-        let snapshot_v0_1_0: CardDefs =
-            serde_json::from_str(include_str!("../patches/v0.1.0.json")).expect("v0.1.0 reads as cards");
+        let snapshot_v0_1_0: CardDefs = serde_json::from_value(
+            serde_json::to_value(crate::snapshot_fold::snapshot("v0.1.0")).expect("a snapshot"),
+        )
+        .expect("v0.1.0 reads as cards");
         assert_eq!(
             serde_json::to_value(oldest).expect("serializes"),
             serde_json::to_value(&snapshot_v0_1_0).expect("serializes")
@@ -3197,8 +3201,10 @@ mod tests {
             "the newest is carried"
         );
         let v0_3_7b = catalog_defs_at("v0.3.1").expect("v0.3.1 is carried");
-        let snapshot_v0_3_7b: CardDefs =
-            serde_json::from_str(include_str!("../patches/v0.3.1.json")).expect("v0.3.1 reads as cards");
+        let snapshot_v0_3_7b: CardDefs = serde_json::from_value(
+            serde_json::to_value(crate::snapshot_fold::snapshot("v0.3.1")).expect("a snapshot"),
+        )
+        .expect("v0.3.1 reads as cards");
         assert_eq!(
             serde_json::to_value(v0_3_7b).expect("serializes"),
             serde_json::to_value(&snapshot_v0_3_7b).expect("serializes")

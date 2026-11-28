@@ -1,0 +1,58 @@
+{
+  "set": {
+    "classic-008": {
+      "id": "classic-008",
+      "index": "8",
+      "name": "Pickle",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "choices",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "discard",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "exile",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 84,
+      "base": {
+        "keywords": [],
+        "text": "At the start of your opponent's next turn, they choose {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "At the start of your opponent's next turn, they choose {choices|time|times}: they discard {discard|random card|random cards}, they exile the bottom {exile|card|cards} of their deck, or you draw {draw}."
+      }
+    }
+  }
+}
