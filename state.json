@@ -21442,13 +21442,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-8",
       "queued_at": "2026-11-28T02:19:12Z",
-      "run_id": "46097549925",
+      "run_id": "pending:0b37afcc-1795834343",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 635,
-      "started_at": "2026-11-28T02:20:04Z",
+      "started_at": "2026-11-28T02:52:41Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -21562,9 +21563,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T02:45:48Z",
+    "at": "2026-11-28T02:52:41Z",
     "url": "",
-    "what": "build #5248 on claude-8"
+    "what": "spot-check #5244 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-28T02:44:14Z",
@@ -44450,7 +44451,15 @@
         "n": 635,
         "pr": 5244,
         "queued_at": "2026-11-28T02:51:40Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:0b37afcc-1795834343",
         "sha": "593066692e79d8799c13ebaf96038ea151749896",
+        "started_at": "2026-11-28T02:52:41Z",
         "status": "queued",
         "title": "Patch: End turn keeps reading a move as left while a card is picked up or an attacker is aimed, so it no longer pulses as if the turn is done and Confirm end turn still asks",
         "tries": 0
