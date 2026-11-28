@@ -20203,6 +20203,13 @@
     "5189": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "46114191109",
+        "model": "opus",
+        "provider": "claude-7",
+        "since": "2026-11-28T06:23:40Z",
+        "until": "2026-11-28T06:53:40Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
