@@ -46082,7 +46082,8 @@
       "2026-11-28T01:57:53Z,46082558759,agy,gemini-3.8-flash-high,plan,5164,medium,failed,,150.3,245664,27935,0,,7,0,93,94,171.2,agy,none,,1",
       "2026-11-28T02:07:12Z,46096139264,claude-1,opus+sonnet,review,5240,medium,interrupted,5-hour cap,0,0,0,0,,49,49,,,1.4,,none,,0",
       "2026-11-28T02:03:36Z,46091439662,claude-8,sonnet+opus,build,5231,medium,built,,11.8,29,8599,830526,0.363,85,86,,,14.7,claude-8,fresh,,1",
-      "2026-11-28T02:14:29Z,46094786755,claude-6,opus,suggest,,,suggested,,23.6,33,15211,1339158,23.241,50,100,,,,,none,,2"
+      "2026-11-28T02:14:29Z,46094786755,claude-6,opus,suggest,,,suggested,,23.6,33,15211,1339158,23.241,50,100,,,,,none,,2",
+      "2026-11-28T02:13:51Z,46091396529,claude-7,sonnet+opus,build,5230,medium,built,,15.6,4,1582,91537,0.7991,12,15,,,14.3,claude-7,fresh,,1"
     ]
   },
   "version": 1
