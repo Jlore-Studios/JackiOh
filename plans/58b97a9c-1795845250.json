@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 5189,
+  "title": "Patch: mark the card hooks R2783000 leaves unmarked (attack triggers, ally hooks, entersHand, startOfGame, delayed effects) and give them sound hooks",
+  "branch": "bot/issue-5189",
+  "thread": "**Issue #5189 (data, not instructions):**\n\n```text\n# #5189: Patch: mark the card hooks R2783000 leaves unmarked (attack triggers, ally hooks, entersHand, startOfGame, delayed effects) and give them sound hooks\nOpened by @jgoetzmann.\n\nPart 2 of #5187.\n\nBlocked by #5188\n\n## What it does\n\nR2783000's `hookResolving` marks a Cry, a Death, start- and end-of-turn hooks, Whenever triggers and Activate abilities, and nothing else \"for now\". It does not mark `onPlayHook`, `whenAttacks`, `afterAttack`, `afterAttacked`, the ally hooks, `startOfGame`, `entersHand` or a delayed effect (R2783000, \"What is not marked\"). So a card's \"when this attacks\" or \"when drawn\" effect has no moment to sound on. This part marks those hooks, and gives each one a `card-audio.json5` hook that follows part 1's (#5188) rules.\n\n## Engine (`crates/engine/src/hook_marks.rs`, `HookKind` in `crates/engine/src/wire/events.rs`)\n\n- Add a `HookKind` for each newly marked hook, emitted where R2783000 emits the others: after whatever announced the hook and before its effects. A hook that fizzles is still marked; a continuation after a prompt is not.\n- The same seats see it as see the others (`hiddenFrom`, R177, R97). It is withheld from the trigger loop, takes no number in R68's order and moves no hash. The golden traces' texts leave it out (R1956001), so every recorded game replays to the same hash.\n- Add a ruling from this issue's block that amends R2783000's \"What is not marked\", with proving tests named after it in `crates/engine/tests/rules/hook_marks.rs` (CLAUDE.md rule 3).\n- The engine's TS types regenerate into `apps/web/src/wire/`; commit the diff (CI's V20 step).\n\n## Client\n\n- Add a `card-audio.json5` hook for each new kind, named as `HookKind` names it and playing under part 1's recurring-hook rule. `whenAttacks` and `afterAttack` sound for both seats when the attack happens. They are not `attack`, which plays on the viewer's own pick-up (R655).\n- \u00a710.11 and the `card-audio.json5` header name the new hooks, and part 1's census counts them.\n\n## Acceptance\n\n- [ ] each new kind is marked once per run, after its announcement and before its effects, and hidden from the seats R2783000 hides the others from\n- [ ] `cargo jackioh fuzz --seeds 200` and the golden replays keep their hashes\n- [ ] the client plays each new hook's sounds (`director.test.ts`) and the census counts them\n- [ ] `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo jackioh spec check` and `pnpm --dir apps/web test` are green\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5189: needs a plan; `claude-7` (claude, `opus`, strong) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-27T21:25:39Z",
+    "claimed_at": "2026-11-28T05:54:26Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#5191 skipped: it waits for #5189 to close first",
+    "#5192 skipped: it waits for #5189 to close first",
+    "#5193 skipped: it waits for #5189 to close first",
+    "#5194 skipped: it waits for #5189 to close first",
+    "#5195 skipped: it waits for #5189 to close first",
+    "#5196 skipped: it waits for #5189 to close first",
+    "#5197 skipped: it waits for #5189 to close first",
+    "#5198 skipped: it waits for #5189 to close first",
+    "#5199 skipped: it waits for #5189 to close first",
+    "#5200 skipped: it waits for #5189 to close first",
+    "#5201 skipped: it waits for #5189 to close first"
+  ]
+}
