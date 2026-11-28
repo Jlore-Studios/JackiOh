@@ -22069,6 +22069,9 @@
           "claude": "strong"
         }
       }
+    },
+    "5284": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -45607,6 +45610,13 @@
         "at": "2026-11-28T03:49:07Z",
         "number": 5265,
         "title": "Patch: a card change that outgrows the daily fuzz's seed count fails its own pull request, not the next daily run",
+        "verdict": "auto-approved",
+        "why": "approved by itself: no one voted on it"
+      },
+      {
+        "at": "2026-11-28T07:29:13Z",
+        "number": 5284,
+        "title": "Patch: voice lines at volume 0 no longer hold the practice AI, dip the music or download in the background, and effects at volume 0 dip no music",
         "verdict": "auto-approved",
         "why": "approved by itself: no one voted on it"
       }
