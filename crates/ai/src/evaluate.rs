@@ -29,7 +29,7 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::afflictions::{Affliction, Riders};
 use jackioh_engine::config::{
     BRITTLE_TICK, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HAND_CAP_MAX, HERO_HEALTH,
-    JADE_ASCEND_AT, JADE_BEAUTY_AT, MAX_MANA, TURN_CAP_PLAYER_TURNS,
+    JADE_ASCEND_AT, JADE_BEAUTY_AT, MAX_MANA, TUNE_HARMFUL_KEYWORDS, TUNE_STAT_TOTAL, TURN_CAP_PLAYER_TURNS,
 };
 use jackioh_engine::effects::{DELAYED_DESTROY_HOOK, DELAYED_DISCARD_HAND_HOOK};
 use jackioh_engine::evolution::{can_evolve, evolve_now};
@@ -38,21 +38,22 @@ use jackioh_engine::multipliers::{Multiplied, extra_runs};
 use jackioh_engine::{
     ActionBody, AltWinCondition, AttackHealth, AttackTarget, CardDef, CardInstance, CardType, CostOptions,
     EngineSink, FengShuiOutcome, GameEvent, GameEventType, GameState, Grant, HasHook, HookArgs, HookName,
-    Keyword, KeywordKind, ModifierExpiry, ModifierKind, PLAYER_IDS, Phase, PlayerId, PlayerState, Position,
-    Rng, Row, SandboxOp, SeatOutcome, SettleOptions, Slumber, SpawnZone, Tag, TriggerHolder, TriggerZone,
-    UnitView, Zone, ZoneName, acting_with_flag, active_brittle_count, active_units_of, acts_to_awaken,
-    animated_with_stats, armor_of, attack_restriction, attacks_per_turn, awaken_card, backrow_is_public,
-    board_totals, brittle_due_by, burn_on, cannot_attack, card_at, card_keywords, card_type_of_face,
-    converts_to, credit_lapsing, damage_pool_of, death_hook_of, effective_cost, effective_life, exit_mark,
-    face_of, find_def, find_instance, find_instance_mut, first_entry_zone, flags_of, frozen_next_turn,
-    gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep,
-    is_dormant_starship, is_extra_turn_card, is_giga, is_sick, is_slumbering, is_standing_unit,
-    is_starship_piece, is_temporary_card, is_tradable, left_field_after, legal_actions, lost_refreshes_left,
-    modifier_is_live, new_instance, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource,
-    pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reborn_body_of,
-    reset_instance, riders_of, script_of, settle, slots_of, stats_with_buffs, stolen_mana_crystals_of,
-    subsystems, sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap,
-    unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
+    Keyword, KeywordKind, ModifierExpiry, ModifierKind, NumberedKey, PLAYER_IDS, ParamBetter, Phase,
+    PlayerId, PlayerState, Position, Rng, Row, SandboxOp, SeatOutcome, SettleOptions, Slumber, SpawnZone,
+    Tag, TriggerHolder, TriggerZone, UnitView, Zone, ZoneName, acting_with_flag, active_brittle_count,
+    active_units_of, acts_to_awaken, animated_with_stats, armor_of, attack_restriction, attacks_per_turn,
+    awaken_card, backrow_is_public, board_totals, brittle_due_by, burn_on, cannot_attack, card_at,
+    card_keywords, card_type_of_face, converts_to, credit_lapsing, damage_pool_of, death_hook_of,
+    effective_cost, effective_life, exit_mark, face_of, find_def, find_instance, find_instance_mut,
+    first_entry_zone, flags_of, frozen_next_turn, gauntlet_acts, has_keyword, heal_multiplier_of,
+    hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep, is_dormant_starship, is_extra_turn_card, is_giga,
+    is_sick, is_slumbering, is_standing_unit, is_starship_piece, is_temporary_card, is_tradable,
+    left_field_after, legal_actions, lost_refreshes_left, modifier_is_live, new_instance, outcome_for,
+    owed_mana_of, own_cost, params_of, pays_credits_like_a_resource, pierces, pile_at, plague_on,
+    playable_from_graveyard, query_cost, queue_hook, reborn_body_of, reset_instance, riders_of, script_of,
+    settle, slots_of, stats_with_buffs, stolen_mana_crystals_of, subsystems, sync_fused_scripts,
+    takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view,
+    units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
@@ -849,6 +850,71 @@ fn cost_shift(state: &GameState, card: &CardInstance) -> i32 {
     }
 }
 
+/// R5246000, B3.4, R386: the open Nerfs on a hand `card`, each a step what was written on it made it worse
+/// for its holder: a crystal its `costMod` made it dearer (`cost_shift`; any price hike written on the card
+/// alike, R65), a `TUNE_STAT_TOTAL` or part of one of stats its attack and health together stand below its
+/// face, a keyword it lost that is not harmful or a harmful one it gained (a Nerf's Crater, R2657005), and a
+/// step a numbered keyword, its X or a declared number moved the worse way (more is better for all but
+/// Tribute; a declared number by its `better`). What an Upgrade wrote counts none, and cancels a Nerf on the
+/// same number. A secret Nerf (`hidden_nerfs`, R1845000) is never read, and a card with no definition (a
+/// placeholder) carries none.
+fn hand_nerfs(state: &GameState, card: &CardInstance) -> i32 {
+    if (card.cost_mod == 0 && card.tuning.is_none()) || find_def(Some(state), &card.def_id).is_none() {
+        return 0;
+    }
+    let dearer = cost_shift(state, card).max(0);
+    let Some(tuning) = &card.tuning else {
+        return dearer;
+    };
+    let below = (tuning.attack.unwrap_or(0) + tuning.health.unwrap_or(0))
+        .min(0)
+        .unsigned_abs();
+    let stats = below.div_ceil(TUNE_STAT_TOTAL.unsigned_abs()) as i32;
+    let harmful = |kind: KeywordKind| TUNE_HARMFUL_KEYWORDS.contains(&kind);
+    let lost = tuning
+        .remove_keywords
+        .iter()
+        .flatten()
+        .filter(|kind| !harmful(**kind))
+        .count() as i32;
+    let gained = tuning
+        .add_keywords
+        .iter()
+        .flatten()
+        .filter(|keyword| harmful(keyword.kind()))
+        .count() as i32;
+    let worse = |steps: i32, more_is_worse: bool| {
+        if more_is_worse {
+            steps.max(0)
+        } else {
+            (-steps).max(0)
+        }
+    };
+    let x: i32 = tuning
+        .x
+        .iter()
+        .flatten()
+        .map(|(key, steps)| worse(*steps, key.as_str() == NumberedKey::Tribute.as_str()))
+        .sum();
+    let params = if tuning.numbers.is_some() {
+        params_of(state, &card.def_id)
+    } else {
+        Vec::new()
+    };
+    let numbers: i32 = tuning
+        .numbers
+        .iter()
+        .flatten()
+        .map(|(key, steps)| {
+            let down = params
+                .iter()
+                .any(|param| param.key == *key && param.better == ParamBetter::Down);
+            worse(*steps, down)
+        })
+        .sum();
+    dearer + stats + lost + gained + x + numbers
+}
+
 /// R3695000: a passed line's Float of `float`, at `w.float_discount` a crystal, for each crystal it took
 /// off an own "Float reduces cost" card while that still cost more than the seat's crystals
 /// (`mana.max`, never the handicap, R180). Read after the turn ended, when the cut is on the card's
@@ -1191,6 +1257,17 @@ fn coming_cost_hike(state: &GameState, player: PlayerId, side: &PlayerState) -> 
     total
 }
 
+/// R5246000, R4590001: the misfires waiting on `side`'s next face-up Spells (IA #130 Prompt Injection): its
+/// live `RandomTargetsNextSpell` modifiers, each removed once a Spell spends it.
+fn coming_random_targets(state: &GameState, side: &PlayerState) -> i32 {
+    side.mods
+        .iter()
+        .filter(|modifier| {
+            matches!(modifier.kind, ModifierKind::RandomTargetsNextSpell) && modifier_is_live(state, modifier)
+        })
+        .count() as i32
+}
+
 /// R844, R5122000, §2.3, §9.9: what `side`'s coming refreshes will or will not give: its rider for or
 /// against it, the refreshes it still has to lose against it, and unconditional price hikes against it.
 fn coming_refreshes(state: &GameState, player: PlayerId, side: &PlayerState, w: &EvalWeights) -> f64 {
@@ -1498,9 +1575,10 @@ fn hero_side(state: &GameState, player: PlayerId, ticks: i32, w: &EvalWeights) -
 }
 
 /// Everything on one side but the hero: the board and the cards dormant under its piles, what it has
-/// banked, what its coming refreshes will or will not give, the backrow (an enemy face-down card by the
-/// cost it shows, never a Unit standing there, R2490000), the hand, the cards in its graveyard it may
-/// still play from there (#2928), the library and the fatigue draws it has taken.
+/// banked, what its coming refreshes will or will not give, the misfires waiting on its next Spells
+/// (R5246000), the backrow (an enemy face-down card by the cost it shows, never a Unit standing there,
+/// R2490000), the hand (an enemy's by its size, less the Nerfs written on it, R5246000), the cards in its
+/// graveyard it may still play from there (#2928), the library and the fatigue draws it has taken.
 fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights, prices: &Prices) -> f64 {
     let side = &state.players[player];
     let mut value = 0.0;
@@ -1515,6 +1593,12 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
     // R1224: a debt is coming turns' mana spent early, so it counts against the side that owes it.
     value -= w.owed_mana * f64::from(owed_mana_of(state, player));
     value += coming_refreshes(state, player, side, w);
+    // R5246000: each misfire waiting on the side's next Spell against it, outside `coming_refreshes`, so a
+    // reply that spends one keeps no credit for it (`replied_score`): its play already drew the random
+    // targets. No reading at a zero share (the frozen baseline's).
+    if w.random_targets != 0.0 {
+        value -= w.random_targets * f64::from(coming_random_targets(state, side));
+    }
     // #1086: what the side has banked in state both seats see (R185): Jade steps (R962), extra
     // turns (R846) and the enemy units it has marked (R437; no `unit_worth` call at a zero share).
     value += w.jade_step * f64::from(jade_steps(side.jade.unwrap_or(0)));
@@ -1599,7 +1683,14 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
             value += w.feng_shui_outlook * feng_shui_outlook(state, seat, w);
         }
     } else {
-        let unseen = side.hand.len() as f64 * (w.hand_card + w.hand_per_cost * w.opponent_hand_cost);
+        let mut unseen = side.hand.len() as f64 * (w.hand_card + w.hand_per_cost * w.opponent_hand_cost);
+        // R5246000: each open Nerf on an enemy hand card (`hand_nerfs`) against it, in the hand's doomed share
+        // as the cards are; `redact` drops a hidden card's, so only a line's own and a readable card's count
+        // (R185). No reading at a zero share (the frozen baseline's).
+        if w.enemy_hand_nerf != 0.0 {
+            let nerfs: i32 = side.hand.iter().map(|card| hand_nerfs(state, card)).sum();
+            unseen -= w.enemy_hand_nerf * f64::from(nerfs);
+        }
         value += if doomed {
             (1.0 - w.doomed_hand_discount) * unseen
         } else {

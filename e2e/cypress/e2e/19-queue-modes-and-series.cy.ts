@@ -34,7 +34,6 @@ import {
   PLAY_STATUS,
   PLAY_TRIO_SELECT,
   PLAY_VERDICT,
-  RESULT_OVERLAY,
   SERIES_BANNER,
   SERIES_BANNER_CONTINUE,
   SERIES_BANNER_RESULT,
@@ -55,6 +54,7 @@ import {
   ts,
   type QueueMode,
 } from "../../support/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 const MS_PER_SECOND = 1000;
 
@@ -380,7 +380,7 @@ describe("19 queue modes and series — Best of 1, All random, Conquest and room
     cy.then(() => {
       seatTwoConcedes();
     });
-    cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.view }).should("contain.text", "Win");
+    cy.get(ts(gameTestid.result), { timeout: timeouts.view }).should("contain.text", "Win");
     me(seatOne).its("currentMatchId").should("eq", null);
     cy.visit("/");
     cy.get(`[data-testid="landing"][data-account="signed-in"]`, { timeout: timeouts.view }).should("exist");
@@ -448,7 +448,7 @@ describe("19 queue modes and series — Best of 1, All random, Conquest and room
         });
         seatTwoConcedes();
       });
-      cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.view }).should("contain.text", "Win");
+      cy.get(ts(gameTestid.result), { timeout: timeouts.view }).should("contain.text", "Win");
     };
 
     const continueToPick = (wins: number): void => {

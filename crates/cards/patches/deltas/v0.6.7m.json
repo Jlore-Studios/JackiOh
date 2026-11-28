@@ -1,0 +1,1624 @@
+{
+  "set": {
+    "core-023": {
+      "id": "core-023",
+      "index": "23",
+      "name": "Reoccurring Dream",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "chance",
+          "base": 30,
+          "radiant": 30,
+          "better": "up",
+          "step": 10,
+          "min": 1,
+          "max": 100
+        }
+      ],
+      "loc": 33,
+      "base": {
+        "keywords": [],
+        "text": "{chance}% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\n{chance}% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      }
+    },
+    "core-050": {
+      "id": "core-050",
+      "index": "50",
+      "name": "K-Pop Fanatic",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 65,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Allure an enemy permanent."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Allure an enemy permanent. Make it Radiant when you steal it."
+      }
+    },
+    "core-089": {
+      "id": "core-089",
+      "index": "89",
+      "name": "Corpse Eater",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 4,
+      "loc": 23,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Brittle",
+            "n": 1
+          }
+        ],
+        "text": "Rush, Brittle 1\nWhile this is in your hand, it gains the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Brittle",
+            "n": 3
+          }
+        ],
+        "text": "Rush, Brittle 3\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+      }
+    },
+    "classicplus-019-1": {
+      "id": "classicplus-019-1",
+      "index": "19.1",
+      "name": "Top Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "loc": 5,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 2
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Armor 2, Can't Defend\nOnly Units in this lane can attack this."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 2
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Armor 2, Immune to Spells, Can't Defend\nOnly Units in this lane can attack this."
+      }
+    },
+    "classicplus-073-1": {
+      "id": "classicplus-073-1",
+      "index": "73.1",
+      "name": "Classic Golem",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 4,
+      "loc": 20,
+      "base": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "First Strike"
+          },
+          {
+            "kind": "Trample"
+          },
+          {
+            "kind": "Frenzy"
+          }
+        ],
+        "text": "Rush, First Strike, Trample, Frenzy\nWhen this attacks a Unit, that Unit transforms into a random Radiant Classic or Classic+ Unit."
+      },
+      "radiant": {
+        "attack": 20,
+        "health": 20,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "First Strike"
+          },
+          {
+            "kind": "Trample"
+          },
+          {
+            "kind": "Frenzy"
+          }
+        ],
+        "text": "Rush, First Strike, Trample, Frenzy\nWhen this attacks a Unit, that Unit transforms into a random Classic or Classic+ Unit."
+      }
+    },
+    "classicplus-t-ai-01": {
+      "id": "classicplus-t-ai-01",
+      "index": "T-AI-1",
+      "name": "Helpful Assistant",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "AI",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 1,
+      "loc": 10,
+      "base": {
+        "attack": 1,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Taunt\nCry: Discover a card from your deck."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Taunt\nCry: Discover a card from your deck. It costs (1) less."
+      }
+    },
+    "meditative-045": {
+      "id": "meditative-045",
+      "index": "45",
+      "name": "Knowledge Breaker",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "CN",
+        "KY",
+        "Catalyst"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "meditative-045-1",
+        "meditative-045"
+      ],
+      "params": [
+        {
+          "key": "times",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "read": "cry"
+        }
+      ],
+      "loc": 41,
+      "base": {
+        "attack": 1,
+        "health": 3,
+        "keywords": [],
+        "text": "Cry: Nerf all other CN and KY cards on the field and in hands.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
+      }
+    },
+    "meditative-045-1": {
+      "id": "meditative-045-1",
+      "index": "45.1",
+      "name": "Knowledge Breaker Prime",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "CN",
+        "KY",
+        "Prime",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 4,
+      "params": [
+        {
+          "key": "traps",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "max": 5,
+          "read": "cry"
+        }
+      ],
+      "loc": 48,
+      "base": {
+        "attack": 6,
+        "health": 18,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nCry: Summon {traps|random Trap|random Traps}. Destroy every other CN or KY permanent.\nAura: Your Units have Cloaked."
+      },
+      "radiant": {
+        "attack": 12,
+        "health": 36,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nCry: Summon {traps|random Radiant Trap|random Radiant Traps}. Exile every other CN or KY permanent.\nAura: Your Units have Cloaked."
+      }
+    },
+    "meditative-049-1": {
+      "id": "meditative-049-1",
+      "index": "49.1",
+      "name": "YileGPT Prime",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "CN",
+        "Acclaimed",
+        "Prime",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Mythic",
+      "token": true,
+      "cost": 8,
+      "refs": [
+        "classic-018",
+        "classic-t-glitch",
+        "classicplus-078",
+        "meditative-049-2",
+        "meditative-049-3"
+      ],
+      "params": [
+        {
+          "key": "picks",
+          "base": 2,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "max": 5,
+          "tunedOn": "base",
+          "read": "cry"
+        },
+        {
+          "key": "datacenters",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        },
+        {
+          "key": "glitches",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "read": "cry"
+        },
+        {
+          "key": "nerfs",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        },
+        {
+          "key": "viruses",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "read": "cry"
+        }
+      ],
+      "loc": 149,
+      "base": {
+        "attack": 8,
+        "health": 20,
+        "keywords": [],
+        "text": "Float reduces cost.\nCry: Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      },
+      "radiant": {
+        "attack": 16,
+        "health": 40,
+        "keywords": [],
+        "text": "Float reduces cost.\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      }
+    },
+    "meditative-093": {
+      "id": "meditative-093",
+      "index": "93",
+      "name": "Growing Felinor",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Felinor"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "meditative-093",
+        "meditative-093-1"
+      ],
+      "loc": 22,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Can't Defend\nDeath: Summon a Growing Felinor Sr."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Sr."
+      }
+    },
+    "meditative-093-1": {
+      "id": "meditative-093-1",
+      "index": "93.1",
+      "name": "Growing Felinor Sr",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Felinor",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Common",
+      "token": true,
+      "cost": 1,
+      "refs": [
+        "meditative-093",
+        "meditative-093-1",
+        "meditative-093-2"
+      ],
+      "loc": 22,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Can't Defend\nDeath: Summon a Growing Felinor Sr Sr."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Sr Sr."
+      }
+    },
+    "meditative-093-2": {
+      "id": "meditative-093-2",
+      "index": "93.2",
+      "name": "Growing Felinor Sr Sr",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Felinor",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Common",
+      "token": true,
+      "cost": 1,
+      "refs": [
+        "meditative-093",
+        "meditative-093-3"
+      ],
+      "loc": 22,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Can't Defend\nDeath: Summon a Growing Felinor Super Senior."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Rush, Can't Defend\nDeath: Summon a Radiant Growing Felinor Super Senior."
+      }
+    },
+    "stinkyscape-145": {
+      "id": "stinkyscape-145",
+      "index": "145",
+      "name": "Fortify Flesh",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "least",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "most",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 23,
+      "base": {
+        "keywords": [],
+        "text": "Your hero gains a random {least} to {most} Armor."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\nYour hero gains a random {least} to {most} Armor."
+      }
+    },
+    "traininggrounds-026": {
+      "id": "traininggrounds-026",
+      "index": "26",
+      "name": "Path of Exile",
+      "set": "Training Grounds",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 29,
+      "base": {
+        "keywords": [],
+        "text": "Exile a permanent. Draw {draw|card|cards}."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Cleave"
+          }
+        ],
+        "text": "Cleave\nExile a permanent. Draw {draw|card|cards}."
+      }
+    },
+    "traininggrounds-049": {
+      "id": "traininggrounds-049",
+      "index": "49",
+      "name": "Legacy: Reoccurring Dream",
+      "set": "Training Grounds",
+      "type": "Spell",
+      "tags": [
+        "Legacy"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "chance",
+          "base": 30,
+          "radiant": 30,
+          "better": "up",
+          "step": 10,
+          "min": 1,
+          "max": 100
+        }
+      ],
+      "loc": 64,
+      "base": {
+        "keywords": [],
+        "text": "{chance}% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\n{chance}% chance a random card in your hand becomes Radiant.\nEnd of turn: Return this to hand."
+      }
+    },
+    "stinkyscapeplus-042": {
+      "id": "stinkyscapeplus-042",
+      "index": "42",
+      "name": "Force Projector",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "loc": 57,
+      "base": {
+        "keywords": [],
+        "text": "The first {pool} damage allies would take per turn is nullified."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "The first {pool} damage allies would take per turn is nullified."
+      },
+      "params": [
+        {
+          "key": "pool",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-064": {
+      "id": "stinkyscapeplus-064",
+      "index": "64",
+      "name": "Surge Wall",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 4
+      },
+      "loc": 24,
+      "base": {
+        "attack": 0,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/24."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 12,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Can't attack, Taunt\nEnd of turn: Deal {damage} damage to all enemies.\nEmbiggened (4): Deal {embiggenedDamage} damage to all enemies instead. GIGA, 0/48."
+      },
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedDamage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-111": {
+      "id": "stinkyscapeplus-111",
+      "index": "111",
+      "name": "Mace",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-α"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "loc": 18,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Immutable, Immune to Spells, Ranged, Pierce\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Immutable, Immune to Spells, Ranged, Pierce\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "burns",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-112": {
+      "id": "stinkyscapeplus-112",
+      "index": "112",
+      "name": "Fortress",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-α"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 13,
+      "base": {
+        "attack": 6,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Armor",
+            "n": 2
+          }
+        ],
+        "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Armor 2"
+      },
+      "radiant": {
+        "attack": 12,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Armor",
+            "n": 4
+          }
+        ],
+        "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Armor 4"
+      }
+    },
+    "stinkyscapeplus-114": {
+      "id": "stinkyscapeplus-114",
+      "index": "114",
+      "name": "Reign",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-α",
+        "Automa-Ω"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 20,
+      "base": {
+        "attack": 12,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Armor",
+            "n": 4
+          }
+        ],
+        "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 24,
+        "health": 16,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Armor",
+            "n": 4
+          }
+        ],
+        "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "burns",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-117": {
+      "id": "stinkyscapeplus-117",
+      "index": "117",
+      "name": "Zenith",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-β"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 20,
+      "base": {
+        "attack": 5,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Tribute 1, Flying, Ranged, Pierce, Can't Defend\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Tribute 1, Flying, Ranged, Pierce, Can't Defend\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "burns",
+          "base": 3,
+          "radiant": 6,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-118": {
+      "id": "stinkyscapeplus-118",
+      "index": "118",
+      "name": "Antumbra",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-β",
+        "Automa-δ"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 20,
+      "base": {
+        "attack": 6,
+        "health": 13,
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Tribute 2, Flying, Ranged, Pierce, Can't Defend\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 12,
+        "health": 26,
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Tribute 2, Flying, Ranged, Pierce, Can't Defend\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "burns",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-119": {
+      "id": "stinkyscapeplus-119",
+      "index": "119",
+      "name": "Eclipse",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-β",
+        "Automa-Ω"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 20,
+      "base": {
+        "attack": 9,
+        "health": 17,
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Armor",
+            "n": 3
+          }
+        ],
+        "text": "Tribute 3, Flying, Ranged, Pierce, Can't Defend, Crater, Armor 3\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 18,
+        "health": 34,
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Armor",
+            "n": 6
+          }
+        ],
+        "text": "Tribute 3, Flying, Ranged, Pierce, Can't Defend, Crater, Armor 6\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "burns",
+          "base": 7,
+          "radiant": 14,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-123": {
+      "id": "stinkyscapeplus-123",
+      "index": "123",
+      "name": "Oct",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-Ω"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 61,
+      "base": {
+        "attack": 4,
+        "health": 16,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Tribute 3, Can't attack, Can't Defend, Flying\nEnd of turn: Heal all allies {heal}.\nAura: The first {pool} damage allies would take per turn is nullified."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 32,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Tribute 3, Can't attack, Can't Defend, Flying\nEnd of turn: Heal all allies {heal}.\nAura: The first {pool} damage allies would take per turn is nullified."
+      },
+      "params": [
+        {
+          "key": "heal",
+          "base": 8,
+          "radiant": 16,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "pool",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-133-2": {
+      "id": "stinkyscapeplus-133-2",
+      "index": "133.2",
+      "name": "Macizon",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-ζ",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 1,
+      "printedRarity": "Common",
+      "loc": 18,
+      "base": {
+        "attack": 5,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Immutable, Immune to Spells, Ranged, Pierce, Flying, Rush, Can't Defend\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Immutable, Immune to Spells, Ranged, Rush, Pierce, Flying, Can't Defend\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "burns",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-133-3": {
+      "id": "stinkyscapeplus-133-3",
+      "index": "133.3",
+      "name": "Fortnith",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-ζ",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 2,
+      "printedRarity": "Rare",
+      "loc": 20,
+      "base": {
+        "attack": 11,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Armor",
+            "n": 2
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Armor 2, Flying, Can't Defend\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 22,
+        "health": 12,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Armor",
+            "n": 4
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Tribute 1, Immutable, Immune to Spells, Ranged, Pierce, Armor 4, Flying, Can't Defend\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "burns",
+          "base": 3,
+          "radiant": 6,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-133-4": {
+      "id": "stinkyscapeplus-133-4",
+      "index": "133.4",
+      "name": "Sceptumbra",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-δ",
+        "Automa-ζ",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 3,
+      "printedRarity": "Epic",
+      "loc": 20,
+      "base": {
+        "attack": 14,
+        "health": 18,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Armor",
+            "n": 3
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Tribute 2, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Armor 3, Flying, Can't Defend\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 28,
+        "health": 36,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Armor",
+            "n": 3
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Tribute 2, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Armor 3, Flying, Can't Defend\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "burns",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-133-5": {
+      "id": "stinkyscapeplus-133-5",
+      "index": "133.5",
+      "name": "Reignclipse",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-Ω",
+        "Automa-ζ",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 4,
+      "printedRarity": "Legendary",
+      "loc": 20,
+      "base": {
+        "attack": 19,
+        "health": 23,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Armor",
+            "n": 4
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Armor",
+            "n": 3
+          }
+        ],
+        "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage also Burns {damage}.\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 38,
+        "health": 46,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Armor",
+            "n": 4
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Armor",
+            "n": 6
+          }
+        ],
+        "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 6\nDamage also Burns {damage}.\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "burns",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    }
+  }
+}

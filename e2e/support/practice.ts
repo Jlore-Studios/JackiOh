@@ -3,8 +3,9 @@
 // UI and the DOM.
 
 import { timeouts } from "./config.ts";
-import { ANIMATING, BOARD, END_TURN, PROMPT, PROMPT_SUBMIT, RESULT_OVERLAY, promptOf, promptOptionId, ts } from "./testids.ts";
+import { ANIMATING, PROMPT, PROMPT_SUBMIT, promptOf, promptOptionId, ts } from "./testids.ts";
 import { isPicked } from "./ux.ts";
+import { testid as gameTestid } from "../../apps/web/src/game/contract.ts";
 
 /** Prompts the human may meet on the way to its main phase: a rare cast-on-draw card's (R58), a card's own question, a Discover. */
 const PROMPT_BUDGET = 10;
@@ -49,19 +50,19 @@ function waitForHuman(): Cypress.Chainable<Waited> {
   return cy
     .get("body", { timeout: timeouts.game })
     .should(($body) => {
-      const board = $body.find(ts(BOARD));
-      const endTurn = $body.find(ts(END_TURN));
+      const board = $body.find(ts(gameTestid.board));
+      const endTurn = $body.find(ts(gameTestid.endTurn));
       const myTurn =
         board.attr("data-active") === "you" &&
         board.attr("data-phase") === "main" &&
         endTurn.length > 0 &&
         !endTurn.is(":disabled");
       const prompt = $body.find(PROMPT).length > 0;
-      const over = $body.find(ts(RESULT_OVERLAY)).length > 0;
+      const over = $body.find(ts(gameTestid.result)).length > 0;
       expect(myTurn || prompt || over, "the human's main phase, a prompt for the human, or a result").to.eq(true);
     })
     .then(($body): Waited => {
-      if ($body.find(ts(RESULT_OVERLAY)).length > 0) return "over";
+      if ($body.find(ts(gameTestid.result)).length > 0) return "over";
       if ($body.find(PROMPT).length > 0) return "prompt";
       return "turn";
     });

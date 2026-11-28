@@ -1155,8 +1155,18 @@ pub const BALANCE_WATCH_PLAYED_DELTA_THRESHOLD: f64 = 0.15;
 /// Cost 6 represents the "6+" bucket (cards costing 6 or more), matching the deckbuilder's CURVE_TOP.
 pub const CARD_STATS_CURVE_TOP: i32 = 6;
 
-/// Cache-Control max-age in seconds for public card statistics endpoints.
-pub const CARD_STATS_CACHE_TTL_SECONDS: i64 = 300;
+/// Cache-Control max-age in seconds for public card statistics endpoints: how long a browser or a cache
+/// in front may answer from what it holds. R5274000: five minutes, so the patch a deploy ships shows within
+/// them, while the server keeps its own figures `CARD_STATS_CACHE_TTL_SECONDS`.
+pub const CARD_STATS_MAX_AGE_SECONDS: i64 = 300;
+
+/// How long the server keeps the card statistics' snapshot and every figure cut from it, from when its
+/// load finished (R978000, R3067000, R5245000). R5274000: six hours, not five minutes. Each reload read
+/// about 120 MiB of `card_totals` and sent the figures over the network, which ran staging through its
+/// Disk IO budget, and since R5245000 a read past this time answers at once with what is held, so a longer
+/// time costs only the figures' age. A dev account's Fetch live (`POST /api/dev/stats-refresh`) lets them
+/// go at once.
+pub const CARD_STATS_CACHE_TTL_SECONDS: i64 = 21_600;
 
 /// SPEC §11 R4677000: after every patch of the newest patch's line (its `major.minor`), how many of the
 /// line before's newest patches anyone but a dev account may read on `/stats`.

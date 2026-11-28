@@ -16,6 +16,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use jackioh_engine::Rng;
 use jackioh_engine::wire::{
     EMOTE_IDS, EmoteId, GameEvent, Phase, PlayerId, PlayerView, SideView, emote_gate, hand_holds, opponent_of,
 };
@@ -33,7 +34,13 @@ pub const PRACTICE_EMOTE_DELAY: EmoteDelayFit = EmoteDelayFit {
 };
 
 /// R645: an emote the persona wants on screen, `delay_ms` after its trigger.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
 pub struct AiEmote {
     pub emote: EmoteId,
     pub delay_ms: f64,
@@ -512,5 +519,47 @@ impl EmotePersona {
             &self.trigger_delay,
         );
         self.admit(roll, moment, now, false).into_iter().collect()
+    }
+}
+
+/// R5269000: a persona and the stream it rolls on, as a host with no machine of its own holds them
+/// between calls (the practice page, through `BotCall`'s persona calls): each roll draws from
+/// `Rng::new(seed, cursor)` and moves `cursor` on, as the match host's `{seed}:bot-persona:{home}` does.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct PersonaStream {
+    pub persona: EmotePersona,
+    pub seed: String,
+    pub cursor: u32,
+}
+
+impl PersonaStream {
+    /// R645, R5269000: the practice AI's persona for `seat`, choosing within `hand` (R1344), dealt by
+    /// `pick_persona` off the stream's first draw; a lesson's is Silent and draws nothing.
+    pub fn deal(seed: String, seat: PlayerId, hand: Vec<EmoteId>, lesson: bool) -> Self {
+        let mut rng = Rng::new(&seed, 0);
+        let name = if lesson {
+            PersonaName::Silent
+        } else {
+            pick_persona(&mut || rng.next())
+        };
+        PersonaStream {
+            persona: EmotePersona::new(name, seat, Some(hand)),
+            cursor: rng.cursor(),
+            seed,
+        }
+    }
+
+    /// Runs `roll` on the persona with the stream's draws, and moves the stream on.
+    pub fn roll<T>(&mut self, roll: impl FnOnce(&mut EmotePersona, &mut dyn FnMut() -> f64) -> T) -> T {
+        let mut rng = Rng::new(&self.seed, self.cursor);
+        let rolled = roll(&mut self.persona, &mut || rng.next());
+        self.cursor = rng.cursor();
+        rolled
     }
 }

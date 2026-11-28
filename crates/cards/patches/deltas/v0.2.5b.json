@@ -1,0 +1,271 @@
+{
+  "set": {
+    "classic-080": {
+      "id": "classic-080",
+      "index": "80",
+      "name": "BOOM! Big Max",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Acclaimed"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 4,
+      "base": {
+        "attack": 13,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Trample"
+          },
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Tribute 3, Rush, Trample, Indestructible"
+      },
+      "radiant": {
+        "attack": 26,
+        "health": 16,
+        "keywords": [
+          {
+            "kind": "Charge"
+          },
+          {
+            "kind": "Trample"
+          },
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Tribute 3, Charge, Trample, Indestructible"
+      }
+    },
+    "classicplus-037": {
+      "id": "classicplus-037",
+      "index": "37",
+      "name": "Wardrum",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Quickdraw",
+        "Acclaimed"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 5,
+      "params": [
+        {
+          "key": "threshold",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 2
+        }
+      ],
+      "loc": 61,
+      "base": {
+        "attack": 5,
+        "health": 5,
+        "keywords": [],
+        "text": "While this is in your hand or deck: After the Spells, Field Spells and Traps you play in a turn reach {threshold}, summon this.\nEnd of turn: Cast a copy of a random Spell, Field Spell or Trap you played this turn."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [],
+        "text": "While this is in your hand or deck: After the Spells, Field Spells and Traps you play in a turn reach {threshold}, summon this.\nEnd of turn: Cast a copy of each Spell, Field Spell and Trap you played this turn."
+      }
+    },
+    "classicplus-038": {
+      "id": "classicplus-038",
+      "index": "38",
+      "name": "Solarius",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Catalyst"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "classicplus-038-1",
+        "classicplus-038"
+      ],
+      "loc": 9,
+      "base": {
+        "attack": 3,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Spell Damage",
+            "n": 2
+          }
+        ],
+        "text": "Spell Damage +2\nDeath: Shuffle a Solarius Prime into your deck."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Spell Damage",
+            "n": 5
+          }
+        ],
+        "text": "Spell Damage +5\nDeath: Shuffle a Radiant Solarius Prime into your deck."
+      }
+    },
+    "classicplus-038-1": {
+      "id": "classicplus-038-1",
+      "index": "38.1",
+      "name": "Solarius Prime",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Prime",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Epic",
+      "token": true,
+      "cost": 4,
+      "params": [
+        {
+          "key": "casts",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 8,
+      "base": {
+        "attack": 9,
+        "health": 5,
+        "keywords": [
+          {
+            "kind": "Spell Damage",
+            "n": 3
+          }
+        ],
+        "text": "Spell Damage +3\nCry: Cast {casts|random Spell|random Spells}. Each aims at enemies when it harms and at your side when it helps."
+      },
+      "radiant": {
+        "attack": 18,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Spell Damage",
+            "n": 7
+          }
+        ],
+        "text": "Spell Damage +7\nCry: Cast {casts|random Radiant Spell|random Radiant Spells}. Each aims at enemies when it harms and at your side when it helps."
+      }
+    },
+    "classicplus-046": {
+      "id": "classicplus-046",
+      "index": "46",
+      "name": "Felinor Flagbearer",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Felinor",
+        "Catalyst"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "classicplus-046-1",
+        "classicplus-046"
+      ],
+      "params": [
+        {
+          "key": "aura",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 26,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nAura: Your other Felinors have +{aura}/+{aura}.\nDeath: Shuffle a Felinor Flagbearer Prime into your deck."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nAura: Your Felinors have +{aura}/+{aura}.\nDeath: Shuffle a Felinor Flagbearer Prime into your deck."
+      }
+    },
+    "classicplus-046-1": {
+      "id": "classicplus-046-1",
+      "index": "46.1",
+      "name": "Felinor Flagbearer Prime",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Felinor",
+        "Prime",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "params": [
+        {
+          "key": "aura",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 19,
+      "base": {
+        "attack": 5,
+        "health": 5,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nCry: Fill your board with copies of this.\nAura: Your other Felinors have +{aura}/+{aura}."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nCry: Fill your board with copies of this.\nAura: Your other Felinors have +{aura}/+{aura}."
+      }
+    }
+  }
+}

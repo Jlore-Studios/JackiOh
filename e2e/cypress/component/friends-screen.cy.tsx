@@ -11,23 +11,8 @@ import { BREAKPOINT_PX } from "../../../apps/web/src/breakpoints.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../../../apps/web/src/net/session.ts";
 import { MENU_SIZES, type MenuSize } from "../../support/config.ts";
 import { HIT_MIN_PX, emulateTouch, hitAreaProblems } from "../../support/hitAreas.ts";
-import {
-  FRIENDS_ALL,
-  FRIENDS_BUTTON,
-  FRIENDS_PANEL,
-  TOGETHER_CHALLENGE,
-  TOGETHER_FRIEND_ROW,
-  TOGETHER_GROUP,
-  TOGETHER_JOIN,
-  TOGETHER_MENU,
-  TOGETHER_OFFLINE_TOGGLE,
-  TOGETHER_ADD_INPUT,
-  TOGETHER_ROOT,
-  TOGETHER_SEARCH,
-  TOGETHER_WATCH,
-  togetherTabId,
-  ts,
-} from "../../support/testids.ts";
+import { togetherTabId, ts } from "../../support/testids.ts";
+import { friendsTestid, togetherTestid } from "../../../apps/web/src/together/testids.ts";
 
 /** Subpixel rounding. */
 const EDGE_SLACK_PX = 1;
@@ -124,9 +109,9 @@ function openDrawer(): void {
       <FriendsButton placement="rail" />
     </>,
   );
-  cy.get(ts(FRIENDS_BUTTON), { timeout: 10_000 }).click();
-  cy.get(ts(FRIENDS_PANEL)).should("be.visible");
-  cy.get(ts(TOGETHER_FRIEND_ROW), { timeout: 10_000 }).should("exist");
+  cy.get(ts(friendsTestid.button), { timeout: 10_000 }).click();
+  cy.get(ts(friendsTestid.panel)).should("be.visible");
+  cy.get(ts(togetherTestid.friendRow), { timeout: 10_000 }).should("exist");
 }
 
 /** The Friends page, its rows drawn. */
@@ -136,7 +121,7 @@ function openPage(): void {
     win.history.replaceState(null, "", "/together");
   });
   cy.mount(<TogetherRoute />);
-  cy.get(ts(TOGETHER_FRIEND_ROW), { timeout: 10_000 }).should("exist");
+  cy.get(ts(togetherTestid.friendRow), { timeout: 10_000 }).should("exist");
 }
 
 /** What the hit-area measure finds wrong with the controls #3955 names. */
@@ -154,7 +139,7 @@ function expectThemedFields(): void {
     const ground = win.getComputedStyle(probe).backgroundColor;
     const radius = win.getComputedStyle(probe).borderTopLeftRadius;
     probe.remove();
-    for (const id of [TOGETHER_ADD_INPUT, TOGETHER_SEARCH]) {
+    for (const id of [togetherTestid.addInput, togetherTestid.search]) {
       const field = win.document.querySelector<HTMLElement>(ts(id));
       expect(field, `${id} is drawn`).not.to.eq(null);
       if (field === null) continue;
@@ -172,7 +157,7 @@ function expectThemedFields(): void {
 
 /** The Offline toggle is drawn with its heading's own face, and none of a button's padding, ground or line. */
 function expectPlainHeading(): void {
-  cy.get(ts(TOGETHER_OFFLINE_TOGGLE)).then(($toggle) => {
+  cy.get(ts(togetherTestid.offlineToggle)).then(($toggle) => {
     const toggle = $toggle[0];
     const heading = toggle?.parentElement;
     expect(toggle, "the toggle").not.to.eq(undefined);
@@ -191,17 +176,17 @@ function expectPlainHeading(): void {
 
 /** The groups are in order, and each friend's row has one primary button and a ⋯ menu. */
 function expectGroupsAndButtons(): void {
-  cy.get(ts(TOGETHER_GROUP)).should("have.length", 4);
-  cy.get(ts(TOGETHER_GROUP)).then((groups) => {
+  cy.get(ts(togetherTestid.group)).should("have.length", 4);
+  cy.get(ts(togetherTestid.group)).then((groups) => {
     expect([...groups].map((group) => group.getAttribute("data-group"))).to.deep.eq(["requests", "inGame", "online", "offline"]);
   });
   // Offline is collapsed until its heading is pressed.
-  cy.get(ts(TOGETHER_OFFLINE_TOGGLE)).should("have.attr", "aria-expanded", "false").click();
-  cy.get(ts(TOGETHER_FRIEND_ROW)).should("have.length", FRIENDS.length);
-  cy.get(ts(TOGETHER_FRIEND_ROW)).each((row) => {
-    const primaries = row.find(`${ts(TOGETHER_WATCH)}, ${ts(TOGETHER_JOIN)}, ${ts(TOGETHER_CHALLENGE)}`);
+  cy.get(ts(togetherTestid.offlineToggle)).should("have.attr", "aria-expanded", "false").click();
+  cy.get(ts(togetherTestid.friendRow)).should("have.length", FRIENDS.length);
+  cy.get(ts(togetherTestid.friendRow)).each((row) => {
+    const primaries = row.find(`${ts(togetherTestid.watch)}, ${ts(togetherTestid.join)}, ${ts(togetherTestid.challenge)}`);
     expect(primaries.length, `one primary button on ${row.attr("data-profile-id") ?? "a row"}`).to.eq(1);
-    expect(row.find(ts(TOGETHER_MENU)).length, "a ⋯ menu on the row").to.eq(1);
+    expect(row.find(ts(togetherTestid.menu)).length, "a ⋯ menu on the row").to.eq(1);
   });
 }
 
@@ -227,9 +212,9 @@ describe("R3732002 the friends drawer and the Friends page at every menu size", 
           <FriendsButton placement="rail" />
         </>,
       );
-      cy.get(ts(FRIENDS_BUTTON), { timeout: 10_000 }).click();
-      cy.get(ts(FRIENDS_PANEL)).should("be.visible");
-      cy.get(ts(TOGETHER_FRIEND_ROW), { timeout: 10_000 }).should("exist");
+      cy.get(ts(friendsTestid.button), { timeout: 10_000 }).click();
+      cy.get(ts(friendsTestid.panel)).should("be.visible");
+      cy.get(ts(togetherTestid.friendRow), { timeout: 10_000 }).should("exist");
       expectGroupsAndButtons();
       expectFits(size);
       cy.screenshot(`3732-friends-drawer-${size.label}`, { capture: "viewport" });
@@ -242,11 +227,11 @@ describe("R3732002 the friends drawer and the Friends page at every menu size", 
         win.history.replaceState(null, "", "/together");
       });
       cy.mount(<TogetherRoute />);
-      cy.get(ts(TOGETHER_ROOT)).should("have.attr", "data-section", "friends");
+      cy.get(ts(togetherTestid.root)).should("have.attr", "data-section", "friends");
       for (const section of ["friends", "requests", "recent", "blocked", "shared"]) {
         cy.get(ts(togetherTabId(section))).should("exist");
       }
-      cy.get(ts(TOGETHER_FRIEND_ROW), { timeout: 10_000 }).should("exist");
+      cy.get(ts(togetherTestid.friendRow), { timeout: 10_000 }).should("exist");
       expectGroupsAndButtons();
       expectFits(size);
       cy.screenshot(`3732-friends-${size.label}`, { capture: "viewport" });
@@ -302,9 +287,9 @@ describe("R3732002 the friends drawer and the Friends page at every menu size", 
     it(`R3732002 See all friends' tap area stays off the Offline toggle at ${size.label}`, () => {
       atSize(size);
       openDrawer();
-      cy.get(ts(TOGETHER_OFFLINE_TOGGLE)).should("have.attr", "aria-expanded", "false");
-      cy.get(ts(FRIENDS_ALL)).then(($all) => {
-        cy.get(ts(TOGETHER_OFFLINE_TOGGLE)).then(($toggle) => {
+      cy.get(ts(togetherTestid.offlineToggle)).should("have.attr", "aria-expanded", "false");
+      cy.get(ts(friendsTestid.all)).then(($all) => {
+        cy.get(ts(togetherTestid.offlineToggle)).then(($toggle) => {
           const all = $all[0]?.getBoundingClientRect();
           const toggle = $toggle[0]?.getBoundingClientRect();
           expect(all, "the link is drawn").not.to.eq(undefined);

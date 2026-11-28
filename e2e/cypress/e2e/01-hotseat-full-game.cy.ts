@@ -4,17 +4,10 @@
 // overridable for §4's 20-seed run.
 
 import { seedFor, timeouts } from "../../support/config.ts";
-import {
-  LEGAL,
-  RESULT_OVERLAY,
-  cardId,
-  handCardId,
-  heroId,
-  ts,
-  zoneId,
-} from "../../support/testids.ts";
+import { LEGAL, cardId, handCardId, heroId, ts, zoneId } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId, Row } from "../../support/types.ts";
 import { ensureSeat } from "../../support/hotseat.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** BUILD M8's seed; `--expose seed=…` overrides it for the nightly sweep. */
 const SEED = seedFor("01-hotseat");
@@ -136,14 +129,14 @@ describe("BUILD M8 01 — a seeded hotseat game played to completion through the
     takeTurns(MAX_TURNS);
 
     // §10.8: `viewFor` makes Win / Loss viewer-relative.
-    cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.game }).should("be.visible");
+    cy.get(ts(gameTestid.result), { timeout: timeouts.game }).should("be.visible");
     cy.jackioh().then((handle) => {
       const result = handle.state.result;
       expect(result, "the engine ended the game (§2.5)").to.not.eq(null);
       if (result === null) return;
       const shown = result.winner === "draw" ? "Draw" : result.winner === handle.seat ? "Win" : "Loss";
-      cy.get(ts(RESULT_OVERLAY)).should("contain.text", shown);
-      cy.get(ts(RESULT_OVERLAY)).should("have.attr", "data-reason", result.reason);
+      cy.get(ts(gameTestid.result)).should("contain.text", shown);
+      cy.get(ts(gameTestid.result)).should("have.attr", "data-reason", result.reason);
     });
 
     cy.replayCheck("01-hotseat-full-game");

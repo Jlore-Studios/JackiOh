@@ -558,6 +558,8 @@ mod r388_get_api_catalog_version_serves_the_catalog_as_each_patch_left_it_b4_2 {
         let versions = catalog_api::load_patch_versions().await;
         assert!(!versions.is_empty(), "patches.json has versions");
         let patches_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../cards/patches");
+        // R5268000: each snapshot is the fold of its version's delta and every one before it.
+        let mut folded = serde_json::Map::new();
         for version in &versions {
             let response = get(&app, &format!("/api/catalog/{version}"), None).await;
             assert_eq!(response.status, 200, "{version}: expected 200");
@@ -567,11 +569,19 @@ mod r388_get_api_catalog_version_serves_the_catalog_as_each_patch_left_it_b4_2 {
                 json!(version),
                 "{version}: version field matches"
             );
-            let path = patches_dir.join(format!("{version}.json"));
+            let path = patches_dir.join("deltas").join(format!("{version}.json"));
             let raw = std::fs::read_to_string(&path)
                 .unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
-            let snapshot: CardDefs = serde_json::from_str(&raw)
+            let delta: serde_json::Value = serde_json::from_str(&raw)
                 .unwrap_or_else(|error| panic!("parse {}: {error}", path.display()));
+            for id in delta["unset"].as_array().into_iter().flatten() {
+                folded.remove(id.as_str().expect("an id"));
+            }
+            for (id, entry) in delta["set"].as_object().expect("a set") {
+                folded.insert(id.clone(), entry.clone());
+            }
+            let snapshot: CardDefs = serde_json::from_value(serde_json::Value::Object(folded.clone()))
+                .unwrap_or_else(|error| panic!("{version}'s snapshot: {error}"));
             let snapshot_value = serde_json::to_value(&snapshot).expect("CardDefs serializes");
             assert_eq!(
                 body["defs"], snapshot_value,

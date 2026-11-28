@@ -1,0 +1,44 @@
+{
+  "set": {
+    "core-097": {
+      "id": "core-097",
+      "index": "97",
+      "name": "Zephyrs",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 0,
+      "loc": 27,
+      "base": {
+        "keywords": [],
+        "text": "Discover the \"perfect\" card. Exile this."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Discover the \"perfect\" Radiant card. Exile this."
+      }
+    },
+    "classicplus-027": {
+      "id": "classicplus-027",
+      "index": "27",
+      "name": "Zephrys Zealotism",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 4,
+      "loc": 9,
+      "base": {
+        "keywords": [],
+        "text": "Replace your hand with the perfect hand. Refresh your mana."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Replace your hand with the perfect Radiant hand. Refresh your mana."
+      }
+    }
+  }
+}

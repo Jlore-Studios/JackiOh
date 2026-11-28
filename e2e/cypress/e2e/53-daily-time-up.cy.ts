@@ -18,20 +18,9 @@ import {
   setDailyClock,
   sweepDaily,
 } from "../../support/daily.ts";
-import {
-  DAILY_CLOCK,
-  DAILY_FRIEND,
-  DAILY_GAME_ROW,
-  DAILY_NEW_DIALOG,
-  DAILY_NEW_GAME,
-  DAILY_SECTION,
-  DAILY_SEND,
-  DAILY_TIME_LEFT,
-  RESULT_OVERLAY,
-  dailyKindId,
-  dailyModeId,
-  ts,
-} from "../../support/testids.ts";
+import { dailyKindId, dailyModeId, ts } from "../../support/testids.ts";
+import { dailyTestid } from "../../../apps/web/src/daily/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** A move made over HTTP reaches the screen within a social read and a read of the list or board. */
 const MOVE_TIMEOUT_MS = SOCIAL_POLL_MS + timeouts.view;
@@ -49,7 +38,7 @@ const MODE = "random";
 const LOST_ON_TIME = "Lost on time";
 
 function gameRow(matchId: string): string {
-  return `${ts(DAILY_GAME_ROW)}[data-match-id="${matchId}"]`;
+  return `${ts(dailyTestid.gameRow)}[data-match-id="${matchId}"]`;
 }
 
 describe("53 Daily games — a move whose time runs out", () => {
@@ -87,16 +76,16 @@ describe("53 Daily games — a move whose time runs out", () => {
 
     // The New daily game dialog: Challenge a friend, All random, the first time per move.
     cy.visitAs(one, routes.daily());
-    cy.get(ts(DAILY_NEW_GAME), { timeout: timeouts.view }).click();
-    cy.get(ts(DAILY_NEW_DIALOG), { timeout: timeouts.view }).should("be.visible");
+    cy.get(ts(dailyTestid.newGame), { timeout: timeouts.view }).click();
+    cy.get(ts(dailyTestid.dialog), { timeout: timeouts.view }).should("be.visible");
     cy.get(ts(dailyKindId("friend"))).click();
     cy.then(() => {
-      cy.get(ts(DAILY_FRIEND), { timeout: FRIENDS_TIMEOUT_MS }).select(twoId);
+      cy.get(ts(dailyTestid.friend), { timeout: FRIENDS_TIMEOUT_MS }).select(twoId);
     });
     cy.get(ts(dailyModeId(MODE))).click();
-    cy.get(ts(DAILY_SEND), { timeout: timeouts.view }).should("not.be.disabled").click();
-    cy.get(ts(DAILY_NEW_DIALOG), { timeout: timeouts.view }).should("not.exist");
-    cy.get(`${ts(DAILY_SECTION)}[data-section="outgoing"]`, { timeout: timeouts.view }).should("exist");
+    cy.get(ts(dailyTestid.send), { timeout: timeouts.view }).should("not.be.disabled").click();
+    cy.get(ts(dailyTestid.dialog), { timeout: timeouts.view }).should("not.exist");
+    cy.get(`${ts(dailyTestid.section)}[data-section="outgoing"]`, { timeout: timeouts.view }).should("exist");
 
     // Seat two accepts; both keep their hands; seat two ends its turn if it went first.
     cy.then(() => {
@@ -127,7 +116,7 @@ describe("53 Daily games — a move whose time runs out", () => {
       dailyGameOf(one, matchId).its("hasMove").should("eq", true);
       cy.visitAs(one, routes.dailyGame(matchId));
     });
-    cy.get(ts(DAILY_CLOCK), { timeout: MOVE_TIMEOUT_MS }).should("have.attr", "data-holder", "you");
+    cy.get(ts(dailyTestid.clock), { timeout: MOVE_TIMEOUT_MS }).should("have.attr", "data-holder", "you");
 
     // The clock passes the hold's deadline (its whole time per move after it began), and the sweep settles it.
     cy.then(() => {
@@ -143,11 +132,11 @@ describe("53 Daily games — a move whose time runs out", () => {
     cy.then(() => {
       cy.visitAs(one, routes.dailyGame(matchId));
     });
-    cy.get(ts(RESULT_OVERLAY), { timeout: timeouts.view })
+    cy.get(ts(gameTestid.result), { timeout: timeouts.view })
       .should("have.attr", "data-outcome", "loss")
       .and("have.attr", "data-reason", "disconnect")
       .and("contain.text", LOST_ON_TIME);
-    cy.get(ts(DAILY_CLOCK)).should("not.exist");
+    cy.get(ts(dailyTestid.clock)).should("not.exist");
     cy.then(() => {
       dailyGameOf(one, matchId).then((game) => {
         expect(game.over, "the game is over").to.eq(true);
@@ -159,8 +148,8 @@ describe("53 Daily games — a move whose time runs out", () => {
     // Seat one's list has it among the finished, lost on time.
     cy.then(() => {
       cy.visitAs(one, routes.daily());
-      cy.get(`${ts(DAILY_SECTION)}[data-section="finished"] ${gameRow(matchId)}`, { timeout: timeouts.view })
-        .find(ts(DAILY_TIME_LEFT))
+      cy.get(`${ts(dailyTestid.section)}[data-section="finished"] ${gameRow(matchId)}`, { timeout: timeouts.view })
+        .find(ts(dailyTestid.timeLeft))
         .should("contain.text", LOST_ON_TIME);
       clearDaily(one);
       clearDaily(two);

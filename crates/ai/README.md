@@ -281,6 +281,12 @@ A passed line's Float counts toward the seat's own "Float reduces cost" cards (R
 `AI_EVAL.float_discount` for each crystal that went toward one still above the seat's crystals (its
 `mana.max`, never the handicap's), in `passed_score` and `replied_score` alike; `GREEDY_EVAL` keeps 0.
 An unconditional price hike on the coming turn (IA #123 Cost Injection, IA #144 Total Compromise, IA #225 Root Kit, C+ T-AI-7 Alignment Tax) counts in `coming_refreshes` as harm against that player's next-turn crystals (`coming_cost_hike`, R5122000): each crystal of the hike is priced at `next_turn_mana` times `AI_TAXED_PLAYS` (1), weighted by `cost_hike` in `AI_EVAL` (1.0), and preserved across reply scoring in `replied_score`; `GREEDY_EVAL` keeps 0.
+A Nerf on a card in the enemy's hand counts against that player in `material` at `enemy_hand_nerf` (0.5) a step
+(`hand_nerfs`, R5246000): a crystal its `costMod` made it dearer, a `TUNE_STAT_TOTAL` of stats below its face, a
+keyword lost or a harmful one gained, a step a number moved the worse way, never a secret Nerf (R1845000) nor what
+an Upgrade wrote. Each live `RandomTargetsNextSpell` on a side (IA #130 Prompt Injection) counts against it at
+`random_targets` (1.0) (`coming_random_targets`), beside `coming_refreshes` rather than in it, so a reply that
+spends one keeps no credit. `GREEDY_EVAL` keeps both at 0.
 A card beneath one of the seat's own Stack piles counts `AI_EVAL.dormant_share`, a half, of its
 `unit_worth` (`dormant_worth`, R3695001), so the Drone Battleship counts its two lower layers; the
 enemy's count `dormant_card` each, and `GREEDY_EVAL` keeps 0.

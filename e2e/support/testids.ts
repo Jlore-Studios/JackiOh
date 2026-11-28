@@ -1,6 +1,10 @@
 // E2E selector contract: BUILD M5-T1 to M5-T4 fix base testids and attributes, M8 exercises them; assumptions in e2e/README.md.
+// It holds only what the web exports nowhere a spec can import: a test id that one of `apps/web/src`'s
+// `testids.ts` files or `game/contract.ts`'s `testid` exports is imported from there (#5269), and
+// apps/web/src/net/e2e-support.test.ts fails on a copy here, and on an export no file reads.
 
 import type { EventType, Lane, PromptKind, Row, Side } from "./types.ts";
+import { CARD_POOL } from "../../apps/web/src/game/deckbuilder/testids.ts";
 
 export function ts(testid: string): string {
   return `[data-testid="${testid}"]`;
@@ -22,10 +26,6 @@ export function heroId(side: Side): string {
   return `hero-${side}`;
 }
 
-export const END_TURN = "end-turn";
-export const OFFER_DRAW = "offer-draw";
-export const POWER = "power";
-
 export const PROMPT = "[data-prompt-kind]";
 
 export function promptOf(kind: PromptKind): string {
@@ -41,8 +41,6 @@ export function animating(event: EventType): string {
   return `[data-animating="${event}"]`;
 }
 
-export const LOCKED = '[data-locked="true"]';
-
 // A4–A5 selectors beyond the BUILD contract are listed in e2e/README.md.
 
 /** A4: one option of an open prompt, keyed by `PendingOption.key` (SPEC §10.8). */
@@ -53,12 +51,6 @@ export function promptOptionId(key: string): string {
 export const PROMPT_SUBMIT = "prompt-submit";
 
 export const PROMPT_X_INPUT = "prompt-x";
-
-export const RESULT_OVERLAY = "result-overlay";
-
-export const BANNER = "turn-banner";
-
-export const SEAT_SWITCH = "seat-switch";
 
 export function graveyardCountId(side: Side): string {
   return `graveyard-count-${side}`;
@@ -84,7 +76,6 @@ export const MANA_CRYSTAL = ".mana-crystal";
 
 export const DAMAGE_POP = ".damage-pop";
 export const HEAL_POP = ".heal-pop";
-export const LOSS_POP = ".loss-pop";
 export const RADIANT = ".radiant";
 /** #991: a field card the hovered or selected hand card's preview counts (apps/web/src/game/glow.ts `countedAttr`). */
 export const COUNTED = '[data-counted="true"]';
@@ -124,8 +115,6 @@ export function positionIs(position: "ATK" | "DEF"): string {
   return `[data-position="${position}"]`;
 }
 
-export const RADIANT_ATTR = '[data-radiant="true"]';
-
 // A5: regions and animation targets mirror `apps/web/src/game/animations.ts` and `contract.ts`.
 
 /** §10.8: an opponent hand has no card ids. */
@@ -135,14 +124,6 @@ export function handRegionId(side: Side): string {
 
 export function libraryId(side: Side): string {
   return `library-${side}`;
-}
-
-export function graveyardId(side: Side): string {
-  return `graveyard-${side}`;
-}
-
-export function exileId(side: Side): string {
-  return `exile-${side}`;
 }
 
 /** R169: keep the empty modifier container so a leaving badge can animate. */
@@ -156,15 +137,6 @@ export const MODIFIER_BADGE = ".modifier-badge";
 /** R169: public modifier badges use `ModifierView.id`, never a face-down source id. */
 export function modifierBadgeOf(modifierId: string): string {
   return `[data-modifier-id="${modifierId}"]`;
-}
-
-/** R169: the live-modifier chip (`data-count`) at every table, and the full list it opens (game/ModifierList.tsx). */
-export const MODIFIER_LIST = "modifier-list";
-export const MODIFIER_LIST_PANEL = "modifier-list-panel";
-
-/** §10.8: a face-down `BackrowView` has no `instanceId`. */
-export function backrowRegionId(side: Side): string {
-  return `backrow-${side}`;
 }
 
 // A18: overflow notices (§2.4; R315, R316, R317, R318) mirror `Board.tsx` and `Hand.tsx`.
@@ -191,31 +163,11 @@ export function burnCardId(side: Side): string {
 }
 
 export const GAME = "game";
-export const BOARD = "board";
-export const CONCEDE = "concede";
-export const LOG = "log";
 /** §9.3: where a refused action's reason is shown, relayed and never restated. */
 export const ACTION_ERROR = "action-error";
 export const DRAW_TOAST = "draw-toast";
-export const PROMPT_MODAL = "prompt-modal";
-export const PROMPT_SCRIM = "prompt-scrim";
 
 // A16: mulligan, concede and draw-offer selectors (§2.1, §2.5; R36, R265, R266, R269) mirror `apps/web/src/game/contract.ts`.
-
-export const CONCEDE_DIALOG = "concede-dialog";
-export const CONCEDE_CONFIRM = "concede-confirm";
-export const CONCEDE_CANCEL = "concede-cancel";
-
-export const DRAW_OFFER_STATUS = "draw-offer-status";
-export const DRAW_OFFER = "draw-offer";
-export const DRAW_ACCEPT = "draw-accept";
-export const DRAW_DECLINE = "draw-decline";
-export const DRAW_OUTCOME = "draw-outcome";
-
-export const MULLIGAN_OPPONENT_STATUS = "mulligan-opponent-status";
-export const MULLIGAN_OPPONENT_READY = "mulligan-opponent-ready";
-/** `data-returning` waits after the viewer's answer; it has no `data-prompt-kind`. */
-export const MULLIGAN_WAITING = "mulligan-waiting";
 
 export function mulliganWaitingCardId(instanceId: string): string {
   return `mulligan-waiting-card-${instanceId}`;
@@ -224,232 +176,63 @@ export function mulliganWaitingCardId(instanceId: string): string {
 export const CLOCK_YOU = "clock-you";
 export const CLOCK_OPPONENT = "clock-opponent";
 export const PROMPT_CLOCK = "prompt-clock";
-export const TURN_CLOCK = "turn-clock";
 /** §9.5: the opponent's disconnect grace while its socket is away (apps/web Clock.tsx `GraceLine`). */
 export const GRACE_OPPONENT = "grace-opponent";
 
 // A11: workshop selectors mirror `apps/web/src/game/deckbuilder/testids.ts` (§9.4; R250, R251, R253, R255, R256).
 
-export const WORKSHOP = "workshop";
-/** R256: save status is always present. */
-export const SYNC_STATUS = "sync-status";
-export const WORKSHOP_BACK = "workshop-back";
-export const WORKSHOP_EMPTY = "workshop-empty";
-
-export const DECK_LIST = "deck-list";
-export const DECK_CAP = "deck-cap";
-
 export function deckRowId(deckId: string): string {
   return `deck-row-${deckId}`;
 }
-
-/** R250: deck creation is disabled at its cap. */
-export const DECK_NEW = "deck-new";
-export const DECK_CAP_REASON = "deck-cap-reason";
-
-export const TRIO_LIST = "trio-list";
-export const TRIO_CAP = "trio-cap";
-export const TRIO_NEW = "trio-new";
-export const TRIO_CAP_REASON = "trio-cap-reason";
 
 /** R253: trio readiness. */
 export function trioRowId(trioId: string): string {
   return `trio-row-${trioId}`;
 }
 
-/** R251: pool entries carry legality, membership and comparison state. */
-export const CARD_POOL = "card-pool";
-
 export function poolCardId(catalogCardId: string): string {
   return `${CARD_POOL}-${catalogCardId}`;
 }
-
-export const DECK_EDITOR = "deck-editor";
-export const DECK_NAME_INPUT = "deck-name-input";
-export const DECK_COUNT = "deck-count";
-export const DECK_DROP = "deck-drop";
-export const DECK_CARDS = "deck-cards";
 
 /** Compared-deck conflicts are shown, never removed. */
 export function deckCardId(catalogCardId: string): string {
   return `deck-card-${catalogCardId}`;
 }
 
-export const DECK_CURVE = "deck-curve";
-export const DECK_FOLD = "deck-fold";
-export const DECK_STATUS = "deck-status";
-/** R256: save errors are verbatim. */
-export const DECK_SAVE_ERROR = "deck-save-error";
-
-export const DECK_COPY_CODE = "deck-copy-code";
-export const DECK_CODE_OUTPUT = "deck-code-output";
-
-/** R2119000: deletes at once; the undo toast (`apps/web/src/undo/UndoToast.tsx`) offers Undo. */
-export const DECK_DELETE = "deck-delete";
-export const UNDO_TOAST = "undo-toast";
-export const UNDO_TOAST_UNDO = "undo-toast-undo";
-
-/** R251: comparison accepts a trio, deck or none. */
-export const DECK_COMPARE_SELECT = "deck-compare-select";
-
 export function deckCompareChipId(deckId: string): string {
   return `deck-compare-${deckId}`;
 }
-
-export const DECK_CONFLICTS = "deck-conflicts";
-
-export const DECK_VERDICT = "deck-verdict";
-
-/** R1297000: opens the deck's cosmetics picks. */
-export const DECK_COSMETICS_BUTTON = "deck-cosmetics-button";
-
-/** L1–L6 verdict sentences. */
-export const LOADOUT_ERRORS = "loadout-errors";
 
 /** Validator failures share a testid, so their rule, source, deck and card stay in attributes. */
 export function loadoutErrorId(rule: string): string {
   return `loadout-error-${rule}`;
 }
 
-export const DECKBUILDER_LOADING = "deckbuilder-loading";
-export const DECKBUILDER_ERROR = "deckbuilder-error";
-
-/** Issue #3734: the ghost that follows a pointer while a pool card is dragged to the deck. */
-export const DECK_DRAG_GHOST = "deck-drag-ghost";
-
-export const TRIO_EDITOR = "trio-editor";
-export const TRIO_NAME_INPUT = "trio-name-input";
-
-export function trioSlotId(slot: number): string {
-  return `trio-slot-${String(slot)}`;
-}
-
 export function trioOpenDeckId(slot: number): string {
   return `trio-open-${String(slot)}`;
 }
-
-export const TRIO_VERDICT = "trio-verdict";
-export const TRIO_COMPARE = "trio-compare";
 
 /** Per-slot card conflict state. */
 export function trioCardId(slot: number, catalogCardId: string): string {
   return `trio-card-${String(slot)}-${catalogCardId}`;
 }
 
-export const TRIO_DELETE = "trio-delete";
-export const TRIO_COPY_CODE = "trio-copy-code";
-export const TRIO_CODE_OUTPUT = "trio-code-output";
-
-export const DECK_IMPORT_OPEN = "deck-import-open";
-export const DECK_IMPORT = "deck-import";
-export const DECK_IMPORT_INPUT = "deck-import-input";
-export const DECK_IMPORT_PREVIEW = "deck-import-preview";
-export const DECK_IMPORT_SUBMIT = "deck-import-submit";
-export const DECK_IMPORT_CAP_REASON = "deck-import-cap-reason";
-export const DECK_IMPORT_CANCEL = "deck-import-cancel";
-
-/** R339, R340, R341: trio import. */
-export const TRIO_IMPORT_OPEN = "trio-import-open";
-export const TRIO_IMPORT = "trio-import";
-export const TRIO_IMPORT_INPUT = "trio-import-input";
-export const TRIO_IMPORT_PREVIEW = "trio-import-preview";
 export function trioImportSlotId(slot: number): string {
   return `trio-import-slot-${String(slot)}`;
 }
-export const TRIO_IMPORT_SHARED = "trio-import-shared";
-export const TRIO_IMPORT_SUBMIT = "trio-import-submit";
-export const TRIO_IMPORT_CAP_REASON = "trio-import-cap-reason";
-export const TRIO_IMPORT_CANCEL = "trio-import-cancel";
-export const TRIO_IMPORT_ERROR = "trio-import-error";
-
-// A13: invite and code-field selectors mirror `apps/web/src/auth/testids.ts` (BUILD M6-T1; §9.4).
-
-/** §9.4; R191 rejects R104-excluded characters without dropping the value. */
-export const INVITE_CODE_INPUT = "invite-code-input";
-/** Submit only a complete, unpaused, non-rate-limited code. */
-export const INVITE_SUBMIT = "invite-submit";
-/** The server's refusal, verbatim: §9.4's identical error is never paraphrased here. */
-export const INVITE_ERROR = "invite-error";
-export const INVITE_PAUSED = "invite-paused";
-export const INVITE_NOT_NEEDED = "invite-not-needed";
-export const INVITE_ATTEMPTS = "invite-attempts";
-/** R192: rate-limit wait disables submit. */
-export const INVITE_RATE_LIMITED = "invite-rate-limited";
-export const INVITE_ACCOUNT_EMAIL = "invite-account-email";
-export const INVITE_SIGN_OUT = "invite-sign-out";
-export const INVITE_HELP = "invite-help";
-
-export const CODE_FIELD = "code-field";
-export const CODE_FIELD_PROGRESS = "code-field-progress";
-export const CODE_FIELD_HINT = "code-field-hint";
-
-export function codeFieldSegmentId(index: number): string {
-  return `code-field-segment-${String(index)}`;
-}
 
 // Practice selectors mirror `apps/web/src/practice/testids.ts` (SPEC §9.9, R187; spec 13).
-
-export const PRACTICE_SETUP = "practice-setup";
 
 export function practiceDifficultyId(d: "easy" | "medium" | "hard"): string {
   return `practice-difficulty-${d}`;
 }
 
-export const PRACTICE_DECK = "practice-deck";
-export const PRACTICE_DECK_HINT = "practice-deck-hint";
-export const PRACTICE_DECK_PREVIEW = "practice-deck-preview";
-/** R1373: Random's “More cards from the newest set” option. */
-export const PRACTICE_LEAN_NEWEST = "practice-lean-newest";
-export const PRACTICE_DECK_CURVE = "practice-deck-curve";
-export function practiceDeckCardId(defId: string): string {
-  return `practice-deck-card-${defId}`;
-}
-export const PRACTICE_START = "practice-start";
-export const PRACTICE_LOADING = "practice-loading";
-export const PRACTICE_ERROR = "practice-error";
-export const PRACTICE_HUD = "practice-hud";
-export const PRACTICE_THINKING = "practice-thinking";
-export const PRACTICE_NEW_GAME = "practice-new-game";
-export const PRACTICE_MENU = "practice-menu";
-export const PRACTICE_LEAVE = "practice-leave";
-/** R765: leave without saving. */
-export const PRACTICE_LEAVE_CONFIRM = "practice-leave-confirm";
-/** R765: save and leave for later resume. */
-export const PRACTICE_LEAVE_SAVE = "practice-leave-save";
-export const PRACTICE_LEAVE_STAY = "practice-leave-stay";
-export const PRACTICE_RESUME_LOST = "practice-resume-lost";
 export const PRACTICE_RESUME_BANNER = "practice-resume-banner";
 export const PRACTICE_RESUME = "practice-resume";
 export const LIVE_GAME_BANNER = "live-game-banner";
 export const LIVE_GAME_REJOIN = "live-game-rejoin";
-export const QUEUE_FOUND = "queue-found";
-export const PRACTICE_RESULT = "practice-result";
-export const PRACTICE_PLAY_AGAIN = "practice-play-again";
-export const PRACTICE_CHANGE_SETUP = "practice-change-setup";
-export const PRACTICE_VIEW_BOARD = "practice-view-board";
-/** #4742: in the result dialog, out to the Play hub's Solo group. */
-export const PRACTICE_MAIN_MENU = "practice-main-menu";
-/** R768000: a kept game's replay, and its last turn's GIF, from the result dialog. */
-export const PRACTICE_WATCH_REPLAY = "practice-watch-replay";
-export const PRACTICE_SHARE_LAST_TURN = "practice-share-last-turn";
-export const PRACTICE_OUTCOME = "practice-outcome";
-/** R923000: the sandbox checkbox on the setup, and a sandbox game's dev tools. */
-export const PRACTICE_SANDBOX = "practice-sandbox";
-export const PRACTICE_SANDBOX_PANEL = "practice-sandbox-panel";
-export const PRACTICE_SANDBOX_TOGGLE = "practice-sandbox-toggle";
-export const PRACTICE_SANDBOX_HOLD = "practice-sandbox-hold";
-export const PRACTICE_SANDBOX_SEARCH = "practice-sandbox-search";
-export const PRACTICE_SANDBOX_RADIANT = "practice-sandbox-radiant";
-export function practiceSandboxResultId(defId: string): string {
-  return `practice-sandbox-result-${defId}`;
-}
-export const PRACTICE_SANDBOX_SPAWN_SEAT = "practice-sandbox-spawn-seat";
-export const PRACTICE_SANDBOX_SPAWN_WHERE = "practice-sandbox-spawn-where";
-export const PRACTICE_SANDBOX_SPAWN = "practice-sandbox-spawn";
 
 // Tutorial selectors mirror `apps/web/src/tutorial/testids.ts` (SPEC §9.10); lessons reuse the practice contract.
-
-export const TUTORIAL_PATH = "tutorial-path";
 
 export function tutorialLessonId(lessonId: string): string {
   return `tutorial-lesson-${lessonId}`;
@@ -459,132 +242,29 @@ export function tutorialStartId(lessonId: string): string {
   return `tutorial-start-${lessonId}`;
 }
 
-export const TUTORIAL_CONTINUE = "tutorial-continue";
-export const TUTORIAL_PATH_TOGGLE = "tutorial-path-toggle";
-/** R322: tutorial visibility controls. */
-export const TUTORIAL_HIDE = "tutorial-hide";
-export const TUTORIAL_PATH_HIDDEN = "tutorial-path-hidden";
-export const TUTORIAL_SHOW = "tutorial-show";
-export const TUTORIAL_HUD = "tutorial-hud";
-export const TUTORIAL_STEP = "tutorial-step";
-export const TUTORIAL_EXIT = "tutorial-exit";
-export const TUTORIAL_OUTCOME = "tutorial-outcome";
-export const COACH = "coach";
-export const COACH_ACK = "coach-ack";
-export const COACH_RING = "coach-ring";
-/** R2205000: a moment's Hint button. */
-export const COACH_HINT = "coach-hint";
-/** R2205002: the Field guide's buttons and its dialog. */
-export const FIELD_GUIDE_HUD = "field-guide-hud";
-export const FIELD_GUIDE_PATH = "field-guide-path";
-export const FIELD_GUIDE = "field-guide";
-export const FIELD_GUIDE_CLOSE = "field-guide-close";
 export function fieldGuideEntryId(entryId: string): string {
   return `field-guide-entry-${entryId}`;
 }
-export const TUTORIAL_RESULT = "tutorial-result";
-export const TUTORIAL_NEXT = "tutorial-next";
-export const TUTORIAL_RETRY = "tutorial-retry";
-export const TUTORIAL_BACK = "tutorial-back";
-export const TUTORIAL_PLAY_PRACTICE = "tutorial-play-practice";
-export const TUTORIAL_STILL_TO_FIND = "tutorial-still-to-find";
-export const TUTORIAL_WHATS_NEXT = "tutorial-whats-next";
-export const TUTORIAL_VIEW_BOARD = "tutorial-view-board";
-/** #4742: in the lesson's result dialog, out to the Play hub's Solo group. */
-export const TUTORIAL_MAIN_MENU = "tutorial-main-menu";
 
 // A14: selectors mirror `apps/web/src/cards/inspect/testids.ts` and deckbuilder `testids.ts` (SPEC §10.10; R277, R279, R280, R654, R660).
 
-export const INSPECT_HOVER = "inspect-hover";
-export const INSPECT_SHEET = "inspect-sheet";
-export const INSPECT_DETAIL = "inspect-detail";
-export const INSPECT_SCRIM = "inspect-scrim";
-export const INSPECT_CLOSE = "inspect-close";
-export const INSPECT_FACE = "inspect-face";
-export const INSPECT_FACE_BASE = "inspect-face-base";
-export const INSPECT_FACE_RADIANT = "inspect-face-radiant";
-export const INSPECT_GLOSSARY = "inspect-glossary";
-export const INSPECT_PRINTED = "inspect-printed";
-export const INSPECT_EXTENDED = "inspect-extended";
-export const INSPECT_REFS = "inspect-refs";
-export const INSPECT_FLAVOUR = "inspect-flavour";
-export const INSPECT_ARTIST = "inspect-artist";
-export const INSPECT_STATS = "inspect-stats";
 export const CARD_REF_TOOLTIP = "card-ref-tooltip";
 export const INSPECT_REFS_FACE = ".inspect-refs-face";
 export const RADIANT_MARK = ".cf-mark";
 export const CARD_REF = ".cf-ref";
 export const CARD_VALUE = ".cf-value";
 
-// R3572000: a Greek letter reads as its name, so the Automa-α to Automa-ζ and Automa-Ω chips each get an id.
-/** `value` without its leading and trailing hyphens (#4009: `/^-+|-+$/` scans super-linearly). */
-function stripEdgeHyphens(value: string): string {
-  let start = 0;
-  while (value.charAt(start) === "-") start++;
-  let end = value.length;
-  while (end > start && value.charAt(end - 1) === "-") end--;
-  return value.slice(start, end);
-}
-
-export function slugOf(value: string): string {
-  return stripEdgeHyphens(
-    value
-      .toLowerCase()
-      .replace(/α/g, "alpha")
-      .replace(/β/g, "beta")
-      .replace(/γ/g, "gamma")
-      .replace(/δ/g, "delta")
-      .replace(/ζ/g, "zeta")
-      .replace(/ω/g, "omega")
-      .replace(/[^a-z0-9]+/g, "-"),
-  );
-}
-
-export const DB_FILTERS = "db-filters";
-export const DB_SEARCH = "db-search";
-
 export function filterCostId(bucket: string): string {
   return `db-filter-cost-${bucket}`;
-}
-
-export function filterTypeId(type: string): string {
-  return `db-filter-type-${slugOf(type)}`;
-}
-
-export function filterTagId(tag: string): string {
-  return `db-filter-tag-${slugOf(tag)}`;
-}
-
-export function filterSetId(set: string): string {
-  return `db-filter-set-${slugOf(set.replace(/\+/g, " plus"))}`;
-}
-
-export function filterRarityId(rarity: string): string {
-  return `db-filter-rarity-${slugOf(rarity)}`;
-}
-
-export function filterKeywordId(kind: string): string {
-  return `db-filter-keyword-${slugOf(kind)}`;
 }
 
 export function filterOwnershipId(view: "all" | "owned" | "missing"): string {
   return `db-filter-ownership-${view}`;
 }
 
-export const DB_FILTER_OWNED = "db-filter-owned";
-export const DB_FILTER_CLEAR = "db-filter-clear";
-export const DB_FILTER_TOGGLE = "db-filter-toggle";
-export const DB_SORT = "db-sort";
-export const DB_SORT_DIR = "db-sort-dir";
-export const DB_RESULT_COUNT = "db-result-count";
-export const DB_EMPTY = "db-empty";
-
 export function addPoolId(catalogCardId: string): string {
   return `db-add-${catalogCardId}`;
 }
-
-export const DB_DETAIL_ADD = "db-detail-add";
-export const DB_SIDEBAR = "db-sidebar";
 
 // A15: selectors mirror showcase constants, `Log.tsx` and inspect `testids.ts` (R97, R227, R502).
 
@@ -598,36 +278,22 @@ export const SHOWCASE_LIVE = "showcase-live";
 export const LOG_CARD = "log-card";
 
 export const BROWSABLE = '[data-browsable="true"]';
-export const INSPECT_LIST_HOVER = "inspect-list-hover";
-export const INSPECT_LIST_SHEET = "inspect-list-sheet";
-export const INSPECT_LIST_COUNT = "inspect-list-count";
-export const INSPECT_LIST_CARD = "inspect-list-card";
-export const INSPECT_LIST_MORE = "inspect-list-more";
-export const INSPECT_LIST_DETAIL = "inspect-list-detail";
-export const INSPECT_LIST_BACK = "inspect-list-back";
 
 // A16: selectors mirror play, series, picker and banner modules (SPEC §9.5; R257, R264, R330, R331, R333, R336, R338).
 
 export type QueueMode = "bo1" | "bo3" | "random";
 
 export const PLAY_QUEUE = "play-queue";
-export const PLAY_LEAVE_QUEUE = "play-leave-queue";
 export const PLAY_STATUS = "play-status";
-export const PLAY_ERROR = "play-error";
 export const PLAY_DECK_SELECT = "play-deck-select";
 export const PLAY_TRIO_SELECT = "play-trio-select";
 export const PLAY_VERDICT = "play-choice-verdict";
-/** R1372: All random's “More cards from the newest set” option. */
-export const PLAY_LEAN_NEWEST = "play-lean-newest";
 /** R1578000: the Play screen and a visitor's sign-in panel. R3729000: the hub of four groups of cards, the panel an Online card opens, the Private lobby's dialog, and the links under the groups. */
 export const PLAY_SCREEN = "play-screen";
-export const PLAY_ONLINE = "play-online";
 export const PLAY_HUB = "play-hub";
 export const PLAY_QUEUE_PANEL = "play-queue-panel";
 export const PLAY_LOBBY = "play-lobby";
 export const PLAY_LOBBY_DIALOG = "play-lobby-dialog";
-export const PLAY_MORE = "play-more";
-export const PLAY_TOGETHER = "play-together";
 /** R3729000: a group's section, `online`, `daily`, `friends` or `solo`. */
 export function playGroupId(group: "online" | "daily" | "friends" | "solo"): string {
   return `play-group-${group}`;
@@ -640,16 +306,11 @@ export function playModeId(mode: QueueMode): string {
 }
 
 export const SERIES_SCREEN = "series-screen";
-export const SERIES_ERROR = "series-error";
 export const SERIES_SCORE = "series-score";
 /** R331: opponent-pick status never reveals the choice. */
 export const SERIES_OPPONENT_STATUS = "series-opponent-status";
-export const SERIES_PICK_CLOCK = "series-pick-clock";
 export const SERIES_PICKER = "series-picker";
 export const SERIES_LOCK_IN = "series-lock-in";
-export const SERIES_OPEN_MATCH = "series-open-match";
-export const SERIES_FORFEIT = "series-forfeit";
-export const SERIES_FORFEIT_CONFIRM = "series-forfeit-confirm";
 export const SERIES_RESULT = "series-result";
 
 export function seriesDeckId(slot: number): string {
@@ -684,10 +345,6 @@ export function unrevealedId(instanceId: string): string {
   return `unrevealed-${instanceId}`;
 }
 
-export const INSPECT_FACE_DOWN = "inspect-face-down";
-export const INSPECT_FACE_DOWN_COST = "inspect-face-down-cost";
-export const INSPECT_NOTE = "inspect-note";
-
 // A20: activate and pile-play selectors mirror `apps/web/src/game/contract.ts` (R384, R510; B5 E11).
 
 export function activateId(instanceId: string, ability?: string): string {
@@ -696,21 +353,6 @@ export function activateId(instanceId: string, ability?: string): string {
 
 export function activateUsesId(instanceId: string, ability?: string): string {
   return ability === undefined ? `activate-uses-${instanceId}` : `activate-uses-${instanceId}-${ability}`;
-}
-
-export function powerOfId(instanceId: string): string {
-  return `power-${instanceId}`;
-}
-
-// R1838000: the Trade control on a Tradable hand card, and its bar on a 1v1 board (contract.ts).
-export function tradeId(instanceId: string): string {
-  return `trade-${instanceId}`;
-}
-
-export const TRADE_BAR = "trade-bar";
-
-export function pilePlayId(instanceId: string): string {
-  return `pile-play-${instanceId}`;
 }
 
 // A21: almanac, footer and back selectors mirror their apps/web testid modules (R630).
@@ -723,16 +365,6 @@ export const NAV_BACK = "nav-back";
 
 // A22: public Statistics selectors mirror `apps/web/src/stats/testids.ts` (R654).
 
-export const STATS_SCREEN = "stats-screen";
-export const STATS_TAB_CARDS = "stats-tab-cards";
-export const STATS_TAB_PLAYERS = "stats-tab-players";
-export const STATS_SUMMARY_TILES = "stats-summary-tiles";
-export const STATS_SUMMARY_TOTAL_GAMES = "stats-summary-total-games";
-export const STATS_SEARCH_INPUT = "stats-search-input";
-export const STATS_CARDS_TABLE = "stats-cards-table";
-export const STATS_PLAYERS_TABLE = "stats-players-table";
-export const STATS_DRILL_DOWN_MODAL = "stats-drill-down-modal";
-export const STATS_DRILL_DOWN_CLOSE = "stats-drill-down-close";
 export const SITE_FOOTER_STATS = "site-footer-stats";
 
 // A23: rematch selectors mirror `rematchTestid` in `apps/web/src/routes/Rematch.tsx` (§9.5, R672).
@@ -758,7 +390,6 @@ export const REPLAY_READOUT = "replay-readout";
 export const REPLAY_BACK = "replay-back";
 export const REPLAY_END = "replay-end";
 export const REPLAY_SCRUBBER = "replay-scrubber";
-export const REPLAY_GIF_TOGGLE = "replay-gif";
 export const REPLAY_GIF_SHARE = "replay-gif-share";
 export const REPLAYS_ROOT = "replays";
 
@@ -768,103 +399,23 @@ export function replaysOnlineId(matchId: string): string {
 
 // #936 (SPEC S8): Play together's selectors mirror `apps/web/src/together/testids.ts`.
 
-export const TOGETHER_ROOT = "together";
-export const TOGETHER_ADD_INPUT = "together-add-input";
-export const TOGETHER_ADD_SUBMIT = "together-add-submit";
-export const TOGETHER_ADD_ERROR = "together-add-error";
-export const TOGETHER_ADD_SENT = "together-add-sent";
-export const TOGETHER_ERROR = "together-error";
-/** One per friend: `data-profile-id`, `data-status` (`offline|online|inMatch`), `data-watchable`. */
-export const TOGETHER_FRIEND_ROW = "together-friend-row";
-export const TOGETHER_NO_FRIENDS = "together-no-friends";
-/** R3732002: a row's Challenge or Daily, the one primary button of an online or an offline friend: `data-action` (`challenge|daily`). */
-export const TOGETHER_CHALLENGE = "together-challenge";
-/** R3732002: the primary Watch of a friend in a game that can be watched, and Join of one with a lobby open (`data-route`). */
-export const TOGETHER_WATCH = "together-watch";
-export const TOGETHER_JOIN = "together-join";
-/** R3732002: a row's ⋯ menu button, and its items: Chat, Daily challenge, Invite to lobby, Watch, Remove, Block. */
-export const TOGETHER_MENU = "together-menu";
-export const TOGETHER_MENU_UNREAD = "together-menu-unread";
-export const TOGETHER_CHAT_OPEN = "together-chat-open";
-export const TOGETHER_DAILY = "together-daily";
-export const TOGETHER_LOBBY = "together-lobby";
-export const TOGETHER_WATCH_ITEM = "together-watch-item";
-/** R3732002: the search over the list, a group (`data-group`: `requests|inGame|online|offline`) and Offline's toggle. */
-export const TOGETHER_SEARCH = "together-search";
-export const TOGETHER_GROUP = "together-group";
-export const TOGETHER_OFFLINE_TOGGLE = "together-offline-toggle";
-/** R3732000: Recently played's rows (`data-profile-id`) and each one's Add friend. */
-export const TOGETHER_RECENT_ROW = "together-recent-row";
-export const TOGETHER_RECENT_ADD = "together-recent-add";
-
 /** R3732002: a tab of the Friends page, by section (`friends|requests|recent|blocked|shared`). */
 export function togetherTabId(section: string): string {
   return `together-tab-${section}`;
 }
-export const TOGETHER_UNREAD = "together-unread";
-export const TOGETHER_REMOVE = "together-remove";
-export const TOGETHER_BLOCK = "together-block";
-export const TOGETHER_CONFIRM = "together-confirm";
-export const TOGETHER_KEEP = "together-keep";
-/** One per request: `data-direction` (`incoming|outgoing`), `data-request-id`, `data-profile-id`. */
-export const TOGETHER_REQUEST_ROW = "together-request-row";
-export const TOGETHER_REQUEST_ACCEPT = "together-request-accept";
-export const TOGETHER_REQUEST_DECLINE = "together-request-decline";
-export const TOGETHER_REQUEST_CANCEL = "together-request-cancel";
-export const TOGETHER_REQUEST_BLOCK = "together-request-block";
-export const TOGETHER_BLOCKED_ROW = "together-blocked-row";
-export const TOGETHER_UNBLOCK = "together-unblock";
-export const TOGETHER_CHALLENGE_FORM = "together-challenge-form";
-export const TOGETHER_CHALLENGE_DECK = "together-challenge-deck";
-export const TOGETHER_CHALLENGE_TRIO = "together-challenge-trio";
-export const TOGETHER_CHALLENGE_SEND = "together-challenge-send";
-export const TOGETHER_CHALLENGE_CLOSE = "together-challenge-close";
-export const TOGETHER_CHALLENGE_ERROR = "together-challenge-error";
-/** One per open challenge the account sent: `data-challenge-id`, `data-room-code`. */
-export const TOGETHER_OUTGOING_CHALLENGE = "together-outgoing-challenge";
-export const TOGETHER_CANCEL_CHALLENGE = "together-cancel-challenge";
-/** One per replay shared with the account: `data-match-id`. */
-export const TOGETHER_SHARED_ROW = "together-shared-row";
-export const TOGETHER_SHARED_OPEN = "together-shared-open";
-export const TOGETHER_NO_SHARED = "together-no-shared";
 
 export function togetherChallengeModeId(mode: QueueMode): string {
   return `together-challenge-mode-${mode}`;
 }
-
-/** #3727: the challenge dialog's Live or Daily (`apps/web/src/together/testids.ts`); the form carries `data-kind`. */
-export const TOGETHER_CHALLENGE_KIND = "together-challenge-kind";
 
 export function togetherChallengeKindId(kind: "live" | "daily"): string {
   return `together-challenge-kind-${kind}`;
 }
 
 // #3727: daily games (`apps/web/src/daily/testids.ts`).
-export const DAILY_ROOT = "daily";
-export const DAILY_NEW_GAME = "daily-new-game";
-/** One per section: `data-section` (`yourMove|theirMove|incoming|outgoing|seeks|finished`). */
-export const DAILY_SECTION = "daily-section";
-/** One per game: `data-match-id`, `data-has-move`, `data-over`. */
-export const DAILY_GAME_ROW = "daily-game-row";
-/** A row's time left: `data-urgent`. */
-export const DAILY_TIME_LEFT = "daily-time-left";
-/** One per challenge or seek: `data-invite-id`, `data-kind`, `data-direction` (`incoming|outgoing|seek`). */
-export const DAILY_INVITE_ROW = "daily-invite-row";
-export const DAILY_ACCEPT = "daily-accept";
-export const DAILY_DECLINE = "daily-decline";
-export const DAILY_CANCEL = "daily-cancel";
-/** A daily game's board: `data-match-id`, `data-has-move`. */
-export const DAILY_BOARD = "daily-board";
-/** Whoever holds the move: `data-holder` (`you|opponent`), `data-urgent`. */
-export const DAILY_CLOCK = "daily-clock";
-export const DAILY_NEXT_GAME = "daily-next-game";
 /** The Play screen's Daily games, and its badge of the games waiting on the player. */
 export const PLAY_DAILY = "play-daily";
 export const PLAY_DAILY_BADGE = "play-daily-badge";
-/** The New daily game dialog: who to play (a friend, `DAILY_FRIEND`'s select, or the queue), the mode and Send. */
-export const DAILY_NEW_DIALOG = "daily-new-dialog";
-export const DAILY_FRIEND = "daily-friend";
-export const DAILY_SEND = "daily-send";
 
 export function dailyKindId(kind: "friend" | "queue"): string {
   return `daily-kind-${kind}`;
@@ -874,59 +425,9 @@ export function dailyModeId(mode: "bo1" | "random"): string {
   return `daily-mode-${mode}`;
 }
 
-export function dailyPerMoveId(days: number): string {
-  return `daily-per-move-${String(days)}`;
-}
-
-/** `data-friend-id`. */
-export const CHAT_PANEL = "chat-panel";
-export const CHAT_INPUT = "chat-input";
-export const CHAT_SEND = "chat-send";
-/** One per message: `data-message-id`, `data-from` (`you|friend`). */
-export const CHAT_MESSAGE = "chat-message";
-export const CHAT_CLOSE = "chat-close";
-export const CHAT_ERROR = "chat-error";
-export const CHAT_EARLIER = "chat-earlier";
-export const CHAT_REPORT = "chat-report";
-export const CHAT_REPORT_REASON = "chat-report-reason";
-export const CHAT_REPORT_SEND = "chat-report-send";
-export const CHAT_REPORTED = "chat-reported";
-export const CHAT_JOIN = "chat-join";
-/** #1831: the Friends button on every signed-in screen, its badge and its panel. */
-export const FRIENDS_BUTTON = "friends-button";
-export const FRIENDS_BADGE = "friends-badge";
-export const FRIENDS_PANEL = "friends-panel";
 /** `skeletonTestid.root` (apps/web/src/skeleton/Skeleton.tsx): a list still loading. */
 export const SKELETON = "skeleton";
-/** The panel's ✕. */
-export const FRIENDS_CLOSE = "friends-close";
-/** The drawer's "See all friends" link. */
-export const FRIENDS_ALL = "friends-all";
 
-/** One per incoming challenge: `data-challenge-id`, `data-room-code`, `data-mode`. */
-export const CHALLENGE_TOAST = "challenge-toast";
-export const CHALLENGE_ACCEPT = "challenge-toast-accept";
-export const CHALLENGE_DECLINE = "challenge-decline";
-export const CHALLENGE_TOAST_ERROR = "challenge-toast-error";
-/** R3729002: Later sends the toast away; the challenge stays in the inbox. */
-export const CHALLENGE_LATER = "challenge-toast-later";
-
-/** `data-connection` (`connecting|open|closed|refused`). */
-export const WATCH_SCREEN = "watch-screen";
-export const WATCH_WAITING = "watch-waiting";
-export const WATCH_REFUSED = "watch-refused";
-export const WATCH_GONE = "watch-gone";
-export const WATCH_STATUS = "watch-status";
-export const WATCH_BACK = "watch-back";
-export const WATCH_RECONNECT = "watch-reconnect";
-export const WATCH_CLOCK = "watch-clock";
-
-export const SHARE_FRIEND_OPEN = "share-friend-open";
-/** One per friend: `data-profile-id`, `data-shared`. */
-export const SHARE_FRIEND_OPTION = "share-friend-option";
-export const SHARE_FRIEND_UNSHARE = "share-friend-unshare";
-export const SHARE_FRIEND_NONE = "share-friend-none";
-export const SHARE_FRIEND_ERROR = "share-friend-error";
 export const REPLAYS_SHARED_WITH_ME = "replays-shared-with-me";
 
 // R738, R643: the opponent's aim and the emote layer, mirroring the literals in
@@ -944,22 +445,7 @@ export function emoteItemId(emote: string): string {
 }
 
 // R2990000, R2990004: the sideline strip, mirroring `sidelineTestid` in apps/web/src/sideline/testids.ts.
-/** `data-phone` on a phone layout. */
-export const SIDELINE_STRIP = "sideline-strip";
-/** One per show: `data-watcher` (empty for the sender's own), `data-emote`, `data-self`. */
-export const SIDELINE_EMOTE = "sideline-emote";
-/** A watcher's Send an emote, which opens `EMOTE_MENU`. */
-export const SIDELINE_MENU = "sideline-menu";
-export const SIDELINE_MUTE = "sideline-mute";
 // #936 S8: Duos co-op selectors mirror `duosTestid` in `apps/web/src/duos/testids.ts` (B60–B65).
-
-export const DUOS_PORTAL = "duos-portal";
-export const DUOS_PASS = "duos-pass";
-export const DUOS_POOL = "duos-pool";
-export const DUOS_OWN_HP = "duos-own-hp";
-export const DUOS_TEAMMATE_STRIP = "duos-teammate-strip";
-export const DUOS_PING_WHEEL = "duos-ping-wheel";
-export const DUOS_PING_MARKER = "duos-ping-marker";
 
 export type DuosPingKind = "thumbsUp" | "thumbsDown" | "portal" | "careful" | "killThis";
 
@@ -967,35 +453,11 @@ export function duosPingId(kind: DuosPingKind): string {
   return `duos-ping-${kind}`;
 }
 
-export const DUOS_BOARD = "duos-board";
-export const DUOS_BOTH = "duos-both";
-export const DUOS_BOARD_OWN = "duos-board-own";
-export const DUOS_BOARD_TEAMMATE = "duos-board-teammate";
-export const DUOS_CARD_ACTIONS = "duos-card-actions";
-export const DUOS_ROUND = "duos-round";
-export const DUOS_WAITING = "duos-waiting";
-export const DUOS_CONCEDE = "duos-concede";
-export const DUOS_CONCEDE_STATUS = "duos-concede-status";
-export const DUOS_RESULT = "duos-result";
-export const DUOS_RESULT_REPLAY = "duos-result-replay";
-export const DUOS_RESULT_JLORE = "duos-result-jlore";
-export const DUOS_RESULT_AGAIN = "duos-result-again";
-export const DUOS_RESULT_AGAIN_STATUS = "duos-result-again-status";
-export const DUOS_REPLAY = "duos-replay";
-export const DUOS_LIFE_STRIP = "duos-life-strip";
-
-export function duosDevSeatId(seat: "a1" | "a2" | "b1" | "b2"): string {
-  return `duos-dev-seat-${seat}`;
-}
-
 // #1310 (SPEC §14): the economy's selectors, for spec 45. They mirror `accountTestid`, `devButtonTestid`,
 // `devToolsTestid`, `shopTestid`, `packTestid`, `questsTestid` and `collectionTestid`, in `apps/web/src/`
 // routes/account.tsx, routes/DevButton.tsx, routes/DevTools.tsx, shop/shop.ts, packs/packs.ts,
 // routes/QuestsPanel.tsx and collection/collection.ts;
 // this project can import none of them (each reaches `@jackioh/*`, which only the client's own build resolves).
-
-/** `/account`'s screen. */
-export const ACCOUNT_SCREEN = "account-screen";
 
 /** R3156000: the front screen's Dev button, for a dev account on a computer, and the dialog it opens. */
 export const LANDING_DEV = "landing-dev";
@@ -1016,31 +478,12 @@ export function shopBuyId(pack: string): string {
   return `shop-buy-${pack}`;
 }
 
-/** §14.5: the token picker: the card tokens held, spent from a locked card's preview in the Collection (R2730000). */
-export const TOKEN_PANEL = "token-panel";
+/** §14.5: a card token held, spent from a locked card's preview in the Collection (R2730000). */
 export const TOKEN_HELD_CARD = "token-held-card";
 
-/** R2730000: a locked card or cosmetic's fullscreen preview in the Collection, the only place a token is spent. */
-/** Issue #3734, R3734000: the Collection's tabs and the Cards tab's grid, count, filters, and the Decks tab's tiles. */
-export function collectionTabId(tab: "cards" | "decks" | "cosmetics" | "progress"): string {
-  return `collection-tab-${tab}`;
-}
-
+/** Issue #3734, R3734000: the Collection's Cards tab's grid and the Decks tab. */
 export const COLLECTION_GRID = "collection-grid";
-export const COLLECTION_COUNT = "collection-count";
-export const COLLECTION_FILTERS = "collection-filters";
-export const COLLECTION_FILTERS_OPEN = "collection-filters-open";
-export const COLLECTION_FILTERS_SHEET = "collection-filters-sheet";
 export const COLLECTION_DECKS = "collection-decks";
-export const COLLECTION_DECK_NEW = "collection-deck-new";
-
-export function collectionDeckTileId(id: string): string {
-  return `collection-deck-${id}`;
-}
-
-export function collectionSetProgressId(set: string): string {
-  return `collection-set-progress-${set}`;
-}
 
 export function collectionCardId(cardId: string): string {
   return `collection-card-${cardId}`;
@@ -1098,25 +541,3 @@ export function collectionTrackXpId(set: string): string {
 
 /** A card face's root (apps/web/src/cards/CardFace.tsx); `data-full-art="true"` when it prints full art (R1017001, R1313000). */
 export const CARD_FACE = ".cf";
-
-// R3730000: the private lobby, mirroring `lobbyTestid` in apps/web/src/lobby/testids.ts.
-export const LOBBY_SCREEN = "lobby-screen";
-export const LOBBY_CODE = "lobby-code";
-export const LOBBY_COPY_LINK = "lobby-copy-link";
-export const LOBBY_SEAT = "lobby-seat";
-export const LOBBY_TEAM = "lobby-team";
-export const LOBBY_SWITCH_TEAM = "lobby-switch-team";
-export const LOBBY_MOVE = "lobby-move";
-export const LOBBY_INVITE = "lobby-invite";
-export const LOBBY_SETTINGS = "lobby-settings";
-export const LOBBY_DECK_SELECT = "lobby-deck-select";
-export const LOBBY_READY = "lobby-ready";
-export const LOBBY_START = "lobby-start";
-export const LOBBY_LEAVE = "lobby-leave";
-export const LOBBY_COUNTDOWN = "lobby-countdown";
-export const LOBBY_ERROR = "lobby-error";
-export const LOBBY_JOIN_CARD = "lobby-join-card";
-export const LOBBY_JOIN_ROOM = "lobby-join-room";
-export const LOBBY_PANEL = "lobby-panel";
-export const LOBBY_CREATE = "lobby-create";
-export const LOBBY_CREATE_2V2 = "lobby-create-2v2";

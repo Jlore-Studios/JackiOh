@@ -1,0 +1,387 @@
+{
+  "set": {
+    "core-098": {
+      "id": "core-098",
+      "index": "98",
+      "name": "Heroic Power",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [
+        "Quickdraw"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "core-t-rush",
+        "core-t-felinor",
+        "core-t-ghoul"
+      ],
+      "params": [
+        {
+          "key": "shot",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 2,
+          "min": 1,
+          "power": "burn"
+        },
+        {
+          "key": "tapDraw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "draw"
+        },
+        {
+          "key": "tapDamage",
+          "base": 2,
+          "radiant": 2,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base",
+          "power": "draw"
+        },
+        {
+          "key": "ping",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "ping"
+        },
+        {
+          "key": "stitchCost",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "stitching"
+        },
+        {
+          "key": "armor",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "armor"
+        },
+        {
+          "key": "insect",
+          "base": 8,
+          "radiant": 8,
+          "better": "up",
+          "step": 2,
+          "min": 1,
+          "power": "insect"
+        },
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "brainstorm"
+        },
+        {
+          "key": "fruitCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "power": "pluck"
+        },
+        {
+          "key": "endTimes",
+          "base": 10,
+          "radiant": 10,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "power": "endTimes"
+        },
+        {
+          "key": "endTimesCut",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "endTimes"
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 11,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent.\n(0) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(0) Steady Shot: Deal {shot} damage to the enemy hero.\n(1) Ranching: Summon a Rush Token.\n(0) Cat Cafe: Summon a Felinor Token.\n(0) Ping: Pierce. Deal {ping} damage.\n(1) Witness Value: Discover a Unit.\n(1) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(0) Armor Up: Your hero gains {armor} Armor.\n(1) Die Insect: Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut})."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent. Make it Radiant.\n(0) Life Tap: Draw {tapDraw} from each player's deck.\n(0) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(1) Ranching: Summon a Radiant Rush Token.\n(0) Cat Cafe: Summon a random Felinor.\n(0) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(1) Witness Value: Discover a Radiant Unit.\n(1) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(0) Tank Up: Your hero gains {armor} Armor.\n(1) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Radiant Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut})."
+      }
+    },
+    "meditativeplus-012": {
+      "id": "meditativeplus-012",
+      "index": "12",
+      "name": "Living Armor Potion",
+      "set": "Meditative+",
+      "type": "Unit",
+      "tags": [
+        "Potion"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "armor",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 38,
+      "base": {
+        "attack": 1,
+        "health": 5,
+        "keywords": [],
+        "text": "Activate: Tribute this. Your hero gains {armor} Armor."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 10,
+        "keywords": [],
+        "text": "Activate: Your hero gains {armor} Armor."
+      }
+    },
+    "stinkyscape-132": {
+      "id": "stinkyscape-132",
+      "index": "132",
+      "name": "Defensive Crystal",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "heroArmor",
+          "base": 3,
+          "radiant": 6,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 13,
+      "base": {
+        "attack": 3,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          }
+        ],
+        "text": "Starship Piece\nDeath: Your hero gains {heroArmor} Armor."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 12,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          }
+        ],
+        "text": "Starship Piece\nDeath: Your hero gains {heroArmor} Armor."
+      }
+    },
+    "stinkyscape-145": {
+      "id": "stinkyscape-145",
+      "index": "145",
+      "name": "Fortify Flesh",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "least",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "most",
+          "base": 8,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 23,
+      "base": {
+        "keywords": [],
+        "text": "Your hero gains a random {least} to {most} Armor."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\nYour hero gains a random {least} to {most} Armor."
+      }
+    },
+    "stinkyscape-t-reknite": {
+      "id": "stinkyscape-t-reknite",
+      "index": "T-reknite",
+      "name": "Reknite",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [
+        "Resource",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Common",
+      "token": true,
+      "cost": 0,
+      "params": [
+        {
+          "key": "armor",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "resource": {
+        "rarity": "Common",
+        "base": {
+          "sellMin": 1,
+          "sellMax": 3,
+          "buy": 3
+        },
+        "radiant": {
+          "sellMin": 2,
+          "sellMax": 6,
+          "buy": 6
+        }
+      },
+      "loc": 22,
+      "base": {
+        "keywords": [],
+        "text": "Your hero gains {armor} Armor."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Your hero gains {armor} Armor."
+      }
+    },
+    "stinkyscapeplus-079": {
+      "id": "stinkyscapeplus-079",
+      "index": "79",
+      "name": "A Glimpse into the Endless Sea",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Wincon",
+        "Terminus"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 4,
+      "loc": 28,
+      "base": {
+        "keywords": [],
+        "text": "Exile your deck and every permanent. You are immune to fatigue damage. Start an {count|turn|turns} countdown. When it ends, win the game."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Exile your deck and every permanent. Your hero gains {armor} Armor. You are immune to fatigue damage. Start an {count|turn|turns} countdown. When it ends, win the game."
+      },
+      "params": [
+        {
+          "key": "count",
+          "base": 7,
+          "radiant": 7,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "armor",
+          "base": 8,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ]
+    },
+    "stinkyscapeplus-t-the-enigmata": {
+      "id": "stinkyscapeplus-t-the-enigmata",
+      "index": "T-the-enigmata",
+      "name": "The Enigmata",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Terminus",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 4,
+      "printedRarity": "Mythic",
+      "loc": 31,
+      "base": {
+        "keywords": [],
+        "text": "Players take turns casting Jogg's box until the game ends."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Your hero gains Armor {count}. Then players take turns casting Jogg's box until the game ends."
+      },
+      "params": [
+        {
+          "key": "count",
+          "base": 8,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ]
+    }
+  }
+}

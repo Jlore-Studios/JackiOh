@@ -95,7 +95,7 @@ use jackioh_engine::{
 
 use crate::api::catalog::load_patch_versions;
 use crate::api::collection::caller_profile;
-use crate::api::dev::is_dev;
+use crate::api::dev::{dev_caller, is_dev};
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Req, bad_request, lock, now_ms, ok_of, open_route_profile,
     query_trimmed, to_json, whole_number,
@@ -103,10 +103,10 @@ use crate::api::http::{
 use crate::app::App;
 use crate::config::{
     CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CO_PLAYED_TOP, CARD_STATS_CURVE_TOP,
-    CARD_STATS_KEPT_IDLE_SECONDS, CARD_STATS_KEPT_REPORTS, CARD_STATS_MIN_SAMPLE, HALL_OF_FAME_LIST_LEN,
-    MS_PER_SECOND, PLAY_RATES_MIN_GAMES, PLAY_RATES_REFRESH_SECONDS, PLAYER_STATS_BYTES_MAX,
-    PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES,
-    PUBLIC_STATS_PATCHES_LINE_BEFORE, PUBLIC_STATS_PATCHES_NEWEST,
+    CARD_STATS_KEPT_IDLE_SECONDS, CARD_STATS_KEPT_REPORTS, CARD_STATS_MAX_AGE_SECONDS, CARD_STATS_MIN_SAMPLE,
+    HALL_OF_FAME_LIST_LEN, MS_PER_SECOND, PLAY_RATES_MIN_GAMES, PLAY_RATES_REFRESH_SECONDS,
+    PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT,
+    PUBLIC_STATS_MIN_LIVE_GAMES, PUBLIC_STATS_PATCHES_LINE_BEFORE, PUBLIC_STATS_PATCHES_NEWEST,
 };
 use crate::db::store::{CardFiling, CardRows, Db, PlayerStatsListOptions, StatsTotalsQuery};
 use crate::env::js_number;
@@ -1143,10 +1143,10 @@ async fn listed_patches(app: &App, history: &[PatchStep]) -> Result<Arc<KeptWind
 }
 
 /// R4677000: a statistics answer that depends on who asks. Anyone's is `cached_ok`'s, public for
-/// `CARD_STATS_CACHE_TTL_SECONDS`; a dev account's is kept by no cache (`private, no-store`); and each
+/// `CARD_STATS_MAX_AGE_SECONDS` (R5274000); a dev account's is kept by no cache (`private, no-store`); and each
 /// varies by `Authorization`, so no cache hands one caller's answer to another.
 fn reader_ok(body: Value, reader: Reader) -> Response {
-    let mut response = cached_ok(body, CARD_STATS_CACHE_TTL_SECONDS);
+    let mut response = cached_ok(body, CARD_STATS_MAX_AGE_SECONDS);
     let headers = response.headers_mut();
     if reader == Reader::Dev {
         headers.insert(
@@ -1946,6 +1946,33 @@ impl KeptReports {
     fn play_rates_cell(&self, now: i64) -> PlayRatesCell {
         kept_cell(&self.play_rates, (), now, PLAY_RATES_REFRESH_SECONDS)
     }
+
+    /// R5274000: a dev account's Fetch live. Every figure kept is let go, and the snapshot with them, so the
+    /// next read loads the totals again and waits for them, as the first read after a boot does. A load under
+    /// way is kept, to be joined, and so is a folding load (R5174000), so no second load starts beside one.
+    /// The play rates are kept: they refresh on their own (`PLAY_RATES_REFRESH_SECONDS`).
+    pub fn let_go(&self) {
+        lock(&self.entries).clear();
+        lock(&self.windows).clear();
+        lock(&self.histories).clear();
+        lock(&self.versions).clear();
+        lock(&self.hall).clear();
+        let mut totals = lock(&self.totals);
+        if totals
+            .as_ref()
+            .is_some_and(|cells| cells.kept.cell.get().is_some())
+        {
+            let folding = totals
+                .take()
+                .and_then(|cells| cells.folded)
+                .filter(|folded| folded.cell.get().is_none());
+            *totals = folding.map(|folded| TotalsCells {
+                kept: Keep::new(None),
+                kept_folds: false,
+                folded: Some(folded),
+            });
+        }
+    }
 }
 
 /// R1367000: windowed figures for a patch (R1973001, R1973002, R1994000).
@@ -2355,7 +2382,7 @@ pub async fn get_versions(app: &Arc<App>, req: Req) -> ApiResult {
         mode,
         table: &table,
     };
-    Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
+    Ok(cached_ok(to_json(&response)?, CARD_STATS_MAX_AGE_SECONDS))
 }
 
 /// R4681001: one Hall of Fame entry: its before and after play-version rows with figures, their ship
@@ -2467,7 +2494,7 @@ async fn kept_hall(app: &App, mode: PublicStatsMode) -> Result<Arc<HallOfFameBod
 pub async fn get_hall_of_fame(app: &Arc<App>, req: Req) -> ApiResult {
     let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
     let body = kept_hall(app, mode).await?;
-    Ok(cached_ok(to_json(&body)?, CARD_STATS_CACHE_TTL_SECONDS))
+    Ok(cached_ok(to_json(&body)?, CARD_STATS_MAX_AGE_SECONDS))
 }
 
 /// GET /api/stats/cards: public card win rates (R654, R1367000).
@@ -2991,6 +3018,16 @@ pub async fn get_loading(app: &Arc<App>, _req: Req) -> ApiResult {
     Ok(response)
 }
 
+/// POST /api/dev/stats-refresh (R5274000): `/stats`' Fetch live, for a dev account (anyone else is answered
+/// 403). Lets go of the card statistics the server keeps (`KeptReports::let_go`), so the page's next reads
+/// wait for figures loaded now, and answers what the load is doing, as `GET /api/stats/loading` does.
+pub async fn post_refresh(app: &Arc<App>, req: Req) -> ApiResult {
+    dev_caller(app, &req)?;
+    app.card_stats.let_go();
+    tracing::info!(event = "stats.let_go");
+    ok_of(&app.card_stats.loading(now_ms()))
+}
+
 /// GET /api/stats/play-rates (R1583000, `PLAY_RATES_REFRESH_SECONDS`).
 pub async fn get_play_rates(app: &Arc<App>, _req: Req) -> ApiResult {
     let keep = app.card_stats.play_rates_cell(now_ms());
@@ -3168,7 +3205,7 @@ mod tests {
     }
 
     /// R5245000: when the tests' snapshot finished loading, past the TTL from zero.
-    const LOADED: i64 = 400 * MS_PER_SECOND;
+    const LOADED: i64 = (CARD_STATS_CACHE_TTL_SECONDS + 100) * MS_PER_SECOND;
 
     /// R5245000: the value a kept cell holds before its refresh, and the one the refresh fills it with.
     const HELD: u32 = 1;
@@ -3240,6 +3277,75 @@ mod tests {
             1,
             "the snapshot past its time is still held beside its next"
         );
+    }
+
+    /// R5274000: the snapshot is kept six hours from when its load finished, so the reads a match start
+    /// makes every few minutes (`win_rate_snapshot`, R3049000) load nothing; the first read at six hours
+    /// starts the next load. At five minutes, each of those reads past the fifth reloaded `card_totals`.
+    #[test]
+    fn r5274000_a_snapshot_is_kept_six_hours_and_the_reads_within_it_load_nothing() {
+        const HOUR_MS: i64 = 3600 * MS_PER_SECOND;
+        let reports = KeptReports::default();
+        let (first, _) = reports.totals_cell(0, Reach::Kept);
+        let held = snapshot_at(LOADED);
+        assert!(first.cell.set(Arc::clone(&held)).is_ok());
+        drop(first);
+
+        for minutes in (5..360).step_by(5) {
+            let (kept, _) = reports.totals_cell(LOADED + minutes * HOUR_MS / 60, Reach::Kept);
+            assert!(
+                kept.cell
+                    .get()
+                    .is_some_and(|snapshot| Arc::ptr_eq(snapshot, &held)),
+                "a read {minutes} minutes after the load started another"
+            );
+        }
+        let (next, _) = reports.totals_cell(LOADED + 6 * HOUR_MS, Reach::Kept);
+        assert!(next.cell.get().is_none(), "the snapshot was kept past six hours");
+    }
+
+    /// R5274000: Fetch live lets go of the snapshot and every figure cut from it, so the next read waits for a
+    /// load rather than answering what was held; a load under way is kept, to be joined.
+    #[test]
+    fn r5274000_fetch_live_lets_go_of_the_snapshot_and_its_figures_but_joins_a_load_under_way() {
+        let reports = KeptReports::default();
+        let (loading, _) = reports.totals_cell(0, Reach::Kept);
+        reports.let_go();
+        let (joined, _) = reports.totals_cell(1, Reach::Kept);
+        assert!(
+            Arc::ptr_eq(&loading.cell, &joined.cell),
+            "a second load began beside the one under way"
+        );
+
+        let held = snapshot_at(LOADED);
+        assert!(joined.cell.set(Arc::clone(&held)).is_ok());
+        drop((loading, joined));
+        let key = ReportKey {
+            patch: "x".to_string(),
+            source: SourceParam::Default,
+            pilot: PublicStatsPilot::Merged,
+            mode: PublicStatsMode::All,
+        };
+        let window = reports.window_cell(key.clone(), LOADED);
+        let cut = window_over(
+            &held.totals,
+            &patch_history(),
+            &key.patch,
+            key.source,
+            key.pilot,
+            key.mode,
+        );
+        assert!(window.cell.set(Arc::new(cut)).is_ok());
+        assert!(reports.held_window(&key).is_some());
+
+        reports.let_go();
+        assert!(
+            reports.held_window(&key).is_none(),
+            "a figure cut from the snapshot is still held"
+        );
+        let (next, _) = reports.totals_cell(LOADED + 1, Reach::Kept);
+        assert!(next.cell.get().is_none(), "the snapshot was still held");
+        assert_eq!(Arc::strong_count(&held), 1, "the snapshot let go is still held");
     }
 
     /// R5245000: a kept figure still being cut is joined past its TTL; one cut and past it is replaced by a

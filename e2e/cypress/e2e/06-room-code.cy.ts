@@ -8,21 +8,11 @@
 import { SETTINGS_STORAGE_KEY } from "../../../apps/web/src/settings/store.ts";
 import { CODE_ALPHABET, ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, apiUrl, bearerHeaders, constants, routes, seedFor, server, timeouts } from "../../support/config.ts";
-import {
-  END_TURN,
-  LOBBY_DECK_SELECT,
-  LOBBY_JOIN_CARD,
-  LOBBY_JOIN_ROOM,
-  MANA_CRYSTAL,
-  handCardId,
-  handCountId,
-  heroId,
-  manaId,
-  ts,
-  zoneId,
-} from "../../support/testids.ts";
+import { MANA_CRYSTAL, handCardId, handCountId, heroId, manaId, ts, zoneId } from "../../support/testids.ts";
 import type { InstalledLoadout } from "../../support/commands.ts";
 import type { ActionInput, Lane, PlayerId, Row, Side } from "../../support/types.ts";
+import { lobbyTestid } from "../../../apps/web/src/lobby/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 // Local scaffolding; ASK items belong in `e2e/support/**`.
 
@@ -113,7 +103,7 @@ function seatTwoKeepsMulligan(): void {
 
 /** The turn is seat 1's again when the client re-enables its own `end-turn` (BUILD M5-T1). */
 function waitForMyTurn(): void {
-  cy.get(ts(END_TURN), { timeout: timeouts.view }).should("not.be.disabled");
+  cy.get(ts(gameTestid.endTurn), { timeout: timeouts.view }).should("not.be.disabled");
 }
 
 function renderedHandCards(): Cypress.Chainable<number> {
@@ -393,14 +383,14 @@ describe("06 room code — a networked match between a browser and a Node client
     cy.then(() => {
       cy.visitAs(seatTwo, inviteLink(roomCode, "bo1"));
       cy.location("pathname", { timeout: timeouts.view }).should("eq", `/lobby/${roomCode}`);
-      cy.get(ts(LOBBY_JOIN_CARD), { timeout: timeouts.view }).should("contain.text", "Best of 1");
+      cy.get(ts(lobbyTestid.joinCard), { timeout: timeouts.view }).should("contain.text", "Best of 1");
     });
 
     // R264: the guest still picks a deck and presses Join.
     cy.then(() => {
-      cy.get(ts(LOBBY_DECK_SELECT), { timeout: timeouts.view }).select(deckOf(seatTwoDecks));
+      cy.get(ts(lobbyTestid.deckSelect), { timeout: timeouts.view }).select(deckOf(seatTwoDecks));
     });
-    cy.get(ts(LOBBY_JOIN_ROOM)).should("not.be.disabled").click();
+    cy.get(ts(lobbyTestid.joinRoom)).should("not.be.disabled").click();
 
     cy.location("pathname", { timeout: timeouts.view })
       .should("match", /^\/match\/([^/]+)$/)

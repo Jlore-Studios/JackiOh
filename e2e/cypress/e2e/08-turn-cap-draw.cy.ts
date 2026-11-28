@@ -4,8 +4,9 @@
 
 import { constants, seedFor } from "../../support/config.ts";
 import { ensureSeat } from "../../support/hotseat.ts";
-import { END_TURN, ts } from "../../support/testids.ts";
+import { ts } from "../../support/testids.ts";
 import type { GameStateLike, PlayerId } from "../../support/types.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** BUILD M8 seed; `--expose seed=…` overrides it. */
 const SEED = seedFor("08-turn-cap-26");
@@ -59,7 +60,7 @@ describe("BUILD M8 08 — two decks that never fatigue run out the turn cap as a
           cy.playByName("Infinite Reserves", { zone: { side: "you", row: "backrow", lane: 1 } });
           played += 1;
         } else {
-          cy.get(ts(END_TURN)).should("not.be.disabled");
+          cy.get(ts(gameTestid.endTurn)).should("not.be.disabled");
           cy.endTurn();
           pressed += 1;
         }

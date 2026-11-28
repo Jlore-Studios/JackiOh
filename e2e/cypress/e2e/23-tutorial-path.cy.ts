@@ -3,19 +3,6 @@
 import { TUTORIAL_HUMAN } from "../../../apps/web/src/wire/engineConfig.ts";
 import { TUTORIAL_HANDICAP, TUTORIAL_PROGRESS_VERSION, constants, timeouts } from "../../support/config.ts";
 import {
-  COACH,
-  COACH_ACK,
-  END_TURN,
-  PRACTICE_ERROR,
-  PRACTICE_LEAVE,
-  PRACTICE_LEAVE_CONFIRM,
-  PRACTICE_LEAVE_STAY,
-  PRACTICE_LOADING,
-  PRACTICE_SETUP,
-  TUTORIAL_CONTINUE,
-  TUTORIAL_EXIT,
-  TUTORIAL_HUD,
-  TUTORIAL_PATH,
   handCardId,
   handRegionId,
   healthIs,
@@ -40,6 +27,9 @@ import {
   visitTutorial,
   waitForMoment,
 } from "../../support/tutorial.ts";
+import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
+import { tutorialTestid } from "../../../apps/web/src/tutorial/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 const LATER_LESSON = "casting";
 
@@ -78,7 +68,7 @@ function progressUpTo(data: TutorialData, lesson: TutorialLessonData): { v: numb
 }
 
 function expectPath(data: TutorialData, statuses: readonly Status[], next: string | null): void {
-  cy.get(ts(TUTORIAL_PATH), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
+  cy.get(ts(tutorialTestid.path), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
   data.lessons.forEach((lesson, at) => {
     const status = statuses[at];
     cy.get(ts(tutorialLessonId(lesson.id))).should("have.attr", "data-status", status ?? "");
@@ -88,7 +78,7 @@ function expectPath(data: TutorialData, statuses: readonly Status[], next: strin
     if (status === "locked") button.should("have.attr", "aria-disabled", "true");
     else button.should("not.have.attr", "aria-disabled");
   });
-  cy.get(ts(TUTORIAL_PATH)).should(
+  cy.get(ts(tutorialTestid.path)).should(
     "have.attr",
     "data-complete",
     statuses.every((status) => status === "completed") ? "true" : "false",
@@ -98,7 +88,7 @@ function expectPath(data: TutorialData, statuses: readonly Status[], next: strin
 function startFromPath(lesson: TutorialLessonData): void {
   cy.get(ts(tutorialStartId(lesson.id))).should("not.have.attr", "aria-disabled");
   cy.get(ts(tutorialStartId(lesson.id))).click();
-  cy.get(ts(TUTORIAL_HUD), { timeout: TUTORIAL_BOOT_TIMEOUT })
+  cy.get(ts(tutorialTestid.hud), { timeout: TUTORIAL_BOOT_TIMEOUT })
     .should("have.attr", "data-lesson", lesson.id)
     .and("have.attr", "data-human-seat", lesson.humanSeat)
     .and("have.attr", "data-ai-seat", otherSeat(lesson.humanSeat))
@@ -129,16 +119,16 @@ function expectLessonGame(data: TutorialData, lesson: TutorialLessonData): void 
 }
 
 function exitLesson(): void {
-  cy.get(ts(TUTORIAL_EXIT)).click();
-  cy.get(ts(PRACTICE_LEAVE)).should("be.visible");
-  cy.get(ts(PRACTICE_LEAVE_CONFIRM)).click();
-  cy.get(ts(TUTORIAL_PATH), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
-  cy.get(ts(TUTORIAL_HUD)).should("not.exist");
+  cy.get(ts(tutorialTestid.exit)).click();
+  cy.get(ts(practiceTestid.leave)).should("be.visible");
+  cy.get(ts(practiceTestid.leaveConfirm)).click();
+  cy.get(ts(tutorialTestid.path), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
+  cy.get(ts(tutorialTestid.hud)).should("not.exist");
 }
 
 /** R314: no Skip controls in the HUD or coach bubble. */
 function expectNoSkip(doc: Document): void {
-  for (const region of [TUTORIAL_HUD, COACH]) {
+  for (const region of [tutorialTestid.hud, tutorialTestid.coach]) {
     const root = doc.querySelector(ts(region));
     const skips = Array.from(root?.querySelectorAll("button, [data-testid]") ?? []).filter((element) =>
       /skip/i.test([element.textContent ?? "", element.getAttribute("aria-label") ?? "", element.getAttribute("data-testid") ?? ""].join(" ")),
@@ -151,7 +141,7 @@ function expectNoSkip(doc: Document): void {
 }
 
 function coachOnAStep(budget = TIP_BUDGET): void {
-  cy.get(ts(COACH), { timeout: TUTORIAL_BOOT_TIMEOUT })
+  cy.get(ts(tutorialTestid.coach), { timeout: TUTORIAL_BOOT_TIMEOUT })
     .should(($coach) => {
       expect($coach, "the coach has caught up with the board").not.to.have.attr("data-stale");
     })
@@ -159,8 +149,8 @@ function coachOnAStep(budget = TIP_BUDGET): void {
       if ($coach.attr("data-coach-mode") !== "tip") return;
       expect(budget, "the tips in the way run out").to.be.greaterThan(0);
       const tip = $coach.attr("data-coach-step") ?? "";
-      cy.get(ts(COACH_ACK)).click();
-      cy.get(ts(COACH)).should(($now) => {
+      cy.get(ts(tutorialTestid.coachAck)).click();
+      cy.get(ts(tutorialTestid.coach)).should(($now) => {
         expect($now.attr("data-coach-step"), `the tip ${tip} is gone`).to.not.eq(tip);
       });
       coachOnAStep(budget - 1);
@@ -202,11 +192,11 @@ function overlapArea(a: Box, b: Box): number {
 
 /** On a phone the coach must not cover End turn or the hand. */
 function expectCoachClearOfEndTurn(when: string): void {
-  cy.get(ts(COACH)).should("be.visible").and("have.attr", "data-coach-dock", "panel");
-  cy.get(ts(END_TURN)).should("be.visible");
+  cy.get(ts(tutorialTestid.coach)).should("be.visible").and("have.attr", "data-coach-dock", "panel");
+  cy.get(ts(gameTestid.endTurn)).should("be.visible");
   cy.document({ log: false }).then((doc) => {
-    const coach = doc.querySelector(ts(COACH));
-    const endTurn = doc.querySelector(ts(END_TURN));
+    const coach = doc.querySelector(ts(tutorialTestid.coach));
+    const endTurn = doc.querySelector(ts(gameTestid.endTurn));
     const hand = doc.querySelector(ts(handRegionId("you")));
     expect(coach, "the coach").to.not.eq(null);
     expect(endTurn, "End turn").to.not.eq(null);
@@ -232,7 +222,7 @@ function phoneMoments(remaining: number): void {
     expect(moment.kind, "the lesson is still on").to.not.eq("over");
     if (moment.kind === "over") return;
     cy.document({ log: false }).then((doc) => {
-      if (doc.querySelector(ts(COACH)) !== null) expectCoachClearOfEndTurn(`moment ${String(PHONE_MOMENTS - remaining + 1)} (${moment.kind})`);
+      if (doc.querySelector(ts(tutorialTestid.coach)) !== null) expectCoachClearOfEndTurn(`moment ${String(PHONE_MOMENTS - remaining + 1)} (${moment.kind})`);
     });
     if (moment.kind === "turn") return;
     expect(remaining, `the player's first turn comes within ${String(PHONE_MOMENTS)} moments`).to.be.greaterThan(0);
@@ -251,12 +241,12 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
         data.lessons.map((_lesson, at) => (at === 0 ? "unlocked" : "locked")),
         first.id,
       );
-      cy.get(ts(TUTORIAL_CONTINUE)).should("not.exist");
+      cy.get(ts(tutorialTestid.continue)).should("not.exist");
 
-      cy.get(ts(PRACTICE_SETUP)).should("be.visible");
+      cy.get(ts(practiceTestid.setup)).should("be.visible");
       cy.document().then((doc) => {
-        const path = doc.querySelector(ts(TUTORIAL_PATH));
-        const setup = doc.querySelector(ts(PRACTICE_SETUP));
+        const path = doc.querySelector(ts(tutorialTestid.path));
+        const setup = doc.querySelector(ts(practiceTestid.setup));
         expect(doc.querySelector("section"), "the path is the page's first section").to.eq(path);
         if (path === null || setup === null) return;
         expect(path.compareDocumentPosition(setup) & Node.DOCUMENT_POSITION_FOLLOWING, "the setup comes after the path").to.not.eq(0);
@@ -265,9 +255,9 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
 
       for (const locked of data.lessons.slice(1)) {
         cy.get(ts(tutorialStartId(locked.id))).click();
-        cy.get(ts(PRACTICE_LOADING)).should("not.exist");
-        cy.get(ts(TUTORIAL_HUD)).should("not.exist");
-        cy.get(ts(PRACTICE_SETUP)).should("be.visible");
+        cy.get(ts(practiceTestid.loading)).should("not.exist");
+        cy.get(ts(tutorialTestid.hud)).should("not.exist");
+        cy.get(ts(practiceTestid.setup)).should("be.visible");
         cy.get(ts(tutorialLessonId(locked.id))).should("have.attr", "data-status", "locked");
       }
       cy.window().then((win) => {
@@ -288,7 +278,7 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
       expectPath(data, afterOne, second.id);
       cy.get(ts(tutorialStartId(first.id))).should("contain.text", "Replay");
       cy.get(ts(tutorialStartId(second.id))).should("contain.text", "Start");
-      cy.get(ts(TUTORIAL_CONTINUE)).should("be.visible").and("contain.text", `Lesson ${String(second.number)}`);
+      cy.get(ts(tutorialTestid.continue)).should("be.visible").and("contain.text", `Lesson ${String(second.number)}`);
 
       cy.reload();
       expectPath(data, afterOne, second.id);
@@ -300,9 +290,9 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
         data.lessons.map((_lesson, at) => (at === 0 ? "unlocked" : "locked")),
         first.id,
       );
-      cy.get(ts(TUTORIAL_CONTINUE)).should("not.exist");
-      cy.get(ts(PRACTICE_SETUP)).should("be.visible");
-      cy.get(ts(PRACTICE_ERROR)).should("not.exist");
+      cy.get(ts(tutorialTestid.continue)).should("not.exist");
+      cy.get(ts(practiceTestid.setup)).should("be.visible");
+      cy.get(ts(practiceTestid.error)).should("not.exist");
     });
   });
 
@@ -322,17 +312,17 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
       stepCounter().then((counter) => {
         expect(counter.of, "the HUD counts the lesson's steps").to.be.greaterThan(0);
       });
-      cy.get(ts(TUTORIAL_HUD)).find(ts(TUTORIAL_EXIT)).should("be.visible").and("have.attr", "aria-label", "Exit tutorial");
+      cy.get(ts(tutorialTestid.hud)).find(ts(tutorialTestid.exit)).should("be.visible").and("have.attr", "aria-label", "Exit tutorial");
       cy.document().should((doc) => {
         expectNoSkip(doc);
       });
 
       debugSnapshot().then((before) => {
-        cy.get(ts(TUTORIAL_EXIT)).click();
-        cy.get(ts(PRACTICE_LEAVE)).should("be.visible");
-        cy.get(ts(PRACTICE_LEAVE_STAY)).click();
-        cy.get(ts(PRACTICE_LEAVE)).should("not.exist");
-        cy.get(ts(TUTORIAL_HUD)).should("have.attr", "data-lesson", second.id);
+        cy.get(ts(tutorialTestid.exit)).click();
+        cy.get(ts(practiceTestid.leave)).should("be.visible");
+        cy.get(ts(practiceTestid.leaveStay)).click();
+        cy.get(ts(practiceTestid.leave)).should("not.exist");
+        cy.get(ts(tutorialTestid.hud)).should("have.attr", "data-lesson", second.id);
         debugSnapshot().then((after) => {
           expect(after.seed, "the same game").to.eq(before.seed);
           expect(after.lesson, "the same lesson").to.eq(before.lesson);
@@ -342,7 +332,7 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
       });
 
       exitLesson();
-      cy.get(ts(PRACTICE_SETUP)).should("be.visible");
+      cy.get(ts(practiceTestid.setup)).should("be.visible");
       expectPath(data, afterOne, second.id);
       storedProgress().should("deep.eq", done);
     });
@@ -384,7 +374,7 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
     cy.viewport(PHONE.width, PHONE.height);
     lessons().then((data) => {
       visitTutorial(PRACTICE_PATH, { progress: null });
-      cy.get(ts(TUTORIAL_PATH), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
+      cy.get(ts(tutorialTestid.path), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
       for (const lesson of data.lessons) {
         cy.get(ts(tutorialLessonId(lesson.id))).scrollIntoView();
         cy.get(ts(tutorialLessonId(lesson.id))).should("be.visible");
@@ -405,8 +395,8 @@ describe("23 — the tutorial's lesson path: progress, no Skip step and Exit, a 
 
       const first = data.lessons[0] as TutorialLessonData;
       visitTutorial(lessonUrl(first.id), { progress: null });
-      cy.get(ts(TUTORIAL_HUD), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("have.attr", "data-lesson", first.id);
-      cy.get(ts(COACH), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
+      cy.get(ts(tutorialTestid.hud), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("have.attr", "data-lesson", first.id);
+      cy.get(ts(tutorialTestid.coach), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
       cy.screenshot("23-tutorial-path/phone-lesson-first-bubble", { capture: "viewport" });
       phoneMoments(PHONE_MOMENTS);
       cy.screenshot("23-tutorial-path/phone-lesson-first-turn", { capture: "viewport" });

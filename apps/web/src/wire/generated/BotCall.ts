@@ -4,8 +4,12 @@ import type { BotFacts } from "./BotFacts";
 import type { BotLadder } from "./BotLadder";
 import type { CatalogSnapshot } from "./CatalogSnapshot";
 import type { CosmeticOwners } from "./CosmeticOwners";
+import type { EmoteId } from "./EmoteId";
+import type { GameEvent } from "./GameEvent";
 import type { GameFacts } from "./GameFacts";
+import type { PersonaStream } from "./PersonaStream";
 import type { PlayerId } from "./PlayerId";
+import type { PlayerView } from "./PlayerView";
 import type { SeriesRow } from "./SeriesRow";
 import type { TicketFacts } from "./TicketFacts";
 import type { WinRateTable } from "./WinRateTable";
@@ -22,4 +26,4 @@ winRates?: WinRateTable, } | { "call": "drawTrio", seed: string, own: Array<BotD
 /**
  * R3049002: as `DrawDecks`' `winRates`.
  */
-winRates?: WinRateTable, } | { "call": "fallbackSeconds", key: string, ticketId: string, } | { "call": "fallbackDue", key: string, ticket: TicketFacts, now: number, hidden: boolean, } | { "call": "hourOf", now: number, } | { "call": "chooseBot", ticket: TicketFacts, bots: Array<BotFacts>, recent: Array<string>, busy: Array<string>, hour: number, catalogVersion: string, } | { "call": "chooseBotPair", bots: Array<BotFacts>, recent: Array<[string, Array<string>]>, busy: Array<string>, hour: number, catalogVersion: string, } | { "call": "botMatches", inMatch: Array<string | null>, } | { "call": "botMatchGapPassed", games: Array<GameFacts>, now: number, } | { "call": "pickDueAt", series: SeriesRow, seat: PlayerId, } | { "call": "pickIsDue", series: SeriesRow, seat: PlayerId, now: number, } | { "call": "pickSlot", series: SeriesRow, seat: PlayerId, } | { "call": "botPick", series: SeriesRow, seat: PlayerId, now: number, } | { "call": "eligibleCosmetics", owners: Array<CosmeticOwners>, now: number, } | { "call": "redrawCosmetics", seed: string, bot: BotFacts, eligible: Array<[string, string | null]>, now: number, };
+winRates?: WinRateTable, } | { "call": "fallbackSeconds", key: string, ticketId: string, } | { "call": "fallbackDue", key: string, ticket: TicketFacts, now: number, hidden: boolean, } | { "call": "hourOf", now: number, } | { "call": "chooseBot", ticket: TicketFacts, bots: Array<BotFacts>, recent: Array<string>, busy: Array<string>, hour: number, catalogVersion: string, } | { "call": "chooseBotPair", bots: Array<BotFacts>, recent: Array<[string, Array<string>]>, busy: Array<string>, hour: number, catalogVersion: string, } | { "call": "botMatches", inMatch: Array<string | null>, } | { "call": "botMatchGapPassed", games: Array<GameFacts>, now: number, } | { "call": "pickDueAt", series: SeriesRow, seat: PlayerId, } | { "call": "pickIsDue", series: SeriesRow, seat: PlayerId, now: number, } | { "call": "pickSlot", series: SeriesRow, seat: PlayerId, } | { "call": "botPick", series: SeriesRow, seat: PlayerId, now: number, } | { "call": "eligibleCosmetics", owners: Array<CosmeticOwners>, now: number, } | { "call": "redrawCosmetics", seed: string, bot: BotFacts, eligible: Array<[string, string | null]>, now: number, } | { "call": "dealPersona", seed: string, seat: PlayerId, hand: Array<EmoteId>, lesson: boolean, } | { "call": "personaEvents", persona: PersonaStream, fresh: Array<GameEvent>, prev: PlayerView | null, view: PlayerView, now: number, } | { "call": "personaPlayerEmote", persona: PersonaStream, emote: EmoteId, now: number, } | { "call": "personaTurnLong", persona: PersonaStream, view: PlayerView, now: number, };

@@ -3,19 +3,9 @@
 // hands and End turn at fixed positions and sizes across desktop, phone portrait and phone landscape.
 
 import { seedFor } from "../../support/config.ts";
-import {
-  ACTION_ERROR,
-  DRAW_ACCEPT,
-  DRAW_DECLINE,
-  DRAW_OFFER,
-  DRAW_TOAST,
-  END_TURN,
-  RESULT_OVERLAY,
-  handCardId,
-  ts,
-  zoneId,
-} from "../../support/testids.ts";
+import { ACTION_ERROR, DRAW_TOAST, handCardId, ts, zoneId } from "../../support/testids.ts";
 import type { PlayerId } from "../../support/types.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 const SEED = seedFor("32-tribute-18");
 const ATTACK_REASON = "attack-reason";
@@ -68,7 +58,7 @@ function measureBoxes(): Cypress.Chainable<BoardBoxes> {
     const seatYou = doc.querySelector<HTMLElement>(".seat-you");
     const handOpponent = doc.querySelector<HTMLElement>(".hand-opponent");
     const handYou = doc.querySelector<HTMLElement>(".hand-you");
-    const endTurn = doc.querySelector<HTMLElement>(`[data-testid="${END_TURN}"]`);
+    const endTurn = doc.querySelector<HTMLElement>(`[data-testid="${gameTestid.endTurn}"]`);
 
     expect(field, "field element exists").to.not.eq(null);
     expect(seatOpponent, "seatOpponent element exists").to.not.eq(null);
@@ -236,7 +226,7 @@ describe("56 — board notices draw in an overlay over the board (#3868)", () =>
           });
 
           const drawToastSelector = `[data-testid="${DRAW_TOAST}"]`;
-          const drawOfferSelector = `[data-testid="${DRAW_OFFER}"]`;
+          const drawOfferSelector = `[data-testid="${gameTestid.drawOffer}"]`;
           cy.get(drawToastSelector).should("be.visible");
           cy.get(drawOfferSelector).should("be.visible");
 
@@ -248,8 +238,8 @@ describe("56 — board notices draw in an overlay over the board (#3868)", () =>
           expectNoticeValid(drawToastSelector, vp, baseline);
 
           // Accept and Decline buttons are active; click Decline.
-          cy.get(`[data-testid="${DRAW_ACCEPT}"]`).should("be.visible");
-          cy.get(`[data-testid="${DRAW_DECLINE}"]`).should("be.visible").click();
+          cy.get(`[data-testid="${gameTestid.drawAccept}"]`).should("be.visible");
+          cy.get(`[data-testid="${gameTestid.drawDecline}"]`).should("be.visible").click();
 
           // Offer dismissed.
           cy.get(drawOfferSelector).should("not.exist");
@@ -267,8 +257,8 @@ describe("56 — board notices draw in an overlay over the board (#3868)", () =>
           });
 
           cy.get(drawOfferSelector).should("be.visible");
-          cy.get(`[data-testid="${DRAW_ACCEPT}"]`).should("be.visible").click();
-          cy.get(ts(RESULT_OVERLAY)).should("be.visible");
+          cy.get(`[data-testid="${gameTestid.drawAccept}"]`).should("be.visible").click();
+          cy.get(ts(gameTestid.result)).should("be.visible");
         });
       });
     });
