@@ -5387,7 +5387,7 @@ pub async fn stats_totals_load(
         None => read,
     };
     let mut rows = read.fetch(&mut **t);
-    while let Some(row) = rows.try_next().await.map_err(db_error)? {
+    while let Some(row) = next_row(&mut rows).await.map_err(db_error)? {
         let patch: String = get(&row, "patch")?;
         let card: String = get(&row, "card")?;
         let Some(patch) = query.cards.file(&patch, &card) else {
@@ -5416,6 +5416,20 @@ pub async fn stats_totals_load(
         cards.shrink_to_fit();
     }
     Ok(totals)
+}
+
+/// R5271000: the next of `rows`, once a unit of the task's cooperative budget is spent, so a long read
+/// hands the runtime's worker back to its other tasks every budget's worth of rows. sqlx reads its socket
+/// with `try_read` and asks tokio for readiness, the one call that spends the budget, only when nothing is
+/// buffered, so a read whose rows arrive faster than they are decoded never yielded: on staging's one
+/// worker the card totals' read held every other request, `GET /api/stats/loading` and `/healthz` among
+/// them, for its whole length (deploy-staging run 46108101836).
+async fn next_row<S, T, E>(rows: &mut S) -> Result<Option<T>, E>
+where
+    S: futures_util::Stream<Item = Result<T, E>> + Unpin,
+{
+    tokio::task::coop::consume_budget().await;
+    rows.try_next().await
 }
 
 /// R1044000 (R1454, R750000): the patch's live Best-of-1 human decklists, first held first.
@@ -8949,6 +8963,41 @@ mod tests {
         assert!(!ping_due(Duration::ZERO, threshold));
         assert!(!ping_due(threshold - Duration::from_millis(1), threshold));
         assert!(ping_due(threshold, threshold));
+    }
+
+    /// R5271000: how many rows the test's read holds, far more than one budget's worth (128).
+    const ROWS: usize = 100_000;
+
+    /// R5271000: a long read lets the runtime's other tasks in. On a multi-thread runtime of one worker, the
+    /// read and the task it spawns beside itself are both that worker's: the read's rows are always ready, as
+    /// a socket's are while Postgres keeps its buffer full, so a read that never spends its budget holds the
+    /// worker to its last row and the other task never runs before it ends.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn r5271000_a_long_read_lets_the_runtimes_other_tasks_in() {
+        use std::sync::Arc;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let read = tokio::spawn(async move {
+            let ran = Arc::new(AtomicBool::new(false));
+            let beside = {
+                let ran = Arc::clone(&ran);
+                tokio::spawn(async move { ran.store(true, Ordering::SeqCst) })
+            };
+            let mut rows = futures_util::stream::iter((0..ROWS).map(Ok::<usize, ()>));
+            let mut met = None;
+            while let Some(row) = next_row(&mut rows).await.expect("an always-ready row") {
+                if ran.load(Ordering::SeqCst) {
+                    met = Some(row);
+                    break;
+                }
+            }
+            (met, beside)
+        });
+        let (met, beside) = read.await.expect("the read ran");
+        beside.await.expect("the other task ran");
+        assert!(
+            met.is_some(),
+            "the read held the worker through all {ROWS} rows: the other task never ran beside it"
+        );
     }
 }
 
