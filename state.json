@@ -21337,13 +21337,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-7",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-8",
+            "run": "46098200312",
+            "tier": "medium"
+          }
+        ],
         "sha": "6400df053af8564b20f1967e9dd1c2e6b9b321ba",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "5241": {
