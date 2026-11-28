@@ -118,6 +118,20 @@ pub struct Grant {
     pub radiant: bool,
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     pub params: IndexMap<String, i32>,
+    /// R5237006 (FvH #79 Post Human Aesthetist): when the granted ability runs. Absent is a Death, as
+    /// every grant was before, so a game without an End of turn grant hashes as it did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub on: Option<GrantOn>,
+}
+
+string_union! {
+    /// R5237006: `Grant.on`, the moment a granted ability runs: as the card dies (§4.5 step 3), or at
+    /// its controller's end of turn, as its own End of turn would (§6.2, R62).
+    pub enum GrantOn {
+        Death = "death",
+        EndOfTurn = "endOfTurn",
+    }
 }
 
 /// R1839000, R1839001: a Dormant card's status (SPEC §6.1 Dormant, `CardInstance.slumber`): on the
@@ -253,6 +267,24 @@ pub struct TurnBuff {
     pub keywords: Vec<Keyword>,
 }
 
+/// R5237001 (FvH #7 Whimsy!, #8 Joy!): "+N Attack and <keywords> for a turn / for two turns": holds while
+/// `player` (the caster) has started fewer than `until_turns_started` turns (`PlayerState.turns_started`),
+/// so it ends as the caster's `turns`-th turn from the grant starts (layers.rs, beside `TurnBuff`).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TimedBuff {
+    pub player: PlayerId,
+    pub until_turns_started: i32,
+    pub attack: i32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub keywords: Vec<Keyword>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "ts",
@@ -329,6 +361,12 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub turn_buff: Option<TurnBuff>,
+    /// R5237001: "+N Attack and <keywords> for N turns" (`effects::turn_buff::grant_for_turns`), each
+    /// held until its caster has started its turns; read in the layers beside `turn_buff`, cleared by
+    /// R78's reset. Absent on every other card (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub timed_buffs: Option<Vec<TimedBuff>>,
     /// A backrow card whose identity is public, e.g. a Field Trap that has fired (R33).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -1676,6 +1714,20 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub stolen_mana_crystals: Option<i32>,
+    /// R5237003 (FvH #18 Villa-D Moneybags): how far effects have raised this player's mana cap for the
+    /// rest of the game (`effects::mana::raise_mana_cap`), added to the seat's `Handicap.mana_cap`
+    /// wherever the cap is read (`mana::mana_cap_of`). Absent (never 0 stored) while none has, so a game
+    /// without one hashes as it did before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub mana_cap_bonus: Option<i32>,
+    /// R5237002 (FvH #16.2 Travertine Golem): the mana this player left unspent at the end of their last
+    /// turn (their last Float, R1563000), set at their cleanup beside `turnLog.unspentAtEnd` and never
+    /// reset, so it holds through their next turn (`query::float_last_turn`). Absent before their first
+    /// turn ends.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub last_float: Option<i32>,
     /// R846 (Meditative #19.1): extra turns owed to this player, taken when their turn ends by
     /// starting their turn again. Absent (never 0 stored) while none is owed, so a game without one
     /// hashes as it did before this field existed.
@@ -2540,6 +2592,8 @@ pub fn create_player_state() -> PlayerState {
         lost_refresh_through: None,
         mana_crystals: None,
         stolen_mana_crystals: None,
+        mana_cap_bonus: None,
+        last_float: None,
         extra_turns: None,
         rift_extra_turn: None,
         won_by_effect: None,
@@ -3097,6 +3151,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         return_to_hand_at_end_of_turn: None,
         taunt_suppressed_turn: None,
         turn_buff: None,
+        timed_buffs: None,
         face_up: None,
         revealed: None,
         last_damaged_by: None,

@@ -19,6 +19,10 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "felinorsvshumans-131";
 
+/// The card's name, which its prompts lead with (FV4: `Plagiarized: <IA name>`; IA #184's read
+/// "Pattern Recognition: …").
+const NAME: &str = "Plagiarized: Pattern Recognition";
+
 const STEP_COPY: &str = "pattern-copy";
 const STEP_EXILE: &str = "pattern-exile";
 const STEP_RADIANT: &str = "pattern-radiant";
@@ -44,7 +48,7 @@ fn pattern_recognition(radiant: bool) -> Script {
                         except: Some(vec![instance_id.clone()]),
                         min: Some(1),
                         max: 1,
-                        prompt: Some("Pattern Recognition: exile another".to_string()),
+                        prompt: Some(format!("{NAME}: exile another")),
                         ..Default::default()
                     }),
                 ]
@@ -74,7 +78,7 @@ fn pattern_recognition(radiant: bool) -> Script {
                     }],
                     min: Some(1),
                     max: 1,
-                    prompt: Some("Pattern Recognition: add a copy to your hand".to_string()),
+                    prompt: Some(format!("{NAME}: add a copy to your hand")),
                     ..Default::default()
                 })]
             })),
@@ -129,7 +133,7 @@ fn pattern_recognition(radiant: bool) -> Script {
                     }],
                     min: Some(2),
                     max: 2,
-                    prompt: Some("Pattern Recognition: add copies of two to your hand".to_string()),
+                    prompt: Some(format!("{NAME}: add copies of two to your hand")),
                     ..Default::default()
                 })]
             })),

@@ -40,7 +40,7 @@ fn bomb() -> Script {
                 "data": { "instanceId": this.id },
                 "watch": this.id,
                 // The badge adds the countdown ("in 3 turns") to the label itself.
-                "label": "Logic Bomb: destroys every enemy Unit",
+                "label": "Plagiarized: Logic Bomb: destroys every enemy Unit",
             })))]
         })),
         resume: IndexMap::from([(
@@ -130,7 +130,7 @@ mod tests {
             let played_on = s.state().turn;
             assert_eq!(
                 p1_badges(&s, P1),
-                vec!["Logic Bomb: destroys every enemy Unit in 3 turns".to_string()]
+                vec!["Plagiarized: Logic Bomb: destroys every enemy Unit in 3 turns".to_string()]
             );
             pass_rounds(&mut s, 2);
             assert_eq!(s.state().turn, played_on + 2 * PLAYER_TURNS_A_ROUND);
