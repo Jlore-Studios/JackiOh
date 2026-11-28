@@ -21288,9 +21288,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T01:32:17Z",
+    "at": "2026-11-28T01:46:21Z",
     "url": "",
-    "what": "review #5218 on claude-6"
+    "what": "suggestions (rules) on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-28T01:38:30Z",
@@ -45624,13 +45624,22 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-28T01:39:42Z",
-    "last_area": "tests",
-    "last_run": "2026-11-28T00:11:25Z",
+    "idle_since": "2026-11-28T01:46:21Z",
+    "last_area": "rules",
+    "last_run": "2026-11-28T01:46:21Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "rules",
+        "count": 5,
+        "last_run": "2026-11-28T01:46:21Z",
+        "provider": "claude-6",
+        "run_id": "pending:e5e82cc3-1795830359",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
