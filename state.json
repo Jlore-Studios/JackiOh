@@ -22438,10 +22438,10 @@
     "what": "plan #5242 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-28T14:45:28Z",
+    "at": "2026-11-28T14:53:02Z",
     "notes": [
-      "delivered review #5303 on claude-6 (run 46148834773): approved",
-      "started plan #5242 on claude-6 (run 46156423431)",
+      "delivered plan #5242 on claude-6 (run 46156423431): planned",
+      "started plan #5242 on claude-6 (run 46157050788)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -23148,7 +23148,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T14:45:28Z",
+  "loop_tick": "2026-11-28T14:53:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
