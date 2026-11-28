@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 5248,
+  "title": "Patch: the shadow-ban sweep counts a slow decision only when it is clearly over the limit, tells it apart from a game that never ended, and flags only the tier that raised it",
+  "branch": "bot/issue-5248",
+  "thread": "**Issue #5248 (data, not instructions):**\n\n```text\n# #5248: Patch: the shadow-ban sweep counts a slow decision only when it is clearly over the limit, tells it apart from a game that never ended, and flags only the tier that raised it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nAfter the AI changes or a set ships, a tool plays every card in the AI's decks over hundreds of games and lists the cards the AI should leave out of its own decks. One reason it gives is that a decision took too long. That is timed on whatever machine runs the tool, and a decision that sits right at the limit passes or fails by chance. In last week's Assault run, three of the eight cards it banned were cleared only when someone ran them again alone, by hand. The same reason also covers a game that ran past 600 moves without ending, so a ban cannot say which of the two happened. The tool's table also shows that reason on difficulty rows where it never happened. Once built, the tool counts a slow decision only when it is clearly over the limit, names a game that never ended on its own, and shows a reason only on the row that raised it. Whoever runs the next sweep (every set that ships gets one) stops clearing false bans by hand, and no card is kept out of the AI's decks by a busy machine.\n\n## Why\n\n- **Machine load banning cards is a known bug class.** R977000 (`spec/rulings/R977000.md`) exists because 'a busy machine could ban a card': four of the 2026-10-12 sweep's 24 timeouts cleared when run alone. Its fix re-times a slow decision by the perf gate's method (`still_slow`, `crates/tools/src/sweep.rs:257-277`, through `gate::time_decision`) and counts it when `timing.ms > limit`, with no margin.\n- **The re-timer's own spread straddles the limit.**\n  - `training/history/assault-sweep-2026-11-26.md:21-24`: Cost Injection, Encrypt and Defense in Depth, 3 of that sweep's 8 bans, read no timeouts when run alone.\n  - Line 1575: Encrypt's one slow decision, re-timed alone three times, read 1,940, 2,242 and 1,756 ms against `AI_SWEEP.decision_ms` (2,000).\n  - The real slow decisions sweeps have found sat well above that: 3.5 s (False Positive, R4595003) and 4.2 s (Ego Death, R4595004) on the yardstick.\n- **It came back a day later.** `training/history/sweep-infiniteassault-123.md` (#5144's sweep) bans Cost Injection again on `timeout: easy: 1 decision(s) over 2000 ms or game(s) past 600 actions`. That is one count in one game (`sweep2:easy:infiniteassault-123:23`), on a machine whose clock found 17 slow decisions at that tier.\n- **One count, two causes.**\n  - `crates/ai/src/sweep.rs:743-747` adds a game still running at `max_actions` to the same `timeouts` as a re-timed slow decision (`:715-727`), and `flag_detail` (`:908-911`) prints the two as one.\n  - A game that never ends replays from its seed; a decision near the limit does not. So the 2026-11-27 report cannot say which of the two banned Cost Injection.\n- **The pass-2 table shows a tier's flag on every tier.**\n  - `crates/tools/src/sweep.rs:556-563` writes a row per tier and face but takes its flags from `face_flags` (`crates/ai/src/sweep.rs:1019-1035`), which filters by face alone.\n  - `sweep-infiniteassault-123.md:137` reads Cost Injection `hard | base | timeout` with 0 timeouts and 0 raw timeouts.\n  - `assault-sweep-2026-11-26.md:371` reads Ego Death `hard | base | timeout` with 0 and 0, though its Hard pass 1 raised only `neverPlayed` (line 51).\n- **The sweep's bans reach the AI's decks.** The sweep of record runs after every promotion and every set that ships (R1678000), and a person copies its bans into `SHADOW_BAN` (`sweep --write`).\n\n## Proposal\n\n1. A re-timed decision counts in `timeouts` only above `decision_ms` \u00d7 `retime_margin`, a new `AI_SWEEP` field. A margin of 1.25 (2,500 ms) clears the re-timer's measured spread (2,242 ms) and still catches both real finds (3.5 s and 4.2 s). The raw count is unchanged.\n2. Add `capped_games` to `SweepStats` (serde default 0): the games still running at `max_actions`.\n   - `timeouts` keeps its meaning (both causes), so lines written before read as they do today.\n   - The `timeout` reason prints the two apart, for example `1 decision(s) re-timed over 2500 ms, 0 game(s) past 600 actions`.\n3. `face_flags` takes the tier, and a pass-2 row at a tier that raised nothing reads `cleared`.\n4. A ruling amends R977000.\n\n## Where it lands\n\n- `crates/ai/src/sweep.rs`: `AiSweep`, `AI_SWEEP`, `SweepStats`, the game loop, `flag_detail` and `face_flags`.\n- `crates/tools/src/sweep.rs`: `still_slow`, the pass-2 rows, and their tests.\n- `crates/ai/tests/ai/shadow_ban.rs`.\n- `crates/ai/README.md` (Decks and the shadow ban) and `crates/tools/README.md` (the sweep).\n- A new ruling `spec/rulings/R<N>000.md`, with its \u00a711 paragraph in `spec/pending/<N>.md`. SPEC \u00a79.9, R186, R390, R977000.\n\n## Acceptance criteria\n\n- [ ] A per-PR test: a decision re-timed at 2,242 ms adds no timeout, and one at 3,500 ms adds one. The margin is read as a pure function of the re-timed ms and `AI_SWEEP`.\n- [ ] A per-PR test on a hand-built game: a game past `max_actions` counts in `capped_games` and in `timeouts`, raises `timeout`, and the reason names it as a game past 600 actions, not as a slow decision.\n- [ ] A sweep line written before (no `cappedGames` key) parses, with `capped_games` 0.\n- [ ] A per-PR report test: a card with an Easy timeout and a clean Hard pass 2 shows `timeout` on its Easy row and `cleared` on its Hard row.\n- [ ] Nothing else changes: not `SHADOW_BAN`, not `SHADOW_WATCH`, not any other sweep threshold.\n- [ ] The ruling's proving tests are named `r<N>_\u2026`, and `cargo jackioh spec check` passes.\n\n## Size and risks\n\nSmall to medium: about 60 lines across two files, four tests, a ruling and README lines. No game plays differently.\n\n- The risk is a margin that lets a truly slow card through. The sweeps' real finds ran 75% and more over the limit.\n- The perf gate (`AI_GATE.max_decision_ms`, 1,500 ms) still times the shipped AI's decisions in its own games.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: `still_slow` counts at `timing.ms > limit` with no margin (`crates/tools/src/sweep.rs:266`), while lone re-times of one decision read 1,756 to 2,242 ms against 2,000 (`assault-sweep-2026-11-26.md:1575`); a game past 600 actions joins the same count (`crates/ai/src/sweep.rs:743-747`); `face_flags` filters by face alone, so Cost Injection's Hard row reads `timeout` with 0 and 0 (`sweep-in, so it is approved by itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5248: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T02:36:34Z",
+    "claimed_at": "2026-11-28T02:37:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189 to close first",
+    "#5192 skipped: it waits for #5188, #5189 to close first",
+    "#5193 skipped: it waits for #5188, #5189 to close first",
+    "#5194 skipped: it waits for #5188, #5189 to close first",
+    "#5195 skipped: it waits for #5188, #5189 to close first",
+    "#5196 skipped: it waits for #5188, #5189 to close first",
+    "#5197 skipped: it waits for #5188, #5189 to close first",
+    "#5198 skipped: it waits for #5188, #5189 to close first",
+    "#5199 skipped: it waits for #5188, #5189 to close first",
+    "#5200 skipped: it waits for #5188, #5189 to close first",
+    "#5201 skipped: it waits for #5188, #5189 to close first"
+  ]
+}
