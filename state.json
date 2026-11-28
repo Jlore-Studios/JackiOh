@@ -21480,15 +21480,8 @@
       }
     },
     "5246": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46100217893",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-28T03:07:55Z",
-        "until": "2026-11-28T03:37:55Z"
-      },
       "difficulty_by": {
         "at": "2026-11-28T03:07:47Z",
         "difficulty": "hard",
@@ -21507,10 +21500,9 @@
         "reason": "planned on opus",
         "trail": " spec/pending/5231.md spec/pending/5119.md | head -30; git log --oneline -3 -- spec/pending/ | head; git show --stat b190a5bbc6 | head -30\", \"description\": \"Read pending paragraph for\u2026\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A40 spec/README.md | head -60\", \"description\": \"Read spec README's ruling instructions\"}\n- Bash: {\"command\": \"for r in R0065 R0185 R0386 R1845000 R1845001 R4590001 R4319000 R2657005 R0169 R1320 R4595000; do f=spec/rulings/$r.md; [ -f $f ] && echo \\\"$r: $(grep -m1 '^title:' $f)\\\" || echo \\\"$r MIS\u2026\n- Bash: {\"command\": \"grep -n \\\"^#\\\" training/improve.md | head -40\", \"description\": \"List improve.md headings\"}\n- Bash: {\"command\": \"sed -n 25,100p training/improve.md; sed -n 127,170p training/improve.md\", \"description\": \"Read the screen and beyond-the-screen sections\"}\n- Bash: {\"command\": \"grep -n \\\"arena\\\" crates/tools/README.md | head -20\", \"description\": \"Check arena CLI options in tools README\"}\n- Bash: {\"command\": \"grep -n \\\"practice-claim\\\" -A6 training/README.md | head -30; ls apps/web/src/practice/ | head -30\", \"description\": \"Check the practice-claim fixture instructions\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5246/.bot-plan.md\", \"content\": \"# Draft plan #5246 (opus planner, run 2) \\u2014 in progress\\n\\n## Findings so far (verified in code)\\n- material enemy\u2026\n- Bash: {\"command\": \"grep -n \\\"derive\\\" -B0 -A0 crates/engine/src/wire/view.rs | sed -n 1,5p; sed -n 360,370p crates/engine/src/wire/view.rs; grep -n \\\"pub use\\\\|pub mod\\\" crates/engine/src/testkit/mod.rs | \u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/ai/tests/ai/hidden_nerfs.rs; grep -n \\\"pub fn clone\\\\|pub const AI\\\\|pub const HUMAN\\\\|pub fn scenario\\\\|pub fn close\\\" -A4 crates/ai/tests/ai/support.rs | head -40\",\u2026\n- Bash: {\"command\": \"grep -n \\\"pub use numbers\\\\|pub use wire\\\\|pub use tuning\\\\|pub use params\\\" crates/engine/src/lib.rs; grep -n \\\"FirstStrike\\\\b\\\" crates/engine/src/wire/*.rs | head -2; grep -n \\\"pub str\u2026\n- Bash: {\"command\": \"sed -n '/\\\\[workspace.lints/,/^\\\\[profile/p' Cargo.toml | head -40; cat crates/ai/clippy.toml | head -40\", \"description\": \"Read workspace lints and AI clippy config\"}\n- Bash: {\"command\": \"grep -rn \\\"cost_hike\\\\|costHike\\\" --include=*.rs --include=*.ts --include=*.tsx --include=*.json --include=*.md . 2>/dev/null | grep -v \\\"^./target\\\\|node_modules\\\\|^./crates/ai/src/eval\u2026\n- Bash: {\"command\": \"grep -rn \\\"EvalWeights {\\\" crates apps 2>/dev/null | grep -v \\\"pub struct\\\" | head -20\", \"description\": \"Find EvalWeights struct literals\"}\n- Bash: {\"command\": \"ls crates/ai/tests/fixtures | head; grep -rln \\\"JACKIOH_RECORD\\\\|RECORD_\\\" crates/ai/tests crates/tools/tests crates/server/tests 2>/dev/null | head\", \"description\": \"List AI fixtures an\u2026\n- Bash: {\"command\": \"grep -n \\\"material(state\\\" crates/ai/src/evaluate.rs | head\", \"description\": \"Find material call sites in evaluate\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nfor i in ['core-005','core-008','core-011','core-020']:\\n d=c[i]\\n print(i, d.get('params'), d.get('vanill\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nn=0\\nfor k,d in c.items():\\n if not isinstance(d,dict): continue\\n for p in d.get('params') or []:\\n if p.\u2026\n- Bash: {\"command\": \"sed -n 772,850p crates/ai/src/config.rs | grep -n \\\"attack\\\\|health\\\\|win\\\\|hand_card\\\\|radiant_face_share\\\\|hero\\\" | head -20\", \"description\": \"Read AI_EVAL board weights\"}\n- Bash: {\"command\": \"sed -n 851,950p crates/ai/src/config.rs | grep -n \\\"radiant_face_share\\\\|radiant_in_hand\\\\|hand_cost_cap\\\\|temporary_discount\\\" | head\", \"description\": \"Read hand-related AI_EVAL weights\u2026\n- Bash: {\"command\": \"grep -n \\\"assault-root-cut\\\" -B5 -A30 crates/ai/tests/ai/pinned.rs | head -60; python3 -c \\\"\\nimport json;d=json.load(open('crates/ai/tests/fixtures/pinned-assault-root-cut.json'));print\u2026\n- Bash: {\"command\": \"grep -n \\\"EvalWeights\\\\|AI_EVAL\\\\|GREEDY_EVAL\\\" crates/tools/tests/acceptance.rs crates/tools/src/*.rs 2>/dev/null | head -10; grep -rn \\\"fn .*greedy.*frozen\\\\|GREEDY_EVAL\\\" crates/ai/te\u2026\n- Bash: {\"command\": \"grep -rn \\\"AI_TUNING_SERIES\\\" crates/ai/src/*.rs | head -5; grep -n \\\"pub const AI_TUNING_SERIES\\\" -B12 crates/ai/src/*.rs | head -30\", \"description\": \"Check AI_TUNING_SERIES meaning\"}\n- Bash: {\"command\": \"grep -n \\\"| \\\\`classify\\\" crates/tools/README.md | cut -c1-2500\", \"description\": \"Read classify row in tools README\"}\n- Bash: {\"command\": \"grep -n \\\"fn start_of_turn_effects\\\" -A15 crates/ai/src/evaluate.rs; grep -n \\\"\\\\.mods\\\\b\\\\|\\\\.mods\\\\.iter\\\" crates/ai/src/evaluate.rs | head -20\", \"description\": \"Check other evaluation\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn act\\\\b\\\\|pub fn act(\\\" -A12 crates/ai/tests/ai/support.rs; grep -n \\\"pub fn scenario\\\" -A10 crates/ai/tests/ai/support.rs\", \"description\": \"Read support act and scenario\u2026\n- Bash: {\"command\": \"grep -n \\\"scenario\\\\|register_cards\\\" crates/ai/tests/ai/support.rs | head -10; sed -n 59,70p crates/ai/tests/ai/support.rs\", \"description\": \"Locate scenario in support.rs\"}\n- Bash: {\"command\": \"cd crates/cards/src/scripts/infinite_assault && head -4 c121_packet_sniffer.rs c127_bad_prompt.rs c142_the_jailbreaker.rs c233_model_collapse.rs\", \"description\": \"Read headers of related\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5246 && grep -n \\\"pub hand:\\\" crates/engine/src/state.rs | head -2; grep -n \\\"Used\\\" crates/engine/src/state.rs | head -3; sed -n 262,272p crates/ai/\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5246/.bot-plan.md\", \"content\": \"# Draft plan #5246 (opus planner, run 2): complete; the final message is the plan\\n\\nCorrections to run 1's plan, all \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule line 2: it changes the AI's evaluation, and with it its decisions (crates/ai/src/evaluate.rs, config.rs)\"} --> ## Goal The Jailbreak enemy should cast IA #137 Patch Tuesday Exploit and IA #130 Prompt Injection when they are its best use of the mana, and\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-28T02:37:17Z",
       "owner_why": "it plans it",
@@ -21523,9 +21515,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-28T02:36:27Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46100217893",
+      "run_id": "pending:539f459c-1795835298",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T02:53:08Z",
+      "started_at": "2026-11-28T03:08:36Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -21724,9 +21716,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T03:01:08Z",
+    "at": "2026-11-28T03:08:36Z",
     "url": "",
-    "what": "review #5250 on claude-3"
+    "what": "build #5246 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-28T02:59:14Z",
