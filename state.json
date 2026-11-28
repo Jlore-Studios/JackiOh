@@ -44387,6 +44387,10 @@
       "5246": {
         "at": "2026-11-28T02:36:17Z",
         "why": "Confirmed: the enemy's hand is priced by its size alone (`crates/ai/src/evaluate.rs:1584`), so a Nerf, which only makes a card dearer, scores nothing, and `RandomTargetsNextSpell` is read nowhere in `crates/ai/src`; the sweep measures both cards at 2 of 28 and 1 of 54 playable turns at Hard (`training/history/assault-sweep-2026-11-26.md:1908,1918`), and the fix follows the path #5122 (R5122000) to"
+      },
+      "5248": {
+        "at": "2026-11-28T02:36:20Z",
+        "why": "Confirmed: `still_slow` counts at `timing.ms > limit` with no margin (`crates/tools/src/sweep.rs:266`), while lone re-times of one decision read 1,756 to 2,242 ms against 2,000 (`assault-sweep-2026-11-26.md:1575`); a game past 600 actions joins the same count (`crates/ai/src/sweep.rs:743-747`); `face_flags` filters by face alone, so Cost Injection's Hard row reads `timeout` with 0 and 0 (`sweep-in"
       }
     },
     "auto_approved": [
