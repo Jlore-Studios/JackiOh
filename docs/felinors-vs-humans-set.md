@@ -142,7 +142,7 @@ fill anything not listed (CLAUDE.md rule 3).
 | 91 | Base: deal ⌊X·√log₂X⌋ to an enemy, or to every enemy when X is a power of 2. Radiant: X rounds up to the next power of 2 (at least 2), always every enemy. Values from `KY_FFT_DAMAGE`. |
 | 92 | Aura: every card's Attack, Health and own cost (never X) counts as its number of binary digits (`⌊log₂N⌋+1`, N ≤ 0 unchanged). Radiant: only where that helps you (your costs, the enemy's Attack and Health). Two do not stack. A damaged Unit whose Health falls to 0 dies. |
 | 100 | One of ten random effects (base), three (Radiant), the Call to Chaos edition pattern (`subsystems::call_to_chaos_fvh`). |
-| 105 | Attacks every other Unit, enemy Units first, then its own, in lane order (Radiant: enemy Units only). |
+| 105 | Attacks every other Unit (Radiant: every enemy Unit) one at a time, in a random order (the owner's call of 2026-11-28); it stops when it dies or leaves the field. |
 | 107 | At the end of your turn every swapped card still in a hand goes back. |
 | 111 | Endless Evolve (FV2 above). |
 | 112 | X Unit 0/0 plus its two modules; the module offer is the 4 dearest affordable, never the same module twice. |
