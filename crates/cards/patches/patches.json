@@ -38654,5 +38654,30 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.15p",
+    "date": "2026-11-28",
+    "title": "Patch: Radiant Rollback Point brings its Units back on their printed face, with Rush, not Radiant",
+    "source": "#5158",
+    "notes": "Issue #5158: Rollback Point's Radiant face passed its own face to each summon, so its copies came back Radiant (R4594005). It keeps the script before, keyed by this fragment (R767000, R4779000). No plays claimed: the Infinite Assault is in no shipped set, so no card's statistics restart (R1370000); the fragment ships for the kept script keyed by it (R4844000).",
+    "player": {
+      "title": "Rollback Point's copies come back plain",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Radiant Rollback Point now brings its Units back on their normal faces, with Rush, instead of Radiant."
+      ]
+    },
+    "commits": [
+      "50dd7c8e75f9e99b51d6290da95ff996dda609e4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "radiant-rollback-point-brings-its-units-back-on-their",
+    "changes": []
   }
 ]

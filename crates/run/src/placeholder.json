@@ -506,7 +506,7 @@
     "coins": 25
    },
    "starter": true,
-   "text": "You may keep no cards from a pack, for 25 Coins."
+   "text": "You may keep no cards from a pack, for 25 Coins for each level."
   },
   {
    "id": "temp-piggy-bank",
@@ -518,7 +518,7 @@
     "n": 5
    },
    "starter": true,
-   "text": "+5 Coins after each fight."
+   "text": "+5 Coins after each fight for each level."
   },
   {
    "id": "temp-big-heart",
@@ -530,7 +530,7 @@
     "n": 5
    },
    "starter": true,
-   "text": "+5 max HP."
+   "text": "+5 max HP for each level."
   },
   {
    "id": "temp-wide-net",
@@ -542,7 +542,7 @@
     "n": 2
    },
    "starter": true,
-   "text": "Packs show 2 more cards."
+   "text": "Packs show 2 more cards for each level."
   },
   {
    "id": "temp-thick-skin",
@@ -566,7 +566,7 @@
     "n": 1
    },
    "starter": true,
-   "text": "Keep 1 more card from each pack."
+   "text": "Keep 1 more card from each pack for each level, up to 5."
   },
   {
    "id": "temp-coupon",
@@ -577,7 +577,7 @@
     "type": "shopDiscount",
     "percent": 20
    },
-   "text": "Shop Coin prices are 20% lower."
+   "text": "Shop Coin prices are 20% lower for each level."
   },
   {
    "id": "temp-ticket-stub",
@@ -588,7 +588,7 @@
     "type": "ticketsPerFight",
     "n": 1
    },
-   "text": "+1 Ticket after each fight."
+   "text": "+1 Ticket after each fight for each level."
   },
   {
    "id": "temp-quick-start",
@@ -610,7 +610,7 @@
     "type": "coinsPerFight",
     "n": 20
    },
-   "text": "+20 Coins after each fight."
+   "text": "+20 Coins after each fight for each level."
   },
   {
    "id": "temp-crown",

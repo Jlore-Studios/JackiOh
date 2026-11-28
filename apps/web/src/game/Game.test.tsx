@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
 import { DAMAGE_FEEL, SLAM_LAND_AT, UNIT_SLAM } from "./damageFeel.ts";
+import { DRAG_THRESHOLD_PX } from "./drag/model.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid, type Highlight } from "./contract.ts";
 import Game, { GAME_HOST_ATTRIBUTE, GAME_SCROLL_LOCK_ATTRIBUTE, sameHighlight } from "./Game.tsx";
@@ -1185,5 +1186,136 @@ describe("R3060000 a repeat of one intent against one view is sent once", () => 
     clickEndTurn();
     clickEndTurn();
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("#5230 End turn reads the turn's moves, not the selection's", () => {
+  const END: ActionBody = { type: "endTurn" };
+  const handView = (): PlayerView => baseView({ you: emptySide("p1", { hand: [card({ instanceId: "h1" })] }) });
+  const PLAYS: ActionBody[] = [
+    { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
+    { type: "play", instanceId: "h1", zone: { row: "units", lane: 2 } },
+    END,
+  ];
+  const attackView = (): PlayerView =>
+    baseView({
+      you: emptySide("p1", { units: [unit("p1", { instanceId: "u1" }), unit("p1", { instanceId: "u3" }), null, null, null] }),
+      opponent: emptySide("p2", { hand: { count: 3 }, units: [unit("p2", { instanceId: "e1" }), null, null, null, null] }),
+    });
+  const ATTACKS: ActionBody[] = [
+    { type: "attack", attackerId: "u1", targetId: "e1" },
+    { type: "attack", attackerId: "u1", targetId: "hero-p2" },
+    { type: "attack", attackerId: "u3", targetId: "hero-p2" },
+    END,
+  ];
+  const endTurnButton = (): HTMLElement => screen.getByTestId(testid.endTurn);
+
+  // The pointer helpers of test/ux/drag-continue.test.tsx.
+  const POINTER = 1;
+  const PRESS = { x: 200, y: 400 };
+  let under: Element[] = [];
+  const over = (...stack: Element[]): void => {
+    under = stack;
+  };
+  const move = (x: number, y: number): void => {
+    fireEvent.pointerMove(window, { pointerId: POINTER, clientX: x, clientY: y });
+  };
+  const lift = (source: Element): void => {
+    over(source);
+    fireEvent.pointerDown(source, { pointerId: POINTER, button: 0, clientX: PRESS.x, clientY: PRESS.y });
+    move(PRESS.x, PRESS.y - 2 * DRAG_THRESHOLD_PX);
+  };
+
+  beforeEach(() => {
+    under = [];
+    document.elementsFromPoint = (() => under) as Document["elementsFromPoint"];
+  });
+
+  afterEach(() => {
+    delete (document as Partial<Document>).elementsFromPoint;
+    document.documentElement.removeAttribute("data-dragging");
+  });
+
+  it("#5230 a card picked up with a click leaves End turn reading ready", () => {
+    writeSettings({ dragToPlay: false });
+    render(<Game view={handView()} legal={PLAYS} onAction={vi.fn()} />);
+    expect(endTurnButton()).toHaveAttribute("data-turn-state", "ready");
+
+    fireEvent.click(screen.getByTestId(testid.handCard("h1")));
+
+    expect(screen.getByTestId(testid.handCard("h1"))).toHaveAttribute("data-selected", "true");
+    expect(endTurnButton()).toHaveAttribute("data-turn-state", "ready");
+  });
+
+  it("#5230 a card lifted by a drag leaves End turn reading ready", () => {
+    render(<Game view={handView()} legal={PLAYS} onAction={vi.fn()} />);
+
+    lift(screen.getByTestId(testid.handCard("h1")));
+
+    expect(document.documentElement).toHaveAttribute("data-dragging", "play");
+    expect(endTurnButton()).toHaveAttribute("data-turn-state", "ready");
+  });
+
+  it.each(["u1", "u3"])("#5230 attacker %s selected leaves End turn reading ready", (id) => {
+    render(<Game view={attackView()} legal={ATTACKS} onAction={vi.fn()} />);
+
+    fireEvent.click(screen.getByTestId(testid.card(id)));
+
+    expect(screen.getByTestId(testid.card(id))).toHaveAttribute("data-selected", "true");
+    expect(screen.getByTestId(testid.hero("opponent"))).toHaveAttribute("data-glow");
+    // u3 can only hit the hero, so an enemy unit's id is no glow and no move; u1 can hit both.
+    if (id === "u3") expect(screen.getByTestId(testid.card("e1"))).not.toHaveAttribute("data-glow");
+    expect(endTurnButton()).toHaveAttribute("data-turn-state", "ready");
+  });
+
+  it("#5230 aiming a dragged attacker between an enemy unit and the hero does not change End turn", () => {
+    render(<Game view={attackView()} legal={ATTACKS} onAction={vi.fn()} />);
+
+    lift(screen.getByTestId(testid.card("u1")));
+    expect(document.documentElement).toHaveAttribute("data-dragging", "attack");
+    expect(endTurnButton()).toHaveAttribute("data-turn-state", "ready");
+
+    over(screen.getByTestId(testid.hero("opponent")));
+    move(600, 60);
+    expect(endTurnButton()).toHaveAttribute("data-turn-state", "ready");
+
+    over(screen.getByTestId(testid.card("e1")));
+    move(500, 120);
+    expect(endTurnButton()).toHaveAttribute("data-turn-state", "ready");
+
+    over(screen.getByTestId(testid.hero("opponent")));
+    move(600, 60);
+    expect(endTurnButton()).toHaveAttribute("data-turn-state", "ready");
+  });
+
+  it("#5230 with Confirm end turn on and a Unit picked up, the first press arms and the second sends", () => {
+    writeSettings({ confirmEndTurn: true, dragToPlay: false });
+    const onAction = vi.fn();
+    render(<Game view={handView()} legal={PLAYS} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.handCard("h1")));
+    expect(screen.getByTestId(testid.handCard("h1"))).toHaveAttribute("data-selected", "true");
+
+    fireEvent.click(endTurnButton());
+    expect(onAction).not.toHaveBeenCalled();
+    expect(endTurnButton()).toHaveAttribute("data-confirm", "armed");
+    expect(endTurnButton()).toHaveTextContent("Confirm end turn");
+
+    fireEvent.click(endTurnButton());
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(END);
+  });
+
+  it("#5230 with no move left but End turn, the state is waiting and one press ends the turn", () => {
+    writeSettings({ confirmEndTurn: true });
+    const onAction = vi.fn();
+    render(<Game view={baseView()} legal={[END]} onAction={onAction} />);
+    expect(endTurnButton()).toHaveAttribute("data-turn-state", "waiting");
+
+    fireEvent.click(endTurnButton());
+
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(END);
+    expect(endTurnButton()).not.toHaveAttribute("data-confirm");
   });
 });
