@@ -46512,21 +46512,13 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-28T12:19:56Z",
+    "idle_since": "2026-11-28T12:12:28Z",
     "last_area": "server",
-    "last_run": "2026-11-28T12:19:56Z",
+    "last_run": "2026-11-28T10:19:00Z",
     "provider": null,
     "requested": false,
     "run_id": null,
     "running": {
-      "1": {
-        "area": "client",
-        "count": 1,
-        "last_run": "2026-11-28T12:19:29Z",
-        "provider": "claude-4",
-        "run_id": "46144085454",
-        "taken_asks": []
-      },
       "2": {
         "area": "tests",
         "count": 1,
