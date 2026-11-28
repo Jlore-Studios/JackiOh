@@ -534,11 +534,16 @@ mod tests {
             let types: Vec<String> = last.iter().map(type_of).collect();
             let ended = types.iter().position(|kind| kind == "turnEnded").expect("a turnEnded event");
             assert!(matches_object(&js(&last[ended]), &json!({ "type": "turnEnded", "player": "p2" })));
-            assert_eq!(types[ended + 1..ended + 3].to_vec(), vec!["shuffledIn".to_string(), "shuffledIn".to_string()]);
-            assert!(last[ended + 1..ended + 3]
+            // R5189000: the delayed effect's own marker comes first, then its two copies.
+            assert!(matches_object(
+                &js(&last[ended + 1]),
+                &json!({ "type": "hookResolving", "defId": VIRUS, "controller": "p1", "hook": "delayed" })
+            ));
+            assert_eq!(types[ended + 2..ended + 4].to_vec(), vec!["shuffledIn".to_string(), "shuffledIn".to_string()]);
+            assert!(last[ended + 2..ended + 4]
                 .iter()
                 .all(|event| matches!(event, GameEvent::ShuffledIn { player, .. } if *player == P1)));
-            assert_eq!(types[ended + 3], "turnStarted");
+            assert_eq!(types[ended + 4], "turnStarted");
         }
     }
 

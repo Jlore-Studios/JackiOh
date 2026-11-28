@@ -3,8 +3,10 @@
   "sources": "issue #5189",
   "notes": "R5189000, R5189001: nine more marked hooks and their card-audio.json5 hooks, labelled in the voice preview; no card carries one yet and no card plays differently.",
   "player": {
-    "title": "",
-    "new": [],
+    "title": "Sounds for more card effects",
+    "new": [
+      "Cards can now be given sounds for when they attack or are attacked, react to an ally's attack or a play, arrive in a hand or at the start of the game, and when their delayed effects resolve."
+    ],
     "balance": [],
     "changes": [],
     "text": [],

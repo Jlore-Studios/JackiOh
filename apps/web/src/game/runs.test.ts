@@ -56,6 +56,24 @@ describe("createPlayTracker", () => {
     plays.see({ type: "turnStarted", player: "p2", turn: 4 });
     expect(plays.current()).toBe(undefined);
   });
+
+  it("R5189001 a marker of a hook R5189000 added leaves the open hook as it was; R2783000's open theirs", () => {
+    const marker = (hook: Extract<GameEvent, { type: "hookResolving" }>["hook"], sourceId: string): GameEvent => ({ type: "hookResolving", sourceId, defId: "core-001", controller: "p1", hook });
+    const plays = createPlayTracker();
+    for (const kind of ["onPlayHook", "whenAttacks", "afterAttack", "afterAttacked", "allyAttacked", "allyAttack", "startOfGame", "entersHand", "delayed"] as const) {
+      plays.see(marker(kind, "drawn"));
+      expect(plays.hook(), kind).toBe(undefined);
+    }
+    plays.see(marker("startOfTurn", "turner"));
+    plays.see(marker("entersHand", "drawn"));
+    plays.see(marker("delayed", "later"));
+    expect(plays.hook()?.sourceId).toBe("turner");
+    plays.see(marker("death", "dying"));
+    expect(plays.hook()?.sourceId).toBe("dying");
+    // A kind this build has never seen (issue #769) is read through too.
+    plays.see({ ...marker("activate", "newer"), hook: "notAHook" } as unknown as GameEvent);
+    expect(plays.hook()?.sourceId).toBe("dying");
+  });
 });
 
 describe("pileOf", () => {

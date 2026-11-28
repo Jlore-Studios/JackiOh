@@ -16,6 +16,7 @@
 
 import type { GameEvent, PlayerId } from "@jackioh/shared";
 
+import { opensHookRun } from "../game/runs.ts";
 import { castOnDrawAt } from "./castOnDraw.ts";
 import { FX_MEMORY_HITS, FX_MEMORY_LIMIT, FX_MEMORY_RECENT, FX_MEMORY_RESOLVING } from "./constants.ts";
 import type { FxCardHook } from "./motifs/names.ts";
@@ -27,8 +28,8 @@ const HIDDEN_ID = "hidden";
 /**
  * R2797000: the table hook a `hookResolving` marker opens an entry for: none for a Cry, which runs inside
  * its card's own play (a Spell's effect is one), so its play keys it by `cast` or `cry`. R5189001: none
- * for the hooks R5189000 marks either, which no effects table keys yet: a `trigger` motif would play a
- * turn hook's look on an attack.
+ * for the hooks R5189000 marks either, which no effects table keys yet (a `trigger` motif would play a
+ * turn hook's look on an attack), and whose markers `remember` reads through (`opensHookRun`).
  */
 const HOOK_OF: Readonly<Record<Extract<GameEvent, { type: "hookResolving" }>["hook"], FxCardHook | null>> = {
   cry: null,
@@ -111,6 +112,9 @@ export function createFxMemory(limit: number = FX_MEMORY_LIMIT): FxMemory {
     remember(events: readonly GameEvent[]): void {
       opening = undefined;
       for (const event of events) {
+        // R5189001: a marker of a hook R5189000 added sounds alone: the memory reads through it, as it read
+        // past that hook before it was marked (no entry opens or closes there, and no play counts it).
+        if (event.type === "hookResolving" && !opensHookRun(event.hook)) continue;
         const hit = hitIdOf(event);
         if (event.type === "modifierChanged" && event.added) {
           // The innermost card resolving owes its controller the turn (the modifier may be the other player's: Last Word ends theirs).

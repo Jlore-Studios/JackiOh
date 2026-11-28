@@ -24,10 +24,41 @@ export type OpenPlay = { player: PlayerId; instanceId: string; defId: string; ca
 /** A cast: the play that made it (as it stood after this cast) and which of its casts this is (1 on). */
 export type Cast = { by: OpenPlay; ordinal: number };
 
+type HookKind = Extract<GameEvent, { type: "hookResolving" }>["hook"];
+
+/**
+ * R5189001: whether a `hookResolving` of this kind opens a hook's run for the animation runner and the
+ * effects layer (`fx/memory.ts`). R2783000's six do; the nine R5189000 added sound their card's hook alone
+ * (`audio/cues.ts`), and both layers read through them as they read past those hooks before they were
+ * marked, so a drawn card's `entersHand` neither ends a rift nor takes a sweep from the run around it.
+ */
+const OPENS_A_RUN: Readonly<Record<HookKind, boolean>> = {
+  cry: true,
+  death: true,
+  startOfTurn: true,
+  endOfTurn: true,
+  whenever: true,
+  activate: true,
+  onPlayHook: false,
+  whenAttacks: false,
+  afterAttack: false,
+  afterAttacked: false,
+  allyAttacked: false,
+  allyAttack: false,
+  startOfGame: false,
+  entersHand: false,
+  delayed: false,
+};
+
+/** R5189001: `OPENS_A_RUN`, widened: a kind this build has never seen (issue #769) is read through too. */
+export function opensHookRun(hook: string): boolean {
+  return (OPENS_A_RUN as Partial<Record<string, boolean>>)[hook] === true;
+}
+
 /**
  * R2800000: the hook resolving now, as the seat's own stream marks it: a `hookResolving` (R2783000) or a
  * Trap's `trapFired`, whose `trap` is the zone it fired from (R154). `defId` is R97's sentinel when the
- * seat cannot read the card.
+ * seat cannot read the card. R5189001: a marker `opensHookRun` refuses leaves the open hook as it was.
  */
 export type OpenHook = { defId: string; sourceId: string; controller: PlayerId; trap: { row: Row; lane: number } | null };
 
@@ -73,7 +104,7 @@ export function createPlayTracker(): PlayTracker {
     see(event) {
       switch (event.type) {
         case "hookResolving":
-          hook = { defId: event.defId, sourceId: event.sourceId, controller: event.controller, trap: null };
+          if (opensHookRun(event.hook)) hook = { defId: event.defId, sourceId: event.sourceId, controller: event.controller, trap: null };
           return null;
         case "trapFired":
           hook = { defId: event.defId, sourceId: event.instanceId, controller: event.controller, trap: { row: event.row, lane: event.lane } };
@@ -557,6 +588,9 @@ export type AnomalyRift = {
 /** R3337003: what ends a rift: the next hook (a laid Cry firing, R1855001), a question, a Trap, the play's end, another replacement, the game's or the turn's end. */
 const RIFT_ENDS = new Set<GameEvent["type"]>(["hookResolving", "promptOpened", "trapFired", "cardResolved", "boardReplaced", "gameOver", "turnEnded"]);
 
+/** R3337003, R5189001: whether `event` ends a rift: one of `RIFT_ENDS`, a marker only if it opens a hook's run. */
+const endsRift = (event: GameEvent): boolean => RIFT_ENDS.has(event.type) && (event.type !== "hookResolving" || opensHookRun(event.hook));
+
 /**
  * R3337003: the rift at `at`, or null: a `boardReplaced` naming an Anomaly (R3337000), with every event
  * after it up to the first of `RIFT_ENDS`: the old side's `exiled` and the board's `summoned` among
@@ -569,7 +603,7 @@ export function riftAt(events: readonly GameEvent[], at: number, view: PlayerVie
   const side = sideOf(view, head.player);
   const landings: { zone: string; row: Row }[] = [];
   let i = at + 1;
-  for (let event = events[i]; event !== undefined && !RIFT_ENDS.has(event.type); event = events[i]) {
+  for (let event = events[i]; event !== undefined && !endsRift(event); event = events[i]) {
     if (event.type === "summoned" && event.player === head.player) landings.push({ zone: testid.zone(side, event.row, event.lane), row: event.row });
     i += 1;
   }

@@ -90,6 +90,17 @@ describe("R2797000 a card's hooks play their entry from their marker", () => {
     expect(boltUnder([marker("death", "src"), marker("activate", "src2", "classic-080")], "src2", new Map([...table, ...tableOf("classic-080", { activate: BOLT })]))).not.toBeNull();
   });
 
+  it("R5189001 the markers R5189000 added open no entry and close none: the hook around them keeps its events", () => {
+    const added: readonly HookKind[] = ["onPlayHook", "whenAttacks", "afterAttack", "afterAttacked", "allyAttacked", "allyAttack", "startOfGame", "entersHand", "delayed"];
+    for (const kind of added) {
+      for (const [, hook] of OPENS) expect(boltUnder([marker(kind, "src")], "src", tableOf(UNIT, { [hook]: BOLT })), `${kind} ${hook}`).toBeNull();
+      // A start-of-turn hook that draws a card with "When this enters your hand" still plays its own motif after it.
+      expect(boltUnder([marker("startOfTurn", "src"), marker(kind, "drawn", SPELL)], "src", tableOf(UNIT, { trigger: BOLT })), kind).not.toBeNull();
+    }
+    // R2783000's markers still close it.
+    expect(boltUnder([marker("startOfTurn", "src"), marker("whenever", "drawn", SPELL)], "src", tableOf(UNIT, { trigger: BOLT }))).toBeNull();
+  });
+
   it("R2797000 a Cry's own marker opens nothing: a Unit's cry plays by its play", () => {
     const stream = [played("p1", "ex", UNIT), marker("cry", "ex")];
     expect(boltUnder(stream, "ex", tableOf(UNIT, { cry: BOLT }))).not.toBeNull();

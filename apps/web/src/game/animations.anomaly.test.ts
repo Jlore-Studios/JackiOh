@@ -126,6 +126,18 @@ describe("R3337003 an Anomaly's rift entry", () => {
     expect(theirs?.rift?.landings[0]?.zone).toBe(testid.zone("opponent", "units", 2));
   });
 
+  it("R5189001 a landing card's startOfGame and entersHand markers leave its rift whole; a Cry still ends it", () => {
+    const { view, a, b } = board();
+    const events = cast("AL", a, b);
+    const landed = (hook: "startOfGame" | "entersHand"): GameEvent => ({ type: "hookResolving", sourceId: "rock-1", defId: ASTEROID, controller: "p1", hook });
+    // Each lands among the rift's landings, as a marker R5189000 added does after its card's arrival.
+    const marked = [...events.slice(0, 5), landed("startOfGame"), landed("entersHand"), ...events.slice(5)];
+    const rifts = planEntries(marked, view, false, createPlayTracker()).filter((entry) => entry.rift !== undefined);
+    expect(rifts).toHaveLength(1);
+    expect(rifts[0]?.events).toEqual(marked.slice(1, 9));
+    expect(rifts[0]?.rift?.landings).toHaveLength(3);
+  });
+
   it("R3337003 an uncoded boardReplaced, or one naming no Anomaly, plays as before", () => {
     const { view, a, b } = board();
     for (const anomaly of [undefined, "ZZ"]) {
