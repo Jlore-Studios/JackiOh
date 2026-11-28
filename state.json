@@ -21481,16 +21481,9 @@
     "what": "review #5240 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-28T01:59:30Z",
+    "at": "2026-11-28T02:09:56Z",
     "notes": [
-      "#5229 is held for `claude-4` until 20:00 (5-hour usage is 76%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))",
-      "delivered build #5227 on claude-7 (run 46090463664): built",
-      "delivered plan #5164 on agy (run 46082558759): failed",
-      "started plan #5164 on agy (run 46096046111)",
-      "started build #5229 on claude-4 (run 46096091250)",
-      "started review #5240 on claude-1 (run 46096139264)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "runner gate: started 2 of 2 waiting run(s) (run 46096651749 on main, run 46096765205 on bot/issue-5231)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
