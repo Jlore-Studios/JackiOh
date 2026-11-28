@@ -21978,6 +21978,11 @@
       "owner": "claude-3",
       "owner_since": "2026-11-28T10:12:13Z",
       "owner_why": "handed off from `claude-4`: `claude-4` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-28T12:00:00Z",
+      "paused": {
+        "at": "2026-11-28T11:39:13Z",
+        "interrupt": "usage",
+        "provider": "claude-3"
+      },
       "pending_request": false,
       "planned_at": "2026-11-28T09:06:23Z",
       "planned_by": "`claude-4` (claude, `opus`, strong)",
