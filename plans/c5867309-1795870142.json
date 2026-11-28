@@ -1,0 +1,66 @@
+{
+  "action": "plan",
+  "number": 5302,
+  "title": "Patch: classify leaves out only a file's test items, not everything after the first one, so a change to the cards crate's registry and shared card helpers asks for its patch note again",
+  "branch": "bot/issue-5302",
+  "thread": "**Issue #5302 (data, not instructions):**\n\n```text\n# #5302: Patch: classify leaves out only a file's test items, not everything after the first one, so a change to the cards crate's registry and shared card helpers asks for its patch note again\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nEvery pull request runs a check that works out whether the change alters how cards play. When it does, the change has to carry a patch note naming those cards, so players read about it and it gets a version. Since a change merged today, that check reads one important file of card code only as far as its first test-only line, and that line now sits near the top. Everything under it is skipped. That includes the code that registers every card's script and two helpers that 17 cards call, one of them for the stats a dying unit's Death text reads. A pull request that changed that code would pass as nothing to do with cards: no patch note asked for, no version and no cards label. Once this is built, the check skips only the test pieces of a file and reads the rest. A test fails if it ever goes blind this way again.\n\n## Why\n- `cargo jackioh classify` (CI's `rust (classify)`, a piece of the required `rust` check) compares a Rust file that is no card script by `code_lines_with_uses` (`crates/tools/src/catalog.rs:1624`). That function is `jackioh_cards::code_lines::script_code`, which stops at the first `#[cfg(test)]`: `.take_while(|code| !code.starts_with(\"#[cfg(test)]\"))` (`crates/cards/src/code_lines.rs:129-134`). R2050000 writes the rule down: everything at or below a file's first `#[cfg(test)]` is no code.\n- #5277 (a5fdfa9d5b, 2026-11-28) added `#[cfg(test)] mod snapshot_fold;` at `crates/cards/src/lib.rs:66-67`. Before that commit, the file's first `#[cfg(test)]` was at line 224, below its code. Now lines 67-227 are cut. They hold the `history` and `patch_history` re-exports, `CATALOG`, `card_def`, `scripts_of`, `register_all` (163-185), `never_defense_kept` (188) and `stats_as_it_died` (203, R4396000's Death stats). 17 card scripts call one of the last two.\n- How an edit there is classified today:\n  - `area()` returns `PlayCode` (`classify.rs:295-300`).\n  - `code_changed` (`classify.rs:333-356`) compares two equal cut lists and returns false, so the loop `continue`s (`classify.rs:535`).\n  - `diff.play_code` stays false and `unchecked` stays empty, so stage 2 never builds the base and `--claims` asks for no fragment.\n  - The pull request classifies as Internal.\n- People edit this part of the file: `stats_as_it_died` came in with #4417 (2026-11-21), `never_defense_kept` with #2662. No test sees the gap, because R2050000's tests (`classify.rs:2477-2529`) use a fixture whose tests come last.\n- I scanned each file for its first `#[cfg(test)]` and the top-level items after it. Across the engine, the cards crate outside its scripts, the AI, the wasm crates and the server, `crates/cards/src/lib.rs` is the only file with production items after its first `#[cfg(test)]`. The five card scripts with an early test item have only test code after it. So this check stopped working as written today, and nothing noticed. The next play-code file that gains a test helper near its top goes blind the same way.\n\n## Proposal\n1. For a Rust file that is no card script, `classify` leaves out each `#[cfg(test)]` item and reads on past it, instead of stopping at the first one. An item is the attribute, any attributes after it, and the one item it marks: a one-line `mod x;` or `use \u2026;`, or a braced item up to its closing brace.\n2. Card scripts keep today's reading. `code_lines`, `catalog loc` and the compiled `CODE_LINES` stay as they are, so no card's line count moves; `BUSTED` and `COMPLICATED`, which cards read in play, rest on those counts.\n3. One way to find an item's end: rustfmt (CI runs `cargo fmt --check`) puts a braced item's closing `}` alone on a line at the attribute's indentation, which `without_comments`' untrimmed lines keep (`code_lines.rs:147`). Any misreading must err toward counting test code as code, which only costs a stage 2 run that finds nothing, and never the other way.\n4. A new ruling in the issue's block refines R2050000: a `#[cfg(test)]` item is no code, but what follows it is. R2050000's sentence points to it, and its \u00a711 paragraph goes in `spec/pending/<issue>.md`.\n\nRejected alternatives:\n- Moving `mod snapshot_fold;` below the code. It fixes today's file, but nothing would catch the next one (CLAUDE.md rule 15).\n- Reading every line of a file that is no card script, test modules included. Every test-only edit to the engine would then go through stage 2's base build.\n- Changing `script_code` itself. It also feeds the card metrics that cards read in play.\n\n## Where it lands\n- `crates/tools/src/catalog.rs`: `code_lines_with_uses` gets a reading of its own for files that are no card script; `code_lines` keeps the script reading.\n- `crates/tools/src/classify.rs`: the tests.\n- `crates/cards/src/code_lines.rs`, only if its literal reading is shared; `script_code` stays unchanged.\n- `spec/rulings/R<issue>000.md`, `spec/rulings/R2050000.md` and `spec/pending/<issue>.md` (SPEC \u00a711).\n\n## Acceptance criteria\n- [ ] A test named after the new ruling: in a fixture, `#[cfg(test)] mod helpers;` sits above `pub fn go()`, and a change to `go`'s body reads as play code. The test fails on today's `main`.\n- [ ] A test reads the real `crates/cards/src/lib.rs`, changes one token of `stats_as_it_died`'s body (and, separately, of `register_all`'s), and finds `code_changed` true. It fails on today's `main`.\n- [ ] Some changes are still no code: one inside a mid-file `#[cfg(test)]` item (a test helper in `lib.rs` below line 228, say), and one inside a trailing `mod tests`. R2050000's three tests pass unchanged.\n- [ ] Every card script's `count_loc` is the same as before: the per-card lines-of-code test passes with no table change, and `CODE_LINES` is untouched.\n- [ ] These all pass: `cargo test -p jackioh-tools classify`, `cargo test -p jackioh-tools catalog`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, `cargo fmt --check` and `cargo jackioh spec check`.\n\n## Size and risks\nSmall to medium: one reading function and its tests in `crates/tools` plus one ruling note, about 100-150 lines. Tooling only (medium difficulty), with no change to cards, the catalog or what players see. The risks:\n- A misread item end would count test lines as code. That costs one stage 2 run that finds no card playing differently.\n- The change must not reach how card scripts are read, because their counts feed cards in play.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: Confirmed on main: #5277 added `#[cfg(test)] mod snapshot_fold;` at `crates/cards/src/lib.rs:66`, and `script_code` stops at the first `#[cfg(test)]` (`crates/cards/src/code_lines.rs:129-134`), so `code_lines_with_uses` (`crates/tools/src/catalog.rs:1624`) no longer reads `register_all` (:163), `never_defense_kept` (:188) or `stats_as_it_died` (:203), which 17 card scripts call, and `classify` wou, so it is approved by itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5302: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T12:48:45Z",
+    "claimed_at": "2026-11-28T12:49:18Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5302 needs a plan"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5191 skipped: it waits for #5189 to close first",
+    "#5192 skipped: it waits for #5189 to close first",
+    "#5193 skipped: it waits for #5189 to close first",
+    "#5194 skipped: it waits for #5189 to close first",
+    "#5195 skipped: it waits for #5189 to close first",
+    "#5196 skipped: it waits for #5189 to close first",
+    "#5197 skipped: it waits for #5189 to close first",
+    "#5198 skipped: it waits for #5189 to close first",
+    "#5199 skipped: it waits for #5189 to close first",
+    "#5200 skipped: it waits for #5189 to close first",
+    "#5201 skipped: it waits for #5189 to close first"
+  ]
+}
