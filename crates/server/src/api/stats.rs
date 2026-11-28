@@ -1788,11 +1788,13 @@ type Kept<K, T> = Mutex<IndexMap<K, (i64, Keep<T>)>>;
 
 /// The cell for `key` in `entries` at `now`: the one made less than `ttl_seconds` before `now`, or one still
 /// filling whatever its age (R5245000: so one fill runs at a time); else a new empty one that serves the
-/// value it replaces while it fills (`kept_value`). One no read renewed in `CARD_STATS_KEPT_IDLE_SECONDS`
-/// is dropped, and the one kept longest ago to stay within `CARD_STATS_KEPT_REPORTS`.
+/// value it replaces while it fills (`kept_value`). One past its time by `CARD_STATS_KEPT_IDLE_SECONDS`
+/// with no read to renew it is dropped, and the one kept longest ago to stay within `CARD_STATS_KEPT_REPORTS`.
 fn kept_cell<K: Hash + Eq, T: Clone>(entries: &Kept<K, T>, key: K, now: i64, ttl_seconds: i64) -> Keep<T> {
     let mut entries = lock(entries);
-    entries.retain(|_, (made_at, _)| now - *made_at < CARD_STATS_KEPT_IDLE_SECONDS * MS_PER_SECOND);
+    entries.retain(|_, (made_at, _)| {
+        now - *made_at < (ttl_seconds + CARD_STATS_KEPT_IDLE_SECONDS) * MS_PER_SECOND
+    });
     if let Some((made_at, keep)) = entries.get_mut(&key) {
         if keep.cell.get().is_none() {
             return keep.clone();
@@ -3195,8 +3197,8 @@ mod tests {
     }
 
     /// R5245000: a kept figure still being cut is joined past its TTL; one cut and past it is replaced by a
-    /// cell that serves it while its next is cut; one no read renewed in `CARD_STATS_KEPT_IDLE_SECONDS` is
-    /// let go.
+    /// cell that serves it while its next is cut; one past its time by `CARD_STATS_KEPT_IDLE_SECONDS` with no
+    /// read to renew it is let go.
     #[test]
     fn r5245000_a_kept_figure_past_its_ttl_serves_itself_while_its_next_is_cut() {
         let entries: Kept<(), u32> = Mutex::default();
@@ -3209,7 +3211,9 @@ mod tests {
         assert!(!Arc::ptr_eq(&first.cell, &next.cell));
         assert_eq!(next.last, Some(HELD));
 
-        let idle = ttl_ms() + CARD_STATS_KEPT_IDLE_SECONDS * MS_PER_SECOND;
+        let held_on = kept_cell(&entries, (), 2 * ttl_ms(), CARD_STATS_CACHE_TTL_SECONDS);
+        assert_eq!(held_on.last, Some(HELD), "a figure just past its time was let go");
+        let idle = ttl_ms() + (CARD_STATS_CACHE_TTL_SECONDS + CARD_STATS_KEPT_IDLE_SECONDS) * MS_PER_SECOND;
         let gone = kept_cell(&entries, (), idle, CARD_STATS_CACHE_TTL_SECONDS);
         assert_eq!(gone.last, None);
     }

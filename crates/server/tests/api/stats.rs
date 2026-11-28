@@ -239,10 +239,16 @@ async fn get_public(app: &Arc<App>, path: &str) -> (u16, HeaderMap, Value) {
     request(app, "GET", path, None, None).await
 }
 
-/// R5245000: lets every refresh the reads so far started finish. A paused clock moves on only once no task
-/// is left to run, and the fake store never waits.
+/// R5245000: how many turns of the runtime `settle` gives the refreshes the reads started: each runs to its
+/// end in a turn or two, as the fake store never waits.
+const SETTLE_TURNS: usize = 64;
+
+/// R5245000: lets every refresh the reads so far started finish, without moving a paused clock: a sleep
+/// would, and push a read meant for within the TTL past it.
 async fn settle() {
-    tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+    for _ in 0..SETTLE_TURNS {
+        tokio::task::yield_now().await;
+    }
 }
 
 /// R5245000: how many reads figures held past their time take to show their next: the first answers what is
