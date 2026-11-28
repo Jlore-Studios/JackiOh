@@ -21747,6 +21747,13 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"sed -n 160,180p crates/tools/src/fuzz.rs && grep -n \\\"mod fuzz_daily_top_up\\\" crates/tools/src/fuzz.rs\"}\n- Bash: {\"command\": \"sed -n 8455,8590p crates/tools/src/fuzz.rs; grep -n \\\"fn extra_daily_seeds\\\\|fn daily_seeds\\\\|fn workflow_seeds\\\\|DAILY_TOP_UP_MAX\\\" crates/tools/src/*.rs | head -20\"}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Test-only change in one file of crates/tools (tooling, not engine/AI), about 30 lines, no cross-crate contract, no migration.\"} --> ## Goal A card change that grows `FUZZ_POOL` past what super.yml's `FUZZ_SEEDS` plus `DAILY_TOP_UP_MAX` (300) covers fails o\u2026"
       },
+      "hold": {
+        "ends": "2026-11-28T06:04:12Z",
+        "owner": "claude-8",
+        "since": "2026-11-28T04:04:12Z",
+        "until": "2026-11-28T05:50:00Z",
+        "why": "5-hour usage is 80%, too close to its 85% cap to start a long run (it starts under 80%)"
+      },
       "in_lane": true,
       "interruptions": 0,
       "kind": "build",
