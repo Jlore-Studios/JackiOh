@@ -21180,6 +21180,7 @@
     "5231": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-28T01:03:20Z",
         "difficulty": "medium",
