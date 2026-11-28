@@ -4,7 +4,8 @@
 //! own Spells included, while a Unit's choice, a Trap, a Field Trap and a source that is no card still
 //! may. A face-down card's Evasive is dormant. Immutable bars no targeting any more (R4353001, which
 //! supersedes R781001): it stops the change, never the aim. And every Indestructible card is Immutable
-//! innately (R4353000).
+//! innately (R4353000). Since issue #5226 a keyword another card gives for good is kept off an Immutable
+//! card too (R5226000).
 
 use jackioh_engine::restrictions::{evasive_bars, evasive_in_play, immutable_in_play, targeting_type_of};
 use jackioh_engine::testkit::*;
@@ -503,5 +504,96 @@ mod r5113000_immutable_takes_no_other_cards_buff_grant_aura_or_lend {
         }
         run_with_targets(&mut state, list(), None, vec![at(&wall)], PlayerId::P1);
         untouched(&state, &wall, &[Keyword::Immutable]);
+    }
+}
+
+mod r5226000_a_keyword_another_card_gives_for_good_passes_an_immutable_card_by {
+    use jackioh_engine::effects::gain_keyword_for_good;
+
+    use super::*;
+    use crate::rules::fixtures::harness::{live, run_with_targets, set_library};
+
+    /// Gives `card` Flashback for good, by id, as `source`'s (none: no card of its own); the events.
+    fn gift(state: &mut GameState, card: &CardInstance, source: Option<&CardInstance>) -> Vec<GameEvent> {
+        run_with_targets(
+            state,
+            gain_keyword_for_good(json_as(
+                json!({ "keyword": { "kind": "Flashback" }, "instanceId": card.id }),
+            )),
+            source,
+            vec![],
+            PlayerId::P1,
+        )
+    }
+
+    /// Whether any event reports a keyword given to `card`.
+    fn granted(events: &[GameEvent], card: &CardInstance) -> bool {
+        events.iter().any(
+            |event| matches!(event, GameEvent::KeywordGranted { instance_id, .. } if *instance_id == card.id),
+        )
+    }
+
+    /// Whether `card` has Flashback now, read through the layers where it is.
+    fn flashed(state: &GameState, card: &CardInstance) -> bool {
+        unit_has(state, &live(state, card), KeywordKind::Flashback)
+    }
+
+    #[test]
+    fn r5226000_another_cards_keyword_for_good_leaves_an_immutable_card_as_it_was_wherever_it_is() {
+        let mut state = game("r5226000-elsewhere");
+        let source = one(&mut state, PlayerId::P1, "fx-1");
+        let on_field = unit_with(&mut state, PlayerId::P2, 1, Keyword::Immutable);
+        // R4353000: an Indestructible Unit card is Immutable in the hand too.
+        let held = one(&mut state, PlayerId::P2, "fx-1");
+        let in_hand = grant(&mut state, &held, Keyword::Indestructible);
+        let dealt = set_library(&mut state, PlayerId::P2, &["fx-1"]);
+        let in_library = grant(&mut state, &dealt[0], Keyword::Immutable);
+        for card in [&on_field, &in_hand, &in_library] {
+            for from in [None, Some(&source)] {
+                let events = gift(&mut state, card, from);
+                assert!(
+                    !granted(&events, card),
+                    "{} from {:?}: {events:?}",
+                    card.id,
+                    from.map(|me| &me.id)
+                );
+                assert!(live(&state, card).tuning.is_none(), "{}", card.id);
+                assert!(!flashed(&state, card), "{}", card.id);
+            }
+        }
+
+        // The same keyword lands on a card that is not Immutable, on the field or in the hand.
+        let plain_unit = put(&mut state, "fx-1", slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let plain_card = one(&mut state, PlayerId::P2, "fx-1");
+        for card in [&plain_unit, &plain_card] {
+            let events = gift(&mut state, card, Some(&source));
+            assert!(granted(&events, card), "{}: {events:?}", card.id);
+            assert!(flashed(&state, card), "{}", card.id);
+            assert_eq!(
+                live(&state, card).tuning.and_then(|tuning| tuning.add_keywords),
+                Some(vec![Keyword::Flashback]),
+                "{}",
+                card.id
+            );
+        }
+    }
+
+    #[test]
+    fn r5226000_r23_an_immutable_cards_own_keyword_for_good_still_lands() {
+        let mut state = game("r5226000-own");
+        let wall = unit_with(&mut state, PlayerId::P2, 1, Keyword::Immutable);
+        let events = gift(&mut state, &wall, Some(&wall));
+        assert!(granted(&events, &wall), "{events:?}");
+        assert!(flashed(&state, &wall));
+
+        // S #154 Dice of Doom's shape: no `instanceId`, so the running card keeps it.
+        let events = run_with_targets(
+            &mut state,
+            gain_keyword_for_good(json_as(json!({ "keyword": { "kind": "Lucky", "n": 1 } }))),
+            Some(&wall),
+            vec![],
+            PlayerId::P2,
+        );
+        assert!(granted(&events, &wall), "{events:?}");
     }
 }

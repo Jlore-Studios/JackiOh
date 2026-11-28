@@ -8,6 +8,7 @@ pub mod activations;
 pub mod affliction_threat;
 pub mod alt_play;
 pub mod answer_key;
+pub mod armor_wear;
 pub mod assault;
 pub mod attack_hooks;
 pub mod attack_order;
