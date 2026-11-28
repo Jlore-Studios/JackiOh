@@ -21712,6 +21712,9 @@
         "sha": "7a7d5c5d651125a5c5b216f7b2e0d052028be598",
         "tiers": {}
       }
+    },
+    "5265": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -45208,6 +45211,13 @@
         "at": "2026-11-28T02:36:32Z",
         "number": 5248,
         "title": "Patch: the shadow-ban sweep counts a slow decision only when it is clearly over the limit, tells it apart from a game that never ended, and flags only the tier that raised it",
+        "verdict": "auto-approved",
+        "why": "approved by itself: no one voted on it"
+      },
+      {
+        "at": "2026-11-28T03:49:07Z",
+        "number": 5265,
+        "title": "Patch: a card change that outgrows the daily fuzz's seed count fails its own pull request, not the next daily run",
         "verdict": "auto-approved",
         "why": "approved by itself: no one voted on it"
       }
