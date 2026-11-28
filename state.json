@@ -19886,7 +19886,9 @@
     },
     "5164": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7227642239"
+      ],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-28T04:35:56Z",
@@ -19926,9 +19928,7 @@
       "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [
-        "c:7227642239"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "5165": {
