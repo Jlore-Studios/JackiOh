@@ -21966,9 +21966,7 @@
     },
     "5289": {
       "action": "build",
-      "asks": [
-        "c:7236655415"
-      ],
+      "asks": [],
       "failures": 0,
       "forced": true,
       "handoff": {
@@ -21984,9 +21982,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-28T08:34:23Z",
-      "owner_why": "it plans it",
+      "owner": "claude-3",
+      "owner_since": "2026-11-28T10:12:13Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-28T12:00:00Z",
       "paused": {
         "at": "2026-11-28T09:39:41Z",
         "interrupt": "usage",
@@ -21998,11 +21996,11 @@
       "planned_by_id": "claude-4",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-4",
+      "provider": "claude-3",
       "queued_at": "2026-11-28T08:33:20Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "46129295945",
+      "run_id": "pending:73dfcd79-1795860712",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -22021,9 +22019,11 @@
         "provider": "claude-4",
         "run": "46129295945"
       },
-      "started_at": "2026-11-28T09:11:30Z",
+      "started_at": "2026-11-28T10:12:13Z",
       "stop_requested": false,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7236655415"
+      ],
       "verdict_rounds": 0
     },
     "5292": {
@@ -22185,9 +22185,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T09:25:37Z",
+    "at": "2026-11-28T10:12:13Z",
     "url": "",
-    "what": "suggestions (ai) on claude-6"
+    "what": "build #5289 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-28T10:03:54Z",
