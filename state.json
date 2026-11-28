@@ -46153,6 +46153,9 @@
       "2026-11-28T03:37:48Z,claude-1,stream,call,46102533085,97,2026-11-28T08:00:00Z,,,allowed_warning,100,,",
       "2026-11-28T03:38:18Z,claude-1,stream,call,46102533085,99,2026-11-28T08:00:00Z,,,allowed_warning,100,,",
       "2026-11-28T03:38:48Z,claude-1,stream,call,46102533085,100,2026-11-28T08:00:00Z,,,rejected,100,,"
+    ],
+    "runs": [
+      "2026-11-28T03:38:49Z,46102533085,claude-1,opus,suggest,,,interrupted,5-hour cap,12.5,53,14081,2870443,17.8855,8,100,,,,,none,,1"
     ]
   },
   "version": 1
