@@ -3223,8 +3223,18 @@ mod tests {
         let snapshot = source.load().await.expect("the snapshot loaded");
         let (key, window) = snapshot.shared.as_ref().expect("the load cut no shared window");
         assert_eq!(*key, shared_key(&version));
-        let cut = window_over(&snapshot.totals, &history, &version, key.source, key.pilot, key.mode);
-        assert_eq!(win_rates_from_report(&window.report), win_rates_from_report(&cut.report));
+        let cut = window_over(
+            &snapshot.totals,
+            &history,
+            &version,
+            key.source,
+            key.pilot,
+            key.mode,
+        );
+        assert_eq!(
+            win_rates_from_report(&window.report),
+            win_rates_from_report(&cut.report)
+        );
         assert_eq!(window.live_games, cut.live_games);
         assert_eq!(window.patches.len(), cut.patches.len());
     }
