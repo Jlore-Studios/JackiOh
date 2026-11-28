@@ -547,7 +547,9 @@ mod r5236010_fragile_dies_to_any_hit_that_lowers_its_health {
         let fragile = s.unit_at(P2, 1).id;
         let events = hit(&mut s, &fragile, 1);
         s.expect_in_zone(fragile.as_str(), "field");
-        s.expect_stats(fragile.as_str(), json!({ "health": WALL_HEALTH - 1 }));
+        // §6.1: an Indestructible Unit "can't be destroyed or damaged", so the hit lowers nothing (FV2
+        // lists "an immunity" among the hits that deal 0).
+        s.expect_stats(fragile.as_str(), json!({ "health": WALL_HEALTH }));
         assert_eq!(death_via(&events, &fragile), None);
     }
 

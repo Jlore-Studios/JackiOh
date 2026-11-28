@@ -5,7 +5,7 @@ import type { Row } from "./Row";
 /**
  * Where a permanent is being played (§3.2: the player picks the zone).
  */
-export type ZoneChoice = { row: Row, lane: number,
+export type ZoneChoice = { row: Row, lane: number, 
 /**
  * R5238002: whose side the zone is on; absent is the playing player's own. Another side is accepted
  * only for a card that plays on either side (`StaticFlags.plays_on_either_side`).

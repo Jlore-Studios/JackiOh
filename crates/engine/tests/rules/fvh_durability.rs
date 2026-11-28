@@ -404,11 +404,13 @@ mod r5236000_one_counter_spent_by_each_use {
     #[test]
     fn r5236000_cloakeds_reveal_spends_none() {
         let mut s = board("r5236000-reveal", json!({ "hand": [CLOAKED, PLAIN] }), json!({}));
-        let id = hand_id(&s, CLOAKED);
+        let held = hand_id(&s, CLOAKED);
         s.play(
-            id.as_str(),
+            held.as_str(),
             json!({ "zone": SET_LANE, "row": "backrow", "faceDown": "cloaked" }),
         );
+        // R227: a card set face-down takes a fresh id, so the set card is found where it was set.
+        let id = must(s.backrow(P1, SET_LANE), "the set Cloaked card").id;
         s.activate(id.as_str(), json!({ "ability": REVEAL }));
         assert_eq!(
             s.card(id.as_str()).face_up,
