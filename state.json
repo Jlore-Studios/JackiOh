@@ -21447,6 +21447,7 @@
       "run_id": "46097549925",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 635,
       "started_at": "2026-11-28T02:20:04Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -44405,9 +44406,33 @@
         "title": "Patch: spell sound effects: new procedural recipes and effects-bank entries for what Spells, Field Spells and Traps do",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "d7b1debfee8bfe325f0dca5078e087ab8db0c142",
+        "issue": 5230,
+        "merged_at": "2026-11-28T02:51:40Z",
+        "n": 635,
+        "pr": 5244,
+        "queued_at": "2026-11-28T02:51:40Z",
+        "sha": "593066692e79d8799c13ebaf96038ea151749896",
+        "status": "queued",
+        "title": "Patch: End turn keeps reading a move as left while a card is picked up or an attacker is aimed, so it no longer pulses as if the turn is done and Confirm end turn still asks",
+        "tries": 0
       }
     ],
-    "count": 634
+    "count": 635
   },
   "statistics": {
     "at": "2026-11-28T02:45:08Z"
