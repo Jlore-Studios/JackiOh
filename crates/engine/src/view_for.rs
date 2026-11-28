@@ -892,6 +892,8 @@ fn unit_view_of(
         None
     };
     let card = field_card_view(state, judging, top, viewer);
+    // R5236031: Durability shows the count it has left.
+    let keywords = crate::subsystems::activate::with_durability_left(&layers.keywords, top);
     Some(UnitView {
         instance_id: card.instance_id,
         def_id: card.def_id,
@@ -918,8 +920,7 @@ fn unit_view_of(
         attack: layers.attack,
         max_health: layers.max_health,
         health: layers.health,
-        // R5236031: Durability shows the count it has left.
-        keywords: shown_keywords(&crate::subsystems::activate::with_durability_left(&layers.keywords, top)),
+        keywords: shown_keywords(&keywords),
         armor: layers.armor,
         position: layers.position,
         counters: top.counters,
