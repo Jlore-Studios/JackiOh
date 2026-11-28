@@ -1,0 +1,2718 @@
+{
+  "set": {
+    "core-049": {
+      "id": "core-049",
+      "index": "49",
+      "name": "Snom Bunny Mind Control",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 6,
+      "loc": 12,
+      "base": {
+        "keywords": [],
+        "text": "Float reduces cost.\nSteal an enemy card."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Float reduces cost.\nSteal an enemy card. Make it Radiant."
+      }
+    },
+    "core-050": {
+      "id": "core-050",
+      "index": "50",
+      "name": "K-Pop Fanatic",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 65,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Allure an enemy permanent."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Divine Shield"
+          }
+        ],
+        "text": "Divine Shield\nCry: Allure an enemy permanent. Make it Radiant when you steal it."
+      }
+    },
+    "core-052": {
+      "id": "core-052",
+      "index": "52",
+      "name": "Silly Silas",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 14,
+      "base": {
+        "attack": 7,
+        "health": 7,
+        "keywords": [],
+        "text": "Summon this for your opponent.\nCry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
+      },
+      "radiant": {
+        "attack": 14,
+        "health": 14,
+        "keywords": [],
+        "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
+      }
+    },
+    "core-054": {
+      "id": "core-054",
+      "index": "54",
+      "name": "Straaza",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "cards",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        },
+        {
+          "key": "setCost",
+          "base": 1,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "read": "cry"
+        }
+      ],
+      "loc": 16,
+      "base": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: Add {cards|random (3) Cost Unit|random (3) Cost Units} to your hand. They cost ({setCost})."
+      },
+      "radiant": {
+        "attack": 12,
+        "health": 12,
+        "keywords": [],
+        "text": "Cry: Add {cards|random Radiant (3) Cost Unit|random Radiant (3) Cost Units} to your hand. They cost ({setCost})."
+      }
+    },
+    "core-070": {
+      "id": "core-070",
+      "index": "70",
+      "name": "Spiteful Stab",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "healthStep",
+          "base": 5,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "perExile",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 24,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Pierce\nDeal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Pierce\nDeal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
+      }
+    },
+    "core-076": {
+      "id": "core-076",
+      "index": "76",
+      "name": "Field of Dreams",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 0,
+      "refs": [
+        "core-072"
+      ],
+      "loc": 19,
+      "base": {
+        "keywords": [],
+        "text": "Replace your hand with the same number of Reminisce. Exile this."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Replace your hand with the same number of Radiant Reminisce. Exile this."
+      }
+    },
+    "classic-037": {
+      "id": "classic-037",
+      "index": "37",
+      "name": "Last Hurrah",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "flashback",
+          "base": 4,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Draw your deck."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Draw your deck. Give {flashback} random cards in your hand Flashback."
+      }
+    },
+    "classic-039": {
+      "id": "classic-039",
+      "index": "39",
+      "name": "Outbreak",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "drawPer",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 33,
+      "base": {
+        "keywords": [],
+        "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at least its cost in Plague Counters, steal it. Otherwise, draw {drawPer} per Plague Counter on it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at least its cost in Plague Counters, steal it. Otherwise, draw {drawPer} per Plague Counter on it."
+      }
+    },
+    "classic-062": {
+      "id": "classic-062",
+      "index": "62",
+      "name": "Living Bomb",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "loc": 10,
+      "base": {
+        "keywords": [],
+        "text": "Cry: Place a Plague Counter.\nAt the start of each player's turn: Destroy every permanent that player controls with a Plague Counter on it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Activate: Place a Plague Counter.\nAt the start of your opponent's turn: Destroy every permanent they control with a Plague Counter on it."
+      }
+    },
+    "classic-084": {
+      "id": "classic-084",
+      "index": "84",
+      "name": "Lockdown",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "loc": 22,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Crater"
+          }
+        ],
+        "text": "Indestructible, Crater\nAfter a permanent is played, Lock its zone.\nActivate: Tribute this."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Crater"
+          }
+        ],
+        "text": "Indestructible, Crater\nAfter your opponent plays a permanent, Lock its zone.\nActivate: Tribute this."
+      }
+    },
+    "classicplus-019-1": {
+      "id": "classicplus-019-1",
+      "index": "19.1",
+      "name": "Top Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "loc": 5,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 2
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Armor 2, Can't Defend\nOnly Units in this lane can attack this."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 4
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Can't Defend"
+          }
+        ],
+        "text": "Armor 4, Immune to Spells, Can't Defend\nOnly Units in this lane can attack this."
+      }
+    },
+    "classicplus-019-2": {
+      "id": "classicplus-019-2",
+      "index": "19.2",
+      "name": "Jungle Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "refs": [
+        "classicplus-019-5"
+      ],
+      "loc": 37,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          }
+        ],
+        "text": "Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          }
+        ],
+        "text": "Can't attack\nEnd of turn: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
+      }
+    },
+    "classicplus-019-3": {
+      "id": "classicplus-019-3",
+      "index": "19.3",
+      "name": "Mid Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "params": [
+        {
+          "key": "heads",
+          "base": 3,
+          "radiant": 6,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        },
+        {
+          "key": "tails",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        },
+        {
+          "key": "oppMana",
+          "base": 1,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        }
+      ],
+      "loc": 18,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [],
+        "text": "Cry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\nCry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      }
+    },
+    "classicplus-019-4": {
+      "id": "classicplus-019-4",
+      "index": "19.4",
+      "name": "Support Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "params": [
+        {
+          "key": "heal",
+          "base": 3,
+          "radiant": 6,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 14,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Divine Shield"
+          }
+        ],
+        "text": "Divine Shield\nEnd of turn: Heal your hero and each of your Units {heal}."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Divine Shield"
+          },
+          {
+            "kind": "Reborn"
+          }
+        ],
+        "text": "Divine Shield, Reborn\nEnd of turn: Heal your hero and each of your Units {heal}."
+      }
+    },
+    "classicplus-019-5": {
+      "id": "classicplus-019-5",
+      "index": "19.5",
+      "name": "Bot Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "params": [
+        {
+          "key": "attackGain",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 23,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "First Strike"
+          }
+        ],
+        "text": "Rush, First Strike\nAfter this destroys a Unit, it gains +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Charge"
+          },
+          {
+            "kind": "First Strike"
+          }
+        ],
+        "text": "Charge, First Strike\nAfter this destroys a Unit, it gains +{attackGain} Attack.\nThis can't go Berserk."
+      }
+    },
+    "classicplus-026": {
+      "id": "classicplus-026",
+      "index": "26",
+      "name": "Tommy Tempo",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "actions",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant",
+          "read": "castOnDraw"
+        },
+        {
+          "key": "per",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        }
+      ],
+      "loc": 12,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Taunt\nCast on draw: End the turn.\nCry: Lose all your mana. Gain +{per} Health per mana lost."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per} Health per mana lost."
+      }
+    },
+    "classicplus-034": {
+      "id": "classicplus-034",
+      "index": "34",
+      "name": "Memory Leak",
+      "set": "Classic+",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "loc": 32,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Crater"
+          }
+        ],
+        "text": "Crater\nChoose one.\nEnd of turn: Lock a random enemy zone.\nAfter your opponent plays a Unit or Field Spell, Lock its zone."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Crater"
+          }
+        ],
+        "text": "Crater\nEnd of turn: Lock a random enemy zone.\nAfter your opponent plays a Unit or Field Spell, Lock its zone."
+      }
+    },
+    "classicplus-071": {
+      "id": "classicplus-071",
+      "index": "71",
+      "name": "Book of Buff",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [
+        "Book"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "times",
+          "base": 3,
+          "radiant": 6,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 6,
+      "base": {
+        "keywords": [],
+        "text": "Buff a permanent {times|time|times}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Buff a card {times|time|times}. It may be a card in your hand."
+      }
+    },
+    "meditative-001": {
+      "id": "meditative-001",
+      "index": "1",
+      "name": "Disruptive Disruptor",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "loc": 21,
+      "base": {
+        "keywords": [],
+        "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nActivate: Your opponent discards a random card."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: You can't be forced to discard cards during your opponent's turn.\nActivate: Your opponent discards a random Radiant card, or a random card if they hold none."
+      }
+    },
+    "meditative-007": {
+      "id": "meditative-007",
+      "index": "7",
+      "name": "Introspection",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "heal",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 49,
+      "base": {
+        "keywords": [],
+        "text": "Tribute 1\nStart of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Tribute 1\nStart of turn: Heal your hero and each of your Units {heal}. Draw {draw}. Cards in your hand cost ({discount}) less. Deal {damage} damage to each enemy."
+      }
+    },
+    "meditative-010": {
+      "id": "meditative-010",
+      "index": "10",
+      "name": "Double Counting",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "extra",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "price",
+          "base": 1,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "tunedOn": "base"
+        }
+      ],
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}.\nActivate: Pay ({price}) to Discover a Cry or Death card."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Your Cry and Death effects trigger {extra|additional time|additional times}.\nActivate: Discover a Cry or Death card."
+      }
+    },
+    "meditative-019": {
+      "id": "meditative-019",
+      "index": "19",
+      "name": "Expedition123",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [
+        "Quickdraw"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "meditative-019-1"
+      ],
+      "params": [
+        {
+          "key": "loss",
+          "base": 2,
+          "radiant": 2,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "lossAfter",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "armor",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 20,
+      "base": {
+        "keywords": [],
+        "text": "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Your hero gains {armor} Armor. Add a Temporal Rift to your hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Your hero gains {armor} Armor. Add a Radiant Temporal Rift to your hand."
+      }
+    },
+    "meditative-040": {
+      "id": "meditative-040",
+      "index": "40",
+      "name": "Feng Shui",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [
+        "CN"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "meditative-039-1"
+      ],
+      "loc": 35,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished.\nCry: Add an Auspicious Rock to your hand.\nActivate: Add an Auspicious Rock to your hand.\nYour last element, your opponent's last element."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui rewards you, bad hurts your opponent heavily.\nCry: Add a Radiant Auspicious Rock to your hand.\nActivate: Add a Radiant Auspicious Rock to your hand.\nYour last element, your opponent's last element."
+      }
+    },
+    "meditative-042": {
+      "id": "meditative-042",
+      "index": "42",
+      "name": "CN Flea Market",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [
+        "CN"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "yuan",
+          "base": 50,
+          "radiant": 80,
+          "better": "up",
+          "step": 10,
+          "min": 10
+        }
+      ],
+      "loc": 29,
+      "base": {
+        "keywords": [],
+        "text": "Open a night market. You have {yuan} yuan to buy its cards."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Open a night market. You have {yuan} yuan to buy its cards, and you may barter cards from your hand."
+      }
+    },
+    "meditative-044": {
+      "id": "meditative-044",
+      "index": "44",
+      "name": "CN Jade Well",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [
+        "CN"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "refs": [
+        "meditative-039-1"
+      ],
+      "loc": 16,
+      "base": {
+        "keywords": [],
+        "text": "Activate: Add an Auspicious Rock to your hand. It has Lucky {lucky}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Activate: Add a Radiant Auspicious Rock to your hand. It has Lucky {lucky}."
+      },
+      "params": [
+        {
+          "key": "lucky",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "meditative-047": {
+      "id": "meditative-047",
+      "index": "47",
+      "name": "饕餮",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "CN"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 29,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Activate: Fuse a random enemy Unit into this, then Freeze this. Has an extra turn cooldown."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "Activate: Fuse a random enemy Unit into this."
+      }
+    },
+    "meditative-078": {
+      "id": "meditative-078",
+      "index": "78",
+      "name": "Occidentless Mandate",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [
+        "CN"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 4,
+      "loc": 32,
+      "base": {
+        "keywords": [],
+        "text": "Destroy every non-CN permanent."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Destroy every enemy non-CN permanent."
+      }
+    },
+    "meditative-087": {
+      "id": "meditative-087",
+      "index": "87",
+      "name": "Tatches the Totem",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Felinor",
+        "KY",
+        "CN",
+        "Jlockeed"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "cards",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 58,
+      "base": {
+        "attack": 0,
+        "health": 4,
+        "keywords": [],
+        "text": "While this is in your hand or deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 8,
+        "keywords": [],
+        "text": "While this is in your hand or deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
+      }
+    },
+    "meditative-095": {
+      "id": "meditative-095",
+      "index": "95",
+      "name": "Call to Chaos (Meditative Edition)",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [
+        "Call to Chaos"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "refs": [
+        "meditative-095",
+        "meditative-039-2",
+        "meditative-039-5",
+        "meditative-095-1",
+        "core-095",
+        "classicplus-073",
+        "stinkyscape-150",
+        "stinkyscape-151",
+        "traininggrounds-039",
+        "stinkyscapeplus-142"
+      ],
+      "loc": 22,
+      "base": {
+        "keywords": [],
+        "text": "One random effect: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 4 Armor and you heal it 4; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Three different random effects, resolved in the order listed: Fuse your hand into one card and add 1 copy of it to your hand, both of which cost (0); add 2 random CN cards to your hand, which cost (0); add 2 random Prime cards to your hand, which cost (0); your hero gains 4 Armor and you heal it 4; summon a Jade Beauty; summon 2 random Acclaimed cards; Bounce every enemy permanent, then Nerf each card bounced; summon a CN Golem; for the rest of the game, at the start of each of your turns, cast a random Call to Chaos; cast a random Call to Chaos."
+      }
+    },
+    "meditativeplus-002": {
+      "id": "meditativeplus-002",
+      "index": "2",
+      "name": "NA Tech",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 0,
+      "loc": 30,
+      "base": {
+        "keywords": [],
+        "text": "Fuse the card with the lowest win rate and the card with the highest win rate, and add it to your hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Fuse a Radiant card with the lowest win rate and a Radiant card with the highest win rate, and add it to your hand."
+      }
+    },
+    "stinkyscape-014": {
+      "id": "stinkyscape-014",
+      "index": "14",
+      "name": "Arm of the Jempire",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "buff",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 22,
+      "base": {
+        "attack": 3,
+        "health": 8,
+        "keywords": [],
+        "text": "When one of your Taunt Units is attacked, give it +{buff} Attack."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 16,
+        "keywords": [],
+        "text": "When one of your Taunt Units is attacked, give it +{buff} Attack."
+      }
+    },
+    "stinkyscape-018": {
+      "id": "stinkyscape-018",
+      "index": "18",
+      "name": "Imitated Instrumentality",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 3,
+      "refs": [
+        "stinkyscape-018-1",
+        "stinkyscape-018-2",
+        "stinkyscape-018-3"
+      ],
+      "loc": 25,
+      "base": {
+        "keywords": [],
+        "text": "Tribute 1\nSummon MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but they can vote to remove you."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Tribute 1\nSummon a Radiant MELCHIOR, a Radiant BALTHASAR and a Radiant CASPER. They offer great strategic value, but they can vote to remove you."
+      }
+    },
+    "stinkyscape-035": {
+      "id": "stinkyscape-035",
+      "index": "35",
+      "name": "Drone Core IX",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [
+        "Drone Core"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 7,
+      "refs": [
+        "stinkyscape-t-drone-corvette"
+      ],
+      "params": [
+        {
+          "key": "corvettes",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 20,
+      "base": {
+        "keywords": [],
+        "text": "Float reduces cost.\nSummon {corvettes|Drone Corvette|Drone Corvettes}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Float reduces cost.\nSummon {corvettes|Radiant Drone Corvette|Radiant Drone Corvettes}."
+      }
+    },
+    "stinkyscape-050": {
+      "id": "stinkyscape-050",
+      "index": "50",
+      "name": "Beam v3",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Weapon"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 52,
+      "base": {
+        "attack": 0,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      }
+    },
+    "stinkyscape-054": {
+      "id": "stinkyscape-054",
+      "index": "54",
+      "name": "Beam v4",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Weapon"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "damage",
+          "base": 6,
+          "radiant": 12,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        }
+      ],
+      "loc": 52,
+      "base": {
+        "attack": 0,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      }
+    },
+    "stinkyscape-058": {
+      "id": "stinkyscape-058",
+      "index": "58",
+      "name": "Beam v5",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Weapon"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "damage",
+          "base": 8,
+          "radiant": 16,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        }
+      ],
+      "loc": 52,
+      "base": {
+        "attack": 0,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate: Deal {damage} damage to an enemy Unit, with Cleave and Pierce. Has an extra turn cooldown."
+      }
+    },
+    "stinkyscape-059": {
+      "id": "stinkyscape-059",
+      "index": "59",
+      "name": "Repeater v5",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Weapon"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "damage",
+          "base": 3,
+          "radiant": 6,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 38,
+      "base": {
+        "attack": 0,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate 3: Deal {damage} damage to an enemy Unit, with Pierce."
+      }
+    },
+    "stinkyscape-070": {
+      "id": "stinkyscape-070",
+      "index": "70",
+      "name": "Z'Zoth",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 43,
+      "base": {
+        "attack": 5,
+        "health": 7,
+        "keywords": [],
+        "text": "Cry: Summon every Unit with a Death from your graveyard. Trigger each one's Death."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 14,
+        "keywords": [],
+        "text": "Cry: Summon every Unit with a Death from your graveyard. Give them Reborn. Trigger each one's Death twice."
+      }
+    },
+    "stinkyscape-079": {
+      "id": "stinkyscape-079",
+      "index": "79",
+      "name": "Orca",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 4,
+        "embiggen": 5
+      },
+      "loc": 28,
+      "base": {
+        "attack": 3,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this.\nEmbiggened (5): The Miners offered are Radiant."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Flying\nCry: Choose one of 2 Miners and Equip it into this, twice.\nEmbiggened (5): The Miners offered are Radiant."
+      }
+    },
+    "stinkyscape-083": {
+      "id": "stinkyscape-083",
+      "index": "83",
+      "name": "Halo",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "weapons",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        }
+      ],
+      "loc": 19,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Choose one of 2 Rare Weapons and Equip it into this, {weapons|time|times}."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: Choose one of 2 Epic Weapons and Equip it into this, {weapons|time|times}."
+      }
+    },
+    "stinkyscape-092": {
+      "id": "stinkyscape-092",
+      "index": "92",
+      "name": "The Propagation's Hornet",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Swarm"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 21,
+      "base": {
+        "attack": 1,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nAfter this attacks, summon a copy of this, then evolve.\nEvolve: Gain Flying."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nAfter this attacks, summon a copy of this, then evolve.\nEvolve: Gain Flying."
+      }
+    },
+    "stinkyscape-094": {
+      "id": "stinkyscape-094",
+      "index": "94",
+      "name": "Tmack Trav",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 23,
+      "base": {
+        "attack": 7,
+        "health": 7,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Frenzy"
+          }
+        ],
+        "text": "Rush, Frenzy"
+      },
+      "radiant": {
+        "attack": 14,
+        "health": 14,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Frenzy"
+          }
+        ],
+        "text": "Rush, Pierce, Frenzy"
+      }
+    },
+    "stinkyscape-096": {
+      "id": "stinkyscape-096",
+      "index": "96",
+      "name": "Ocean Tsunami",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 4,
+      "loc": 18,
+      "base": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [],
+        "text": "Tribute 2\nCry: Discard your hand. Fill your hand with random Stinkyscape Resources."
+      },
+      "radiant": {
+        "attack": 12,
+        "health": 12,
+        "keywords": [],
+        "text": "Tribute 2\nCry: Discard your hand. Fill your hand with random Radiant Stinkyscape Resources."
+      }
+    },
+    "stinkyscape-109": {
+      "id": "stinkyscape-109",
+      "index": "109",
+      "name": "xxFreshJack",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Acclaimed"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 4,
+      "loc": 40,
+      "base": {
+        "attack": 6,
+        "health": 11,
+        "keywords": [],
+        "text": "Tribute 1\nCry: Cast a random BUSTED card from anywhere in the game's code."
+      },
+      "radiant": {
+        "attack": 12,
+        "health": 22,
+        "keywords": [],
+        "text": "Tribute 1\nCry: Discover a Radiant BUSTED card from anywhere in the game's code and cast it."
+      }
+    },
+    "stinkyscape-112": {
+      "id": "stinkyscape-112",
+      "index": "112",
+      "name": "Job Application",
+      "set": "Stinkyscape",
+      "type": "Field Spell",
+      "tags": [
+        "Quest"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "stinkyscape-112-1"
+      ],
+      "params": [
+        {
+          "key": "buffs",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 253,
+      "base": {
+        "keywords": [],
+        "text": "Death: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 2 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 2 cards of different costs in one turn; or take or deal 8 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\nDeath: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 1 to 2 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 2 cards of different costs in one turn; or take or deal 8 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      }
+    },
+    "stinkyscape-148": {
+      "id": "stinkyscape-148",
+      "index": "148",
+      "name": "Alteran Reach",
+      "set": "Stinkyscape",
+      "type": "Field Spell",
+      "tags": [
+        "Wincon",
+        "Quickdraw"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "stinkyscape-148-1"
+      ],
+      "loc": 18,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nYour first travel each turn is free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nYour first two travels each turn are free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
+      }
+    },
+    "stinkyscape-165": {
+      "id": "stinkyscape-165",
+      "index": "165",
+      "name": "The Trade Union",
+      "set": "Stinkyscape",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "trades",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 2
+        }
+      ],
+      "loc": 14,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Tradable"
+          }
+        ],
+        "text": "Tradable\nAura: Cards in your hand have Tradable. You may Trade up to {trades|card|cards} each turn."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Tradable"
+          }
+        ],
+        "text": "Tradable\nAura: Cards in your hand have Tradable. You may Trade up to {trades|card|cards} each turn."
+      }
+    },
+    "traininggrounds-005": {
+      "id": "traininggrounds-005",
+      "index": "5",
+      "name": "Midlane Menace",
+      "set": "Training Grounds",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "buff",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        }
+      ],
+      "loc": 25,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: If this is in midlane, it gains +{buff}/+{buff} and Rush."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: If this is in midlane, it gains +{buff}/+{buff} and Rush."
+      }
+    },
+    "traininggrounds-039": {
+      "id": "traininggrounds-039",
+      "index": "39",
+      "name": "Call to Chaos (Training-Grounds Edition)",
+      "set": "Training Grounds",
+      "type": "Spell",
+      "tags": [
+        "Call to Chaos"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "refs": [
+        "core-095",
+        "classicplus-073",
+        "meditative-095",
+        "stinkyscape-150",
+        "stinkyscape-151",
+        "traininggrounds-039",
+        "stinkyscapeplus-142",
+        "traininggrounds-039-1",
+        "traininggrounds-040",
+        "core-t-rush"
+      ],
+      "loc": 22,
+      "base": {
+        "keywords": [],
+        "text": "One random effect: Summon 2 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and replenish 2 mana; add 3 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 5 mana and draw 2 cards; summon 4 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 2 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Three different random effects, resolved in the order listed: Summon 2 Rush Tokens, then give your Units on the field, in your hand and in your deck Taunt and Divine Shield; fill your hand with Goetzmann Game Designs and replenish 2 mana; add 3 random Training Grounds cards to your hand, which cost (1), and gain 2 mana; gain 5 mana and draw 2 cards; summon 4 random Training Grounds permanents; add 2 random Radiant Training Grounds cards to your hand, which cost (1), and gain 1 mana; summon 2 Rush Tokens, and for the rest of the game your Units have Rush, Trample and Pierce; summon a Training-Grounds Golem; at the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand; cast a random Call to Chaos."
+      }
+    },
+    "traininggrounds-040": {
+      "id": "traininggrounds-040",
+      "index": "40",
+      "name": "Goetzmann Game Design",
+      "set": "Training Grounds",
+      "type": "Spell",
+      "tags": [
+        "Quickdraw"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 0,
+      "loc": 23,
+      "base": {
+        "keywords": [],
+        "text": "Add a random card to your hand. It costs ({discount}) less."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Add a random Radiant card to your hand. It costs ({discount}) less."
+      },
+      "params": [
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-004": {
+      "id": "stinkyscapeplus-004",
+      "index": "4",
+      "name": "Profe Yates",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Felinor",
+        "Catalyst",
+        "Acclaimed"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 166,
+      "base": {
+        "attack": 7,
+        "health": 7,
+        "keywords": [],
+        "text": "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune). Then summon two random Traps."
+      },
+      "radiant": {
+        "attack": 14,
+        "health": 14,
+        "keywords": [],
+        "text": "Cry: Exile a permanent with M, O, U, S and E in its name and text (CN cards are immune). Then summon three random Radiant Traps."
+      }
+    },
+    "stinkyscapeplus-021": {
+      "id": "stinkyscapeplus-021",
+      "index": "21",
+      "name": "Jlockeed Shredder-12",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Jlockeed"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 4,
+      "loc": 23,
+      "base": {
+        "attack": 12,
+        "health": 16,
+        "keywords": [
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Tribute 3, Pierce\nFloat reduces Tribute requirement by 1.\nEnd of turn: Deal {damage} damage to all enemies, twice."
+      },
+      "radiant": {
+        "attack": 24,
+        "health": 32,
+        "keywords": [
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Tribute 3, Pierce\nFloat reduces Tribute requirement by 1.\nEnd of turn: Deal {damage} damage to all enemies, twice."
+      },
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-061": {
+      "id": "stinkyscapeplus-061",
+      "index": "61",
+      "name": "Jayaad",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Acclaimed"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "loc": 18,
+      "base": {
+        "attack": 2,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: Summon Shawarma Law."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 12,
+        "keywords": [],
+        "text": "Cry: Summon Radiant Shawarma Law."
+      },
+      "refs": [
+        "stinkyscapeplus-061-1"
+      ]
+    },
+    "stinkyscapeplus-061-1": {
+      "id": "stinkyscapeplus-061-1",
+      "index": "61.1",
+      "name": "Shawarma Law",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 2,
+      "printedRarity": "Epic",
+      "loc": 66,
+      "base": {
+        "keywords": [],
+        "text": "End of turn: Every Unit eats a Shawarma, with one of these effects.\nFirst Shawarma: It gains +{health} Health.\nSecond Shawarma: It gains Can't attack.\nThird Shawarma: It gains Can't Defend and Brittle {brittle2}.\nA Unit eats at most three Shawarmas."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "End of turn: Every Unit eats a Shawarma, with one of these effects.\nFirst Shawarma: It gains +{health} Health.\nSecond Shawarma: It gains Can't attack.\nThird Shawarma: It gains Can't Defend and Brittle {brittle2}.\nA Unit eats at most three Shawarmas.\nYour Units stop at one Shawarma."
+      },
+      "params": [
+        {
+          "key": "health",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "brittle2",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-079": {
+      "id": "stinkyscapeplus-079",
+      "index": "79",
+      "name": "A Glimpse into the Endless Sea",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Wincon",
+        "Terminus"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 4,
+      "loc": 28,
+      "base": {
+        "keywords": [],
+        "text": "Exile your deck and every permanent. Start an {count|turn|turns} countdown. When it ends, win the game."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Exile your deck and every permanent. Your hero gains {armor} Armor. Start an {count|turn|turns} countdown. When it ends, win the game."
+      },
+      "params": [
+        {
+          "key": "count",
+          "base": 8,
+          "radiant": 8,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "armor",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ]
+    },
+    "stinkyscapeplus-080": {
+      "id": "stinkyscapeplus-080",
+      "index": "80",
+      "name": "The Last Voyage",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Terminus"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 4,
+      "loc": 85,
+      "base": {
+        "keywords": [],
+        "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one at the start of each of your turns."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Exile your hand, deck and board and your opponent's board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one now and at the start of each of your turns."
+      },
+      "params": [
+        {
+          "key": "starships",
+          "base": 10,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-082": {
+      "id": "stinkyscapeplus-082",
+      "index": "82",
+      "name": "Endless Expedition",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Quickdraw"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 1,
+      "loc": 27,
+      "params": [
+        {
+          "key": "mana",
+          "base": 1,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "base": {
+        "keywords": [],
+        "text": "For the rest of the game, you have ({mana}) less mana, and at the start of each of your turns, add a random Terminus card to your hand. It costs (3)."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "For the rest of the game, you have ({mana}) less mana, and at the start of each of your turns, add a random Radiant Terminus card to your hand. It costs (3)."
+      }
+    },
+    "stinkyscapeplus-095": {
+      "id": "stinkyscapeplus-095",
+      "index": "95",
+      "name": "JC Backed",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 45,
+      "base": {
+        "keywords": [],
+        "text": "Fill your hand with random S tier cards (or A tier if none exist). Summon {jlarna} Jlarna and lose {mana} mana for the rest of the game."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Fill your hand with random S tier cards (or A tier if none exist). Summon {radiant} Radiant Jlarna for the rest of the game."
+      },
+      "params": [
+        {
+          "key": "jlarna",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        },
+        {
+          "key": "mana",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        },
+        {
+          "key": "radiant",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "refs": [
+        "meditative-089"
+      ]
+    },
+    "stinkyscapeplus-096": {
+      "id": "stinkyscapeplus-096",
+      "index": "96",
+      "name": "Open Enrollment",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 0,
+      "loc": 32,
+      "base": {
+        "keywords": [],
+        "text": "Fill your hand with random F tier cards (or D tier if none exist)."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Fill your hand with random Radiant F tier cards (or D tier if none exist)."
+      }
+    },
+    "stinkyscapeplus-097": {
+      "id": "stinkyscapeplus-097",
+      "index": "97",
+      "name": "Selective Enrollment",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 5,
+      "loc": 37,
+      "base": {
+        "keywords": [],
+        "text": "Float reduces cost.\nFill your hand with random Radiant S tier cards (or A tier if none exist)."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Float reduces cost.\nFill your hand with random Radiant S tier cards (or A tier if none exist). They cost (2) less."
+      }
+    },
+    "stinkyscapeplus-107": {
+      "id": "stinkyscapeplus-107",
+      "index": "107",
+      "name": "Fuse",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 21,
+      "base": {
+        "attack": 2,
+        "health": 5,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 3
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Armor 3, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 6
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Armor 6, Can't Defend, Ranged, Pierce\nIts attacks deal {sweepLane}x damage to enemy Units in this lane, {sweepAdjacent}x in adjacent lanes."
+      },
+      "params": [
+        {
+          "key": "sweepLane",
+          "base": 5,
+          "radiant": 7,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "sweepAdjacent",
+          "base": 3,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-119": {
+      "id": "stinkyscapeplus-119",
+      "index": "119",
+      "name": "Eclipse",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-β",
+        "Automa-Ω"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 20,
+      "base": {
+        "attack": 9,
+        "health": 17,
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Armor",
+            "n": 3
+          }
+        ],
+        "text": "Tribute 3, Flying, Ranged, Pierce, Can't Defend, Crater, Armor 3\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 18,
+        "health": 34,
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Armor",
+            "n": 6
+          }
+        ],
+        "text": "Tribute 3, Flying, Ranged, Pierce, Rush, Can't Defend, Crater, Armor 6\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "burns",
+          "base": 7,
+          "radiant": 14,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-120": {
+      "id": "stinkyscapeplus-120",
+      "index": "120",
+      "name": "Crawler",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-γ"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "loc": 87,
+      "base": {
+        "attack": 3,
+        "health": 1,
+        "keywords": [],
+        "text": "May be played from your graveyard for (1).\nDeath: Add a Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 2,
+        "keywords": [],
+        "text": "May be played from your graveyard for (1).\nDeath: Add a Radiant Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
+      },
+      "params": [
+        {
+          "key": "reduce",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "refs": [
+        "stinkyscapeplus-121"
+      ]
+    },
+    "stinkyscapeplus-121": {
+      "id": "stinkyscapeplus-121",
+      "index": "121",
+      "name": "Toxopid",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-γ"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 10,
+      "loc": 156,
+      "base": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Crater, Immutable, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random empty unit zones on the field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      },
+      "radiant": {
+        "attack": 20,
+        "health": 20,
+        "keywords": [
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Crater, Immutable, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random empty unit zones on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      },
+      "params": [
+        {
+          "key": "legs",
+          "base": 3,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        },
+        {
+          "key": "toxic",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "refs": [
+        "stinkyscapeplus-121",
+        "stinkyscapeplus-121-1"
+      ]
+    },
+    "stinkyscapeplus-121-1": {
+      "id": "stinkyscapeplus-121-1",
+      "index": "121.1",
+      "name": "Toxopid Leg",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-γ",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 3,
+      "printedRarity": "Mythic",
+      "loc": 6,
+      "base": {
+        "attack": 2,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Crater, Can't attack, Taunt\nImmune to Toxic."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 16,
+        "keywords": [
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          }
+        ],
+        "text": "Crater, Can't attack, Taunt\nImmune to Toxic."
+      }
+    },
+    "stinkyscapeplus-133-5": {
+      "id": "stinkyscapeplus-133-5",
+      "index": "133.5",
+      "name": "Reignclipse",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-Ω",
+        "Automa-ζ",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 4,
+      "printedRarity": "Legendary",
+      "loc": 20,
+      "base": {
+        "attack": 19,
+        "health": 23,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Armor",
+            "n": 4
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Armor",
+            "n": 3
+          }
+        ],
+        "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 3\nDamage also Burns {damage}.\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 38,
+        "health": 46,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Armor",
+            "n": 4
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Crater"
+          },
+          {
+            "kind": "Armor",
+            "n": 6
+          }
+        ],
+        "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Rush, Cleave, Armor 4, Flying, Can't Defend, Crater, Armor 6\nDamage also Burns {damage}.\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "burns",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-134": {
+      "id": "stinkyscapeplus-134",
+      "index": "134",
+      "name": "Basket of Crawlers",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "loc": 18,
+      "base": {
+        "keywords": [],
+        "text": "Add {crawlers} Crawlers to your hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Add {crawlers} Radiant Crawlers to your hand."
+      },
+      "params": [
+        {
+          "key": "crawlers",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "refs": [
+        "stinkyscapeplus-120"
+      ]
+    },
+    "stinkyscapeplus-142": {
+      "id": "stinkyscapeplus-142",
+      "index": "142",
+      "name": "Call to Chaos (Mindustrial-Swarm Edition)",
+      "set": "Stinkyscape+",
+      "type": "Spell",
+      "tags": [
+        "Call to Chaos"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 22,
+      "base": {
+        "keywords": [],
+        "text": "One random effect: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Three different random effects, resolved in the order listed: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
+      },
+      "params": [
+        {
+          "key": "card",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "card2",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "card3",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "card4",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "toxic",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "burn",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "refs": [
+        "classicplus-073",
+        "core-095",
+        "meditative-095",
+        "stinkyscape-150",
+        "stinkyscape-151",
+        "stinkyscapeplus-121",
+        "stinkyscapeplus-142",
+        "stinkyscapeplus-142-1",
+        "stinkyscapeplus-142-2",
+        "traininggrounds-039"
+      ]
+    }
+  }
+}

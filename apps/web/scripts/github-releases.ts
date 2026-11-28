@@ -21,8 +21,9 @@ import { parseArgs } from "node:util";
 import { loadEnv } from "vite";
 
 import { SITE_ORIGIN, originOf, paths } from "../src/net/navigate.ts";
+import { snapshotReader } from "../src/patches/deltas.ts";
 import { githubReleases, type ShippedRecord } from "../src/patches/github.ts";
-import type { Patch, Snapshot, TechnicalEntry } from "../src/patches/source.ts";
+import type { Patch, TechnicalEntry } from "../src/patches/source.ts";
 import { loadWasmSync } from "../src/wasm/index.ts";
 
 const WEB = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -42,7 +43,8 @@ const plan = githubReleases({
   patches,
   shipped: read<ShippedRecord[]>(join(PATCHES, "shipped.json")),
   technical: read<TechnicalEntry[]>(join(PATCHES, "technical.json")),
-  snapshot: (version) => read<Snapshot>(join(PATCHES, `${version}.json`)),
+  // R5268000: each snapshot folded from the deltas.
+  snapshot: snapshotReader((stem) => read<unknown>(join(PATCHES, `${stem}.json`))),
   live: new Set(production.map((patch) => patch.version)),
   sites: {
     production: originOf(loadEnv("production", WEB, "VITE_").VITE_SITE_ORIGIN),

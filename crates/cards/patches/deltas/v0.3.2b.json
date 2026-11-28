@@ -1,0 +1,50 @@
+{
+  "set": {
+    "meditative-097-6": {
+      "id": "meditative-097-6",
+      "index": "97.6",
+      "name": "University",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Epic",
+      "token": true,
+      "cost": 4,
+      "params": [
+        {
+          "key": "times",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "max": 5
+        }
+      ],
+      "loc": 28,
+      "base": {
+        "attack": 0,
+        "health": 12,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          }
+        ],
+        "text": "Can't attack\nActivate: Buff each of your other permanents {times|time|times}."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 24,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          }
+        ],
+        "text": "Can't attack\nActivate: Buff each of your other permanents {times|time|times}."
+      }
+    }
+  }
+}

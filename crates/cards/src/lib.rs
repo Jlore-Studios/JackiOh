@@ -62,6 +62,10 @@ pub mod census;
 /// R767000: the shipped catalog versions a replay folds under.
 mod history;
 
+/// R5268000: the shipped snapshots folded from `patches/deltas/`, for the tests that hold `history` to them.
+#[cfg(test)]
+mod snapshot_fold;
+
 pub use history::{
     FRAGMENT_KEY, KEPT_SCRIPTS, KeptScript, card_eras, carried_versions, catalog_at, catalog_defs_at,
     has_script_at, resolve_kept_key, shipped_catalog, shipped_versions,

@@ -1,0 +1,36 @@
+{
+  "set": {
+    "classic-055": {
+      "id": "classic-055",
+      "index": "55",
+      "name": "Book of Wildfire",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Book"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 8,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage.\nEnd of turn: Become a different Book."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage.\nEnd of turn: Become a different Radiant Book."
+      }
+    }
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "set": {
+    "stinkyscapeplus-133-5": {
+      "id": "stinkyscapeplus-133-5",
+      "index": "133.5",
+      "name": "Reignclipse",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Mindustrial",
+        "Automa-Ω",
+        "Automa-ζ",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 4,
+      "printedRarity": "Legendary",
+      "loc": 20,
+      "base": {
+        "attack": 19,
+        "health": 23,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Armor",
+            "n": 7
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Crater"
+          }
+        ],
+        "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 7, Flying, Can't Defend, Crater\nDamage also Burns {burns}."
+      },
+      "radiant": {
+        "attack": 38,
+        "health": 46,
+        "keywords": [
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Armor",
+            "n": 10
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Can't Defend"
+          },
+          {
+            "kind": "Crater"
+          }
+        ],
+        "text": "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 10, Flying, Can't Defend, Crater\nDamage also Burns {burns}."
+      },
+      "params": [
+        {
+          "key": "burns",
+          "base": 9,
+          "radiant": 18,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    }
+  }
+}
