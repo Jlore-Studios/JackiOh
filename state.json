@@ -21522,6 +21522,13 @@
     "5248": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "46099027461",
+        "model": "sonnet",
+        "provider": "claude-8",
+        "since": "2026-11-28T02:45:00Z",
+        "until": "2026-11-28T03:15:00Z"
+      },
       "difficulty_by": {
         "at": "2026-11-28T02:44:52Z",
         "difficulty": "medium",
