@@ -41457,42 +41457,6 @@
         "approver": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-7",
-          "tier": "strong"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-7"
-        },
-        "difficulty": "hard",
-        "done_at": "2026-11-08T00:08:24Z",
-        "every": 5,
-        "findings": 0,
-        "head": "e5998096be07a66b7209e3c0c85d72e9daf69d70",
-        "issue": 3343,
-        "last_why": "interrupted: `claude-2` stops mid-call: 5-hour usage is 90%, at or over its 90% cap; it resets at 2026-11-08T03:20:00Z",
-        "merged_at": "2026-11-07T23:10:00Z",
-        "n": 140,
-        "pr": 3369,
-        "queued_at": "2026-11-07T23:10:00Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-1",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42427386686",
-        "sha": "310f4412060f6d35c981d165267417e220a20e99",
-        "started_at": "2026-11-07T23:55:04Z",
-        "status": "done",
-        "title": "Patch: Mythics arrive in full art: every Mythic's default look is full art, Prismatic is full art at both its levels, and Legendaries default to Extended art",
-        "tries": 0,
-        "verdict": "clean"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "opus",
           "provider": "claude-8",
           "tier": "strong"
         },
@@ -44979,7 +44943,9 @@
           "provider": "claude-8"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-28T08:11:04Z",
         "every": 5,
+        "findings": 0,
         "head": "60039074ce46e2c7d142a95016df1dd68ff726ff",
         "issue": 5265,
         "merged_at": "2026-11-28T07:22:54Z",
@@ -44992,12 +44958,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:f54edcde-1795853046",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/46124089905",
         "sha": "11172e7925707e8a99db7775d066553eae1e2db6",
         "started_at": "2026-11-28T08:04:21Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a card change that outgrows the daily fuzz's seed count fails its own pull request, not the next daily run",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 641
