@@ -69,6 +69,20 @@ it("the record shows best and checkpoints, and Start offers level 1 and the high
   expect(within(screen.getByTestId(assaultTestid.history)).getByText(DAY.date, { exact: false })).toBeInTheDocument();
 });
 
+it("the ladder marks every level beaten today with a Beaten badge", () => {
+  const levels = [...DAY.levels, ...DAY.levels.slice(0, 1).map((level) => ({ ...level, level: 3, enemy: "Quarantine Wall" }))];
+  render(<DayScreen assault={assault({ day: { ...DAY, levels }, record: { ...RECORD, best: 2 } })} saved={NO_SAVED} />);
+
+  for (const beaten of [1, 2]) {
+    const row = screen.getByTestId(assaultTestid.level(beaten));
+    expect(within(row).getByText("Beaten")).toBeInTheDocument();
+    expect(row).toHaveAttribute("data-beaten", "true");
+  }
+  const unbeaten = screen.getByTestId(assaultTestid.level(3));
+  expect(within(unbeaten).queryByText("Beaten")).toBeNull();
+  expect(unbeaten).not.toHaveAttribute("data-beaten");
+});
+
 // #5005 (docs/implicit-states.md §16, H2): the store refuses a Start sent past UTC midnight and moves the
 // screen on to the new day; the screen's own picks follow it.
 it("R4581000 a day screen moved on to a new day offers that day's deck and a start level its record holds", () => {
