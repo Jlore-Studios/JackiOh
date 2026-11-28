@@ -46593,7 +46593,8 @@
     ],
     "runs": [
       "2026-11-28T09:32:25Z,46130425778,claude-6,opus,suggest,,,interrupted,5-hour cap,3,0,0,0,,51,71,,,,,none,,1",
-      "2026-11-28T09:32:25Z,46130387758,claude-6,opus,suggest,,,interrupted,5-hour cap,3.3,0,0,0,,51,70,,,,,none,,1"
+      "2026-11-28T09:32:25Z,46130387758,claude-6,opus,suggest,,,interrupted,5-hour cap,3.3,0,0,0,,51,70,,,,,none,,1",
+      "2026-11-28T09:37:23Z,46130348177,claude-4,opus,suggest,,,interrupted,5-hour cap,9,4,14,94676,11.8047,40,70,,,,,none,,1"
     ]
   },
   "version": 1
