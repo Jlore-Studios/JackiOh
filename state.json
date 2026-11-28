@@ -22130,22 +22130,34 @@
       "taken_asks": []
     },
     "5302": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-8",
+      "owner_since": "2026-11-28T12:49:18Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-28T12:48:45Z",
       "requested_by": "jgoetzmann-bot",
+      "run_id": "pending:c5867309-1795870142",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-28T12:49:18Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T12:41:19Z",
+    "at": "2026-11-28T12:49:18Z",
     "url": "",
-    "what": "suggestions (client) on claude-7"
+    "what": "plan #5302 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-28T12:39:38Z",
