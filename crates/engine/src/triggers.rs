@@ -107,6 +107,9 @@ pub const DEATH_WATCH: &str = "@deathWatch";
 /// R3570004: the `hook` of a launch watcher's queue entry (Stinkyscape+ #142 Call to Chaos, entry 8).
 pub const LAUNCH_WATCH: &str = "@launchWatch";
 
+/// R5237000: the `hook` of a summon watcher's queue entry (FvH #4 KY's Unification Mandate).
+pub const SUMMON_WATCH: &str = "@summonWatch";
+
 /// R3536000, R3536003: the `hook` of an Evolve text's queued run (`evolution::begin`): one entry per
 /// run past the inline one, so a prompt in the text pauses the queue rather than dropping the rest.
 /// No card's trigger id starts with `@`.
@@ -956,6 +959,8 @@ fn dispatch_event_at(sink: &mut EngineSink<'_>, event: &GameEvent, at: Option<us
     queued.extend(offer_to_death_watches(sink, event));
     // R3570004: and Call to Chaos (Mindustrial-Swarm Edition)'s, its holder's own Starship launch.
     queued.extend(offer_to_launch_watches(sink, event));
+    // R5237000: and KY's Unification Mandate's, each card its owner puts onto the field from now on.
+    queued.extend(offer_to_summon_watches(sink, event));
     // R212: the removal this event reports, if any, has been answered (`stays::note_reported`).
     crate::stays::note_reported(sink.state, event);
     queued
@@ -1047,6 +1052,64 @@ fn offer_to_lane_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<Qu
             sink.state.trigger_queue.push(entry.clone());
             queued.push(entry);
         }
+    }
+    queued
+}
+
+/// R5237000: offer one event to the summon watchers (`ModifierKind::SummonWatch`) of the player whose
+/// card it puts onto the field: a permanent's `cardResolved` on its own side, or a `summoned` that no play
+/// made (a played card answers through its resolution, so once), as `offer_to_lane_watches` reads them,
+/// in any lane. A watch with `unitsOnly` answers a Unit alone. Each match queues one `SUMMON_WATCH` entry,
+/// its data holding `instanceId` and `watcher`, in the order the watches were made.
+fn offer_to_summon_watches(sink: &mut EngineSink<'_>, event: &GameEvent) -> Vec<QueuedTrigger> {
+    let placed: Option<(PlayerId, String)> = match event {
+        GameEvent::CardResolved {
+            permanent,
+            player,
+            instance_id,
+            ..
+        } if *permanent => match find_instance(sink.state, instance_id).map(|card| &card.zone) {
+            Some(Zone::Field { player: at, .. }) if at == player => Some((*player, instance_id.clone())),
+            _ => None,
+        },
+        GameEvent::Summoned {
+            player,
+            instance_id,
+            exits_from: None,
+            ..
+        } => Some((*player, instance_id.clone())),
+        _ => None,
+    };
+    let Some((player, instance_id)) = placed else {
+        return Vec::new();
+    };
+    let is_unit = find_instance(sink.state, &instance_id)
+        .is_some_and(|card| crate::faces::card_type_of(sink.state, card) == crate::wire::CardType::Unit);
+    let answers: Vec<(String, Resume)> = sink.state.players[player]
+        .mods
+        .iter()
+        .filter_map(|modifier| match &modifier.kind {
+            crate::state::ModifierKind::SummonWatch {
+                resume, units_only, ..
+            } if is_unit || *units_only != Some(true) => Some((modifier.id.clone(), resume.clone())),
+            _ => None,
+        })
+        .collect();
+    let mut queued: Vec<QueuedTrigger> = Vec::new();
+    for (id, resume) in answers {
+        let (entry_id, seq) = next_entry_id(sink.state, false, "w");
+        let mut data = resume.data.clone();
+        data.insert("instanceId".to_string(), Value::String(instance_id.clone()));
+        data.insert("watcher".to_string(), Value::String(player.as_str().to_string()));
+        let entry = QueuedTrigger {
+            id: entry_id,
+            seq,
+            instance_id: id,
+            hook: SUMMON_WATCH.to_string(),
+            resume: Resume { data, ..resume },
+        };
+        sink.state.trigger_queue.push(entry.clone());
+        queued.push(entry);
     }
     queued
 }
@@ -1268,10 +1331,12 @@ pub fn run_queued_trigger(sink: &mut EngineSink<'_>, entry: &QueuedTrigger) {
     // MD-B22, R946: a lane watcher's answer — the stored resume runs as its owner; R1863000: a play
     // watcher's the same, and R1882004: a death watcher's, as the dead card's controller; R3570004: a
     // launch watcher's, as the launching player.
+    // R5237000: a summon watcher's the same, as its owner.
     if entry.hook == LANE_WATCH
         || entry.hook == PLAY_WATCH
         || entry.hook == DEATH_WATCH
         || entry.hook == LAUNCH_WATCH
+        || entry.hook == SUMMON_WATCH
     {
         let watcher = entry.resume.data.get("watcher").and_then(Value::as_str);
         let owner = PLAYER_IDS

@@ -455,43 +455,131 @@ pub fn meet_kill_deadlines(state: &mut GameState, killer_id: &str) {
 /// a Unit Immune to Spells by (R4453000).
 pub fn allure_enemy_units() -> Effect {
     Effect::new("allureEnemyUnits", move |ctx| {
-        let (def_id, radiant) = maker_of(ctx);
         let owner = ctx.controller;
-        let at = DelayedAt {
-            phase: Phase::Start,
-            player: owner,
-        };
-        let mark = CardMark {
-            mark: ALLURE_MARK.to_string(),
-            color: ALLURE_MARK_COLOR.to_string(),
-        };
-        // Each pile's top in lane order, then (R1081000) the Units standing in the backrow.
-        let mut units: Vec<CardInstance> = slots_of(opponent_of(owner), Row::Units)
-            .into_iter()
-            .filter_map(|slot| card_at(ctx.state, slot).cloned())
-            .collect();
-        units.extend(
-            standing_units_of(ctx.state, opponent_of(owner))
-                .into_iter()
-                .cloned(),
-        );
-        // R1839000: a Dormant card is marked by nothing, so Allure passes it by; R4453000: so does a Spell's
-        // Allure (S #150's Call to Chaos) a Unit Immune to Spells.
-        units.retain(|unit| !crate::restrictions::unaffected_by(ctx, unit));
-        for unit in units {
-            let mut data: IndexMap<String, Value> = IndexMap::new();
-            data.insert("instanceId".to_string(), Value::String(unit.id.clone()));
-            let resume = Resume {
-                def_id: def_id.clone(),
-                hook: DELAYED_ALLURE_HOOK.to_string(),
-                step: "unit".to_string(),
-                radiant,
-                instance_id: None,
-                data,
-            };
-            let entry = schedule_delayed(ctx, owner, at, resume, Some(unit.id.clone()), None);
-            mark_delayed(ctx, &entry, &mark);
+        for unit in allure_candidates(ctx, owner) {
+            schedule_allure(ctx, owner, &unit.id);
         }
+    })
+}
+
+/// R963: the enemy Units an Allure made by `owner` may mark now: each pile's top in lane order, then
+/// (R1081000) the Units standing in the backrow. R1839000: a Dormant card is marked by nothing, so Allure
+/// passes it by; R4453000: so does a Spell's Allure (S #150's Call to Chaos) a Unit Immune to Spells.
+fn allure_candidates(ctx: &EffectContext<'_>, owner: PlayerId) -> Vec<CardInstance> {
+    let state: &GameState = &*ctx.state;
+    let mut units: Vec<CardInstance> = slots_of(opponent_of(owner), Row::Units)
+        .into_iter()
+        .filter_map(|slot| card_at(state, slot).cloned())
+        .collect();
+    units.extend(standing_units_of(state, opponent_of(owner)).into_iter().cloned());
+    units.retain(|unit| !crate::restrictions::unaffected_by(ctx, unit));
+    units
+}
+
+/// R963: one Allure's entry: the steal of `unit_id` at the start of `owner`'s next turn, watching its
+/// stay (R174) with the `allure` mark (R437), outliving the Allurer (R76).
+fn schedule_allure(ctx: &mut EffectContext<'_>, owner: PlayerId, unit_id: &str) {
+    let (def_id, radiant) = maker_of(ctx);
+    let at = DelayedAt {
+        phase: Phase::Start,
+        player: owner,
+    };
+    let mark = CardMark {
+        mark: ALLURE_MARK.to_string(),
+        color: ALLURE_MARK_COLOR.to_string(),
+    };
+    let mut data: IndexMap<String, Value> = IndexMap::new();
+    data.insert("instanceId".to_string(), Value::String(unit_id.to_string()));
+    let resume = Resume {
+        def_id,
+        hook: DELAYED_ALLURE_HOOK.to_string(),
+        step: "unit".to_string(),
+        radiant,
+        instance_id: None,
+        data,
+    };
+    let entry = schedule_delayed(ctx, owner, at, resume, Some(unit_id.to_string()), None);
+    mark_delayed(ctx, &entry, &mark);
+}
+
+/// `allureUnit`'s argument: the Unit by id, or one random enemy Unit.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct AllureUnitArgs {
+    /// The enemy Unit to Allure; one that is no enemy Unit `allure_enemy_units` would mark now (an ally,
+    /// one off the field, beneath a pile, Dormant, or passed by as Immune to Spells) is not Allured.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub instance_id: Option<String>,
+    /// With no `instanceId`: one of those enemy Units drawn from the match rng (none there: nothing is
+    /// drawn, R129).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub random_enemy: Option<bool>,
+}
+
+/// R5238008: Allure one Unit, the one `instance_id` names or one random enemy Unit, with the very entry
+/// `allure_enemy_units` makes for each (R963): stolen at the start of the Allurer's next turn, or
+/// destroyed with no open unit zone, the `allure` mark on it while it waits. The controller is the
+/// Allurer, so a granted hook's allure is its holder's controller's. Neither named: nothing.
+pub fn allure_unit(args: AllureUnitArgs) -> Effect {
+    Effect::new("allureUnit", move |ctx| {
+        let owner = ctx.controller;
+        let candidates = allure_candidates(ctx, owner);
+        let unit: Option<String> = match (&args.instance_id, args.random_enemy) {
+            (Some(id), _) => candidates.iter().find(|unit| unit.id == *id).map(|unit| unit.id.clone()),
+            (None, Some(true)) => ctx.rng.pick(&candidates).map(|unit| unit.id.clone()),
+            (None, _) => None,
+        };
+        if let Some(unit) = unit {
+            schedule_allure(ctx, owner, &unit);
+        }
+    })
+}
+
+/// R5238009: the `data` key a `watch_deaths` step finds the player who placed the watch under (its
+/// holder: `"p1"` or `"p2"`), since the step runs as the dead card's controller (R1882004).
+pub const DEATH_WATCH_HOLDER_KEY: &str = "holder";
+
+/// `watchDeaths`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct WatchDeathsArgs {
+    /// The tag a dead card's definition prints for the watch to answer it.
+    pub tag: crate::wire::Tag,
+    pub step: String,
+    /// The watch's badge on its holder's side (R169).
+    pub label: String,
+    /// The `Script` key the step lives under; `RESUME_HOOK` by default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hook: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub data: Option<IndexMap<String, Value>>,
+}
+
+/// R5238009: "for the rest of the game, after a <tag> card dies, …" — a never-expiring death watch
+/// (`ModifierKind::DeathWatch`, R1882004) on the controller: after each `destroyed` of a card whose
+/// definition prints `tag`, either side's, the card's `step` re-enters (under `hook`) as a queued trigger,
+/// once the state check that killed it has run (the dead card's own Death first). As every death watch's,
+/// the step runs as the dead card's controller as it died, its data holding `instanceId` (the dead card),
+/// `watcher` (that controller) and `DEATH_WATCH_HOLDER_KEY` (the player who placed it); no `self` (R127).
+/// Several stack, each its own.
+pub fn watch_deaths(args: WatchDeathsArgs) -> Effect {
+    Effect::new("watchDeaths", move |ctx| {
+        let player = ctx.controller;
+        let mut data = args.data.clone().unwrap_or_default();
+        data.insert(
+            DEATH_WATCH_HOLDER_KEY.to_string(),
+            Value::String(player.as_str().to_string()),
+        );
+        let mut resume = delayed_resume(
+            ctx,
+            &args.step,
+            data,
+            args.hook.as_deref().unwrap_or(RESUME_HOOK),
+        );
+        resume.instance_id = None;
+        crate::modifiers::add_death_watch(ctx, player, args.tag, resume, &args.label);
     })
 }
 

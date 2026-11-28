@@ -75,7 +75,8 @@ reads: `SetName`, the catalog order, the sets that ship, the deck codes' set off
   and `-` taken out), the abbreviation ruling notes write before a `#` (`TG #12`), and its shadow-ban share, `(part, whole)`, or
   `None` while the ban takes none of its cards. Never move or remove a row: its place is the set's in the catalog order (R1420)
   and in the deck codes (R1410).
-- Add its census entry (`crates/cards/src/census.rs`) after the last one, and its scripts folder, `src/scripts/<segment with _
+- Add its census entry (`crates/cards/src/census.rs`) after the last set the catalog orders and before the single-player
+  sets' (the census lists the catalog order, then the single-player sets with cards), and its scripts folder, `src/scripts/<segment with _
   between its words>/`, with its first card.
 - Run the workspace tests, which regenerate `apps/web/src/wire/generated/SetName.ts` (and `engineConfig.ts` when the set ships);
   commit the diff.

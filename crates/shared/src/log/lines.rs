@@ -696,6 +696,8 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
                 CounterKind::Toxic => "{target} toxic counters: {value}",
                 CounterKind::Woozy => "{target} Woozy counter: {value}",
                 CounterKind::Warhero => "Warhero Tokens are worth {value} Credits",
+                // R5236000: the Durability a use left the card.
+                CounterKind::Durability => "{target} Durability left: {value}",
             };
             // R3548002: the game-wide worth, which names no card.
             if *counter == CounterKind::Warhero {

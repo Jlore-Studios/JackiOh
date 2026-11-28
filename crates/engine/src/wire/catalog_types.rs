@@ -2198,8 +2198,8 @@ mod tests {
         );
         assert_eq!(SetName::InfiniteAssault.as_str(), "Infinite Assault");
         assert_eq!(
-            SetName::ALL.iter().position(|set| *set == SetName::InfiniteAssault),
-            Some(SetName::StinkyscapePlus as usize + 1)
+            SetName::InfiniteAssault as usize,
+            SetName::StinkyscapePlus as usize + 1
         );
         assert!(HELD_SINGLE_PLAYER_SETS.is_empty());
         assert!(!CATALOG_SETS.contains(&SetName::InfiniteAssault));

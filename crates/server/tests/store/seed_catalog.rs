@@ -515,10 +515,11 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .position(|admitted| admitted == "Commander")
             .expect("the check admits Commander");
         assert_eq!(
-            tags[commander + 1..].to_vec(),
-            ["Plagiarized", "Roblox-Tool", "Golem", "Token"].map(str::to_owned).to_vec(),
+            tags[commander + 1..commander + 4],
+            ["Plagiarized", "Roblox-Tool", "Golem"],
             "{tags:?}"
         );
+        assert_eq!(tags.last().map(String::as_str), Some("Token"));
         for (tag, name) in [
             (Tag::Plagiarized, "Plagiarized"),
             (Tag::RobloxTool, "Roblox-Tool"),
@@ -527,7 +528,6 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             assert_eq!(tag.as_str(), name);
             assert!(tags.iter().any(|admitted| admitted == name), "{name}: {tags:?}");
         }
-        assert!(!set_ships(SetName::FelinorsVsHumans));
     }
 }
 

@@ -339,11 +339,16 @@ pub struct GrantAbilityArgs {
     pub radiant: bool,
     #[serde(default)]
     pub params: IndexMap<String, i32>,
+    /// R5237006: when the granted ability runs; absent, as the card dies.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub on: Option<crate::state::GrantOn>,
 }
 
 /// ME-GRANT (MD-D13): grant a card on the field a Death ability. The instance carries only the name and
 /// numbers as data; the granting card's script registers the hook (`Script.grants`), and
-/// `grants::death_hook_of` runs it after the card's own Death.
+/// `grants::death_hook_of` runs it after the card's own Death. R5237006: with `on: EndOfTurn` it is an
+/// End of turn ability instead, run at the holder's controller's end of turn after its own
+/// (`grants::end_of_turn_hook_of`), FvH #79's "runs as the Human's own".
 pub fn grant_ability(args: GrantAbilityArgs) -> Effect {
     Effect::new("grantAbility", move |ctx| {
         // R174: as `setRadiant` resolves it: by id at its stay when the run began, else the first chosen.
@@ -365,6 +370,8 @@ pub fn grant_ability(args: GrantAbilityArgs) -> Effect {
             grant: args.grant.clone(),
             radiant: args.radiant,
             params: args.params.clone(),
+            // R5237006: a Death is written as absent, as every grant was before.
+            on: args.on.filter(|on| *on != crate::state::GrantOn::Death),
         };
         let grants = live.grants.get_or_insert_with(Vec::new);
         if !grants.contains(&grant) {
