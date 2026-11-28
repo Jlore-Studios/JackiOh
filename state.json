@@ -21768,6 +21768,14 @@
       "queued_at": "2026-11-28T05:11:14Z",
       "requested_by": "jgoetzmann",
       "stop_requested": false
+    },
+    "5270": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-28T02:02:34Z",
+      "issue": 5229,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
