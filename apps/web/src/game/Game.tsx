@@ -46,6 +46,7 @@ import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
 import { IDLE, answerPlaguePlacement, answerTargetPrompt, boardKeyOf, highlightFor, matchTargetOption, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import { attackOutcomes, hoveredAttack, withOutcomes, type HoveredAttack } from "./attackOutcome.ts";
+import { hasMovesLeft } from "./glow.ts";
 import {
   HIDDEN_ID,
   SET_PIECE_SKIP_HINT_MS,
@@ -925,6 +926,10 @@ export default function Game({
     () => withOutcomes(replay ? NO_HIGHLIGHT : highlightFor(shown, legal, interaction), outcomes, hovered),
     [replay, shown, legal, interaction, outcomes, hovered],
   );
+  // #5230: a move is left by the turn, not by the selection: the idle highlight of the shown view's moves, so a card
+  // picked up or an attacker aimed (a highlight that lights only its zones or targets) neither flips End turn to its
+  // done look nor waives Confirm end turn. A replay lights nothing. A boolean, so the cards' memo on `highlight` is untouched.
+  const movesLeft = useMemo(() => !replay && hasMovesLeft(highlightFor(shown, legal, IDLE)), [replay, shown, legal]);
   // #3633: the highlight the cards were drawn with while it lights the same things, so a new view that
   // only offers its moves later (`legal` held back above) draws no card again (Card.tsx, sameCardProps).
   const keptHighlight = useRef(computedHighlight);
@@ -1058,6 +1063,7 @@ export default function Game({
         deckCosmetics={deckCosmetics}
         loadouts={loadouts}
         highlight={highlight}
+        movesLeft={movesLeft}
         animating={animating}
         animated={animated}
         enemyLabel={enemyLabel}
