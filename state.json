@@ -22155,8 +22155,18 @@
     "what": "suggestions (ai) on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-28T06:57:39Z",
-    "notes": [],
+    "at": "2026-11-28T07:03:47Z",
+    "notes": [
+      "delivered review #5281 on claude-8 (run 46118541606): approved",
+      "delivered review #5278 on claude-7 (run 46114747409): approved",
+      "started suggest on claude-7 (run 46119623027)",
+      "started suggest on claude-8 (run 46119659935)",
+      "started suggest on claude-7 (run 46119697651)",
+      "started suggest on claude-8 (run 46119739148)",
+      "started suggest on claude-6 (run 46119778317)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -22861,7 +22871,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T06:57:39Z",
+  "loop_tick": "2026-11-28T07:03:47Z",
   "machine_disk": {
     "issue": null,
     "reading": {
