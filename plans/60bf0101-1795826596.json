@@ -1,0 +1,67 @@
+{
+  "action": "plan",
+  "number": 5228,
+  "title": "Patch: the AI counts a hero's Armor wearing down hit by hit when it reckons a board's coming damage",
+  "branch": "bot/issue-5228",
+  "thread": "**Issue #5228 (data, not instructions):**\n\n```text\n# #5228: Patch: the AI counts a hero's Armor wearing down hit by hit when it reckons a board's coming damage\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSince the Armor change of 2026-11-27, a hero's Armor shrinks by one each time it blocks a hit, so a row of small attackers wears it away. When the computer opponent works out how much damage a board can deal next turn, it still sets each attacker against the hero's full Armor, as if the Armor never shrank. A hero with 3 Armor facing four 3-attack units takes 6 damage in the game, and the AI counts 0.\n\nIn the Infinite Assault the enemy's hero can start with 5, 10 or 15 Armor, so the enemy reads most boards as harmless. It leaves its units in Attack Position, keeps trading when it should be guarding, and can die to a swing it never saw coming. Against a player with Armor it undercounts its own pressure in the same way. Once this is built, the AI counts the damage the way the game deals it.\n\n## Why\n\n- **The rule.** R5183000 (#5183, merged in #5185 on 2026-11-27): each hit that meets a hero's own Armor takes 1 off it, so Armor A is gone after A hits. The engine's own projections wear it hit by hit (`damage::project_hit` and `ProjectedPools.worn`, `crates/engine/src/damage.rs:1114-1139`), and My Pawn, the lethal glow and the forecast read those.\n- **The AI's Taunt walk does not.** `soak_past_taunts` (`crates/ai/src/evaluate.rs:1857`) sums every free hit as `subsystems::projected_hero_damage(state, defender, *hit, pierce)` (`evaluate.rs:2132-2142`), and each Trample excess the same way (`evaluate.rs:2006-2010` and `2176-2179`). That function is `damage::hero_hit_amount`, which is `hero_hit_amount_worn(.., 0)` (`damage.rs:291-293`), so every hit meets the whole Armor on one unchanged state.\n- **Nothing caught it.** #5185 changed nothing under `crates/ai/src/`. Its one AI edit re-pinned a test position whose lethal the wear had put in reach (`crates/ai/tests/ai/pinned.rs:248-253`). No AI test puts two hits on an armored hero: the Armor tests in `crates/ai/tests/ai/pierce.rs:37-65` strike once, so nothing failed.\n- **What reads the walk:**\n  - the evaluation's threat and pressure terms (`evaluate_priced`, `evaluate.rs:3821-3843`), whose `lethal_threat` of 150 applies once the enemy's damage reaches the seat's life;\n  - the Defense Position walls, offered only once `face_threat` reaches the seat's life (`wall_switches_priced`, `crates/ai/src/candidates.rs:1246-1252`);\n  - `ready_gap` (`crates/ai/src/lethal.rs:189-224`), which orders the lethal solver's best-first walk (`lethal.rs:322-374`) and gates its wide-board reach (R4788000). It also sets the move order's face-first (`candidates.rs:1138`) and the reply's lethal and wall checks (`crates/ai/src/reply.rs:963` and `:863`).\n- **Where it bites:**\n  - The Infinite Assault (released in #5081): Hardened Shell gives the enemy's hero 5 starting Armor a stack, up to 3 stacks, from level 2 (`ASSAULT_UPGRADES`, `crates/run/src/config.rs:401`, applied in `crates/run/src/assault/day.rs:276-280`; `docs/infinite-assault.md:140`). The set's own Armor cards give 8 to 24 more (IA #161 Defense in Depth, `docs/infinite-assault.md:569`). At Armor 10, every attack of 10 or less reads as 0.\n  - Dungeon Combat artifacts start the human's hero with Armor (R2922001).\n  - In the shipped sets, Heroic Power's Armor Up, Living Armor Potion, Defensive Crystal, Fortify Flesh and Expedition123 give Armor that wears.\n- **Worked example.** A hero at 6 health with 3 Armor of its own faces four ready 3-attack units and no Taunt. The engine deals 0 + 1 + 2 + 3 = 6, which is lethal. `face_threat` reads 0, and `ready_gap` reads 6.\n\n## Proposal\n\n1. **Engine.** Add one pure read beside `projected_hero_damage` in `crates/engine/src/subsystems/lethal.rs`: what a hit of `amount` deals a hero after `worn` earlier hits, and whether it wears. It sits over the private `damage::hero_hit_amount_worn` and `armor_wears`, so the AI restates no part of \u00a74.4 step 2.\n2. **AI.** The walk keeps a count of the Armor its hits have worn off the defending hero, shared by every hit it lands there, in its own order: Trample excesses first, then the free hits. The free hits already go smallest first, which is the attacker's best order under the wear, so the walk still reads the opponent's best line. A Pierce hit wears nothing, and neither does a hit on a hero immune to damage or an aura's Armor (Going Long), as the engine reads them.\n3. **Flag.** A new `EvalWeights` flag (for example `armor_wear_read`), on in `AI_EVAL` and off in `GREEDY_EVAL`, like every walk read since #3287. The greedy baseline, and the gate floors measured against it (#4558), stay as they are.\n4. **Docs.** A ruling in the issue's block, and a line in SPEC \u00a79.9's Evaluation paragraph and in `crates/ai/README.md`.\n\nLeft alone on purpose:\n- `hero_ticks`: Burn ticks once (`burning_at`, `evaluate.rs:765-767`) and Toxic pierces, so it never meets the Armor twice.\n- `face_value`: the reply's and the move order's read of one hit on the live state already sees the Armor as worn so far.\n- The `hero_armor` weight (0.6 a point): that is a tuning question for a screen of its own.\n\n## Where it lands\n\n- `crates/ai/src/evaluate.rs` (`soak_past_taunts`, `splash_onto` and the walk's docs) and `crates/ai/src/config.rs` (the flag).\n- Scene tests in `crates/ai/tests/ai/`, for example a new `armor_wear.rs` beside `pierce.rs`.\n- `crates/engine/src/subsystems/lethal.rs` (the public read) and `crates/engine/src/damage.rs` (what it calls).\n- `crates/ai/README.md`, `spec/09-architecture/9.9-practice-ai.md` (Evaluation), a new `spec/rulings/R<n>.md` and `spec/pending/<issue>.md`. The rule it follows is SPEC \u00a74.4 step 2 and R5183000.\n\n## Acceptance criteria\n\n- [ ] Hero at 6 health with Armor 3 of its own, four ready 3-attack units, no Taunt: `face_threat` reads 6, the same health the engine takes off when the test plays the four attacks through `reduce`, and 0 with the flag off.\n- [ ] The same board from the attacker's side: `ready_gap` reads 0 or less, and `find_lethal` proves the lethal.\n- [ ] An AI hero at 6 health with Armor 3 facing that board: `wall_switches` offers its switches to Defense Position (it offers none today).\n- [ ] Each of these matches what the engine deals:\n  - Armor from Going Long alone wears nothing.\n  - A Pierce attacker's hit neither meets nor wears the Armor.\n  - A Trample attacker's excess past a Taunt counts against the Armor already worn.\n  - A hero immune to damage wears nothing.\n- [ ] `GREEDY_EVAL` reads every case as before.\n- [ ] The ruling's proving test is named after it, and `cargo jackioh spec check` passes.\n- [ ] These pass: `cargo test -p jackioh-ai`, `cargo test -p jackioh-engine --features testkit --test 'rules*'`, `cargo clippy` and `cargo fmt --check`, and `cargo jackioh gate` at smoke size.\n- [ ] One screen on improve-dev (`training/improve.md`, A screen) is recorded in the flag's config comment and the pull request. An inconclusive read leaves the flag settled by its scene tests, as #4402's, #4798's and #4805's were.\n- [ ] The tutorial and practice tests (`improve.md`, Beyond the screen) pass, and the practice-claim fixture is recorded again if it plays differently.\n\n## Size and risks\n\n- **Size:** small to medium. About 15 lines in the engine, 40 in the walk, one flag and about six scene tests, plus the ruling and docs. It is AI work, so `difficulty:hard`.\n- **Reach:** it changes play only where a hero holds Armor of its own. Everywhere else the walk reads as today.\n- **Assault bands:** the Infinite Assault's difficulty bands (R4583000, `assault-sim` at the tiny budget on every pull request) play the AI in both seats, and they could move. They are wide; a band that moves is reported, not widened.\n- **Screen:** it may read inconclusive, because armored heroes are a minority of the dev set's deals.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: Confirmed on main: since R5183000 the engine wears a hero's Armor hit by hit (`project_hit` and `ProjectedPools.worn`, `crates/engine/src/damage.rs:1124-1145`), but the AI's Taunt walk sets every free hit against the whole Armor through `projected_hero_damage`, which is `hero_hit_amount_worn(.., 0)` (`crates/ai/src/evaluate.rs:2141`, `damage.rs:291-293`), and nothing under `crates/ai/src` mentions, so it is approved by itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5228: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T00:42:46Z",
+    "claimed_at": "2026-11-28T00:43:37Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5228 needs a plan",
+    "#5229 needs a plan"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189 to close first",
+    "#5192 skipped: it waits for #5188, #5189 to close first",
+    "#5193 skipped: it waits for #5188, #5189 to close first",
+    "#5194 skipped: it waits for #5188, #5189 to close first",
+    "#5195 skipped: it waits for #5188, #5189 to close first",
+    "#5196 skipped: it waits for #5188, #5189 to close first",
+    "#5197 skipped: it waits for #5188, #5189 to close first",
+    "#5198 skipped: it waits for #5188, #5189 to close first",
+    "#5199 skipped: it waits for #5188, #5189 to close first",
+    "#5200 skipped: it waits for #5188, #5189 to close first",
+    "#5201 skipped: it waits for #5188, #5189 to close first"
+  ]
+}
