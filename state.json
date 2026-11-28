@@ -22149,12 +22149,8 @@
     "what": "build #5289 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-28T09:10:44Z",
-    "notes": [
-      "started build #5289 on claude-4 (run 46129295945)",
-      "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days"
-    ],
+    "at": "2026-11-28T09:17:53Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -22859,7 +22855,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T09:10:44Z",
+  "loop_tick": "2026-11-28T09:17:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
