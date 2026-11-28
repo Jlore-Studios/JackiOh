@@ -22134,14 +22134,8 @@
     "what": "plan #5300 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-28T12:04:35Z",
-    "notes": [
-      "#5300 needs a plan",
-      "delivered review #5292 on claude-8 (run 46137127383): approved",
-      "started plan #5300 on claude-7 (run 46142984853)",
-      "nothing more to start: nothing is queued",
-      "#5300: typed it Bug"
-    ],
+    "at": "2026-11-28T12:12:01Z",
+    "notes": [],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -22846,7 +22840,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T12:04:35Z",
+  "loop_tick": "2026-11-28T12:12:01Z",
   "machine_disk": {
     "issue": null,
     "reading": {
