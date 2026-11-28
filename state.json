@@ -20913,7 +20913,7 @@
         "provider": "claude-6",
         "round_tier": "strong",
         "rounds_on": 5188,
-        "rounds_used": 0,
+        "rounds_used": 1,
         "since": "2026-11-27T23:56:25Z",
         "source": "build",
         "until": "2026-11-28T01:16:16Z"
