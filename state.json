@@ -22194,8 +22194,15 @@
     "what": "plan #5297 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-28T11:32:30Z",
-    "notes": [],
+    "at": "2026-11-28T11:38:34Z",
+    "notes": [
+      "#5297 needs a plan",
+      "delivered build #5289 on claude-3 (run 46134046189): interrupted",
+      "started build #5289 on claude-6 (run 46140942069)",
+      "started plan #5297 on claude-6 (run 46140983320)",
+      "nothing more to start: nothing is queued",
+      "#5297: typed it Bug"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -22900,7 +22907,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T11:32:30Z",
+  "loop_tick": "2026-11-28T11:38:34Z",
   "machine_disk": {
     "issue": null,
     "reading": {
