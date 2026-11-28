@@ -45940,6 +45940,9 @@
     "readings": [
       "2026-11-28T02:14:23Z,claude-8,ping,before,46096854739,39,2026-11-28T06:50:00Z,,,allowed,85,,",
       "2026-11-28T02:14:45Z,claude-8,stream,call,46096854739,40,2026-11-28T06:50:00Z,,,allowed,85,,"
+    ],
+    "runs": [
+      "2026-11-28T02:19:21Z,46096854739,claude-8,sonnet+opus,review,5241,medium,approved,,4.8,14,4614,385060,0.4951,39,40,,,0.9,,none,,1"
     ]
   },
   "version": 1
