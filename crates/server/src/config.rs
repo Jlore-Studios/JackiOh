@@ -1166,6 +1166,12 @@ pub const PUBLIC_STATS_PATCHES_LINE_BEFORE: usize = 2;
 /// when that run is longer than the newest line's patches and `PUBLIC_STATS_PATCHES_LINE_BEFORE` more.
 pub const PUBLIC_STATS_PATCHES_NEWEST: usize = 5;
 
+/// SPEC §11 R5245000: how long a kept card statistic no read renewed stays to be served while its next
+/// one is worked out (`api::stats::kept_cell`). A statistic read again within it answers at once with the
+/// figures held, however long the next one takes; one read after it waits for its figures, as the first
+/// read after a boot does.
+pub const CARD_STATS_KEPT_IDLE_SECONDS: i64 = 3600;
+
 /// SPEC §11 R978000, R2491000: how many computed reports each of the card statistics' kept stores
 /// (`api::stats::KeptReports`) holds at once, each for `CARD_STATS_CACHE_TTL_SECONDS`; keeping
 /// another drops the one kept longest ago. The card drill-down keeps at most 24 however many patches
