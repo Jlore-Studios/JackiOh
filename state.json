@@ -21075,6 +21075,9 @@
       "requested_by": "jgoetzmann-bot",
       "stop_requested": false,
       "suggestion": true
+    },
+    "5231": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -44545,6 +44548,13 @@
         "at": "2026-11-28T00:51:54Z",
         "number": 5230,
         "title": "Patch: End turn keeps reading a move as left while a card is picked up or an attacker is aimed, so it no longer pulses as if the turn is done and Confirm end turn still asks",
+        "verdict": "auto-approved",
+        "why": "approved by itself: no one voted on it"
+      },
+      {
+        "at": "2026-11-28T00:52:03Z",
+        "number": 5231,
+        "title": "Patch: a finished daily game reloads the Jlore balance, the quests and the card proficiency it paid, as a live game's result does",
         "verdict": "auto-approved",
         "why": "approved by itself: no one voted on it"
       }
