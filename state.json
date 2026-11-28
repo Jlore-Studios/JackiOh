@@ -21821,13 +21821,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-4",
         "rejections": [],
-        "reviews": [],
-        "sha": "88ef459fc8bf055956ee87977dad2ebd735faa46",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-4",
+            "run": "46111782759",
+            "tier": "strong"
+          }
+        ],
+        "sha": "d24d9bd58a0e135490205869970ebcad127a426b",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "5278": {
