@@ -43,6 +43,11 @@
 //! R5225000: the CPU-bound work of the statistics (`Snapshot::new`, `window_over`) runs off the runtime's
 //! worker threads (`blocking`), so the runtime keeps answering other requests while it runs, and a window's
 //! figures are cut on a task of its own, counted as the load's last step.
+//! R5245000 (amends R978000, R1583000, R3067000, R5186000): a kept snapshot lasts from when its load
+//! finished, and a load under way is joined whatever its age. Once a value is held, no read waits on its
+//! next: a read past its time gets the held value and starts one refresh beside it (`kept_value`). The
+//! snapshot past its time is let go as its next loads, so one is held at a time, and the figures cut from it
+//! answer meanwhile (`kept_snapshot`).
 //! R5040000: `?scope=major` sends the live play versions alone, each cut to the newest major's line
 //! (`major_line_versions`) and read against those rows' own field, one table per scope too.
 //!
@@ -53,7 +58,9 @@
 //! them is asked for.
 
 use std::cmp::Ordering;
+use std::future::Future;
 use std::hash::Hash;
+use std::sync::atomic::{self, AtomicBool};
 use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
@@ -95,11 +102,11 @@ use crate::api::http::{
 };
 use crate::app::App;
 use crate::config::{
-    CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CO_PLAYED_TOP, CARD_STATS_CURVE_TOP, CARD_STATS_KEPT_REPORTS,
-    CARD_STATS_MIN_SAMPLE, HALL_OF_FAME_LIST_LEN, MS_PER_SECOND, PLAY_RATES_MIN_GAMES,
-    PLAY_RATES_REFRESH_SECONDS, PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS,
-    PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES, PUBLIC_STATS_PATCHES_LINE_BEFORE,
-    PUBLIC_STATS_PATCHES_NEWEST,
+    CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CO_PLAYED_TOP, CARD_STATS_CURVE_TOP,
+    CARD_STATS_KEPT_IDLE_SECONDS, CARD_STATS_KEPT_REPORTS, CARD_STATS_MIN_SAMPLE, HALL_OF_FAME_LIST_LEN,
+    MS_PER_SECOND, PLAY_RATES_MIN_GAMES, PLAY_RATES_REFRESH_SECONDS, PLAYER_STATS_BYTES_MAX,
+    PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES,
+    PUBLIC_STATS_PATCHES_LINE_BEFORE, PUBLIC_STATS_PATCHES_NEWEST,
 };
 use crate::db::store::{CardFiling, CardRows, Db, PlayerStatsListOptions, StatsTotalsQuery};
 use crate::env::js_number;
@@ -1209,15 +1216,21 @@ async fn totals_in(
 /// versions kept as filed unless `reach` asks for the older play versions too, which only the play
 /// versions' table does, so the page's own read costs the patches it shows and not every version filed.
 /// R5186000: the load runs on a task of its own, so a read that gives up (the client's timeout, a proxy
-/// closing the connection) leaves it running for the next read to join. In the read's own future it was
-/// dropped half done, and the next read began it again from nothing.
-async fn kept_snapshot(app: &App, reach: Reach) -> Result<KeptTotals, ApiError> {
-    let (made_at, cell, folds) = app.card_stats.totals_cell(now_ms(), reach);
-    if let Some(held) = cell.get() {
-        return Ok(KeptTotals {
-            made_at,
-            held: Arc::clone(held),
-        });
+/// closing the connection) leaves it running for the next read to join. R5245000: the snapshot is kept
+/// from when its load finished. The one past its time is let go as its next begins to load, so one is held
+/// at a time; meanwhile the figure `held` finds, cut from the one let go, answers at once
+/// (`CutFrom::Held`), and only a read with none waits for the load.
+async fn kept_snapshot<T>(
+    app: &App,
+    reach: Reach,
+    held: impl FnOnce() -> Option<T>,
+) -> Result<CutFrom<T>, ApiError> {
+    let (keep, folds) = app.card_stats.totals_cell(now_ms(), reach);
+    if let Some(snapshot) = keep.cell.get() {
+        return Ok(CutFrom::Snapshot(KeptTotals {
+            made_at: snapshot.loaded_at,
+            held: Arc::clone(snapshot),
+        }));
     }
     let source = SnapshotSource {
         db: app.db.clone(),
@@ -1225,13 +1238,82 @@ async fn kept_snapshot(app: &App, reach: Reach) -> Result<KeptTotals, ApiError> 
         load: Arc::clone(&app.card_stats.load),
         folds,
     };
-    let held = tokio::spawn(async move {
-        let snapshot = cell.get_or_try_init(|| source.load()).await?;
-        Ok::<_, ApiError>(Arc::clone(snapshot))
-    })
-    .await
-    .map_err(|error| ApiError::internal(format!("the card statistics' load stopped: {error}")))??;
-    Ok(KeptTotals { made_at, held })
+    if let Some(figure) = held() {
+        refresh(keep, async move { source.load().await });
+        return Ok(CutFrom::Held(figure));
+    }
+    let snapshot = kept_value(keep, async move { source.load().await }).await?;
+    Ok(CutFrom::Snapshot(KeptTotals {
+        made_at: snapshot.loaded_at,
+        held: snapshot,
+    }))
+}
+
+/// R5245000: what a figure cut from the kept snapshot is read from.
+enum CutFrom<T> {
+    /// The snapshot held.
+    Snapshot(KeptTotals),
+    /// The figure cut from the snapshot let go, while its next loads.
+    Held(T),
+}
+
+/// R5245000: a kept value: its cell, filled by the first read that needs it while the others wait on it;
+/// the value it replaced, served while the cell fills; and whether a refresh is filling it.
+#[derive(Clone)]
+struct Keep<T> {
+    cell: Arc<OnceCell<T>>,
+    last: Option<T>,
+    refreshing: Arc<AtomicBool>,
+}
+
+impl<T> Keep<T> {
+    fn new(last: Option<T>) -> Keep<T> {
+        Keep {
+            cell: Arc::new(OnceCell::new()),
+            last,
+            refreshing: Arc::new(AtomicBool::new(false)),
+        }
+    }
+}
+
+/// R5245000: `keep`'s value. The one its cell holds; else, when it replaced one, that one at once, its
+/// cell then filled by `fill` on a task of its own, one refresh at a time, which a failure leaves for the
+/// next read to start again; else `fill`'s, on a task of its own (R5186000: a read that gives up leaves it
+/// to finish for the next), joined by every read that misses it together.
+async fn kept_value<T, F>(keep: Keep<T>, fill: F) -> Result<T, ApiError>
+where
+    T: Clone + Send + Sync + 'static,
+    F: Future<Output = Result<T, ApiError>> + Send + 'static,
+{
+    if let Some(value) = keep.cell.get() {
+        return Ok(value.clone());
+    }
+    if let Some(last) = keep.last.clone() {
+        refresh(keep, fill);
+        return Ok(last);
+    }
+    let cell = keep.cell;
+    tokio::spawn(async move { cell.get_or_try_init(|| fill).await.cloned() })
+        .await
+        .map_err(|error| ApiError::internal(format!("the card statistics stopped: {error}")))?
+}
+
+/// R5245000: fills `keep`'s cell with `fill` on a task of its own, unless a refresh fills it already. One
+/// that fails leaves the cell empty for the next read to fill.
+fn refresh<T, F>(keep: Keep<T>, fill: F)
+where
+    T: Send + Sync + 'static,
+    F: Future<Output = Result<T, ApiError>> + Send + 'static,
+{
+    if keep.refreshing.swap(true, atomic::Ordering::SeqCst) {
+        return;
+    }
+    tokio::spawn(async move {
+        if let Err(error) = keep.cell.get_or_try_init(|| fill).await {
+            tracing::warn!(event = "stats.refresh.failed", message = %error.message);
+        }
+        keep.refreshing.store(false, atomic::Ordering::SeqCst);
+    });
 }
 
 /// R5186000: the steps of a load of the kept snapshot, in order, which `GET /api/stats/loading` numbers
@@ -1333,7 +1415,8 @@ impl SnapshotSource {
         ticket.step(LoadStep::CardTotals);
         let totals = totals_in(&self.db, None, false, CardRows::Filed(filing.clone())).await?;
         ticket.step(LoadStep::Snapshot);
-        let snapshot = Arc::new(blocking(|| Snapshot::new(&history, totals, filing)));
+        // R5245000: the snapshot is kept from when its load finished, its totals read.
+        let snapshot = Arc::new(blocking(|| Snapshot::new(&history, totals, filing, now_ms())));
         ticket.done = true;
         Ok(snapshot)
     }
@@ -1601,10 +1684,10 @@ struct ReportKey {
 }
 
 /// A kept report, filled by the first request that asks for it; the others wait on it.
-type KeptCell = Arc<OnceCell<Arc<PatchReport>>>;
+type KeptCell = Keep<Arc<PatchReport>>;
 
 /// R3067000: every patch's totals, filled by the first request that needs them; the others wait on it.
-type KeptTotalsCell = Arc<OnceCell<Arc<Snapshot>>>;
+type KeptTotalsCell = Keep<Arc<Snapshot>>;
 
 /// SPEC §11 R5174000: which card totals a read of the kept snapshot needs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -1619,7 +1702,6 @@ enum Reach {
 
 /// R3067000, R5174000: the cells of every patch's totals made at one time.
 struct TotalsCells {
-    made_at: i64,
     /// The cell every read takes first.
     kept: KeptTotalsCell,
     /// Whether `kept` folds the older play versions in: it does when the play versions' table asked first.
@@ -1629,7 +1711,8 @@ struct TotalsCells {
     folded: Option<KeptTotalsCell>,
 }
 
-/// R3067000: every patch's totals, and when their cell was first asked for.
+/// R3067000: every patch's totals, and when their load finished (R5245000), which every kept window and
+/// history cut from them is kept by.
 struct KeptTotals {
     made_at: i64,
     held: Arc<Snapshot>,
@@ -1641,10 +1724,12 @@ struct Snapshot {
     totals: StatsTotals,
     filing: CardFiling,
     windows: Vec<PatchWindow>,
+    /// R5245000: when its load finished, which it is kept `CARD_STATS_CACHE_TTL_SECONDS` from.
+    loaded_at: i64,
 }
 
 impl Snapshot {
-    fn new(history: &[PatchStep], totals: StatsTotals, filing: CardFiling) -> Snapshot {
+    fn new(history: &[PatchStep], totals: StatsTotals, filing: CardFiling, loaded_at: i64) -> Snapshot {
         let windows = patch_windows(
             history,
             |version| totals.games(version),
@@ -1654,6 +1739,7 @@ impl Snapshot {
             totals,
             filing,
             windows,
+            loaded_at,
         }
     }
 
@@ -1712,42 +1798,82 @@ pub struct KeptReports {
     /// were first asked for. R5174000: beside them, the same totals with the older play versions folded in,
     /// when the play versions' table asked for those after the cards.
     totals: Mutex<Option<TotalsCells>>,
-    /// R1583000: the play rates `GET /api/stats/play-rates` reads, with when they were first asked for.
-    play_rates: Mutex<Option<(i64, PlayRatesCell)>>,
+    /// R1583000: the play rates `GET /api/stats/play-rates` reads, with when they were made.
+    play_rates: Kept<(), Arc<PlayRatesResponse>>,
     /// R5186000: what the kept snapshot's loads are doing, shared with each load's task.
     load: Arc<Mutex<SnapshotLoad>>,
 }
 
-/// Kept cells by what they were computed from, each with when it was first asked for.
-type Kept<K, T> = Mutex<IndexMap<K, (i64, Arc<OnceCell<T>>)>>;
+/// Kept cells by what they were computed from, each with when it was made.
+type Kept<K, T> = Mutex<IndexMap<K, (i64, Keep<T>)>>;
 
-/// The cell for `key` in `entries`: the one made less than `CARD_STATS_CACHE_TTL_SECONDS` before
-/// `now`, or a new empty one, dropping the oldest to stay within `CARD_STATS_KEPT_REPORTS`.
-fn kept_cell<K: Hash + Eq, T>(entries: &Kept<K, T>, key: K, now: i64) -> Arc<OnceCell<T>> {
+/// The cell for `key` in `entries` at `now`: the one made less than `ttl_seconds` before `now`, or one still
+/// filling whatever its age (R5245000: so one fill runs at a time); else a new empty one that serves the
+/// value it replaces while it fills (`kept_value`). One past its time by `CARD_STATS_KEPT_IDLE_SECONDS`
+/// with no read to renew it is dropped, and the one kept longest ago to stay within `CARD_STATS_KEPT_REPORTS`.
+fn kept_cell<K: Hash + Eq, T: Clone>(entries: &Kept<K, T>, key: K, now: i64, ttl_seconds: i64) -> Keep<T> {
     let mut entries = lock(entries);
-    entries.retain(|_, (made_at, _)| now - *made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND);
-    if let Some((_, cell)) = entries.get(&key) {
-        return Arc::clone(cell);
+    entries.retain(|_, (made_at, _)| {
+        now - *made_at < (ttl_seconds + CARD_STATS_KEPT_IDLE_SECONDS) * MS_PER_SECOND
+    });
+    if let Some((made_at, keep)) = entries.get_mut(&key) {
+        if keep.cell.get().is_none() {
+            return keep.clone();
+        }
+        if now - *made_at < ttl_seconds * MS_PER_SECOND {
+            keep.last = None;
+            return keep.clone();
+        }
     }
+    let last = entries
+        .shift_remove(&key)
+        .and_then(|(_, keep)| keep.cell.get().cloned());
     while entries.len() >= CARD_STATS_KEPT_REPORTS {
         entries.shift_remove_index(0);
     }
-    let cell = Arc::new(OnceCell::new());
-    entries.insert(key, (now, Arc::clone(&cell)));
-    cell
+    let keep = Keep::new(last);
+    entries.insert(key, (now, keep.clone()));
+    keep
+}
+
+/// R5245000: the value held for `key` in `entries`, whatever its time: its cell's, or the one that cell
+/// replaced while it fills.
+fn held<K: Hash + Eq, T: Clone>(entries: &Kept<K, T>, key: &K) -> Option<T> {
+    lock(entries)
+        .get(key)
+        .and_then(|(_, keep)| keep.cell.get().cloned().or_else(|| keep.last.clone()))
 }
 
 impl KeptReports {
+    fn held_window(&self, key: &ReportKey) -> Option<Arc<KeptWindow>> {
+        held(&self.windows, key)
+    }
+
+    fn held_history(&self, key: &(PublicStatsPilot, PublicStatsMode, StatsFace)) -> Option<Arc<KeptHistory>> {
+        held(&self.histories, key)
+    }
+
+    fn held_versions(
+        &self,
+        key: &(PublicStatsPilot, PublicStatsMode, PublicStatsScope),
+    ) -> Option<Arc<PlayVersionTable>> {
+        held(&self.versions, key)
+    }
+
+    fn held_hall(&self, key: &PublicStatsMode) -> Option<Arc<HallOfFameBody>> {
+        held(&self.hall, key)
+    }
+
     fn cell(&self, key: ReportKey, now: i64) -> KeptCell {
-        kept_cell(&self.entries, key, now)
+        kept_cell(&self.entries, key, now, CARD_STATS_CACHE_TTL_SECONDS)
     }
 
     fn window_cell(&self, key: ReportKey, now: i64) -> KeptWindowCell {
-        kept_cell(&self.windows, key, now)
+        kept_cell(&self.windows, key, now, CARD_STATS_CACHE_TTL_SECONDS)
     }
 
     fn history_cell(&self, key: (PublicStatsPilot, PublicStatsMode, StatsFace), now: i64) -> KeptHistoryCell {
-        kept_cell(&self.histories, key, now)
+        kept_cell(&self.histories, key, now, CARD_STATS_CACHE_TTL_SECONDS)
     }
 
     fn versions_cell(
@@ -1755,11 +1881,11 @@ impl KeptReports {
         key: (PublicStatsPilot, PublicStatsMode, PublicStatsScope),
         now: i64,
     ) -> KeptVersionsCell {
-        kept_cell(&self.versions, key, now)
+        kept_cell(&self.versions, key, now, CARD_STATS_CACHE_TTL_SECONDS)
     }
 
     fn hall_cell(&self, key: PublicStatsMode, now: i64) -> KeptHallCell {
-        kept_cell(&self.hall, key, now)
+        kept_cell(&self.hall, key, now, CARD_STATS_CACHE_TTL_SECONDS)
     }
 
     /// R5186000: what the kept snapshot's load is doing at `now`.
@@ -1779,44 +1905,46 @@ impl KeptReports {
         }
     }
 
-    /// R3067000: the cell of every patch's totals made less than `CARD_STATS_CACHE_TTL_SECONDS` before
-    /// `now`, or a new empty one in its place, with when it was made. R5174000: and whether it folds the
-    /// older play versions in. A read that needs them takes a cell that does: the one there when it folds,
-    /// or one made beside it with its time, so everything cut from either is kept and dropped together.
-    fn totals_cell(&self, now: i64, reach: Reach) -> (i64, KeptTotalsCell, bool) {
+    /// R3067000: the cell of every patch's totals, and whether it folds the older play versions in
+    /// (R5174000). A read that needs them takes a cell that does: the one there when it folds, or one made
+    /// beside it, so everything cut from either is kept and dropped together. R5245000: the cells are made
+    /// again once the held snapshot's load finished `CARD_STATS_CACHE_TTL_SECONDS` before `now`, never while
+    /// it loads; a folding load under way is joined.
+    fn totals_cell(&self, now: i64, reach: Reach) -> (KeptTotalsCell, bool) {
         let mut kept = lock(&self.totals);
-        if let Some(cells) = kept.as_mut()
-            && now - cells.made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND
-        {
-            if reach == Reach::Kept || cells.kept_folds {
-                return (cells.made_at, Arc::clone(&cells.kept), cells.kept_folds);
-            }
-            let folded = cells.folded.get_or_insert_with(|| Arc::new(OnceCell::new()));
-            return (cells.made_at, Arc::clone(folded), true);
-        }
-        let cell: KeptTotalsCell = Arc::new(OnceCell::new());
-        let folds = reach == Reach::Folded;
-        *kept = Some(TotalsCells {
-            made_at: now,
-            kept: Arc::clone(&cell),
-            kept_folds: folds,
-            folded: None,
+        let renew = kept.as_ref().is_none_or(|cells| {
+            cells
+                .kept
+                .cell
+                .get()
+                .is_some_and(|held| now - held.loaded_at >= CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND)
         });
-        (now, cell, folds)
+        if renew {
+            // R5245000: the snapshots past their time are let go here, so one is held at a time; a folding load
+            // still under way is kept, to be joined.
+            let folds = reach == Reach::Folded;
+            let folded = kept
+                .take()
+                .and_then(|cells| cells.folded)
+                .filter(|folded| !folds && folded.cell.get().is_none());
+            *kept = Some(TotalsCells {
+                kept: Keep::new(None),
+                kept_folds: folds,
+                folded,
+            });
+        }
+        let cells = kept.as_mut().expect("the cells were just made");
+        if reach == Reach::Kept || cells.kept_folds {
+            return (cells.kept.clone(), cells.kept_folds);
+        }
+        let folded = cells.folded.get_or_insert_with(|| Keep::new(None));
+        (folded.clone(), true)
     }
 
     /// R1583000: the play rates' cell made less than `PLAY_RATES_REFRESH_SECONDS` before `now`, or a
-    /// new empty one in its place.
+    /// new empty one in its place (R5245000: serving the rates it replaces while it fills).
     fn play_rates_cell(&self, now: i64) -> PlayRatesCell {
-        let mut kept = lock(&self.play_rates);
-        if let Some((made_at, cell)) = kept.as_ref()
-            && now - *made_at < PLAY_RATES_REFRESH_SECONDS * MS_PER_SECOND
-        {
-            return Arc::clone(cell);
-        }
-        let cell: PlayRatesCell = Arc::new(OnceCell::new());
-        *kept = Some((now, Arc::clone(&cell)));
-        cell
+        kept_cell(&self.play_rates, (), now, PLAY_RATES_REFRESH_SECONDS)
     }
 }
 
@@ -1847,7 +1975,7 @@ impl KeptWindow {
     }
 }
 
-type KeptWindowCell = Arc<OnceCell<Arc<KeptWindow>>>;
+type KeptWindowCell = Keep<Arc<KeptWindow>>;
 
 /// R1367000: the windowed figures at `at` over `totals`: the report and game figures R1367000 and
 /// R1994000 read, each patch's live games, and the patch lists R1973001 and R1973002 read off the
@@ -1900,17 +2028,17 @@ async fn shipped_window(
     pilot: PublicStatsPilot,
     mode: PublicStatsMode,
 ) -> Result<Arc<KeptWindow>, ApiError> {
-    let snapshot = kept_snapshot(app, Reach::Kept).await?;
     let key = ReportKey {
         patch: at.to_string(),
         source,
         pilot,
         mode,
     };
-    let cell = app.card_stats.window_cell(key, snapshot.made_at);
-    if let Some(kept) = cell.get() {
-        return Ok(Arc::clone(kept));
-    }
+    let snapshot = match kept_snapshot(app, Reach::Kept, || app.card_stats.held_window(&key)).await? {
+        CutFrom::Snapshot(snapshot) => snapshot,
+        CutFrom::Held(window) => return Ok(window),
+    };
+    let keep = app.card_stats.window_cell(key, snapshot.made_at);
     // R5225000: the cut runs on a task of its own, as the snapshot loads (R5186000), so a read that gives up
     // leaves it to finish for the next.
     let cut = WindowCut {
@@ -1923,12 +2051,7 @@ async fn shipped_window(
         mode,
         load: Arc::clone(&app.card_stats.load),
     };
-    tokio::spawn(async move {
-        let kept = cell.get_or_try_init(|| cut.window()).await?;
-        Ok::<_, ApiError>(Arc::clone(kept))
-    })
-    .await
-    .map_err(|error| ApiError::internal(format!("the card statistics' figures stopped: {error}")))?
+    kept_value(keep, async move { cut.window().await }).await
 }
 
 /// R1367000: the windowed report at `at`, as kept (`CARD_STATS_CACHE_TTL_SECONDS`): cut from every
@@ -2056,20 +2179,24 @@ async fn kept_report(
     mode: PublicStatsMode,
 ) -> Result<Arc<PatchReport>, ApiError> {
     let current = patch == app.catalog.version;
-    let compute = || async move {
-        let with_drills = current && source == SourceParam::Default;
-        let totals = totals_for(app, Some(patch), with_drills, CardRows::All).await?;
-        Ok::<_, ApiError>(Arc::new(patch_report(
-            &totals,
-            patch,
-            source,
-            pilot.filter(),
-            mode.filter(),
-            with_drills,
-        )))
+    let with_drills = current && source == SourceParam::Default;
+    let compute = {
+        let db = app.db.clone();
+        let patch = patch.to_string();
+        async move {
+            let totals = totals_in(&db, Some(&patch), with_drills, CardRows::All).await?;
+            Ok::<_, ApiError>(Arc::new(patch_report(
+                &totals,
+                &patch,
+                source,
+                pilot.filter(),
+                mode.filter(),
+                with_drills,
+            )))
+        }
     };
     if !current && !versions.iter().any(|version| version == patch) {
-        return compute().await;
+        return compute.await;
     }
     let key = ReportKey {
         patch: patch.to_string(),
@@ -2077,9 +2204,7 @@ async fn kept_report(
         pilot,
         mode,
     };
-    let cell = app.card_stats.cell(key, now_ms());
-    let kept = cell.get_or_try_init(compute).await?;
-    Ok(Arc::clone(kept))
+    kept_value(app.card_stats.cell(key, now_ms()), compute).await
 }
 
 /// R2491000: one `?pilot=` and `?mode=`'s patch history, which every card's drill-down reads: each
@@ -2090,7 +2215,7 @@ struct KeptHistory {
     patches: Vec<(String, IndexMap<String, Tally>)>,
 }
 
-type KeptHistoryCell = Arc<OnceCell<Arc<KeptHistory>>>;
+type KeptHistoryCell = Keep<Arc<KeptHistory>>;
 
 /// R2491000: the patch history of `versions` for `pilot` and `mode` over `totals`: each version cut
 /// from them by `patch_report` as its own load was (R978000), so the figures are the same.
@@ -2140,29 +2265,31 @@ async fn kept_history(
     mode: PublicStatsMode,
     face: StatsFace,
 ) -> Result<Arc<KeptHistory>, ApiError> {
-    let snapshot = kept_snapshot(app, Reach::Kept).await?;
-    let cell = app.card_stats.history_cell((pilot, mode, face), snapshot.made_at);
-    let kept = cell
-        .get_or_try_init(|| async {
-            // R4965000: the patches whose card totals the snapshot holds as filed.
-            let held: Vec<String> = versions
-                .iter()
-                .filter(|version| snapshot.held.holds_patch(version))
-                .cloned()
-                .collect();
-            Ok::<_, ApiError>(Arc::new(history_over(
-                &snapshot.held.totals,
-                &held,
-                pilot,
-                mode,
-                face,
-            )))
-        })
-        .await?;
-    Ok(Arc::clone(kept))
+    let key = (pilot, mode, face);
+    let snapshot = match kept_snapshot(app, Reach::Kept, || app.card_stats.held_history(&key)).await? {
+        CutFrom::Snapshot(snapshot) => snapshot,
+        CutFrom::Held(history) => return Ok(history),
+    };
+    let keep = app.card_stats.history_cell(key, snapshot.made_at);
+    let versions = versions.to_vec();
+    kept_value(keep, async move {
+        // R4965000: the patches whose card totals the snapshot holds as filed.
+        let held: Vec<String> = versions
+            .into_iter()
+            .filter(|version| snapshot.held.holds_patch(version))
+            .collect();
+        Ok::<_, ApiError>(Arc::new(history_over(
+            &snapshot.held.totals,
+            &held,
+            pilot,
+            mode,
+            face,
+        )))
+    })
+    .await
 }
 
-type KeptVersionsCell = Arc<OnceCell<Arc<PlayVersionTable>>>;
+type KeptVersionsCell = Keep<Arc<PlayVersionTable>>;
 
 /// R4675001: every deck card's play versions' figures for `pilot` and `mode`, as kept: read off every
 /// patch's totals (R3067000: `kept_snapshot`; R5174000: with the older play versions folded in, the one
@@ -2177,31 +2304,31 @@ async fn kept_versions(
     mode: PublicStatsMode,
     scope: PublicStatsScope,
 ) -> Result<Arc<PlayVersionTable>, ApiError> {
-    let snapshot = kept_snapshot(app, Reach::Folded).await?;
-    let cell = app
-        .card_stats
-        .versions_cell((pilot, mode, scope), snapshot.made_at);
-    let kept = cell
-        .get_or_try_init(|| async {
-            let every = deck_play_versions();
-            let history = patch_history();
-            let versions = match scope {
-                PublicStatsScope::All => every,
-                PublicStatsScope::Major => major_line_versions(&every, &history),
-            };
-            Ok::<_, ApiError>(Arc::new(play_version_figures(
-                &snapshot.held.totals,
-                &PlayVersionQuery {
-                    versions: &versions,
-                    history: &history,
-                    live_pilot: pilot.filter(),
-                    mode: mode.filter(),
-                    min_sample: CARD_STATS_MIN_SAMPLE,
-                },
-            )))
-        })
-        .await?;
-    Ok(Arc::clone(kept))
+    let key = (pilot, mode, scope);
+    let snapshot = match kept_snapshot(app, Reach::Folded, || app.card_stats.held_versions(&key)).await? {
+        CutFrom::Snapshot(snapshot) => snapshot,
+        CutFrom::Held(table) => return Ok(table),
+    };
+    let keep = app.card_stats.versions_cell(key, snapshot.made_at);
+    kept_value(keep, async move {
+        let every = deck_play_versions();
+        let history = patch_history();
+        let versions = match scope {
+            PublicStatsScope::All => every,
+            PublicStatsScope::Major => major_line_versions(&every, &history),
+        };
+        Ok::<_, ApiError>(Arc::new(play_version_figures(
+            &snapshot.held.totals,
+            &PlayVersionQuery {
+                versions: &versions,
+                history: &history,
+                live_pilot: pilot.filter(),
+                mode: mode.filter(),
+                min_sample: CARD_STATS_MIN_SAMPLE,
+            },
+        )))
+    })
+    .await
 }
 
 /// R4675001: `GET /api/stats/versions`' body: the query it answers and the table, figures only (R661: no
@@ -2260,7 +2387,7 @@ pub struct HallOfFameBody {
     pub changed: Vec<PublicHallEntry>,
 }
 
-type KeptHallCell = Arc<OnceCell<Arc<HallOfFameBody>>>;
+type KeptHallCell = Keep<Arc<HallOfFameBody>>;
 
 /// R4681001: the Hall of Fame's body over `table`: R4681000's lists, each entry joined to its rows,
 /// dates from `patches.json`, and the balance line matched per R4681001.
@@ -2322,13 +2449,16 @@ fn hall_body_of(table: &PlayVersionTable, mode: PublicStatsMode) -> HallOfFameBo
 /// table (`kept_versions`, over the snapshot that folds the older play versions in, R5174000), kept as
 /// long as that snapshot, once however many requests miss it together.
 async fn kept_hall(app: &App, mode: PublicStatsMode) -> Result<Arc<HallOfFameBody>, ApiError> {
+    let snapshot = match kept_snapshot(app, Reach::Folded, || app.card_stats.held_hall(&mode)).await? {
+        CutFrom::Snapshot(snapshot) => snapshot,
+        CutFrom::Held(body) => return Ok(body),
+    };
     let table = kept_versions(app, PublicStatsPilot::Merged, mode, PublicStatsScope::All).await?;
-    let snapshot = kept_snapshot(app, Reach::Folded).await?;
-    let cell = app.card_stats.hall_cell(mode, snapshot.made_at);
-    let kept = cell
-        .get_or_try_init(|| async { Ok::<_, ApiError>(Arc::new(hall_body_of(&table, mode))) })
-        .await?;
-    Ok(Arc::clone(kept))
+    let keep = app.card_stats.hall_cell(mode, snapshot.made_at);
+    kept_value(keep, async move {
+        Ok::<_, ApiError>(Arc::new(hall_body_of(&table, mode)))
+    })
+    .await
 }
 
 /// GET /api/stats/hall-of-fame (R4681001): the Hall of Fame's four lists (R4681000) over `?mode=`
@@ -2821,7 +2951,7 @@ pub struct PlayRatesResponse {
 }
 
 /// The kept play rates, filled by the first request that asks; the others wait on it.
-type PlayRatesCell = Arc<OnceCell<Arc<PlayRatesResponse>>>;
+type PlayRatesCell = Keep<Arc<PlayRatesResponse>>;
 
 /// R1583000: the play rates over `totals`. A ladder bot's seat (R1451) and a development game (R378)
 /// never count; a card's rate is R377's `played` over every seat counted. `defs` holds only the
@@ -2863,24 +2993,24 @@ pub async fn get_loading(app: &Arc<App>, _req: Req) -> ApiResult {
 
 /// GET /api/stats/play-rates (R1583000, `PLAY_RATES_REFRESH_SECONDS`).
 pub async fn get_play_rates(app: &Arc<App>, _req: Req) -> ApiResult {
-    let cell = app.card_stats.play_rates_cell(now_ms());
-    let rates = cell
-        .get_or_try_init(|| async {
-            let mut tx = app.db.begin(None).await?;
-            let totals = tx
-                .stats_totals_load(&StatsTotalsQuery {
-                    source: SourceFilter::Live,
-                    mode: None,
-                    patch: None,
-                    drills: false,
-                    // R4965000: every patch's live totals summed alike, so one total per card and key.
-                    cards: CardRows::Merged,
-                })
-                .await?;
-            tx.commit().await?;
-            Ok::<_, ApiError>(Arc::new(play_rates_of(&totals, &app.catalog.defs)))
-        })
-        .await?;
+    let keep = app.card_stats.play_rates_cell(now_ms());
+    let app = Arc::clone(app);
+    let rates = kept_value(keep, async move {
+        let mut tx = app.db.begin(None).await?;
+        let totals = tx
+            .stats_totals_load(&StatsTotalsQuery {
+                source: SourceFilter::Live,
+                mode: None,
+                patch: None,
+                drills: false,
+                // R4965000: every patch's live totals summed alike, so one total per card and key.
+                cards: CardRows::Merged,
+            })
+            .await?;
+        tx.commit().await?;
+        Ok::<_, ApiError>(Arc::new(play_rates_of(&totals, &app.catalog.defs)))
+    })
+    .await?;
     Ok(cached_ok(to_json(rates.as_ref())?, PLAY_RATES_REFRESH_SECONDS))
 }
 
@@ -3035,5 +3165,146 @@ mod tests {
     async fn r5225000_a_one_thread_runtime_runs_the_work_in_place() {
         let asked = std::thread::current().id();
         assert_eq!(blocking(|| std::thread::current().id()), asked);
+    }
+
+    /// R5245000: when the tests' snapshot finished loading, past the TTL from zero.
+    const LOADED: i64 = 400 * MS_PER_SECOND;
+
+    /// R5245000: the value a kept cell holds before its refresh, and the one the refresh fills it with.
+    const HELD: u32 = 1;
+    const FRESH: u32 = 2;
+
+    /// R5245000: how many turns of the runtime a refresh may take before the test calls it stuck.
+    const SETTLE_TURNS: usize = 100;
+
+    fn ttl_ms() -> i64 {
+        CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND
+    }
+
+    /// An empty snapshot whose load finished at `loaded_at`.
+    fn snapshot_at(loaded_at: i64) -> Arc<Snapshot> {
+        let history = patch_history();
+        let totals = StatsTotals::default();
+        let filing = snapshot_filing(&history, &totals, &deck_play_versions(), "x");
+        Arc::new(Snapshot::new(&history, totals, filing, loaded_at))
+    }
+
+    /// Turns the runtime until no refresh fills `keep`.
+    async fn settle<T>(keep: &Keep<T>) {
+        for _ in 0..SETTLE_TURNS {
+            tokio::task::yield_now().await;
+            if !keep.refreshing.load(atomic::Ordering::SeqCst) {
+                return;
+            }
+        }
+        panic!("the refresh never finished");
+    }
+
+    /// R5245000 (the gap #5207 found): a snapshot still loading is joined however long it takes, never
+    /// replaced by a second load beside it once the TTL has passed since it was asked for.
+    #[test]
+    fn r5245000_a_snapshot_still_loading_is_joined_past_its_ttl() {
+        let reports = KeptReports::default();
+        let (first, _) = reports.totals_cell(0, Reach::Kept);
+        let (again, _) = reports.totals_cell(ttl_ms() + 1, Reach::Kept);
+        assert!(
+            Arc::ptr_eq(&first.cell, &again.cell),
+            "a second load began beside the first"
+        );
+    }
+
+    /// R5245000: a snapshot is kept the TTL from when its load finished; past it the next cell is made empty
+    /// and the snapshot is let go, so the server never holds two (#5139).
+    #[test]
+    fn r5245000_a_snapshot_is_kept_from_when_its_load_finished_and_let_go_as_the_next_loads() {
+        let reports = KeptReports::default();
+        let (first, _) = reports.totals_cell(0, Reach::Kept);
+        let held = snapshot_at(LOADED);
+        assert!(first.cell.set(Arc::clone(&held)).is_ok());
+        drop(first);
+
+        let (kept, _) = reports.totals_cell(LOADED + ttl_ms() - 1, Reach::Kept);
+        assert!(
+            kept.cell
+                .get()
+                .is_some_and(|snapshot| Arc::ptr_eq(snapshot, &held))
+        );
+        drop(kept);
+
+        let (next, folds) = reports.totals_cell(LOADED + ttl_ms(), Reach::Kept);
+        assert!(!folds);
+        assert!(next.cell.get().is_none(), "no next snapshot was asked for");
+        assert!(next.last.is_none());
+        assert_eq!(
+            Arc::strong_count(&held),
+            1,
+            "the snapshot past its time is still held beside its next"
+        );
+    }
+
+    /// R5245000: a kept figure still being cut is joined past its TTL; one cut and past it is replaced by a
+    /// cell that serves it while its next is cut; one past its time by `CARD_STATS_KEPT_IDLE_SECONDS` with no
+    /// read to renew it is let go.
+    #[test]
+    fn r5245000_a_kept_figure_past_its_ttl_serves_itself_while_its_next_is_cut() {
+        let entries: Kept<(), u32> = Mutex::default();
+        let first = kept_cell(&entries, (), 0, CARD_STATS_CACHE_TTL_SECONDS);
+        let joined = kept_cell(&entries, (), ttl_ms(), CARD_STATS_CACHE_TTL_SECONDS);
+        assert!(Arc::ptr_eq(&first.cell, &joined.cell));
+
+        assert!(first.cell.set(HELD).is_ok());
+        let next = kept_cell(&entries, (), ttl_ms(), CARD_STATS_CACHE_TTL_SECONDS);
+        assert!(!Arc::ptr_eq(&first.cell, &next.cell));
+        assert_eq!(next.last, Some(HELD));
+
+        let held_on = kept_cell(&entries, (), 2 * ttl_ms(), CARD_STATS_CACHE_TTL_SECONDS);
+        assert_eq!(held_on.last, Some(HELD), "a figure just past its time was let go");
+        let idle = ttl_ms() + (CARD_STATS_CACHE_TTL_SECONDS + CARD_STATS_KEPT_IDLE_SECONDS) * MS_PER_SECOND;
+        let gone = kept_cell(&entries, (), idle, CARD_STATS_CACHE_TTL_SECONDS);
+        assert_eq!(gone.last, None);
+    }
+
+    /// R5245000: a held value answers at once while one refresh fills its cell beside it. A refresh that
+    /// fails leaves the held value, and the next read starts another; a read while one runs starts none.
+    #[tokio::test(flavor = "current_thread")]
+    async fn r5245000_a_held_value_answers_at_once_and_one_refresh_fills_it() {
+        let keep = Keep::new(Some(HELD));
+        let failed = kept_value(keep.clone(), async {
+            Err::<u32, _>(ApiError::internal("the store is down"))
+        })
+        .await;
+        assert_eq!(failed.ok(), Some(HELD));
+        settle(&keep).await;
+        assert!(keep.cell.get().is_none(), "a failed refresh filled the cell");
+
+        let gate = Arc::new(tokio::sync::Notify::new());
+        let opened = Arc::clone(&gate);
+        let first = kept_value(keep.clone(), async move {
+            opened.notified().await;
+            Ok::<_, ApiError>(FRESH)
+        })
+        .await;
+        assert_eq!(first.ok(), Some(HELD));
+        tokio::task::yield_now().await;
+        assert!(keep.refreshing.load(atomic::Ordering::SeqCst));
+
+        let second_ran = Arc::new(AtomicBool::new(false));
+        let ran = Arc::clone(&second_ran);
+        let second = kept_value(keep.clone(), async move {
+            ran.store(true, atomic::Ordering::SeqCst);
+            Ok::<_, ApiError>(FRESH)
+        })
+        .await;
+        assert_eq!(second.ok(), Some(HELD));
+
+        gate.notify_one();
+        settle(&keep).await;
+        assert_eq!(keep.cell.get(), Some(&FRESH));
+        assert!(
+            !second_ran.load(atomic::Ordering::SeqCst),
+            "a second refresh began beside the first"
+        );
+        let read = kept_value(keep.clone(), async { Ok::<_, ApiError>(HELD) }).await;
+        assert_eq!(read.ok(), Some(FRESH));
     }
 }
