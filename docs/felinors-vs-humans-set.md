@@ -290,11 +290,28 @@ theme (`crates/ai/src/deck.rs`).
 F #5235, E1 #5236, E2 #5237, E3 #5238, E4 #5239. Each owns its ruling block (R<n>000–R<n>999) and
 `spec/pending/<n>.md`.
 
-**Wave 1, stage B** (fullsend: card slices built blind against FV3, then contact, reconcile, green and
-cull): one part issue per card slice, a presentation part (card text, voice, audio, FX, art) and the
-release part R. Shared files (`catalog.json`, the §8 note, `census.rs`, the fixture rows, `card-text.yaml`,
-`card-audio.json5`, the FX json5, `radiant-audit.md`) are written only by the merge step, from per-slice
-fragments.
+**Wave 1, stage B** (fullsend: card slices built blind against the landed engine, then contact, reconcile,
+green and cull), each part its own issue and ruling block:
+
+| Part | Issue | Cards |
+| --- | --- | --- |
+| S01 | #5251 | units on printed keywords and simple Cries: #1, #11–#15, #33, #35, #37, #43, #47, #48, #62, #89, #90, #93 |
+| S02 | #5252 | spells on existing verbs: #7–#9, #21, #22, #38, #51, #55, #56, #61, #77, #104 |
+| S03 | #5253 | the Books: #23–#30 |
+| S04 | #5254 | Activates, Durability and the Roblox-Tools: #19, #19.1, #20, #20.1, #32, #36, #41, #49, #49.1, #50, #53, #80, #85, #86, #115 |
+| S05 | #5255 | the Otherworldly cards: #57, #57.1–#57.6, #58, #72, #72.1–#72.3 |
+| S06 | #5256 | KY, Travertine and the Float cards: #3, #4, #16, #16.1, #16.2, #17, #18, #31, #39, #91, #92, #107 |
+| S07 | #5257 | the Felinors: #44, #65, #66, #69, #70, #71, #81, #84, #88, #94, #96, #97, #105 |
+| S08 | #5258 | Human auras, Catalysts and Primes: #52, #54, #63, #64, #67, #68, #73, #74, #74.1, #78, #78.1, #79, #95 |
+| S09 | #5259 | the rule benders: #2, #5, #6, #10, #34, #40, #42, #45, #46 |
+| S10 | #5260 | readers, tools, graves and portals: #59, #60, #60.1, #60.2, #75, #76, #82, #83, #87, #98, #98.1, #98.2, #99 |
+| S11 | #5261 | transforms, draws and the last Humans: #101–#103, #106, #108–#111, #113, #114 |
+| S12 | #5262 | Call to Chaos (FvH Edition) and Jilliax Deluxe: #100, #100.1, #100.2, #112, #112.1–#112.13 |
+| P1 | #5263 | every entry's card text, voice lines, Chinese, audio entry and radiant-audit row |
+| P2 | #5264 | every entry's art and FX, the keyword visuals, and the client pieces (#42's enemy zones, the end-of-turn voice hook, cat ears, #84's glyph) |
+
+The 82 reprints were completed in stage A (F #5235). The release (the set ships, gated from the AI's own
+decks) closes wave 1.
 
 **Waves 2 and 3** are cut once the sweep of record names the flagged cards: one slice per family.
 
