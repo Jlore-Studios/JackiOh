@@ -21087,11 +21087,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-28T01:04:44Z",
+        "at": "2026-11-28T01:39:09Z",
         "difficulty": "hard",
-        "provider": "claude-3",
-        "tier": "medium",
-        "why": "Rule 2: it changes the AI's decisions (`blow`, `trade_value`, `face_value` and the Taunt walk in `crates/ai/src`), and rule 1: it adds a public read to the engine's `afflictions.rs`."
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "rule 2 (the AI's blow, trade_value, face_value and Taunt walk change its decisions) and rule 1 (ride_damage in crates/engine/src/afflictions.rs moves onto a new read)"
       },
       "failures": 0,
       "forced": false,
