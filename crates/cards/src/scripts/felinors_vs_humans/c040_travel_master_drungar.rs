@@ -59,7 +59,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
-    use jackioh_engine::testkit::PlayerId::{P1, P2};
+    use jackioh_engine::testkit::PlayerId::P1;
     use jackioh_engine::testkit::*;
 
     use crate::scenario;
@@ -149,6 +149,10 @@ mod tests {
             crate::next_turn_of(&mut s, P1);
             let side = &s.state().players.p1;
             assert_eq!(side.mana.current, (side.mana.max - LOSS).max(0));
+            assert_eq!(side.mana.next_turn_mod, 0);
+            crate::next_turn_of(&mut s, P1);
+            let side = &s.state().players.p1;
+            assert_eq!(side.mana.current, side.mana.max, "the turn after is whole");
         }
 
         #[test]

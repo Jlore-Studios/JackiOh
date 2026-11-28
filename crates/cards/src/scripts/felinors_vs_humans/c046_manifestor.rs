@@ -154,10 +154,25 @@ mod tests {
         s
     }
 
-    /// Manifestor played into lane 2 of an empty row, on the first seed whose two summons both land.
+    /// Whether a Unit landed in p1's `lane` that a grant reaches: awake and not Immutable (R5113000).
+    fn grantable(s: &Scenario, lane: i32) -> bool {
+        s.unit(P1, lane).is_some_and(|unit| {
+            !jackioh_engine::slumber::is_slumbering(&unit)
+                && !unit_has(s.state(), &unit, KeywordKind::Immutable)
+        })
+    }
+
+    /// Manifestor played into lane 2 of an empty row, on the first seed whose two summons both land, each
+    /// one a grant reaches, and whose prompt is open over two options.
     fn both_summoned(prefix: &str, radiant: bool) -> Scenario {
-        let lands = |s: &Scenario| s.unit(P1, 1).is_some() && s.unit(P1, 3).is_some();
-        let seed = seed_where(prefix, |seed| lands(&played(seed, radiant, json!([]), 2)));
+        let asks = |s: &Scenario| {
+            grantable(s, 1)
+                && grantable(s, 3)
+                && s.state().pending.as_ref().is_some_and(|pending| {
+                    pending.kind == PromptKind::Target && pending.options.len() == 2
+                })
+        };
+        let seed = seed_where(prefix, |seed| asks(&played(seed, radiant, json!([]), 2)));
         played(&seed, radiant, json!([]), 2)
     }
 
@@ -231,9 +246,7 @@ mod tests {
 
         #[test]
         fn r5259000_at_the_edge_one_is_summoned_and_takes_fragile_with_no_prompt() {
-            let seed = seed_where("manifestor-edge", |seed| {
-                played(seed, false, json!([]), 1).unit(P1, 2).is_some()
-            });
+            let seed = seed_where("manifestor-edge", |seed| grantable(&played(seed, false, json!([]), 1), 2));
             let s = played(&seed, false, json!([]), 1);
             assert!(s.state().pending.is_none(), "nothing is asked");
             let only = s.unit_at(P1, 2).id;
@@ -245,7 +258,7 @@ mod tests {
         fn r129_a_filled_zone_beside_it_summons_nothing_there() {
             let field = json!([{ "def": BODY, "lane": 1 }]);
             let seed = seed_where("manifestor-filled", |seed| {
-                played(seed, false, field.clone(), 2).unit(P1, 3).is_some()
+                grantable(&played(seed, false, field.clone(), 2), 3)
             });
             let s = played(&seed, false, field, 2);
             assert_eq!(s.unit_at(P1, 1).def_id, BODY, "the filled zone keeps its Unit");

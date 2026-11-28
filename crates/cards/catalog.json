@@ -37392,7 +37392,7 @@
     "flavor": "Dark",
     "token": false,
     "cost": 3,
-    "loc": 60,
+    "loc": 58,
     "base": {
       "attack": 2,
       "health": 5,

@@ -943,6 +943,27 @@ of their own (`motion.ts`).
 Only `infiniteassault-` ids are keys, so no shipped card's picture moves (R503). `infiniteassault.test.ts` holds
 the set to all of this.
 
+## The Felinors vs Humans set's placeholder scenes (R5264000)
+
+The held Felinors vs Humans set (cat-eared Felinors against the Humans, with KY, the Books, the Roblox tools and the
+Jilliax modules) draws placeholder scenes until a brief pass gives each card one of its own. Every entry, its 35
+tokens and its 82 Plagiarized reprints included (232 in all), has a recipe in `felinorsVsHumansRecipes.ts`, merged
+into `SCENE_RECIPES`, so the procedural painter draws it as any recipe card and no dispatch site, painter or kit is
+new. An original entry's scene is one of twelve templates in every layer, family `classic`: a Human's town square at
+dusk, a Felinor's moonlit rooftops, KY's classroom (Core's `KY_TUTOR_LOOK`), a beast's crag, a construct's forge yard,
+a Jilliax module's workbench, a living potion's laboratory, #84's temple (an Egyptian Felinor beside a black cat
+sitting as Bastet), a spell's battlefield between the two camps, a Book's library, a field's market square and a
+trap's dungeon hall. Its table row names the card's own subject part, paint, count, size, pose or look where the
+template's would not do; `hashId(id)` varies the rest. Every Felinor wears the cat-ears part (`sceneKitInkCharacters.ts`)
+on its figure's head, placed from its pose's neck (`POSE_ANCHORS`). A Legendary, a Mythic and a token printed either
+draw a set piece of counted parts over the template (stars, motes, sparks, a halo), so each clears its printed
+rarity's floor. A reprint is its original's template (`assaultRecipe`, seeded by the reprint's own id) photocopied:
+greys for its sky and glow, toner grain (`dust`) across it and a red `ink-seal` stamp in its lower corner. Every part
+and figure part is one a shipped scene already places, so no Mythic's part of its own is taken; no part turns and no
+paint is gold. The 63 Legendaries, Mythics and tokens printed either move by `RARE_CARDS` recipes of their own
+(`motion.ts`), and the 26 Mythics and tokens printed Mythic have dioramas (`dioramas/felinorsvshumans/`). Only
+`felinorsvshumans-` ids are keys (R503). `felinorsvshumans.test.ts` holds the set to all of this.
+
 ## The detail floor (R3331001)
 
 `artRichness.test.ts` measures every catalog entry's base picture as its face draws it (`richness.ts`): the

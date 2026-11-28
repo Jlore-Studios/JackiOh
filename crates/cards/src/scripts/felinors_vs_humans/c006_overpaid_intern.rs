@@ -68,6 +68,17 @@ mod tests {
         trap
     }
 
+    /// R1838000: the printed Tradable reaches play: Traded from the hand into the deck, a card drawn, at no mana.
+    fn traded(radiant: bool) {
+        let mut s = board(radiant, json!([]));
+        let intern = s.card(ID).id.clone();
+        let mana = s.state().players.p1.mana.current;
+        s.trade(&intern);
+        s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
+        assert_eq!(s.hand(P1).len(), 2, "radiant {radiant}: one card went in and one came out");
+        assert_eq!(s.state().players.p1.mana.current, mana, "radiant {radiant}: at no mana");
+    }
+
     #[test]
     fn declares_no_numbers() {
         assert!(crate::card_def(ID).params.is_none());
@@ -109,10 +120,7 @@ mod tests {
 
         #[test]
         fn r1838000_it_is_tradable_from_the_hand() {
-            let mut s = board(false, json!([]));
-            let intern = s.card(ID).clone();
-            s.trade(&intern);
-            s.expect_in_zone(&intern, "library");
+            traded(false);
         }
     }
 
@@ -132,10 +140,7 @@ mod tests {
 
         #[test]
         fn r1838000_it_is_tradable_from_the_hand() {
-            let mut s = board(true, json!([]));
-            let intern = s.card(ID).clone();
-            s.trade(&intern);
-            s.expect_in_zone(&intern, "library");
+            traded(true);
         }
     }
 }

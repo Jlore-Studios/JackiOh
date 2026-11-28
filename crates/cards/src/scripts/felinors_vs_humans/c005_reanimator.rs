@@ -30,9 +30,7 @@ fn death_units() -> CatalogQueryArgs {
 /// its Death once, read as the clause begins.
 fn trigger_the_summoned_death() -> Effect {
     for_each_card(ForEachCardArgs {
-        cards: Arc::new(|ctx: &mut EffectContext<'_>| {
-            summoned_so_far(ctx).into_iter().take(1).collect()
-        }),
+        cards: Arc::new(|ctx: &mut EffectContext<'_>| summoned_so_far(ctx).into_iter().take(1).collect()),
         each: Arc::new(|instance_id: &str| {
             trigger_death(TriggerDeathArgs {
                 instance_id: instance_id.to_string(),
