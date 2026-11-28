@@ -98,7 +98,7 @@ mod tests {
         #[test]
         fn it_has_no_divine_shield() {
             let s = board(false, "dangerous-variant-shield");
-            assert!(!has_keyword(&s.stats(&s.unit_at(P1, 1)).keywords, KeywordKind::DivineShield));
+            assert!(!has_keyword(&s.stats(s.unit_at(P1, 1)).keywords, KeywordKind::DivineShield));
         }
     }
 
@@ -113,7 +113,7 @@ mod tests {
         #[test]
         fn it_has_divine_shield_on_the_field() {
             let s = board(true, "dangerous-variant-radiant-shield");
-            assert!(has_keyword(&s.stats(&s.unit_at(P1, 1)).keywords, KeywordKind::DivineShield));
+            assert!(has_keyword(&s.stats(s.unit_at(P1, 1)).keywords, KeywordKind::DivineShield));
         }
     }
 }
