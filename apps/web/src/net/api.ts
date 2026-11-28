@@ -2159,6 +2159,14 @@ export function getStatsLoading(signal?: AbortSignal): Promise<StatsLoading> {
   return apiRequest<StatsLoading>("/api/stats/loading", { signal });
 }
 
+/**
+ * R5274000: `POST /api/dev/stats-refresh`, `/stats`' Fetch live: the server lets go of the card statistics it
+ * keeps, so the next reads wait for figures loaded now. A dev account's alone; anyone else is refused.
+ */
+export function devStatsRefresh(token: string): Promise<StatsLoading> {
+  return apiRequest<StatsLoading>("/api/dev/stats-refresh", { method: "POST", token, body: {} });
+}
+
 export type PlayerStatsAccountResponse = {
   stats: Record<string, unknown>;
   isPrivate: boolean;
