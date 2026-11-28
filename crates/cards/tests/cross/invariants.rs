@@ -4273,14 +4273,18 @@ mod r4599004_an_exile_aura_arriving_in_the_step_is_the_board_s {
 // GIGA" grants GIGA to a graveyard card, the size it takes as it next enters the field. R78's reset takes
 // every grant a card held on the field as it leaves, so a GIGA a graveyard card holds was granted there, and
 // I16 keeps it (the fuzz's changed-card Radiant wave found it, `--from 4 --cards core-090 --radiant`, #5222);
-// any other keyword a graveyard card holds is still field state left behind.
+// any other keyword a graveyard card holds is still field state left behind. A graveyard card exiled keeps
+// it, R215 resetting only a card that reaches a pile from a hand or a library (S #4.1 Farewell's sweep of
+// both graveyards, the fuzz gate's seed 82).
 mod r5262000_i16_a_giga_granted_in_a_graveyard {
     use super::*;
 
-    /// p2's graveyard Vanilla holding `granted`, and what the monitor finds of it.
-    fn found_with(granted: &[&str]) -> Vec<String> {
-        let mut g = scenario(json!({ "p2": { "graveyard": [VANILLA] } }));
-        let id = g.pile(PlayerId::P2, "graveyard")[0].id.clone();
+    /// p2's `pile` Vanilla holding `granted`, and what the monitor finds of it.
+    fn found_in(pile: &str, granted: &[&str]) -> Vec<String> {
+        let mut p2 = json!({});
+        p2[pile] = json!([VANILLA]);
+        let mut g = scenario(json!({ "p2": p2 }));
+        let id = g.pile(PlayerId::P2, pile)[0].id.clone();
         find_instance_mut(g.state_mut(), &id)
             .expect("the graveyard card")
             .granted_keywords = granted
@@ -4292,16 +4296,20 @@ mod r5262000_i16_a_giga_granted_in_a_graveyard {
     }
 
     #[test]
-    fn r5262000_i16_keeps_a_giga_granted_in_a_graveyard() {
-        assert_eq!(found_with(&["GIGA"]), no_violations());
+    fn r5262000_i16_keeps_a_giga_granted_in_a_graveyard_and_carried_on_to_an_exile_pile() {
+        for pile in ["graveyard", "exile"] {
+            assert_eq!(found_in(pile, &["GIGA"]), no_violations(), "{pile}");
+        }
     }
 
     #[test]
-    fn r5262000_i16_still_finds_any_other_keyword_on_a_graveyard_card() {
-        for granted in [&["Taunt"][..], &["GIGA", "Taunt"][..]] {
-            let found = found_with(granted);
-            assert_eq!(found.len(), 1, "{granted:?}: {found:?}");
-            assert!(found[0].contains("I16 field state off the field"), "{}", found[0]);
+    fn r5262000_i16_still_finds_any_other_keyword_on_a_graveyard_or_exiled_card() {
+        for pile in ["graveyard", "exile"] {
+            for granted in [&["Taunt"][..], &["GIGA", "Taunt"][..]] {
+                let found = found_in(pile, granted);
+                assert_eq!(found.len(), 1, "{pile} {granted:?}: {found:?}");
+                assert!(found[0].contains("I16 field state off the field"), "{}", found[0]);
+            }
         }
     }
 }

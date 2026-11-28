@@ -668,7 +668,8 @@ const KEPT_IN_HAND_OR_LIBRARY: [&str; 8] = [
 /// R5262000, R3546002: what a graveyard card may hold when every keyword granted it is GIGA: FvH #100's
 /// "make enemy Units and Field Spells in their hand, deck and graveyard GIGA" grants it there, the size the
 /// card takes as it next enters the field. R78's reset takes every grant a card held on the field as it
-/// leaves, so a GIGA grant a graveyard card holds is one made in the graveyard.
+/// leaves, so a GIGA grant a graveyard card holds is one made in the graveyard; and a graveyard card exiled
+/// keeps it (R215 resets a card reaching a pile from a hand or a library only), so an exile pile may too.
 const KEPT_BY_A_GIGA_GRANT: [&str; 1] = ["grantedKeywords"];
 
 /// What a graveyard or an exile card that evolved there may hold: R3566004's Stinky Cheese keeps what its
@@ -710,7 +711,7 @@ const SLUMBER_KEPT: [&str; 20] = [
 /// Maestro's random pick did before #4322 (R4322000), so the card running is the only signature; a new
 /// sweep joins the table with its ruling. A fusion holding one sweeps too (R43, R102). A kept version's
 /// id (`<id>@v<version>`, R767000) sweeps only where its own script did.
-const BOARD_SWEEPS: [(&str, &str); 5] = [
+const BOARD_SWEEPS: [(&str, &str); 6] = [
     // S+ #4 Profe Yates through v0.6.5b, a past version a fuzz game still plays: every card named with
     // M, O, U, S or E, Dormant cards included (`exile_named`).
     ("stinkyscapeplus-004@v0.6.5b", "R3567000"),
@@ -722,6 +723,8 @@ const BOARD_SWEEPS: [(&str, &str); 5] = [
     ("stinkyscapeplus-080", "R3539002"),
     // S+ #81 Doomsayer: its controller's board at the start of their turn.
     ("stinkyscapeplus-081", "R3539002"),
+    // FvH #82 The Last Meow: its caster's hand and board (`exile_board`, the fuzz gate's wave of #5222).
+    ("felinorsvshumans-082", "R3539002"),
 ];
 
 /// A card's fields as JSON, by name: each optional field is absent when unset.
@@ -748,7 +751,7 @@ fn field_state_held(card: &CardInstance, zone: &Zone) -> Vec<String> {
     let in_hand_or_library = matches!(zone, Zone::Hand { .. } | Zone::Library { .. });
     let evolved_here =
         matches!(zone, Zone::Graveyard { .. } | Zone::Exile { .. }) && card.evolved == Some(true);
-    let giga_granted_here = matches!(zone, Zone::Graveyard { .. })
+    let giga_granted_here = matches!(zone, Zone::Graveyard { .. } | Zone::Exile { .. })
         && !card.granted_keywords.is_empty()
         && card
             .granted_keywords
