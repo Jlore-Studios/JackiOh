@@ -13,8 +13,8 @@
 //!
 //! Its worlds sample the hidden cards from the catalog's pools, so a card joining one deals other worlds
 //! (R380, #3117): the R4788000 tests search its stream for a cursor that meets their premise
-//! (`premise_cursor`), and an audit position whose own worlds no longer hold a lethal at all takes the
-//! first cursor whose worlds do (`lethal_cursor`).
+//! (`premise_cursor`), and an audit position on whose own worlds the walk no longer proves a lethal takes
+//! the first cursor whose worlds it does (`lethal_cursor`).
 
 use jackioh_ai::{
     AI_BUDGET, AI_SEARCH, AiOptions, DecisionReason, DeterminizeOptions, NodeCounter, Prices, SearchBudget,
@@ -39,12 +39,15 @@ const AUDIT_HVE_12_T21: &str = include_str!("../fixtures/pinned-audit-hve-12-t21
 /// prove within `AI_BUDGET.lethal_nodes`: it needed 510 for mirror 26's and 462 for hard-vs-easy 8's, so
 /// this leaves modest room over what the walk cost and still fails a walk that loses either. Since the
 /// Felinors vs Humans set shipped (#5222) the pools deal both other worlds: hard-vs-easy 8's own take 283
-/// nodes, and mirror 26's own hold no lethal (the walk searches them out in 7,913), so it takes cursor 4's,
-/// proved in 160. Both now fit within `AI_BUDGET.lethal_nodes`.
+/// nodes, and on mirror 26's own the walk proves none, since world 1 samples FvH #159 Plagiarized:
+/// Ransomware into p1's face-down backrow, which Freezes the Unit the line plays, and a Frozen card cannot
+/// Activate (R2246000); so mirror 26 takes cursor 4's worlds, proved in 160. Both now fit within
+/// `AI_BUDGET.lethal_nodes`, so this room no longer measures the walk's cost, and #5119 needs long
+/// positions of its own.
 const LONG_LETHAL_ROOM: usize = 600;
 
-/// The nodes that settle whether a position's worlds hold a lethal at all, well past every room the audit
-/// test gives, so the premise it searches on does not depend on that room.
+/// The nodes that settle whether the walk proves a lethal on a position's worlds, well past every room the
+/// audit test gives, so the premise it searches on does not depend on that room.
 const LETHAL_EXISTS_ROOM: usize = 2000;
 
 /// The pinned position: the true state, the deciding seat and its stream.
@@ -257,8 +260,8 @@ fn r4788000_a_walk_that_never_reads_as_lethal_stops_at_its_allowance() {
 /// then this keeps a change to the walk from losing any of the three unnoticed. Each is pinned as the audit
 /// dealt it, on its fixture's own cursor, so its worlds read the pools as they are, not as the pool probe
 /// (#3117) rotates them: a rotation deals other hidden cards and moves the walk's cost (hve-8's to 661
-/// nodes). A card joining a pool can move one the same way, and it is measured again; one whose own worlds
-/// then hold no lethal at all is dealt the first that do (`lethal_cursor`).
+/// nodes). A card joining a pool can move one the same way, and it is measured again; one on whose own
+/// worlds the walk then proves no lethal is dealt the first worlds it does (`lethal_cursor`).
 #[test]
 fn the_audits_long_lethals_are_proved_given_room() {
     with_pool_shift(0, the_audits_long_lethals_as_they_stand);
@@ -281,8 +284,9 @@ fn the_audits_long_lethals_as_they_stand() {
         let at = pinned(text);
         let prices = decision_prices_at(&at.state, at.seat);
         // The worlds sample the hidden cards from the pools, so a set joining them can deal the audit's
-        // cursor worlds that hold no lethal at all (mirror 26's since #5222): those take the first cursor
-        // whose worlds hold one, settled at `LETHAL_EXISTS_ROOM`, not at the room this asserts.
+        // cursor worlds in which the line does not win (mirror 26's since #5222, a sampled Trap that
+        // Freezes the Unit it plays): those take the first cursor whose worlds hold a lethal, settled at
+        // `LETHAL_EXISTS_ROOM`, not at the room this asserts.
         let worlds = worlds(&at, lethal_cursor(&at, &prices));
         let counter = create_node_counter(room, None);
         let proved = find_lethal(&worlds, at.seat, &counter, room, &prices);
