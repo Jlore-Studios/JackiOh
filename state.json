@@ -21086,6 +21086,14 @@
       "requested_by": "jgoetzmann-bot",
       "stop_requested": false,
       "suggestion": true
+    },
+    "5232": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-27T23:57:38Z",
+      "issue": 5217,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
