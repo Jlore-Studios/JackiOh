@@ -157,7 +157,7 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
 
 ### 2.2 The rules the promotion enforces
 
-- Only the gating jobs of a super run hold anything (the owner's call of 2026-11-28, #5207): every
+- Only the gating jobs of a super run hold anything (the owner's call of 2026-11-28, #5287): every
   job but the report-only ones, fuzz, ai gates, daily tests, coverage and notebooks. A report-only job
   carries `continue-on-error`, so its failure leaves the run green: staging does not freeze, the daily
   promotion goes ahead and a promotion pull request merges. Its failure is reported all the same, on

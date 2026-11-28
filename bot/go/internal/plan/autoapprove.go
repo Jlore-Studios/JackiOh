@@ -66,11 +66,16 @@ func autoApprovedSince(state *pyjson.Object, since time.Time) int {
 // heldBy is who took suggestion `issue` up, so it waits for a person: a 👎 on it, or a comment that
 // is not the bot's own. "" when no one did.
 func heldBy(ctx *hctx.Context, number int, issue *pyjson.Object) string {
+	return heldIn(ctx, issue, ctx.GH.ListComments(number, 100))
+}
+
+// heldIn is `heldBy` over `comments`, the issue's comments already read.
+func heldIn(ctx *hctx.Context, issue *pyjson.Object, comments []*pyjson.Object) string {
 	if issue.Obj("reactions").Int("-1") > 0 {
 		return "a 👎 on it"
 	}
 	bot := strings.ToLower(strings.TrimLeft(ctx.Cfg.BotLogin, "@"))
-	for _, c := range ctx.GH.ListComments(number, 100) {
+	for _, c := range comments {
 		login := py.OrStr(c.Obj("user").Get("login"), "")
 		if strings.ToLower(login) == bot || identity.Carries(c.Str("body"), config.Marker) {
 			continue

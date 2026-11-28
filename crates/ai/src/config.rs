@@ -754,6 +754,13 @@ pub struct EvalWeights {
     /// R5122000: per crystal of unconditional price hike on the coming turn (`evaluate::coming_cost_hike`),
     /// scaled by `next_turn_mana` and `AI_TAXED_PLAYS`.
     pub cost_hike: f64,
+    /// R5246000: per open Nerf on an enemy hand card (`evaluate::hand_nerfs`): a crystal its `costMod` made it
+    /// dearer, a `TUNE_STAT_TOTAL` of stats below its face, a keyword lost or a harmful one gained, a step a
+    /// number moved the worse way. A secret Nerf (R1845000) and an Upgrade count none.
+    pub enemy_hand_nerf: f64,
+    /// R5246000, R4590001: per live `RandomTargetsNextSpell` on a side (`evaluate::coming_random_targets`,
+    /// IA #130 Prompt Injection), taken off that side in `material`.
+    pub random_targets: f64,
     /// Per point of faceThreat(enemy) against the seat.
     pub threat_per_damage: f64,
     /// When faceThreat(enemy) >= the seat's life (`effective_life`, R964000), less the pool's coming loss
@@ -986,6 +993,19 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // 0.0 (-0.024 to 0.024); inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 0 diverged;
     // its scene tests settle it (training/improve.md, A screen). 0 turns it off (GREEDY_EVAL).
     cost_hike: 1.0,
+    // R5246000 (issue #5246): 0.5, a crystal's `hand_cost_delta`, the price of the same dearer card in the
+    // seat's own hand. Each Nerf a line leaves on an enemy hand card (IA #137 Patch Tuesday Exploit, IA #233
+    // Model Collapse) counts against that player. Its screen, 400 games on improve-dev against the control
+    // 593066692e (`random_targets` at 0), read 201-199, edge +0.005 (-0.005 to +0.015); inconclusive (R4319000):
+    // 1 decided of 200 (won 1, lost 0), 8 diverged; its scene tests settle it (training/improve.md, A screen).
+    // 0 turns it off (GREEDY_EVAL).
+    enemy_hand_nerf: 0.5,
+    // R5246000 (issue #5246): 1.0, five eighths of the 1.6 an unseen card is priced at. A misfire waiting on a
+    // side's next Spell (IA #130 Prompt Injection) counts against that side. Its screen, 400 games on improve-dev
+    // against the control 593066692e (`enemy_hand_nerf` at 0), read 200-200, edge 0.0 (0.0 to 0.0);
+    // inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 0 diverged; its scene tests settle it
+    // (training/improve.md, A screen). 0 turns it off (GREEDY_EVAL).
+    random_targets: 1.0,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,
@@ -1204,6 +1224,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     lost_refresh: 0.0,
     next_turn_mana: 0.0,
     cost_hike: 0.0,
+    enemy_hand_nerf: 0.0,
+    random_targets: 0.0,
     threat_per_damage: 0.4,
     lethal_threat: 150.0,
     pressure_per_damage: 0.5,

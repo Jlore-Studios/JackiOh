@@ -24,7 +24,7 @@
 # when it is already open, naming each failed job with a link to its log; a run that passes closes it
 # (V25). The run is long on purpose and ci-duration.yml does not watch it.
 #
-# Gating and report-only jobs (the owner's call of 2026-11-28, #5207). fuzz, ai gates, daily tests,
+# Gating and report-only jobs (the owner's call of 2026-11-28, #5287). fuzz, ai gates, daily tests,
 # coverage and notebooks are report-only: each carries `continue-on-error`, so its failure leaves the
 # run green, and nothing that reads the run's conclusion holds for it: not staging's freeze
 # (scripts/promote-staging.sh), not the daily promotion, not a promotion pull request's merge

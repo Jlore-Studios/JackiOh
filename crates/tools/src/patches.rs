@@ -47,7 +47,7 @@ use self::patches_io::{
     ShippedEntry, check_fragments, differing_ids, fragment_name, fragment_stem, git_blob_hash,
     next_ship_name, player_note_problems, read_fragments, read_patches, read_shipped, read_snapshot,
     read_win_rates, rebuild_derived, records_path, remove_file, same_win_rates, snapshot_path, snapshot_text,
-    snapshots, win_rates_path, write_json, write_snapshot,
+    snapshots, win_rates_path, write_json, write_snapshot, write_table,
 };
 use self::versions::name_by_tier;
 use crate::card_lists;
@@ -1113,9 +1113,108 @@ pub mod patches_io {
         Ok(names)
     }
 
-    /// R1329000: `win_rates/<version>.json` under `dir`, the win-rate table `version` shipped with.
+    /// R1329000: the file under `dir` holding the win-rate table `version` shipped with, through
+    /// `win_rates/versions.json` (R5268001); a version with no table names a file that is not there.
     pub fn win_rates_path(version: &str, dir: &Path) -> anyhow::Result<PathBuf> {
-        snapshot_path(version, &dir.join("win_rates"))
+        table_path(version, &dir.join("win_rates"))
+    }
+
+    /// R5268001: the file in a folder of per-version tables (`win_rates/`, `card_metrics/`) that
+    /// maps each version holding one to the file holding its bytes, so a table that did not change
+    /// is kept once.
+    pub const TABLE_VERSIONS_FILE: &str = "versions.json";
+
+    /// R5268001: a table folder's `versions.json`; none yet is the empty map.
+    pub fn read_table_map(folder: &Path) -> anyhow::Result<IndexMap<String, String>> {
+        let path = folder.join(TABLE_VERSIONS_FILE);
+        match fs::read_to_string(&path) {
+            Ok(text) => serde_json::from_str(&text)
+                .with_context(|| format!("{} is not a map of versions", path.display())),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(IndexMap::new()),
+            Err(error) => Err(error).with_context(|| format!("{} cannot be read", path.display())),
+        }
+    }
+
+    /// R5268001: the file in `folder` holding `version`'s table: the one `versions.json` names, else
+    /// the version's own, which a version that shipped none lacks.
+    pub fn table_path(version: &str, folder: &Path) -> anyhow::Result<PathBuf> {
+        let map = read_table_map(folder)?;
+        snapshot_path(map.get(version).map_or(version, String::as_str), folder)
+    }
+
+    /// R5268001: keeps `text` as `version`'s table in `folder`: the file of `previous` (the version
+    /// shipped before it) when its bytes are the same, else a file of its own.
+    pub fn write_table(
+        version: &str,
+        previous: Option<&str>,
+        folder: &Path,
+        text: &str,
+    ) -> anyhow::Result<()> {
+        fs::create_dir_all(folder).with_context(|| format!("{} cannot be created", folder.display()))?;
+        let mut map = read_table_map(folder)?;
+        let shared = match previous.and_then(|previous| map.get(previous)) {
+            Some(stem) if fs::read_to_string(snapshot_path(stem, folder)?).ok().as_deref() == Some(text) => {
+                Some(stem.clone())
+            }
+            _ => None,
+        };
+        let stem = match shared {
+            Some(stem) => stem,
+            None => {
+                let path = snapshot_path(version, folder)?;
+                fs::write(&path, text).with_context(|| format!("{} cannot be written", path.display()))?;
+                version.to_string()
+            }
+        };
+        map.insert(version.to_string(), stem);
+        write_json(&folder.join(TABLE_VERSIONS_FILE), &map)
+    }
+
+    /// R5268001: `patches encode`'s pass over a table folder. In `versions`' order, every version
+    /// with a file of its own joins `versions.json`, and one whose file is the same bytes as the
+    /// file of the version before it is mapped to that file and its own deleted. Returns how many
+    /// files it deleted; a second run deletes none.
+    pub fn encode_tables(folder: &Path, versions: &[String]) -> anyhow::Result<usize> {
+        if !folder.is_dir() {
+            return Ok(0);
+        }
+        let mut map = read_table_map(folder)?;
+        let mut removed = Vec::new();
+        let mut previous: Option<(String, String)> = None;
+        for version in versions {
+            let own = snapshot_path(version, folder)?;
+            let text = if own.exists() && map.get(version).is_none_or(|stem| stem == version) {
+                let text =
+                    fs::read_to_string(&own).with_context(|| format!("{} cannot be read", own.display()))?;
+                match &previous {
+                    Some((stem, before)) if *before == text => {
+                        map.insert(version.clone(), stem.clone());
+                        removed.push(own);
+                    }
+                    _ => {
+                        map.insert(version.clone(), version.clone());
+                    }
+                }
+                Some(text)
+            } else {
+                match map.get(version) {
+                    Some(stem) => {
+                        let path = snapshot_path(stem, folder)?;
+                        Some(
+                            fs::read_to_string(&path)
+                                .with_context(|| format!("{} cannot be read", path.display()))?,
+                        )
+                    }
+                    None => None,
+                }
+            };
+            previous = text.map(|text| (map.get(version).cloned().unwrap_or_default(), text));
+        }
+        write_json(&folder.join(TABLE_VERSIONS_FILE), &map)?;
+        for path in &removed {
+            fs::remove_file(path).with_context(|| format!("{} cannot be removed", path.display()))?;
+        }
+        Ok(removed.len())
     }
 
     /// R3882000: the folder beside the snapshots that holds each version's win rates of record.
@@ -2018,6 +2117,44 @@ fn history_problems(dir: &Path, patches: &[PatchEntry], catalog: &Catalog) -> an
     if let Err(error) = patches_io::merge_order(&mut order, catalog) {
         problems.push(format!("catalog.json: {error} (R5268000)"));
     }
+    let versions: Vec<String> = patches.iter().map(|patch| patch.version.clone()).collect();
+    for folder in ["win_rates", card_lists::LISTS_DIR] {
+        problems.extend(table_problems(&dir.join(folder), folder, &versions)?);
+    }
+    Ok(problems)
+}
+
+/// R5268001: each table folder keeps a table once while it does not change: every file a version
+/// holds of its own is in `versions.json`, every file it names is there, and no version's own file
+/// repeats the table of the version before it.
+fn table_problems(folder: &Path, name: &str, versions: &[String]) -> anyhow::Result<Vec<String>> {
+    let mut problems = Vec::new();
+    if !folder.is_dir() {
+        return Ok(problems);
+    }
+    let map = patches_io::read_table_map(folder)?;
+    let mut previous: Option<String> = None;
+    for version in versions {
+        let mapped = map.get(version);
+        if mapped.is_none() && snapshot_path(version, folder)?.exists() {
+            problems.push(format!(
+                "{name}/{version}.json is in no {name}/{}: run `cargo jackioh patches encode` (R5268001)",
+                patches_io::TABLE_VERSIONS_FILE
+            ));
+        }
+        let text = fs::read_to_string(patches_io::table_path(version, folder)?).ok();
+        match mapped {
+            Some(stem) if text.is_none() => problems.push(format!(
+                "{name}/{} maps {version} to {stem}.json, which is not there (R5268001)",
+                patches_io::TABLE_VERSIONS_FILE
+            )),
+            Some(stem) if stem == version && text.is_some() && text == previous => problems.push(format!(
+                "{name}/{version}.json repeats the table of the version before it: run `cargo jackioh patches encode` (R5268001)"
+            )),
+            _ => {}
+        }
+        previous = text;
+    }
     Ok(problems)
 }
 
@@ -2416,6 +2553,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     let mut previous = read_snapshot(&newest.version, &paths.dir)?;
     // R5268000: each delta is written against the snapshot before it, the newest shipped one first.
     let mut prior = previous.clone();
+    let mut prior_version = Some(newest.version.clone());
     // R3049000: no version ships a win-rate table since #3049; the frozen files under `win_rates/`
     // stay the tables the versions before it shipped with (R1329000).
     // R2173000: a version that holds a card reading the BUSTED or complicated lists ships the lists
@@ -2514,6 +2652,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
     {
         let written = write_snapshot(&version, &paths.dir, Some(&prior), &snapshot)?;
         prior = snapshot;
+        let shipped_before = prior_version.replace(version.clone());
         let fragment_records = fragment.records;
         let timestamp = git(repo_root, &["log", "-1", "--format=%ct", &commit], &[])?;
         let seconds: i64 = timestamp
@@ -2538,11 +2677,13 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
         });
         let card_metrics_blob = match lists {
             Some(lists) => {
-                let lists_path = card_lists::lists_path(&version, &paths.dir)?;
-                fs::create_dir_all(paths.dir.join(card_lists::LISTS_DIR))
-                    .with_context(|| format!("{} cannot be created", lists_path.display()))?;
-                fs::write(&lists_path, &lists)
-                    .with_context(|| format!("{} cannot be written", lists_path.display()))?;
+                // R5268001: kept once while it does not change.
+                write_table(
+                    &version,
+                    shipped_before.as_deref(),
+                    &paths.dir.join(card_lists::LISTS_DIR),
+                    &lists,
+                )?;
                 Some(git_blob_hash(&lists))
             }
             None => None,
@@ -2765,9 +2906,13 @@ pub fn cut_patch(repo_root: &Path, production: Option<&str>) -> anyhow::Result<C
     let raw = write_snapshot(&version, &paths.dir, Some(&snapshot), &snapshot)?;
     let card_metrics_blob = match lists {
         Some(lists) => {
-            let lists_path = card_lists::lists_path(&version, &paths.dir)?;
-            fs::write(&lists_path, &lists)
-                .with_context(|| format!("{} cannot be written", lists_path.display()))?;
+            // R5268001: the newest version's lists again, kept once.
+            write_table(
+                &version,
+                Some(&newest.version),
+                &paths.dir.join(card_lists::LISTS_DIR),
+                &lists,
+            )?;
             Some(git_blob_hash(&lists))
         }
         None => None,
@@ -2945,13 +3090,23 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
         return crate::retcon::run(repo_root, &argv[1..]);
     }
     if command == Some("encode") {
-        let encoded = patches_io::encode_history(&patch_paths(repo_root).dir)?;
+        let dir = patch_paths(repo_root).dir;
+        let encoded = patches_io::encode_history(&dir)?;
         match (encoded.first(), encoded.last()) {
             (Some(first), Some(last)) => println!(
                 "patches encode: {} snapshot file(s), {first} to {last}, are deltas now (R5268000)",
                 encoded.len()
             ),
-            _ => println!("patches encode: no snapshot file left, nothing changed"),
+            _ => println!("patches encode: no snapshot file left"),
+        }
+        // R5268001: and each table kept once while it does not change.
+        let versions: Vec<String> = read_patches(&dir.join("patches.json"))?
+            .into_iter()
+            .map(|patch| patch.version)
+            .collect();
+        for folder in ["win_rates", card_lists::LISTS_DIR] {
+            let removed = patches_io::encode_tables(&dir.join(folder), &versions)?;
+            println!("patches encode: {folder}/ kept {removed} repeated table(s) once (R5268001)");
         }
         return Ok(());
     }
@@ -5180,6 +5335,10 @@ mod tests {
                     &[
                         ("crates/cards/patches/win_rates/v0.1.1.json", frozen.clone()),
                         (
+                            "crates/cards/patches/win_rates/versions.json",
+                            json(&IndexMap::from([("v0.1.1", "v0.1.1")])),
+                        ),
+                        (
                             "crates/cards/catalog.json",
                             json(&base_with(&base, vec![card("aaa", 2)])),
                         ),
@@ -5826,6 +5985,103 @@ mod tests {
                     1,
                     "the file alone"
                 );
+            }
+        }
+
+        // R5268001: a win-rate table or a version's card lists that did not change is kept once.
+        mod r5268001_each_table_kept_once {
+            use std::fs;
+
+            use super::*;
+            use crate::patches::table_problems;
+            use crate::patches::tests::TempDir;
+
+            #[test]
+            fn r5268001_a_table_that_did_not_change_is_kept_once_and_each_version_reads_its_own() {
+                let temp = TempDir::new("jackioh-tables-");
+                let folder = temp.path().join("card_metrics");
+                write_table("v1", None, &folder, "A\n").unwrap();
+                write_table("v2", Some("v1"), &folder, "A\n").unwrap();
+                write_table("v3", Some("v2"), &folder, "B\n").unwrap();
+                write_table("v4", Some("v3"), &folder, "B\n").unwrap();
+                let mut files: Vec<String> = fs::read_dir(&folder)
+                    .unwrap()
+                    .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+                    .collect();
+                files.sort();
+                assert_eq!(files, strings(&["v1.json", "v3.json", "versions.json"]));
+                for (version, text) in [("v1", "A\n"), ("v2", "A\n"), ("v3", "B\n"), ("v4", "B\n")] {
+                    assert_eq!(
+                        fs::read_to_string(table_path(version, &folder).unwrap()).unwrap(),
+                        text,
+                        "{version}"
+                    );
+                }
+                // A version that shipped none names a file that is not there.
+                assert!(!table_path("v0", &folder).unwrap().exists());
+            }
+
+            #[test]
+            fn r5268001_patches_encode_keeps_a_run_of_one_table_once_and_a_second_run_changes_nothing() {
+                let temp = TempDir::new("jackioh-tables-encode-");
+                let folder = temp.path().join("win_rates");
+                fs::create_dir_all(&folder).unwrap();
+                for (version, text) in [("v2", "A\n"), ("v3", "A\n"), ("v5", "A\n"), ("v6", "B\n")] {
+                    fs::write(folder.join(format!("{version}.json")), text).unwrap();
+                }
+                let versions = strings(&["v1", "v2", "v3", "v4", "v5", "v6"]);
+                assert_eq!(
+                    encode_tables(&folder, &versions).unwrap(),
+                    1,
+                    "v3 repeats v2; v5 follows v4, which has none"
+                );
+                assert!(!folder.join("v3.json").exists());
+                assert_eq!(
+                    fs::read_to_string(table_path("v3", &folder).unwrap()).unwrap(),
+                    "A\n"
+                );
+                assert!(!table_path("v1", &folder).unwrap().exists());
+                assert!(!table_path("v4", &folder).unwrap().exists());
+                assert_eq!(encode_tables(&folder, &versions).unwrap(), 0);
+                assert_eq!(
+                    table_problems(&folder, "win_rates", &versions).unwrap(),
+                    Vec::<String>::new()
+                );
+            }
+
+            #[test]
+            fn r5268001_patches_check_names_an_unmapped_a_missing_and_a_repeated_table() {
+                let temp = TempDir::new("jackioh-tables-check-");
+                let folder = temp.path().join("card_metrics");
+                fs::create_dir_all(&folder).unwrap();
+                fs::write(folder.join("v1.json"), "A\n").unwrap();
+                fs::write(folder.join("v2.json"), "A\n").unwrap();
+                fs::write(folder.join("v4.json"), "C\n").unwrap();
+                write_json(
+                    &folder.join(TABLE_VERSIONS_FILE),
+                    &IndexMap::from([("v1", "v1"), ("v2", "v2"), ("v3", "gone")]),
+                )
+                .unwrap();
+                let problems =
+                    table_problems(&folder, "card_metrics", &strings(&["v1", "v2", "v3", "v4"])).unwrap();
+                assert_eq!(problems.len(), 3, "{problems:?}");
+                assert!(problems[0].contains("v2.json repeats the table"), "{problems:?}");
+                assert!(problems[1].contains("maps v3 to gone.json"), "{problems:?}");
+                assert!(
+                    problems[2].contains("v4.json is in no card_metrics/versions.json"),
+                    "{problems:?}"
+                );
+            }
+
+            #[test]
+            fn r5268001_the_real_history_keeps_each_table_once() {
+                let versions: Vec<String> = patches().into_iter().map(|patch| patch.version).collect();
+                for folder in ["win_rates", "card_metrics"] {
+                    assert_eq!(
+                        table_problems(&patches_dir().join(folder), folder, &versions).unwrap(),
+                        Vec::<String>::new()
+                    );
+                }
             }
         }
 

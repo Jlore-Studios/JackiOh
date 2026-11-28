@@ -34,8 +34,8 @@ use crate::classify::{self, FileChange, Side, Tier};
 use crate::patches::js::{self, Json};
 use crate::patches::patch::bump_sites;
 use crate::patches::patches_io::{
-    Catalog, ORDER_FILE, PatchEntry, delta_path, git_blob_hash, read_patches, read_shipped, rebuild_derived,
-    records_path, snapshots, win_rates_path, write_json,
+    Catalog, ORDER_FILE, PatchEntry, TABLE_VERSIONS_FILE, delta_path, git_blob_hash, read_patches,
+    read_shipped, read_table_map, rebuild_derived, records_path, snapshot_path, snapshots, write_json,
 };
 use crate::patches::versions::name_by_tier;
 use crate::patches::{git, sets_of};
@@ -358,6 +358,17 @@ fn write_with(
     if patches.len() != map.len() {
         bail!("patches.json changed since the map was made");
     }
+    let win_rates_dir = dir.join("win_rates");
+    let lists_dir = dir.join(crate::card_lists::LISTS_DIR);
+    // R5268001: each table folder's map, its versions and the files they name renamed.
+    let mut table_maps = Vec::new();
+    for folder in [&win_rates_dir, &lists_dir] {
+        let renamed = read_table_map(folder)?
+            .into_iter()
+            .map(|(version, stem)| Ok((new_of(&version)?, new_of(&stem)?)))
+            .collect::<anyhow::Result<IndexMap<String, String>>>()?;
+        table_maps.push((folder.clone(), renamed));
+    }
     let mut snapshots = Vec::new();
     let mut tables = Vec::new();
     let mut lists = Vec::new();
@@ -371,18 +382,19 @@ fn write_with(
         let text = fs::read_to_string(&snapshot)
             .with_context(|| format!("{} cannot be read", snapshot.display()))?;
         snapshots.push((snapshot, delta_path(&renamed.new, &dir)?, text));
-        let table = win_rates_path(&patch.version, &dir)?;
+        // R5268001: the table files a version holds of its own; `versions.json` maps the rest.
+        let table = snapshot_path(&patch.version, &win_rates_dir)?;
         if let Ok(text) = fs::read_to_string(&table) {
             tables.push((
                 table,
-                win_rates_path(&renamed.new, &dir)?,
+                snapshot_path(&renamed.new, &win_rates_dir)?,
                 rename_versions(&text, &names),
             ));
         }
         // R2173000: and its BUSTED and complicated lists, which name cards, never versions.
-        let kept = crate::card_lists::lists_path(&patch.version, &dir)?;
+        let kept = snapshot_path(&patch.version, &lists_dir)?;
         if let Ok(text) = fs::read_to_string(&kept) {
-            lists.push((kept, crate::card_lists::lists_path(&renamed.new, &dir)?, text));
+            lists.push((kept, snapshot_path(&renamed.new, &lists_dir)?, text));
         }
         // R3882000: and its win rates of record, whose `patch` label names a version.
         let held = records_path(&patch.version, &dir)?;
@@ -400,9 +412,10 @@ fn write_with(
     let mut shipped = read_shipped(&dir.join("shipped.json"))?;
     for entry in &mut shipped {
         let new = new_of(&entry.version)?;
+        let held = table_maps[0].1.get(&new).unwrap_or(&new);
         if let Some((_, _, text)) = tables
             .iter()
-            .find(|(_, to, _)| to.file_stem().and_then(|stem| stem.to_str()) == Some(new.as_str()))
+            .find(|(_, to, _)| to.file_stem().and_then(|stem| stem.to_str()) == Some(held.as_str()))
         {
             entry.win_rates_blob = Some(git_blob_hash(text));
         }
@@ -463,6 +476,9 @@ fn write_with(
     }
     for (path, text) in &others {
         fs::write(path, text).with_context(|| format!("{} cannot be written", path.display()))?;
+    }
+    for (folder, map) in table_maps.iter().filter(|(_, map)| !map.is_empty()) {
+        write_json(&folder.join(TABLE_VERSIONS_FILE), map)?;
     }
     write_json(&dir.join("patches.json"), &patches)?;
     write_json(&dir.join("shipped.json"), &shipped)?;

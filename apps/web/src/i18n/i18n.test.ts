@@ -25,6 +25,7 @@ import { DRAW_TEXT } from "../game/DrawOffer.tsx";
 import { MODE_TEXT, RADIANT_MODE_TEXT, modeText } from "../game/modeText.ts";
 import { BOARD_NAMES_OPTIONS } from "../settings/controls.tsx";
 import { SETTINGS_SLOTS } from "../settings/slots.ts";
+import { assaultContent } from "../wasm/index.ts";
 import { COSMETICS } from "../wire/generated/cosmetics.ts";
 import chineseJson from "../../../../crates/cards/chinese.json";
 import chaosNames from "../../../../crates/shared/data/chaos-names.json";
@@ -308,7 +309,7 @@ describe("R711000 internationalisation and reader language", () => {
   it("R711000 every table-fed sentence has a zh-CN entry", () => {
     // Words that reach `t()` through a variable, a table or `??` are invisible to the literal
     // scan above (`sentencesIn`), so this walks every such table and fails naming the table and
-    // the value. A new table feeding `t()` joins this walk.
+    // the value. A new table or module answer feeding `t()` joins this walk.
     const fed: { table: string; value: string }[] = [];
     const ids = new Set([...Object.keys(MODE_TEXT), ...Object.keys(RADIANT_MODE_TEXT)]);
     for (const id of ids) {
@@ -339,6 +340,13 @@ describe("R711000 internationalisation and reader language", () => {
     for (const option of BOARD_NAMES_OPTIONS) fed.push({ table: "boardNames", value: option.label });
     for (const label of Object.values(LINE_LABELS)) fed.push({ table: "LINE_LABELS", value: label });
     fed.push({ table: "CardList", value: DEFAULT_ORDER });
+    // The Infinite Assault's content (`crates/run/src/assault.json`) reaches `t()` only as variables: the ladder's,
+    // briefing's and fight's enemy (a Commander level's is the Commander's name), each doctrine's name and line.
+    const assault = assaultContent();
+    for (const doctrine of assault.doctrines) {
+      for (const value of [doctrine.name, doctrine.line, ...doctrine.enemies]) fed.push({ table: "assaultContent", value });
+    }
+    for (const commander of assault.commanders) fed.push({ table: "assaultContent", value: commander.name });
     const missing = [...new Set(fed.filter(({ value }) => !Object.hasOwn(zhCN, value)).map(({ table, value }) => `${table}: ${JSON.stringify(value)}`))];
     expect(missing).toEqual([]);
     expect(fed.length).toBeGreaterThan(100);

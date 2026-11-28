@@ -376,7 +376,7 @@ mod evaluate_patch_v0_2_0s_mechanics {
     }
 
     #[test]
-    fn b3_4_r65_an_own_hand_card_made_dearer_scores_lower_and_one_made_cheaper_higher_x_cost_and_enemy_cards_do_not_move()
+    fn b3_4_r65_an_own_hand_card_made_dearer_scores_lower_and_one_made_cheaper_higher_x_cost_and_a_cheaper_enemy_card_do_not_move()
      {
         let hand = |cost_mod: i32, extra: Value| {
             let mut p2 = json!({ "hand": ["core-005"] });
@@ -422,7 +422,9 @@ mod evaluate_patch_v0_2_0s_mechanics {
             )
         };
         assert_eq!(dividend(1), dividend(0));
-        // The opponent's hand is placeholders to the AI: its cards' costs are no term.
+        // The opponent's hand is placeholders to the AI, so its cards' prices are no term; R5246000: but a crystal
+        // written on one dearer is a Nerf against its holder (`redact` zeroes a hidden card's `costMod`, R185, so a
+        // search sees only its line's own), and one written cheaper counts nothing.
         let enemy = |cost_mod: i32| {
             eval(
                 &board(
@@ -431,7 +433,8 @@ mod evaluate_patch_v0_2_0s_mechanics {
                 AI,
             )
         };
-        assert_eq!(enemy(1), enemy(0));
+        assert_close(enemy(1) - enemy(0), AI_EVAL.enemy_hand_nerf, 10, "enemy dearer");
+        assert_eq!(enemy(-1), enemy(0));
     }
 
     #[test]
