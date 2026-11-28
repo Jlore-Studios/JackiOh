@@ -26,7 +26,7 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::afflictions::Affliction;
+use jackioh_engine::afflictions::{Affliction, Riders};
 use jackioh_engine::config::{
     BRITTLE_TICK, CALL_TO_CHAOS_RADIANT_EFFECTS, DUOS_OWN_HEALTH, FIRST_GRADE, HAND_CAP_MAX, HERO_HEALTH,
     JADE_ASCEND_AT, JADE_BEAUTY_AT, MAX_MANA, TURN_CAP_PLAYER_TURNS,
@@ -50,9 +50,9 @@ use jackioh_engine::{
     is_starship_piece, is_temporary_card, is_tradable, left_field_after, legal_actions, lost_refreshes_left,
     modifier_is_live, new_instance, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource,
     pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reborn_body_of,
-    reset_instance, script_of, settle, slots_of, stats_with_buffs, stolen_mana_crystals_of, subsystems,
-    sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has,
-    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
+    reset_instance, riders_of, script_of, settle, slots_of, stats_with_buffs, stolen_mana_crystals_of,
+    subsystems, sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap,
+    unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
@@ -1410,6 +1410,26 @@ fn hero_ticks(state: &GameState, player: PlayerId, burn: i32, toxic: i32, w: &Ev
     taken.min(life - 1)
 }
 
+/// R5229000: the life `more_burn` more Burn and `more_toxic` more Toxic on `player`'s hero take over the
+/// coming ticks (`coming_hero_ticks`), past what its counters take already: what a hit's riders cost a
+/// hero it leaves standing (§4.4 step 7).
+pub(crate) fn hero_ticks_added_by(
+    state: &GameState,
+    player: PlayerId,
+    more_burn: i32,
+    more_toxic: i32,
+    w: &EvalWeights,
+) -> i32 {
+    let (burn, toxic) = (hero_burn_of(state, player), hero_toxic_of(state, player));
+    hero_ticks(
+        state,
+        player,
+        burn.saturating_add(more_burn),
+        toxic.saturating_add(more_toxic),
+        w,
+    ) - hero_ticks(state, player, burn, toxic, w)
+}
+
 /// R4064001: the life `amount` more of `kind` on `player`'s hero takes over the coming ticks
 /// (`coming_hero_ticks`), past what its counters take already: what a hit that Burns or is Toxic instead
 /// costs a hero.
@@ -1420,12 +1440,10 @@ pub(crate) fn hero_ticks_added(
     amount: i32,
     w: &EvalWeights,
 ) -> i32 {
-    let (burn, toxic) = (hero_burn_of(state, player), hero_toxic_of(state, player));
-    let (more_burn, more_toxic) = match kind {
-        Affliction::Burn => (burn.saturating_add(amount), toxic),
-        Affliction::Toxic => (burn, toxic.saturating_add(amount)),
-    };
-    hero_ticks(state, player, more_burn, more_toxic, w) - hero_ticks(state, player, burn, toxic, w)
+    match kind {
+        Affliction::Burn => hero_ticks_added_by(state, player, amount, 0, w),
+        Affliction::Toxic => hero_ticks_added_by(state, player, 0, amount, w),
+    }
 }
 
 /// R4064000: what `player`'s damage pools soak of one turn start's ticks, refilled first (the refill,
@@ -1738,7 +1756,7 @@ impl AttackerStand {
     }
 }
 
-/// `damage_past_taunts_with` at `AI_EVAL`'s weights: what the lethal solver's `ready_gap` reads.
+/// `damage_past_taunts_with` at `AI_EVAL`'s weights: what `ready_gap` reads.
 pub fn damage_past_taunts(
     state: &GameState,
     defender: PlayerId,
@@ -1769,7 +1787,10 @@ pub fn damage_past_taunts(
 /// splash's kill free none. With `w.splash_trample_read` (R4805000), a Cleave splash also meets each unit
 /// that binds nothing more (one without Taunt, a Taunt the walk has passed) as the walk left it, spending
 /// the pools, and a Trample attacker's sends what it deals beyond that unit's health to the hero (§4.4
-/// step 9).
+/// step 9). With `w.damage_rider_read` too (R5229000), each hit on the hero that leaves it life adds its
+/// source's Burn rider (§4.4 step 7, `riders_of`), and that Burn counts as one more unpierced hit after the
+/// attacks, the tick at the turn's end (R4154000), through what the pools have left; a Toxic rider ticks at
+/// the hero's own turn start (R3540001) and counts nothing here.
 pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
@@ -2129,6 +2150,10 @@ fn soak_past_taunts(
         i += 1;
     }
 
+    // R5229000, R3540002: a hit the hero survives adds its source's Burn, ticking once, unpierced, at the
+    // turn's end (R4154000). Toxic ticks at the hero's own turn start (R3540001), after the attacks.
+    let hero_life = effective_life(state, defender);
+    let mut rider_burn: i32 = 0;
     for (attacker, hit, may_hit_hero) in &free {
         // R4064001: a hit that Burns or is Toxic instead deals the hero nothing. R4402000: an attacker a
         // strike back destroyed makes no swing.
@@ -2136,9 +2161,19 @@ fn soak_past_taunts(
             continue;
         }
         let pierce = pierces(state, Some(attacker), None);
-        total += soaked(
+        let dealt = soaked(
             &mut pool,
             subsystems::projected_hero_damage(state, defender, *hit, pierce),
+        );
+        total += dealt;
+        if pools.read && w.damage_rider_read && total < hero_life {
+            rider_burn = rider_burn.saturating_add(riders_of(state, attacker).after(dealt).0);
+        }
+    }
+    if rider_burn > 0 {
+        total += soaked(
+            &mut pool,
+            subsystems::projected_hero_damage(state, defender, rider_burn, false),
         );
     }
     (total, breaker_behind, cleave_behind)
@@ -2202,6 +2237,7 @@ fn splashed(state: &GameState, stand: &TauntStand, pool: i32) -> Side {
         exiles: false,
         converts: None,
         pool,
+        riders: Riders::default(),
     }
 }
 

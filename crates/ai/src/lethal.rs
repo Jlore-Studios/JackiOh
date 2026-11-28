@@ -28,9 +28,11 @@ use jackioh_engine::{
 };
 
 use crate::candidates::candidate_actions;
-use crate::config::{AI_SEARCH, LETHAL_HINT_DETERMINIZATIONS, LETHAL_HINT_NODES, LETHAL_HINT_SEED};
+use crate::config::{
+    AI_EVAL, AI_SEARCH, EvalWeights, LETHAL_HINT_DETERMINIZATIONS, LETHAL_HINT_NODES, LETHAL_HINT_SEED,
+};
 use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
-use crate::evaluate::{Prices, damage_past_taunts, deft_in_defense};
+use crate::evaluate::{Prices, damage_past_taunts_with, deft_in_defense};
 use crate::observe::redact;
 use crate::simulate::{
     LineStatus, UNPAID_SURCHARGE, create_node_counter, create_sub_counter, line_status, position_key,
@@ -234,10 +236,20 @@ fn attacks_left(state: &GameState, unit: &CardInstance) -> i32 {
     attacks_per_turn(state, unit) - spent
 }
 
-/// Gap to lethal: enemy hero life (including Duos pool R964000) less damage past Taunts (#1823).
+/// Gap to lethal: enemy hero life (including Duos pool R964000) less damage past Taunts (#1823), the Burn
+/// tick its hits leave at the turn's end counted (R5229000).
 pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
-    gaps(state, seat).ready
+    gaps(state, seat, &AI_EVAL).ready
 }
+
+/// R5229000: the weights the solver's own gaps walk the Taunts at, `AI_EVAL` with the damage riders unread.
+/// A rider's Burn ticks at the turn's end (R4154000), which the solver, never ending the turn
+/// (`lethal_moves`), cannot reach, so a gap that counted it would send the walk after a lethal it cannot
+/// prove.
+const LETHAL_WALK: EvalWeights = EvalWeights {
+    damage_rider_read: false,
+    ..AI_EVAL
+};
 
 /// `ready_gap` and, R5119000, the same gap were no Taunt standing.
 struct Gaps {
@@ -251,8 +263,8 @@ struct Gaps {
     taunt_free: f64,
 }
 
-/// `ready_gap`, with `Gaps::taunt_free` beside it from the same ready attackers.
-fn gaps(state: &GameState, seat: PlayerId) -> Gaps {
+/// `ready_gap` at `w`'s Taunt walk, with `Gaps::taunt_free` beside it from the same ready attackers.
+fn gaps(state: &GameState, seat: PlayerId, w: &EvalWeights) -> Gaps {
     let both = |gap: f64| Gaps {
         ready: gap,
         taunt_free: gap,
@@ -299,7 +311,7 @@ fn gaps(state: &GameState, seat: PlayerId) -> Gaps {
     let ready = if state.pending.is_some() {
         life
     } else {
-        life - damage_past_taunts(state, opp, &attacks)
+        life - damage_past_taunts_with(state, opp, &attacks, w)
     };
     Gaps {
         ready: f64::from(ready),
@@ -430,7 +442,7 @@ fn best_first(
     let root = &dets[0]; // `find_lethal` answered an empty slice itself.
     let mut visited: IndexSet<String> = IndexSet::new();
     visited.insert(position_key(root, seat));
-    let root_gaps = gaps(root, seat);
+    let root_gaps = gaps(root, seat, &LETHAL_WALK);
     let mut open: Vec<Open> = vec![Open {
         state: Rc::new(root.clone()),
         line: Vec::new(),
@@ -480,7 +492,7 @@ fn best_first(
             match verdict {
                 Verdict::Lethal => return Walk::Line(line),
                 Verdict::Deeper => {
-                    let next_gaps = gaps(&next, seat);
+                    let next_gaps = gaps(&next, seat, &LETHAL_WALK);
                     branches.push(Branch {
                         parent: node.branch,
                         gap: next_gaps.ready,
@@ -786,7 +798,7 @@ mod tests {
     #[test]
     fn r5119000_an_open_prompt_spends_no_attack() {
         let state = scarab_in_hand();
-        let ready = gaps(&state, P1);
+        let ready = gaps(&state, P1, &LETHAL_WALK);
         assert_eq!(
             (ready.ready, ready.taunt_free),
             (6.0, 6.0),
@@ -806,7 +818,7 @@ mod tests {
             .and_then(Result::ok)
             .expect("the play runs");
         assert!(prompted.pending.is_some(), "the Cry's Discover is open");
-        let open = gaps(&prompted, P1);
+        let open = gaps(&prompted, P1, &LETHAL_WALK);
         assert_eq!(open.ready, 10.0, "no attack is listed while the prompt is open");
         assert_eq!(
             open.taunt_free, 6.0,
@@ -830,7 +842,11 @@ mod tests {
         }))
         .state()
         .clone();
-        assert_eq!(gaps(&root, P1).ready, 4.0, "the Golem walls the Vanilla");
+        assert_eq!(
+            gaps(&root, P1, &LETHAL_WALK).ready,
+            4.0,
+            "the Golem walls the Vanilla"
+        );
         let legal = legal_actions(&root, P1);
         let attack = legal
             .iter()
@@ -854,7 +870,7 @@ mod tests {
         let closes = legal_actions(&prompted, P1).iter().any(|answer| {
             simulate(&prompted, P1, answer, &counter, Prices::NONE)
                 .and_then(Result::ok)
-                .is_some_and(|next| gaps(&next, P1).ready <= 0.0)
+                .is_some_and(|next| gaps(&next, P1, &LETHAL_WALK).ready <= 0.0)
         });
         assert!(
             closes,
@@ -864,7 +880,7 @@ mod tests {
         let state = Rc::new(root.clone());
         let branches = [branch_at(0, 4.0), branch_at(0, 4.0), branch_at(0, 4.0)];
         let opened = [(&spent, 1u32), (&prompted, 2)].map(|(next, order)| {
-            let at = gaps(next, P1);
+            let at = gaps(next, P1, &LETHAL_WALK);
             assert_eq!(at.ready, 4.0);
             open_at(&state, at.ready, at.taunt_free, 1, order as usize, order)
         });
@@ -971,5 +987,25 @@ mod tests {
             1,
             "a closer position first, set aside or not"
         );
+    }
+
+    /// S+ #114 Reign, a 12/8 Ranged Windfury Pierce: "Damage also Burns 4."
+    const REIGN: &str = "stinkyscapeplus-114";
+
+    /// R5229000: Reign's two swings at a hero on 30 deal 24 and leave Burn 8, which ticks at the turn's
+    /// end: `ready_gap` reads the tick, so 30 less 32, while the solver's own gap, which never ends the turn,
+    /// reads 30 less 24.
+    #[test]
+    fn r5229000_the_solvers_gap_counts_no_burn_tick() {
+        jackioh_cards::register_all();
+        let state = scenario(json!({
+            "seed": "lethal-r5229000", "active": P1, "turn": 9,
+            "p1": { "field": [REIGN], "library": [VANILLA, VANILLA] },
+            "p2": { "health": 30, "library": [VANILLA, VANILLA] },
+        }))
+        .state()
+        .clone();
+        assert_eq!(ready_gap(&state, P1), -2.0);
+        assert_eq!(gaps(&state, P1, &LETHAL_WALK).ready, 6.0);
     }
 }
