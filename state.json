@@ -44383,7 +44383,12 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {},
+    "auto": {
+      "5246": {
+        "at": "2026-11-28T02:36:17Z",
+        "why": "Confirmed: the enemy's hand is priced by its size alone (`crates/ai/src/evaluate.rs:1584`), so a Nerf, which only makes a card dearer, scores nothing, and `RandomTargetsNextSpell` is read nowhere in `crates/ai/src`; the sweep measures both cards at 2 of 28 and 1 of 54 playable turns at Hard (`training/history/assault-sweep-2026-11-26.md:1908,1918`), and the fix follows the path #5122 (R5122000) to"
+      }
+    },
     "auto_approved": [
       "2026-11-27T03:08:24Z",
       "2026-11-27T03:09:48Z",
