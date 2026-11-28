@@ -29,6 +29,8 @@
 //   trigger  a card whose effect summons (R1088): one of its lines plays when the runner starts the
 //            `summoned` entry the card caused, picked by the client's own rng, replacing the
 //            summoned card's own line for that entry
+//   endOfTurn  a Unit's or a Field Spell's End of turn resolving (R5264500, its `hookResolving` marker),
+//            a line no card needs: FvH #59 Voracious Reader's
 // A hook gives a voice line, { voice: "<a voice>" }, which speaks the card's line for that hook in
 // card-text.yaml (a trigger's list of lines), an effect, { effect: "<an effect>" }, or both in one
 // object; with both, the effect starts first. No hook here writes its words: a text or lines fails.

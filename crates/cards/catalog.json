@@ -38772,7 +38772,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 33,
     "base": {
       "attack": 3,
       "health": 3,
@@ -38858,7 +38858,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 39,
     "base": {
       "attack": 6,
       "health": 6,
@@ -38976,7 +38976,7 @@
         "read": "cry"
       }
     ],
-    "loc": 1,
+    "loc": 65,
     "base": {
       "attack": 5,
       "health": 5,

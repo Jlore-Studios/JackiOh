@@ -151,8 +151,10 @@ fn jilliax(radiant: bool) -> Script {
         cry: Some(hook(move |ctx| {
             // R5262002: the X this play paid; a fused card is no X card, so its replay's X is 0.
             let x = ctx.x;
-            let own = ctx.self_.as_ref().map(|me| me.def_id.clone());
-            let fused = own.map(|def_id| fused_modules(ctx.state, &def_id)).unwrap_or_default();
+            let fused = match ctx.self_.as_ref().map(|me| me.def_id.clone()) {
+                Some(def_id) => fused_modules(ctx.state, &def_id),
+                None => Vec::new(),
+            };
             vec![discover(radiant, x, &[], &fused)]
         })),
         resume: IndexMap::from([(
