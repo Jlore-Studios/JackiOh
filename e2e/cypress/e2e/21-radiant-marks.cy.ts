@@ -6,16 +6,18 @@ import {
   CARD_REF,
   CARD_REF_TOOLTIP,
   CARD_VALUE,
-  INSPECT_CLOSE,
-  INSPECT_HOVER,
-  INSPECT_REFS,
   INSPECT_REFS_FACE,
-  INSPECT_SHEET,
   RADIANT,
   RADIANT_MARK,
   handCardId,
   ts,
 } from "../../support/testids.ts";
+import {
+  INSPECT_CLOSE,
+  INSPECT_HOVER,
+  INSPECT_REFS,
+  INSPECT_SHEET,
+} from "../../../apps/web/src/cards/inspect/testids.ts";
 
 /** This seed deals #31, #26, and #65 and gives player 1 three mana on turn three. */
 const SEED = seedFor("21-marks-163");

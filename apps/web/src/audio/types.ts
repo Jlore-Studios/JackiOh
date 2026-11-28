@@ -139,8 +139,12 @@ export type CardKind = "unit" | "spell" | "trap";
 /** R655: when a card's sounds play (constants.ts CARD_HOOKS, the one list of them). */
 export type CardHook = keyof typeof CARD_HOOKS;
 export type VoiceLineKind = CardHook;
-/** What `playVoice` accepts: a card's line, or R644's portrait emote line (`emote-<portrait>-<id>` files). */
-export type PlayableLineKind = VoiceLineKind | VoiceEmoteId | `trigger${number}`;
+/**
+ * What `playVoice` accepts: a card's line, or R644's portrait emote line (`emote-<portrait>-<id>` files).
+ * A numbered line is one of a pool's: a trigger's n-th (R1088, `trigger1` its first), any other hook's
+ * second and later (R5188000, `play2`; its first keeps the bare hook's name and key).
+ */
+export type PlayableLineKind = VoiceLineKind | VoiceEmoteId | `${CardHook}${number}`;
 /** "<defId>-<line>", e.g. "core-004-play", "core-051-1-cast", "emote-gary-thanks". Parse from the END: defIds contain "-". */
 export type VoiceKey = `${string}-${PlayableLineKind}`;
 
@@ -185,11 +189,20 @@ export type Persona = SayPersona | SapiPersona;
  */
 export type CardEffect = { sfx: SfxId; pitch: number; gain: number; params?: SfxParams };
 
-/** R655: one hook's sounds, as the file writes them: a voice line, an effect, or both (never neither). */
+/**
+ * R655: a hook's effect: one name from the effects bank, or (R5188000) a list of them played in order,
+ * each EFFECT_SEQUENCE_GAP_MS after the one before ends.
+ */
+export type HookEffect = string | string[];
+
+/**
+ * R655: one hook's sounds, as the file writes them: a voice line, an effect, or both (never neither).
+ * R5188000: any hook may give a pool of lines (`lines`) in place of its one `text`, as a trigger does (R1088).
+ */
 export type HookAssignment =
-  | { voice: string; text: string; effect?: string }
-  | { voice: string; lines: string[]; effect?: string }
-  | { effect: string; voice?: undefined; text?: undefined };
+  | { voice: string; text: string; effect?: HookEffect }
+  | { voice: string; lines: string[]; effect?: HookEffect }
+  | { effect: HookEffect; voice?: undefined; text?: undefined };
 
 /** A card's hooks, with the kind its catalog type gives it (the file never states it). */
 export type CardAudioEntry = { kind: CardKind } & { [H in CardHook]?: HookAssignment };

@@ -4,7 +4,6 @@
 
 import { seedFor } from "../../support/config.ts";
 import {
-  END_TURN,
   MODIFIER_BADGE,
   cardId,
   graveyardCountId,
@@ -16,6 +15,7 @@ import {
 } from "../../support/testids.ts";
 import type { Side } from "../../support/types.ts";
 import { ensureSeat } from "../../support/hotseat.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 const SEED = seedFor("03-sheep-19");
 
@@ -106,7 +106,7 @@ describe("BUILD M8 03 — a trap fires on the other player's turn; a face-up mod
           cy.get(ts(graveyardCountId("opponent"))).should("have.text", "1");
 
           // R118 resumes player 1's turn: the one mana left plays the next Unit.
-          cy.get(ts(END_TURN)).should("not.be.disabled");
+          cy.get(ts(gameTestid.endTurn)).should("not.be.disabled");
           cy.playByName(LATER_PLAY, { zone: { side: "you", row: "units", lane: 3 } });
           cy.fieldCardByName(LATER_PLAY).should("exist");
 

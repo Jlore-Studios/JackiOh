@@ -11,29 +11,9 @@
 import { ROOM_CODE_LENGTH } from "../../../apps/web/src/wire/serverConfig.ts";
 import { accounts, apiUrl, bearerHeaders, routes, timeouts, type E2EAccount } from "../../support/config.ts";
 import { DuosSocket, duosPath, endLiveDuos, type Frame } from "../../support/duos.ts";
-import {
-  DUOS_BOARD,
-  DUOS_CONCEDE,
-  DUOS_CONCEDE_STATUS,
-  DUOS_RESULT,
-  DUOS_RESULT_AGAIN,
-  DUOS_TEAMMATE_STRIP,
-  LOBBY_CODE,
-  LOBBY_COUNTDOWN,
-  LOBBY_CREATE_2V2,
-  LOBBY_DECK_SELECT,
-  LOBBY_MOVE,
-  LOBBY_PANEL,
-  LOBBY_READY,
-  LOBBY_SEAT,
-  LOBBY_SETTINGS,
-  LOBBY_START,
-  LOBBY_TEAM,
-  PLAY_LOBBY,
-  PLAY_LOBBY_DIALOG,
-  heroId,
-  ts,
-} from "../../support/testids.ts";
+import { PLAY_LOBBY, PLAY_LOBBY_DIALOG, heroId, ts } from "../../support/testids.ts";
+import { duosTestid } from "../../../apps/web/src/duos/testids.ts";
+import { lobbyTestid } from "../../../apps/web/src/lobby/testids.ts";
 
 /** `GET /api/lobbies/:code`, as far as this spec reads it (apps/web/src/lobby/api.ts's `LobbyView`). */
 type LobbyBody = {
@@ -77,7 +57,7 @@ function expectSeated(
       if (seat.player !== null) names[seat.player.profileId] = seat.player.username;
       const role = ROLES.find((each) => each === seat.role);
       if (role === undefined) continue;
-      cy.get(`${ts(LOBBY_TEAM)}[data-team="${teamOf(role)}"] ${ts(LOBBY_SEAT)}[data-seat="${role}"]`, { timeout: timeouts.view }).should(
+      cy.get(`${ts(lobbyTestid.team)}[data-team="${teamOf(role)}"] ${ts(lobbyTestid.seat)}[data-seat="${role}"]`, { timeout: timeouts.view }).should(
         "contain.text",
         seat.player?.username ?? "",
       );
@@ -115,20 +95,20 @@ describe("55 2v2 lobby — four people in two teams from Create to the board", (
     cy.visitAs(host, routes.play());
     cy.get(ts(PLAY_LOBBY), { timeout: timeouts.view }).should("not.be.disabled").click();
     cy.get(ts(PLAY_LOBBY_DIALOG), { timeout: timeouts.view }).should("be.visible");
-    cy.get(`${ts(LOBBY_PANEL)}[data-format="coop"]`, { timeout: timeouts.view })
-      .find(ts(LOBBY_CREATE_2V2))
+    cy.get(`${ts(lobbyTestid.panel)}[data-format="coop"]`, { timeout: timeouts.view })
+      .find(ts(lobbyTestid.create2v2))
       .should("not.be.disabled")
       .click();
     cy.location("pathname", { timeout: timeouts.view }).should("match", /^\/lobby\/[^/]+$/);
-    cy.get(ts(LOBBY_CODE), { timeout: timeouts.view })
+    cy.get(ts(lobbyTestid.code), { timeout: timeouts.view })
       .invoke("text")
       .then((text) => {
         code = text.trim();
         expect(code, `a lobby's code is ${String(ROOM_CODE_LENGTH)} characters`).to.have.length(ROOM_CODE_LENGTH);
       });
-    cy.get(ts(LOBBY_SETTINGS)).should("contain.text", "2v2");
-    cy.get(ts(LOBBY_TEAM)).should("have.length", 2);
-    cy.get(`${ts(LOBBY_TEAM)}[data-team="1"] ${ts(LOBBY_SEAT)}[data-seat="host"]`).should("have.attr", "data-you", "true");
+    cy.get(ts(lobbyTestid.settings)).should("contain.text", "2v2");
+    cy.get(ts(lobbyTestid.team)).should("have.length", 2);
+    cy.get(`${ts(lobbyTestid.team)}[data-team="1"] ${ts(lobbyTestid.seat)}[data-seat="host"]`).should("have.attr", "data-you", "true");
 
     // R3731000: an entrant takes the first empty seat in order. The second switches team, keeping their
     // pick, to the other team's empty seat, and the fourth takes the one the second left.
@@ -147,11 +127,11 @@ describe("55 2v2 lobby — four people in two teams from Create to the board", (
 
     // R3731000: the host moves the third across; the host's team has no empty seat, so the third swaps with
     // the fourth. The host's screen reads the lobby once the move has landed, and the server's read follows.
-    cy.get(`${ts(LOBBY_SEAT)}[data-seat="guest2"]`).find(ts(LOBBY_MOVE)).should("not.be.disabled").click();
+    cy.get(`${ts(lobbyTestid.seat)}[data-seat="guest2"]`).find(ts(lobbyTestid.move)).should("not.be.disabled").click();
     cy.then(() => {
       const moved = names[profiles[third.email] ?? ""] ?? "";
       expect(moved, "the third's name, as the lobby shows it").to.not.eq("");
-      cy.get(`${ts(LOBBY_TEAM)}[data-team="1"] ${ts(LOBBY_SEAT)}[data-seat="guest"]`, { timeout: timeouts.view }).should("contain.text", moved);
+      cy.get(`${ts(lobbyTestid.team)}[data-team="1"] ${ts(lobbyTestid.seat)}[data-seat="guest"]`, { timeout: timeouts.view }).should("contain.text", moved);
     });
     cy.then(() => {
       expectSeated(code, profiles, names, { host, guest: third, guest2: fourth, guest3: second });
@@ -161,16 +141,16 @@ describe("55 2v2 lobby — four people in two teams from Create to the board", (
     cy.then(() => {
       for (const account of [second, third, fourth]) lobbyPost(account, code, "ready", { ready: true });
     });
-    cy.get(ts(LOBBY_DECK_SELECT), { timeout: timeouts.view }).should("not.be.disabled").select("random");
-    cy.get(ts(LOBBY_READY)).should("not.be.disabled").click();
-    cy.get(ts(LOBBY_READY), { timeout: timeouts.view }).should("have.attr", "data-ready", "true");
+    cy.get(ts(lobbyTestid.deckSelect), { timeout: timeouts.view }).should("not.be.disabled").select("random");
+    cy.get(ts(lobbyTestid.ready)).should("not.be.disabled").click();
+    cy.get(ts(lobbyTestid.ready), { timeout: timeouts.view }).should("have.attr", "data-ready", "true");
     for (const role of ["guest", "guest2", "guest3"]) {
-      cy.get(`${ts(LOBBY_SEAT)}[data-seat="${role}"]`, { timeout: timeouts.view }).should("have.attr", "data-state", "ready");
+      cy.get(`${ts(lobbyTestid.seat)}[data-seat="${role}"]`, { timeout: timeouts.view }).should("have.attr", "data-state", "ready");
     }
 
     // The host's Start lights once all four are ready, and the countdown opens the Duos board.
-    cy.get(ts(LOBBY_START), { timeout: timeouts.view }).should("not.be.disabled").click();
-    cy.get(ts(LOBBY_COUNTDOWN), { timeout: timeouts.view }).should("exist");
+    cy.get(ts(lobbyTestid.start), { timeout: timeouts.view }).should("not.be.disabled").click();
+    cy.get(ts(lobbyTestid.countdown), { timeout: timeouts.view }).should("exist");
     cy.then(() => {
       cy.request<LobbyBody>({ method: "GET", url: apiUrl(`/api/lobbies/${code}`), headers: bearerHeaders(fourth.token) }).then((read) => {
         matchId = read.body.matchId ?? "";
@@ -183,7 +163,7 @@ describe("55 2v2 lobby — four people in two teams from Create to the board", (
 
     // R3731002: the host's board is their own duel, duel 0, from their team's first seat: as its Player 2
     // when the coin made the host's team team B.
-    cy.get(ts(DUOS_BOARD), { timeout: timeouts.view })
+    cy.get(ts(duosTestid.board), { timeout: timeouts.view })
       .should("have.attr", "data-duel", "0")
       .invoke("attr", "data-seat")
       .then((seat) => {
@@ -192,7 +172,7 @@ describe("55 2v2 lobby — four people in two teams from Create to the board", (
       });
     cy.get(ts(heroId("you"))).should("be.visible");
     cy.then(() => {
-      cy.get(ts(DUOS_TEAMMATE_STRIP)).should("have.attr", "data-seat", TEAMMATE[hostSeat] ?? "");
+      cy.get(ts(duosTestid.teammateStrip)).should("have.attr", "data-seat", TEAMMATE[hostSeat] ?? "");
       cy.jackioh().should((handle) => {
         expect(handle.seat, "the host's own duel, from their side").to.eq(hostSeat === "b1" ? "p2" : "p1");
       });
@@ -216,13 +196,13 @@ describe("55 2v2 lobby — four people in two teams from Create to the board", (
 
     // R3731002, R3731003: the host's team concedes, the host offering in the browser and the third agreeing;
     // the other team wins, and a 2v2 offers no Play again.
-    cy.get(ts(DUOS_CONCEDE), { timeout: timeouts.view }).should("not.be.disabled").click();
-    cy.get(ts(DUOS_CONCEDE_STATUS)).should("exist");
+    cy.get(ts(duosTestid.concede), { timeout: timeouts.view }).should("not.be.disabled").click();
+    cy.get(ts(duosTestid.concedeStatus)).should("exist");
     cy.wrap(teammate, { timeout: timeouts.view }).should((seat) => {
       expect(seat.view?.concedeOfferedBy, "the offer stands on the teammate's view").to.eq(hostSeat);
     });
     cy.then(() => cy.wrap(teammate.act({ kind: "concede" }), { timeout: timeouts.view }));
-    cy.get(ts(DUOS_RESULT), { timeout: timeouts.view }).should("have.attr", "data-outcome", "loss");
+    cy.get(ts(duosTestid.result), { timeout: timeouts.view }).should("have.attr", "data-outcome", "loss");
     cy.wrap(across, { timeout: timeouts.view }).should((seat) => {
       expect(seat.view?.result?.reason, "the game ends by concede").to.eq("concede");
       expect(seat.view?.result?.winner, "and the other team wins").to.eq(hostSeat.startsWith("a") ? "b" : "a");
@@ -236,7 +216,7 @@ describe("55 2v2 lobby — four people in two teams from Create to the board", (
         .its("body.unavailable")
         .should("eq", true);
     });
-    cy.get(ts(DUOS_RESULT_AGAIN)).should("not.exist");
+    cy.get(ts(duosTestid.resultAgain)).should("not.exist");
     cy.then(() => {
       teammate.close();
       across.close();

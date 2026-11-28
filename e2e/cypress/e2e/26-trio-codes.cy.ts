@@ -6,6 +6,7 @@
 import { MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "../../../apps/web/src/wire/serverConfig.ts";
 import { INSTALLED_DECK_NAMES, INSTALLED_TRIO_NAME, mintId, type InstalledLoadout } from "../../support/commands.ts";
 import { accounts, apiUrl, bearerHeaders, constants, routes, timeouts, type E2EAccount } from "../../support/config.ts";
+import { deckRowId, trioImportSlotId, trioRowId, ts } from "../../support/testids.ts";
 import {
   DECK_LIST,
   TRIO_CODE_OUTPUT,
@@ -21,11 +22,7 @@ import {
   TRIO_NAME_INPUT,
   TRIO_VERDICT,
   WORKSHOP,
-  deckRowId,
-  trioImportSlotId,
-  trioRowId,
-  ts,
-} from "../../support/testids.ts";
+} from "../../../apps/web/src/game/deckbuilder/testids.ts";
 
 const DECK_SIZE = constants.DECK_SIZE;
 

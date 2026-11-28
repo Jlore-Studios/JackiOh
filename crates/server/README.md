@@ -1028,10 +1028,10 @@ series still makes its picks.
   its answer lands (`MatchActor::on_rematch_offer`, told by `api/rematch.rs`'s `offer_as` through
   `Registry::get`); its offers go through the route's own path (`offer_for_bot`). A rematch with a bot claims it in one statement (`bots_claim_for_rematch`: free
   and not retired, whatever its schedule) and lets it go if the start fails.
-- `jackioh_shared::bots::persona` is the port of the practice AI's personas (`apps/web/src/practice/personas.ts`,
-  which stays for practice), its tables `config.rs`'s `AI_PERSONAS` and `AI_EMOTE`, drawing as the
-  web's does on its own stream (`{seed}:bot-persona:{home}`) and within the bot seat's dealt hand
-  (R645, R1344). A ladder bot is dealt its persona by `BOT_PERSONA_WEIGHTS` (`pick_bot_persona`) and
+- `jackioh_shared::bots::persona` is the AI's personas, the ladder bots' and the practice page's alike
+  (the page rolls them through the module's `bots`, R5269000), its tables `config.rs`'s `AI_PERSONAS`
+  and `AI_EMOTE`, drawing on its own stream (`{seed}:bot-persona:{home}`) and within the bot seat's
+  dealt hand (R645, R1344). A ladder bot is dealt its persona by `BOT_PERSONA_WEIGHTS` (`pick_bot_persona`) and
   waits out its emotes inside `BOT_EMOTE_DELAY_FIT` and `BOT_EMOTE_REPLY_DELAY_FIT`
   (`EmotePersona::with_delays`), the rows `timing-fit` refits; the caps and R643's rate limit are
   unchanged (R639000).

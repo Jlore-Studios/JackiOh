@@ -12,6 +12,8 @@ import {
   CARD_EFFECT_DELAY_MS,
   CARD_HOOK_NAMES,
   CARD_HOOKS,
+  CENSUS_SOUND_FLOOR,
+  CENSUS_VOICE_CEILING,
   CHAOS_REVEAL_MAX,
   CLOCK_ALARM_BEAT_MS,
   CLOCK_ALARM_FROM_MS,
@@ -21,6 +23,7 @@ import {
   CLOCK_ALARM_SHARP_FROM_MS,
   DEATH_VOICE_DELAY_MS,
   EFFECT_PITCH_JITTER,
+  EFFECT_SEQUENCE_GAP_MS,
   FLUSH_GAP_MS,
   FLUSH_MAX_SFX,
   GAIN_SMOOTHING_S,
@@ -58,6 +61,7 @@ import {
   PLAY_STACK_MAX,
   QUIET_SFX_GAIN,
   RAPID_SFX,
+  RECURRING_HOOKS,
   REVERB_CHANNELS,
   REVERB_DECAY_POWER,
   REVERB_SECONDS,
@@ -66,10 +70,12 @@ import {
   REVERB_VOICE_SEND,
   RIFFLE_SOUND_DELAY_MS,
   SCHEDULED_SFX,
+  SOUND_TABLES_GZIP_BUDGET_BYTES,
   SFX_MAX_VOICES,
   SFX_RETRIGGER_MS,
   SFX_VOICE_DUCK_GAIN,
   STING_DELAY_MS,
+  TRIGGER_LINE_CHANCE,
   UI_HOVER_THROTTLE_MS,
   VOICE_BUDGET_BYTES,
   VOICE_DECODED_MAX,
@@ -78,6 +84,7 @@ import {
   VOICE_FILE_MAX_MS,
   VOICE_LATE_MS,
   VOICE_MAX_WORDS,
+  VOICE_NEW_LINE_MAX_WORDS,
   VOICE_PREVIEW_DEF_ID,
   VOICE_PREFETCH_CONCURRENCY,
   VOICE_PREFETCH_DELAY_MS,
@@ -93,12 +100,38 @@ import {
 
 describe("audio constants", () => {
   it("names the card hooks in card-audio.json5 order, with the kinds each may carry", () => {
-    expect(CARD_HOOK_NAMES).toEqual(["play", "attack", "death", "cast", "trigger"]);
+    expect(CARD_HOOK_NAMES).toEqual([
+      "play",
+      "attack",
+      "death",
+      "cast",
+      "trigger",
+      "startOfTurn",
+      "endOfTurn",
+      "whenever",
+      "activate",
+      "hurt",
+      "hit",
+    ]);
     expect(CARD_HOOKS.play).toEqual({ kinds: ["unit"] });
     expect(CARD_HOOKS.attack).toEqual({ kinds: ["unit"] });
     expect(CARD_HOOKS.death).toEqual({ kinds: ["unit"] });
     expect(CARD_HOOKS.cast).toEqual({ kinds: ["spell", "trap"] });
     expect(CARD_HOOKS.trigger).toEqual({ kinds: ["spell", "trap", "unit"] });
+    // R5188000: the recurring hooks, a Unit's hurt alone kept to Units.
+    for (const hook of ["startOfTurn", "endOfTurn", "whenever", "activate", "hit"] as const) {
+      expect(CARD_HOOKS[hook], hook).toEqual({ kinds: ["unit", "spell", "trap"] });
+    }
+    expect(CARD_HOOKS.hurt).toEqual({ kinds: ["unit"] });
+  });
+
+  it("R5188000 pins the recurring rule's constants", () => {
+    expect([...RECURRING_HOOKS]).toEqual(["startOfTurn", "endOfTurn", "whenever", "activate", "hurt", "hit"]);
+    expect(TRIGGER_LINE_CHANCE).toBe(1 / 3);
+    expect(EFFECT_SEQUENCE_GAP_MS).toBe(60);
+    // R204's lowest: level with a summon's line, below every line that may cut in.
+    expect(VOICE_PRIORITY.recurring).toBe(0);
+    expect(Math.min(...Object.values(VOICE_PRIORITY))).toBe(VOICE_PRIORITY.recurring);
   });
 
   it("pins the store key, the log cap and the voice concurrency guards", () => {
@@ -111,7 +144,7 @@ describe("audio constants", () => {
   });
 
   it("R655 ranks a pickup over every other line, and caps the queue behind the channel", () => {
-    expect(VOICE_PRIORITY).toEqual({ summon: 0, play: 1, react: 2, pickup: 3 });
+    expect(VOICE_PRIORITY).toEqual({ recurring: 0, summon: 0, play: 1, react: 2, pickup: 3 });
     expect(VOICE_QUEUE_MAX).toBe(2);
     expect(VOICE_QUEUE_WAIT_MS).toBe(1500);
     expect(VOICE_FADE_S).toBe(0.04);
@@ -148,9 +181,28 @@ describe("audio constants", () => {
   });
 
   it("pins the voice budget R501 caps and the per-hook word caps", () => {
-    expect(VOICE_BUDGET_BYTES).toBe(24 * 1024 * 1024);
+    expect(VOICE_BUDGET_BYTES).toBe(32 * 1024 * 1024);
     expect(VOICE_FILE_MAX_MS).toBe(4000);
-    expect(VOICE_MAX_WORDS).toEqual({ play: 8, attack: 4, death: 6, cast: 8, trigger: 8 });
+    expect(VOICE_MAX_WORDS).toEqual({
+      play: 8,
+      attack: 4,
+      death: 6,
+      cast: 8,
+      trigger: 8,
+      startOfTurn: 4,
+      endOfTurn: 4,
+      whenever: 4,
+      activate: 4,
+      hurt: 4,
+      hit: 4,
+    });
+  });
+
+  it("R5188001 pins the new lines' word cap, the tables' gzip cap and the census's floors and ceilings", () => {
+    expect(VOICE_NEW_LINE_MAX_WORDS).toBe(4);
+    expect(SOUND_TABLES_GZIP_BUDGET_BYTES).toBe(18 * 8192);
+    expect(CENSUS_SOUND_FLOOR).toEqual({ Token: 1, Common: 2, Rare: 3, Epic: 4, Legendary: 5, Mythic: 6 });
+    expect(CENSUS_VOICE_CEILING).toEqual({ Token: 0, Common: 1, Rare: 1, Epic: 2, Legendary: 3, Mythic: 4 });
   });
 
   it("pins the def ids the web reaches no engine module for", () => {

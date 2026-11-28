@@ -5,8 +5,8 @@
 // The AI is Rust (`crates/ai`), compiled into the WebAssembly module with the engine; `decide`,
 // `aiToAct` and `buildAiDeck` below call it through `../wasm`. Its budgets and its shadow ban are the
 // Rust AI's own values, read from the module once it is loaded (so the client never restates them,
-// CLAUDE.md rule 9), and so are its deck builder's numbers (`AI_DECK`). The emote personas (R645) are presentation, not play, and stay TypeScript:
-// `../practice/personas.ts`, re-exported here so `practice/emotes.ts` reads them as it did.
+// CLAUDE.md rule 9), and so are its deck builder's numbers (`AI_DECK`). The emote personas (R645) are
+// `jackioh-shared`'s, which `practice/emotes.ts` calls through the module's `bots` (R5269000).
 //
 // STREAMS. TypeScript's AI drew from an `Rng` object the caller held. The Rust AI draws from the
 // stream rebuilt from that object's `(seed, cursor)` and hands back the cursor it stopped at; each
@@ -32,14 +32,6 @@ import { advanceTo, type Rng } from "./rng.ts";
 import type { AiDeckConstants } from "../wasm/index.ts";
 import type { GameState } from "./generated/GameState.ts";
 import type { ActionBody, PlayerId, SetName } from "./index.ts";
-
-export {
-  AI_EMOTE,
-  createEmotePersona,
-  pickPersona,
-  type AiEmote,
-  type EmotePersona,
-} from "../practice/personas.ts";
 
 // ---------------------------------------------------------------------------------------------
 // the AI's types (the Rust AI's `SearchBudget`, `Decision` and friends, as JSON)

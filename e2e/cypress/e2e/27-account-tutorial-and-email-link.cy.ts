@@ -2,13 +2,14 @@
 // Progress only grows, so each test records a newer Show choice and asserts containment.
 
 import { accounts, server, timeouts, TUTORIAL_PROGRESS_VERSION } from "../../support/config.ts";
-import { TUTORIAL_HIDE, TUTORIAL_PATH, TUTORIAL_PATH_HIDDEN, TUTORIAL_SHOW, ts, tutorialLessonId } from "../../support/testids.ts";
+import { ts, tutorialLessonId } from "../../support/testids.ts";
 import { loginTestid } from "../../../apps/web/src/auth/testids.ts";
 
 const LOGIN_CONFIRMED = loginTestid.confirmed;
 const LOGIN_LINK_ERROR = loginTestid.linkError;
 import type { TutorialData } from "../../support/tasks/lessons.ts";
 import { PRACTICE_PATH, TUTORIAL_BOOT_TIMEOUT, storedProgress, visitTutorial } from "../../support/tutorial.ts";
+import { tutorialTestid } from "../../../apps/web/src/tutorial/testids.ts";
 
 /** `TutorialProgressView` response from `crates/server/src/api/tutorial.rs`. */
 type AccountProgress = { completed: string[]; hiddenChoice: { hidden: boolean; at: number } | null };
@@ -106,31 +107,31 @@ describe("27 — the tutorial kept on the account (R320–R322)", () => {
   it("Hide tutorial follows the account to a fresh device, and Show brings the path back everywhere", () => {
     spyOnTheAccount();
     visitPractice(null);
-    cy.get(ts(TUTORIAL_PATH), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
+    cy.get(ts(tutorialTestid.path), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
     cy.wait("@load", { timeout: SYNC_TIMEOUT });
-    cy.get(ts(TUTORIAL_HIDE)).should("be.visible").click();
+    cy.get(ts(tutorialTestid.hide)).should("be.visible").click();
 
     // R322: one focused Show button replaces the path.
-    cy.get(ts(TUTORIAL_PATH)).should("not.exist");
-    cy.get(ts(TUTORIAL_PATH_HIDDEN)).should("be.visible");
-    cy.get(ts(TUTORIAL_SHOW)).should("be.focused").and("contain.text", "Show tutorial");
+    cy.get(ts(tutorialTestid.path)).should("not.exist");
+    cy.get(ts(tutorialTestid.hidden)).should("be.visible");
+    cy.get(ts(tutorialTestid.show)).should("be.focused").and("contain.text", "Show tutorial");
     cy.wait("@save", { timeout: SYNC_TIMEOUT }).its("request.body.hiddenChoice.hidden").should("eq", true);
     readAccount().its("hiddenChoice.hidden").should("eq", true);
 
     visitPractice(null);
     cy.wait("@load", { timeout: SYNC_TIMEOUT });
-    cy.get(ts(TUTORIAL_PATH_HIDDEN), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
-    cy.get(ts(TUTORIAL_PATH)).should("not.exist");
+    cy.get(ts(tutorialTestid.hidden), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
+    cy.get(ts(tutorialTestid.path)).should("not.exist");
 
-    cy.get(ts(TUTORIAL_SHOW)).click();
-    cy.get(ts(TUTORIAL_PATH)).should("be.visible");
-    cy.get(ts(TUTORIAL_HIDE)).should("be.focused");
+    cy.get(ts(tutorialTestid.show)).click();
+    cy.get(ts(tutorialTestid.path)).should("be.visible");
+    cy.get(ts(tutorialTestid.hide)).should("be.focused");
     cy.wait("@save", { timeout: SYNC_TIMEOUT }).its("request.body.hiddenChoice.hidden").should("eq", false);
     readAccount().its("hiddenChoice.hidden").should("eq", false);
 
     visitPractice(null);
-    cy.get(ts(TUTORIAL_PATH), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
-    cy.get(ts(TUTORIAL_PATH_HIDDEN)).should("not.exist");
+    cy.get(ts(tutorialTestid.path), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("be.visible");
+    cy.get(ts(tutorialTestid.hidden)).should("not.exist");
   });
 
   it("on a phone, Hide and Show are full-size touch targets and the hidden path scrolls nothing sideways", () => {
@@ -138,13 +139,13 @@ describe("27 — the tutorial kept on the account (R320–R322)", () => {
     spyOnTheAccount();
     visitPractice(null);
     cy.wait("@load", { timeout: SYNC_TIMEOUT });
-    cy.get(ts(TUTORIAL_HIDE), { timeout: TUTORIAL_BOOT_TIMEOUT })
+    cy.get(ts(tutorialTestid.hide), { timeout: TUTORIAL_BOOT_TIMEOUT })
       .should("be.visible")
       .then(($hide) => {
         expect($hide[0]?.getBoundingClientRect().height ?? 0, "Hide is a 44px touch target").to.be.at.least(TOUCH_TARGET_PX);
       })
       .click();
-    cy.get(ts(TUTORIAL_SHOW))
+    cy.get(ts(tutorialTestid.show))
       .should("be.visible")
       .then(($show) => {
         const box = $show[0]?.getBoundingClientRect();
@@ -155,8 +156,8 @@ describe("27 — the tutorial kept on the account (R320–R322)", () => {
       expect(doc.documentElement.scrollWidth, "no horizontal scroll").to.be.at.most(doc.documentElement.clientWidth);
     });
     cy.wait("@save", { timeout: SYNC_TIMEOUT }).its("request.body.hiddenChoice.hidden").should("eq", true);
-    cy.get(ts(TUTORIAL_SHOW)).click();
-    cy.get(ts(TUTORIAL_PATH)).should("be.visible");
+    cy.get(ts(tutorialTestid.show)).click();
+    cy.get(ts(tutorialTestid.path)).should("be.visible");
     cy.wait("@save", { timeout: SYNC_TIMEOUT }).its("request.body.hiddenChoice.hidden").should("eq", false);
   });
 });

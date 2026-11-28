@@ -3,15 +3,7 @@
 // The flow stays generic so lesson content may change if following the coach still wins.
 
 import { TUTORIAL_PROGRESS_KEY, TUTORIAL_PROGRESS_VERSION, timeouts } from "../../support/config.ts";
-import {
-  ACTION_ERROR,
-  COACH,
-  TUTORIAL_HUD,
-  TUTORIAL_NEXT,
-  TUTORIAL_RESULT,
-  TUTORIAL_STEP,
-  ts,
-} from "../../support/testids.ts";
+import { ACTION_ERROR, ts } from "../../support/testids.ts";
 import type { TutorialData } from "../../support/tasks/lessons.ts";
 import {
   TUTORIAL_BOOT_TIMEOUT,
@@ -26,6 +18,7 @@ import {
   type StepCounter,
   type Taken,
 } from "../../support/tutorial.ts";
+import { tutorialTestid } from "../../../apps/web/src/tutorial/testids.ts";
 
 /** Lesson 1, the one every player may start (R294). */
 const LESSON_ID = "basics";
@@ -97,18 +90,18 @@ describe("22 — tutorial lesson 1, played to a win by following the coach (§9.
         onBeforeLoad: installRecorder,
       });
 
-      cy.get(ts(TUTORIAL_HUD), { timeout: TUTORIAL_BOOT_TIMEOUT })
+      cy.get(ts(tutorialTestid.hud), { timeout: TUTORIAL_BOOT_TIMEOUT })
         .should("have.attr", "data-lesson", LESSON_ID)
         .and("have.attr", "data-human-seat", lesson.humanSeat)
         .and("contain.text", `Lesson ${String(lesson.number)}`)
         .and("contain.text", lesson.title);
-      cy.get(ts(COACH), { timeout: TUTORIAL_BOOT_TIMEOUT })
+      cy.get(ts(tutorialTestid.coach), { timeout: TUTORIAL_BOOT_TIMEOUT })
         .should("be.visible")
         .and("have.attr", "data-coach-mode", "step")
         .and("have.attr", "data-coach-dock", "float")
         .and("not.have.attr", "data-stale");
-      cy.get(ts(COACH)).invoke("attr", "data-coach-step").should("be.a", "string").and("not.be.empty");
-      cy.get(ts(TUTORIAL_STEP)).should("contain.text", "Step 1 of");
+      cy.get(ts(tutorialTestid.coach)).invoke("attr", "data-coach-step").should("be.a", "string").and("not.be.empty");
+      cy.get(ts(tutorialTestid.step)).should("contain.text", "Step 1 of");
       tutorialHandle().then((handle) => {
         expect(handle.lessonId).to.eq(LESSON_ID);
         expect(handle.display.mode, "the coach opens on a step").to.eq("step");
@@ -125,11 +118,11 @@ describe("22 — tutorial lesson 1, played to a win by following the coach (§9.
       const run: Run = { counters: [], taken: { ack: 0, coach: 0, fallback: 0 }, playShot: false, outcome: null };
       followCoach(run, MOVE_BUDGET);
 
-      cy.get(ts(TUTORIAL_RESULT), { timeout: timeouts.view })
+      cy.get(ts(tutorialTestid.result), { timeout: timeouts.view })
         .should("be.visible")
         .and("have.attr", "data-outcome", "win")
         .and("have.attr", "data-lesson", LESSON_ID);
-      cy.get(ts(TUTORIAL_NEXT)).should("be.visible");
+      cy.get(ts(tutorialTestid.next)).should("be.visible");
       cy.screenshot("22-tutorial-lesson-one/3-result", { capture: "viewport" });
 
       cy.then(() => {

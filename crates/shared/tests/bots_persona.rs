@@ -1,9 +1,10 @@
 //! Bot persona chatter (SPEC §9.9, §6, R645, R1344, R643).
 
 use jackioh_engine::wire::{EMOTE_COOLDOWN_MS, EMOTE_IDS, EmoteId, GameEvent, PlayerId, PlayerView};
+use jackioh_shared::bots::boundary::{BotAnswer, BotCall, apply};
 use jackioh_shared::bots::persona::{
-    AiEmote, EmotePersona, pick_bot_persona, pick_persona, reply_key_of, roll_delay, roll_for_reply,
-    roll_for_trigger,
+    AiEmote, EmotePersona, PersonaStream, pick_bot_persona, pick_persona, reply_key_of, roll_delay,
+    roll_for_reply, roll_for_trigger,
 };
 use jackioh_shared::config::{
     AI_EMOTE, AI_PERSONAS, BOT_EMOTE_DELAY_FIT, BOT_EMOTE_REPLY_DELAY_FIT, BOT_PERSONA_WEIGHTS,
@@ -1481,4 +1482,115 @@ fn r639000_the_refit_windows_feed_the_rolls_and_the_caps_and_rate_limit_hold() {
             delay_ms: TRIGGER_WINDOW.min_ms,
         }]
     );
+}
+
+// The practice page's persona, through the module (R5269000)
+
+/// The persona and the emotes a persona call answers.
+fn persona_answer(call: BotCall) -> (Box<PersonaStream>, Vec<AiEmote>) {
+    match apply(call) {
+        BotAnswer::Persona { persona, emotes } => (persona, emotes),
+        other => panic!("a persona call answered {other:?}"),
+    }
+}
+
+#[test]
+fn r5269000_the_page_s_persona_is_dealt_by_pick_persona_off_its_own_stream_and_a_lesson_s_is_silent() {
+    let hand = EMOTE_IDS[..8].to_vec();
+    for seed in [
+        "practice-persona:0.1",
+        "practice-persona:0.5",
+        "practice-persona:0.9",
+    ] {
+        let (stream, emotes) = persona_answer(BotCall::DealPersona {
+            seed: seed.to_string(),
+            seat: SEAT,
+            hand: hand.clone(),
+            lesson: false,
+        });
+        let mut rng = jackioh_engine::Rng::new(seed, 0);
+        let dealt = pick_persona(&mut || rng.next());
+        assert_eq!(
+            stream.persona,
+            EmotePersona::new(dealt, SEAT, Some(hand.clone())),
+            "{seed}"
+        );
+        assert_eq!(
+            (stream.seed.as_str(), stream.cursor, emotes),
+            (seed, 1, vec![]),
+            "{seed}"
+        );
+    }
+    let (lesson, _) = persona_answer(BotCall::DealPersona {
+        seed: "practice-persona:0.1".to_string(),
+        seat: SEAT,
+        hand: hand.clone(),
+        lesson: true,
+    });
+    assert_eq!(
+        lesson.persona,
+        EmotePersona::new(PersonaName::Silent, SEAT, Some(hand))
+    );
+    assert_eq!(lesson.cursor, 0, "a lesson's deal draws nothing");
+}
+
+#[test]
+fn r5269000_each_call_rolls_on_the_stream_where_the_last_stopped_as_one_persona_held_natively_does() {
+    let seed = "practice-persona:0.25";
+    let stream = PersonaStream {
+        persona: EmotePersona::new(PersonaName::Bm, SEAT, None),
+        seed: seed.to_string(),
+        cursor: 0,
+    };
+    let mut native = stream.persona.clone();
+    let mut rng = jackioh_engine::Rng::new(seed, 0);
+
+    // The page holds the persona as JSON between calls, as the module hands it back.
+    let through_json = |stream: Box<PersonaStream>| -> Box<PersonaStream> {
+        serde_json::from_value(serde_json::to_value(&stream).expect("a persona serializes"))
+            .expect("a persona reads back")
+    };
+    let (stream, greeting) = persona_answer(BotCall::PersonaEvents {
+        persona: Box::new(stream),
+        fresh: vec![],
+        prev: Some(Box::new(mulligan_view())),
+        view: Box::new(turn_view(FOE, 1)),
+        now: 1_000,
+    });
+    assert_eq!(
+        greeting,
+        native.on_events(
+            &mut || rng.next(),
+            &[],
+            Some(&mulligan_view()),
+            &turn_view(FOE, 1),
+            1_000
+        )
+    );
+    assert!(!greeting.is_empty(), "bm greets at the mulligan's end");
+    assert_eq!(
+        stream.cursor,
+        rng.cursor(),
+        "the answer carries where the stream stopped"
+    );
+
+    let (stream, reply) = persona_answer(BotCall::PersonaPlayerEmote {
+        persona: through_json(stream),
+        emote: EmoteId::Greetings,
+        now: 20_000,
+    });
+    assert_eq!(
+        reply,
+        native.on_player_emote(&mut || rng.next(), EmoteId::Greetings, 20_000)
+    );
+    let (stream, long) = persona_answer(BotCall::PersonaTurnLong {
+        persona: through_json(stream),
+        view: Box::new(turn_view(FOE, 2)),
+        now: 90_000,
+    });
+    assert_eq!(
+        long,
+        native.on_player_turn_long(&mut || rng.next(), &turn_view(FOE, 2), 90_000)
+    );
+    assert_eq!((stream.persona, stream.cursor), (native, rng.cursor()));
 }

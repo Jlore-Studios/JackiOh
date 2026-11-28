@@ -8,7 +8,15 @@ import DeckWorkshop from "../../../apps/web/src/game/deckbuilder/DeckWorkshop.ts
 import type { DeckSyncInput, DecksResponse } from "../../../apps/web/src/net/api.ts";
 import { loadWasm } from "../../../apps/web/src/wasm/index.ts";
 import { setShips } from "../../../apps/web/src/wire/catalog.ts";
-import { CARD_POOL, DECK_COUNT, DECK_DRAG_GHOST, DECK_DROP, DECK_EDITOR, WORKSHOP, deckCardId, ts } from "../../support/testids.ts";
+import { deckCardId, ts } from "../../support/testids.ts";
+import {
+  CARD_POOL,
+  DECK_COUNT,
+  DECK_DRAG_GHOST,
+  DECK_DROP,
+  DECK_EDITOR,
+  WORKSHOP,
+} from "../../../apps/web/src/game/deckbuilder/testids.ts";
 
 const DECK_ID = "00000000-0000-4000-8000-000000000001";
 const DECKABLE = Object.values(CATALOG).filter((def) => !def.token && !def.tags.includes("Token") && setShips(def.set));

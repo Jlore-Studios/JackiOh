@@ -8,7 +8,13 @@
 // only: a pull request's `e2e smoke` plays only SMOKE in scripts/shard-specs.mjs, which does not hold 38.
 // Networked: the signed-in routes need `E2E=1 cargo run --release -p jackioh-server`.
 
-import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid } from "../../../apps/web/src/auth/testids.ts";
+import {
+  consentTestid,
+  inviteTestid,
+  landingTestid,
+  loginTestid,
+  resetTestid,
+} from "../../../apps/web/src/auth/testids.ts";
 import { BREAKPOINT_PX } from "../../../apps/web/src/breakpoints.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
@@ -18,19 +24,12 @@ import { expectNoBlockingViolations } from "../../support/a11y.ts";
 import { allCardIds } from "../../support/cards.ts";
 import { MENU_SIZES, accounts, constants, routes, seedFor, timeouts } from "../../support/config.ts";
 import {
-  BOARD,
-  CARD_POOL,
   COLLECTION_SCREEN,
   DEALING,
-  FRIENDS_BUTTON,
-  FRIENDS_PANEL,
   GAME,
   PLAY_HUB,
-  PRACTICE_HUD,
   REPLAYS_ROOT,
   SKELETON,
-  TOGETHER_ROOT,
-  WORKSHOP,
   cardId,
   deckRowId,
   handCardId,
@@ -40,6 +39,9 @@ import {
 } from "../../support/testids.ts";
 import { expectShellNav } from "../../support/shell.ts";
 import type { ActionBody, Lane } from "../../support/types.ts";
+import { CARD_POOL, WORKSHOP } from "../../../apps/web/src/game/deckbuilder/testids.ts";
+import { friendsTestid, togetherTestid } from "../../../apps/web/src/together/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 /** The practice worker loads the engine, the card scripts and the AI before its first answer. */
 const BOOT_TIMEOUT = 60_000;
@@ -222,8 +224,8 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
           // No HUD above the board (#2878): the enemy hero's seat names the AI and the difficulty.
           cy.get(ts(GAME), { timeout: BOOT_TIMEOUT }).should("be.visible");
           cy.get(ts("hero-opponent")).should("contain.text", "AI · Easy");
-          cy.get(ts(PRACTICE_HUD)).should("not.exist");
-          cy.get(ts(BOARD), { timeout: BOOT_TIMEOUT }).should("be.visible");
+          cy.get(ts(practiceTestid.hud)).should("not.exist");
+          cy.get(ts(gameTestid.board), { timeout: BOOT_TIMEOUT }).should("be.visible");
           // The opening mulligan (R265), whose card options are a prompt's.
           cy.get(promptOf("mulligan"), { timeout: BOOT_TIMEOUT }).should("be.visible");
           dealt();
@@ -279,7 +281,7 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
         });
 
         it("/together", () => {
-          checkSignedIn(at("/together"), account(), "/together", TOGETHER_ROOT);
+          checkSignedIn(at("/together"), account(), "/together", togetherTestid.root);
         });
 
         it("/collection", () => {
@@ -347,10 +349,10 @@ describe("38 — axe finds no serious or critical violation on any route (issue 
         it("/play, the friends drawer open (R3728001)", () => {
           cy.visitAs(shellAccount(), routes.play());
           cy.get(ts(PLAY_HUB), { timeout: timeouts.view }).should("be.visible");
-          cy.get(ts(menuShellTestid.nav)).find(ts(FRIENDS_BUTTON), { timeout: timeouts.view }).click();
+          cy.get(ts(menuShellTestid.nav)).find(ts(friendsTestid.button), { timeout: timeouts.view }).click();
           // Checked with the friends list read, never against the skeleton that comes first; the drawer's undo
           // region (R2119000, #3891) is always a status, so the wait is on the skeleton itself.
-          cy.get(ts(FRIENDS_PANEL), { timeout: timeouts.view }).should("be.visible").find(ts(SKELETON)).should("not.exist");
+          cy.get(ts(friendsTestid.panel), { timeout: timeouts.view }).should("be.visible").find(ts(SKELETON)).should("not.exist");
           expectNoBlockingViolations(at("/play friends drawer"));
         });
       });

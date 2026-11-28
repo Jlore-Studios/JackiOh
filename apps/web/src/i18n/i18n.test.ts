@@ -14,6 +14,7 @@ import { SERIES_WINS_NEEDED } from "@jackioh/server-config";
 import { faceModel } from "../cards/model.ts";
 import { drawnInChinese } from "../cards/chinese.ts";
 import { CardDetail } from "../cards/inspect/CardDetail.tsx";
+import { LINE_LABELS } from "../cards/inspect/VoicePreview.tsx";
 import { conquestText } from "../routes/conquestCopy.ts";
 import { Flavour, showsEasterEgg } from "../cards/inspect/Flavour.tsx";
 import { ANOMALIES } from "../cards/anomalies.ts";
@@ -337,6 +338,7 @@ describe("R711000 internationalisation and reader language", () => {
       fed.push({ table: "CARD_SETTINGS_FIELDS", value: field.description });
     }
     for (const option of BOARD_NAMES_OPTIONS) fed.push({ table: "boardNames", value: option.label });
+    for (const label of Object.values(LINE_LABELS)) fed.push({ table: "LINE_LABELS", value: label });
     fed.push({ table: "CardList", value: DEFAULT_ORDER });
     // The Infinite Assault's content (`crates/run/src/assault.json`) reaches `t()` only as variables: the ladder's,
     // briefing's and fight's enemy (a Commander level's is the Commander's name), each doctrine's name and line.
