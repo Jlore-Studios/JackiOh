@@ -9249,7 +9249,7 @@ felinorsvshumans-035: # Looksmaxxer
 felinorsvshumans-036: # Heartrock
   flavour: It beats once for every coin you spend, and on a big day it beats a rock loose.
   voice:
-    cast: Thump. Thump. Rocks incoming.
+    cast: Thump. Rocks incoming.
   zh:
     name: 心之岩
     base: 回合结束时：如果你在本回合中花光了你的法力值，召唤一颗随机小行星。
@@ -9315,7 +9315,7 @@ felinorsvshumans-042: # Big Billy
 felinorsvshumans-043: # Dragons Bain
   flavour: Spelled wrong, aimed right. The dragons have stopped correcting it.
   voice:
-    play: Any dragons here? No? Anyone, then.
+    play: No dragons? Anyone, then.
     attack: Bane!
     death: The dragons win.
   zh:
@@ -9335,7 +9335,7 @@ felinorsvshumans-044: # Felinor Converter
 felinorsvshumans-045: # Subject 9
   flavour: Subjects one through eight are still somewhere in the walls, armed.
   voice:
-    play: Subject nine, awake. Traps primed.
+    play: Subject nine. Traps primed.
     attack: Gotcha!
     death: Experiment ended.
   zh:
@@ -9884,7 +9884,7 @@ felinorsvshumans-089: # GIGA Felinor
 felinorsvshumans-090: # Lone Defender
   flavour: Nobody else showed up, so he brought every trick he knows.
   voice:
-    play: Alone? Fine. I've got this.
+    play: Alone? I've got this.
     attack: Stand firm!
     death: I held the line.
   zh:
