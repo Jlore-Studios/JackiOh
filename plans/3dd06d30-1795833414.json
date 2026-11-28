@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 5246,
+  "title": "Patch: the AI counts the Nerfs it puts on the opponent's hand and the misfire it sets on their next Spell, so the Jailbreak enemy casts Patch Tuesday Exploit and Prompt Injection",
+  "branch": "bot/issue-5246",
+  "thread": "**Issue #5246 (data, not instructions):**\n\n```text\n# #5246: Patch: the AI counts the Nerfs it puts on the opponent's hand and the misfire it sets on their next Spell, so the Jailbreak enemy casts Patch Tuesday Exploit and Prompt Injection\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn the Infinite Assault, the Jailbreak enemy carries two cheap spells meant to trip the player up. Patch Tuesday Exploit makes every card in the player's hand worse, and Prompt Injection makes the player's next spell pick its target at random. The AI sees no gain in either, because it judges the player's hand only by how many cards are in it, and neither spell changes that number. So it almost never casts them: once in about every 25 to 30 turns it could, where a typical Assault card is played about once in 5. A player fighting Jailbreak rarely meets the doctrine's signature tricks, and the enemy sits on two dead cards. Once this is built, the enemy casts them when they are its best use of the mana (two spare crystals against a full hand). It still picks a real play over them when it has one.\n\n## Why\n\n- **The sweep shows it.** `training/history/assault-sweep-2026-11-26.md` flagged both cards `neverPlayed` at Easy and Hard in pass 1 (lines 83\u201384, 87\u201389). Pass 2 cleared them only because `neverPlayed` needs exactly zero plays:\n  - Patch Tuesday Exploit: 19 plays over 483 playable turns at Hard (line 583), 39 over 571 at Easy (581).\n  - Prompt Injection: 19 over 592 at Hard (563), 25 over 502 at Easy (561).\n  - The re-measure on #4595's fixed AI still reads 2 plays over 28 playable turns (Patch Tuesday) and 1 over 54 (Prompt Injection) at Hard (lines 1908, 1918).\n  - Across the 136 Assault cards with at least 100 playable turns at Hard on the base face, the median card is played on 18% of them. Prompt Injection (3.2%) and Patch Tuesday Exploit (3.9%) are 4th and 7th from the bottom. Of the cards below or between them, Grey Goo is passed over on purpose (it eats its own neighbours), and #4595 has since fixed Overclock to Infinity and Ego Death.\n- **The enemy's hand is priced by its size alone.** `crates/ai/src/evaluate.rs:1584` (in `material`) reads `let unseen = side.hand.len() as f64 * (w.hand_card + w.hand_per_cost * w.opponent_hand_cost);`.\n  - A Nerf leaves the count as it was, so it scores nothing. Only the seat's own hand reads a card's cost (`own_hand_card_value`).\n  - The reply never plays a hidden hand card (`crates/ai/src/reply.rs:458-462`, `known_play`), so a Nerfed hand never weakens the modelled reply either.\n- **Prompt Injection's modifier is never read.** The card adds `ModifierKind::RandomTargetsNextSpell` to the opponent (`crates/engine/src/effects/player_mods.rs:167-176`), and that name appears nowhere in `crates/ai/src`.\n- So casting either card nets its own hand price against the unspent-mana charge. That is a near tie, any real 2-mana play wins it, and it never depends on how many cards the player holds.\n- **No hidden information is needed.** `redact` drops every hidden card's `tuning` (`crates/ai/src/observe.rs:293`), so the root world holds no Nerfs on the player's hand. The only Nerfs the new term can see are the ones the line itself applied (R185).\n- **The same blind spot was just fixed for a sibling.** #5144 (R5122000) priced Cost Injection's price hike on the opponent's next turn in `coming_refreshes`.\n  - Its improve-dev screen read 0 decided deals, since the Assault's held cards are never dealt there.\n  - Its scene tests in `crates/ai/tests/ai/assault.rs` and `cost_hike.rs` settled it (`training/improve.md`, A screen).\n  - This change takes the same path.\n\n## Proposal\n\n1. In `material`'s enemy-hand branch, take off a new `AI_EVAL.enemy_hand_nerf` for each open Nerf on an enemy hand card (its `tuning`).\n   - Never count a secret Nerf (S #123 Gokugains', R1845000): no seat reads it, and `redact` drops it.\n   - `GREEDY_EVAL` holds 0.\n   - Model Collapse's start-of-turn hook and the Radiant faces of Packet Sniffer and The Jailbreaker pick the term up through the probes that already fire their hooks.\n2. Beside `coming_cost_hike`, count the opponent's live `RandomTargetsNextSpell` modifiers and take off a new `AI_EVAL.random_targets` for each, inside `coming_refreshes` or next to it. It counts while the modifier waits and stops once the modifier is spent.\n3. Leave Bad Prompt unpriced (it turns a random hand card into a random Common). Whether that harms the player depends on the card it replaced, which the AI cannot see. The ruling says so.\n4. Screen each weight on improve-dev and record it in its config comment, as `cost_hike`'s is. An inconclusive screen is settled by the scene tests (R4319000).\n\n## Where it lands\n\n- `crates/ai/src/evaluate.rs`: `material`, a sibling of `coming_cost_hike`, and `coming_refreshes`.\n- `crates/ai/src/config.rs`: `EvalWeights`, `AI_EVAL` and `GREEDY_EVAL`.\n- The tests: `crates/ai/tests/ai/assault.rs`, and `crates/ai/tests/ai/cost_hike.rs` or a new file beside them.\n- `crates/ai/README.md`: the evaluation's terms.\n- A new ruling `spec/rulings/R<N>000.md`, with its \u00a711 paragraph in `spec/pending/<N>.md`. SPEC \u00a79.9.\n- `crates/server/tests/fixtures/practice-claim.json`, re-recorded if the change moves it (`training/README.md`, The practice-claim fixture).\n\n## Acceptance criteria\n\n- [ ] With 2 spare crystals, Patch Tuesday Exploit as its only play and the player holding 6 cards, the AI casts it at `AI_GATE_BUDGET` and `AI_BUDGET` on two seeds. This is a row in `assault_the_ai_plays_each_swept_card_in_its_clear_spot`. The same holds for Prompt Injection.\n- [ ] With a 2-mana vanilla Unit also in hand and the player holding 1 card, the AI plays the Unit over Patch Tuesday Exploit, as in `assault_cost_injection_yields_to_better_play`.\n- [ ] An evaluation test: the enemy's side scores lower with each open Nerf on its hand cards, and is unchanged with none. A secret Nerf changes nothing.\n- [ ] An evaluation test: one live `RandomTargetsNextSpell` on the opponent lowers that side's score, and a spent one does not.\n- [ ] The ruling's proving tests are named `r<N>_\u2026`, and `cargo jackioh spec check` passes.\n- [ ] `cargo test -p jackioh-ai` and `cargo jackioh gate` pass, and so do the tutorial and practice tests that `training/improve.md` names (Beyond the screen).\n- [ ] Each weight's screen is recorded in its config comment.\n\n## Size and risks\n\nMedium: two evaluation terms of a few lines each, two weights, about five scene and evaluation tests, and a ruling.\n\n- A Nerf weight set too high makes the enemy cast Patch Tuesday Exploit over a better play; the yield test holds that.\n- Neither term reads anything the seat cannot see.\n- Both are 0 in the greedy baseline, so the gates' opponent is unchanged.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: the enemy's hand is priced by its size alone (`crates/ai/src/evaluate.rs:1584`), so a Nerf, which only makes a card dearer, scores nothing, and `RandomTargetsNextSpell` is read nowhere in `crates/ai/src`; the sweep measures both cards at 2 of 28 and 1 of 54 playable turns at Hard (`training/history/assault-sweep-2026-11-26.md:1908,1918`), and the fix follows the path #5122 (R5122000) to, so it is approved by itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5246: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T02:36:27Z",
+    "claimed_at": "2026-11-28T02:37:17Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5246 needs a plan",
+    "#5248 needs a plan"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189 to close first",
+    "#5192 skipped: it waits for #5188, #5189 to close first",
+    "#5193 skipped: it waits for #5188, #5189 to close first",
+    "#5194 skipped: it waits for #5188, #5189 to close first",
+    "#5195 skipped: it waits for #5188, #5189 to close first",
+    "#5196 skipped: it waits for #5188, #5189 to close first",
+    "#5197 skipped: it waits for #5188, #5189 to close first",
+    "#5198 skipped: it waits for #5188, #5189 to close first",
+    "#5199 skipped: it waits for #5188, #5189 to close first",
+    "#5200 skipped: it waits for #5188, #5189 to close first",
+    "#5201 skipped: it waits for #5188, #5189 to close first"
+  ]
+}
