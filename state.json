@@ -21107,24 +21107,25 @@
         "reason": "planned on sonnet",
         "trail": "h\\\\|fn burning_at\\\" crates/ai/src/evaluate.rs; sed -n \\\"$(grep -n 'fn afflicted(' crates/ai/src/evaluate.rs | cut -d\u2026\n- Bash: {\"command\": \"grep -n \\\"pub damage\\\" crates/engine/src/state.rs; grep -n \\\"damage\\\" crates/engine/src/layers.rs | head -10; grep -n \\\"mod tests\\\" crates/ai/src/reply.rs crates/ai/src/candidates.rs; se\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5229/.bot-plan.md\", \"content\": \"# Draft plan #5229 (planner notes; final message is the plan)\\n\\n## Findings so far\\n- Engine: `crates/engine/src/affl\u2026\n- Bash: {\"command\": \"sed -n 95,175p crates/engine/tests/rules/fixtures/burn_toxic.rs; sed -n 495,600p crates/engine/tests/rules/burn_toxic.rs; grep -n \\\"pub fn declared_or\\\" -A6 crates/engine/src/params.rs; \u2026\n- Bash: {\"command\": \"grep -rn \\\"r4783001\\\\|R4783001\\\" crates --include=*.rs | cut -c1-170 | head; sed -n 1,60p crates/engine/tests/rules/burn_toxic.rs | head -90; grep -n \\\"ride\\\\|converts_to\\\" crates/engine\u2026\n- Bash: {\"command\": \"sed -n 655,735p crates/engine/tests/rules/burn_toxic.rs; sed -n 1,95p crates/engine/tests/rules/fixtures/burn_toxic.rs | grep -n \\\"const\\\\|fn \\\" \"}\n- Bash: {\"command\": \"sed -n 735,800p crates/engine/tests/rules/burn_toxic.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"EvalWeights {\\\" crates apps --include=*.rs | grep -v \\\"\\\\.\\\\.AI_EVAL\\\\|\\\\.\\\\.GREEDY\\\" | head; grep -rn \\\"splash_trample_read\\\" -l . --include=*.rs --include=*.md --include=*.j\u2026\n- Bash: {\"command\": \"grep -n \\\"pub(crate) fn already_killed\\\" -B3 -A14 crates/engine/src/damage.rs; grep -n \\\"Side {\\\" -r crates/ai/src | head\"}\n- Bash: {\"command\": \"grep -n \\\"fn already_killed\\\" -B3 -A16 crates/engine/src/damage.rs\"}\n- Bash: {\"command\": \"grep -n \\\"blow(\\\\|hero_ticks_added\\\\|side_of(\\\" -r crates/ai/src | grep -v \\\"^\\\\S*:\\\\s*///\\\" | head -30; grep -n \\\"fn front_value\\\" -A60 crates/ai/src/candidates.rs | grep -n \\\"trade_val\u2026\n- Bash: {\"command\": \"cd crates/cards/src/scripts/stinkyscape_plus && for f in c037_scorch c114_reign c151_volcanic_rounds c152_venomous_rounds c111_mace; do echo \\\"== $f\\\"; sed -n 1,40p $f.rs | cut -c1-180; \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5229 && grep -n \\\"pub fn ready_gap\\\" -B12 -A25 crates/ai/src/lethal.rs | cut -c1-200\"}\n- Bash: {\"command\": \"sed -n 263,360p crates/ai/src/lethal.rs | cut -c1-200\"}\n- Bash: {\"command\": \"grep -rn \\\"ready_gap\\\\|gaps(\\\" crates/ai/src --include=*.rs | grep -v \\\"^\\\\S*:\\\\s*//\\\" | cut -c1-170 | head -30\"}\n- Bash: {\"command\": \"sed -n 425,520p crates/ai/src/lethal.rs | cut -c1-190\"}\n- Bash: {\"command\": \"grep -rn \\\"EvalWeights\\\\|GREEDY_EVAL\\\\|_read\\\\b\\\" crates/tools/tests crates/tools/src 2>/dev/null | head -10; grep -rn \\\"GREEDY_EVAL\\\" crates/ai/tests/ai/*.rs | grep \\\"assert\\\" | head -8\u2026\n- Bash: {\"command\": \"sed -n 44,80p training/improve.md | cut -c1-400\"}\n- Bash: {\"command\": \"sed -n 1305,1345p crates/ai/src/candidates.rs; sed -n 1,40p crates/ai/src/candidates.rs\"}\n- Bash: {\"command\": \"grep -n \\\"trade_value\\\\|face_value\\\\|side_of\\\\|blow\\\\|GREEDY_EVAL\\\\|damage_past_taunts\\\\|face_threat\\\" crates/ai/src/baselines.rs | head -20; sed -n 1,30p crates/ai/tests/ai/support.rs |\u2026\n- Bash: {\"command\": \"grep -rn \\\"\\\\\\\"armor\\\\\\\":\\\" crates/ai/tests/ai/*.rs | head -5; grep -n \\\"fn end_turn\\\\|fn attack\\\\|fn card_mut\\\\|fn unit_at\\\\|fn expect_in_zone\\\" crates/engine/src/testkit/*.rs | head\"}\n- Bash: {\"command\": \"git show --stat 82f4ed4c37 | head -40; ls patches 2>/dev/null | head; \"}\n- Bash: {\"command\": \"git show --stat 82f4ed4c37 | sed -n 40,90p; grep -n \\\"AI\\\\b.*fragment\\\\|no fragment\\\\|AI change\\\" docs/issues-and-patches.md | head\"}\n- Bash: {\"command\": \"grep -rn \\\"practice-claim\\\" --include=*.rs --include=*.ts --include=*.md --include=*.sh --include=*.yml . 2>/dev/null | grep -v \\\"^./target\\\\|node_modules\\\" | cut -c1-220 | head -12; gre\u2026\n- Bash: {\"command\": \"sed -n 44,62p training/README.md | cut -c1-500; sed -n 172,186p docs/issues-and-patches.md | cut -c1-500; sed -n 120,140p apps/web/src/practice/claim.test.ts | cut -c1-220\"}\n- Bash: {\"command\": \"grep -rln \\\"R4064001\\\" --include=*.md . 2>/dev/null | grep -v \\\"^./target\\\\|node_modules\\\\|spec/history\\\\|spec/rulings\\\" | head; grep -rn \\\"shadow_ban\\\\|SHADOW_WATCH\\\" crates/ai/src/shad\u2026\n- Bash: {\"command\": \"grep -rn \\\"derive\\\" crates/ai/src/config.rs | sed -n 1,6p; grep -rn \\\"evalHash\\\\|eval_hash\\\\|AI_EVAL)\\\" crates/tools/src --include=*.rs | head -5; grep -n \\\"AI_EVAL\\\" crates/ai/src/lib.r\u2026\n- Bash: {\"command\": \"grep -rn \\\"EvalWeights\\\" crates --include=*.rs -l | grep -v \\\"crates/ai/\\\" | head; sed -n 452,460p crates/ai/src/config.rs; grep -rn \\\"splash_trample\\\\|splashTrample\\\" . --include=*.json\u2026\n- Bash: {\"command\": \"sed -n 1,8p spec/rulings/R4783001.md | cut -c1-400; sed -n 1,8p spec/rulings/R4064001.md | cut -c1-300; grep -n \\\"cards\\\" spec/README.md | sed -n 1,6p | cut -c1-500\"}\n- Bash: {\"command\": \"grep -o \\\"a converted one counts as the Burn or Toxic it adds (\\\\[\\\\[R4064001\\\\]\\\\])\\\\.\\\" spec/09-architecture/9.9-practice-ai.md | wc -l; grep -o \\\"once across its hits, \\\\[\\\\[R4064000\\\u2026\n- Bash: {\"command\": \"grep -n \\\"afflictions\\\\|Burn\\\" crates/engine/README.md | cut -c1-200 | head; grep -n \\\"Burn\\\\|burns\\\" crates/ai/README.md | cut -c1-120 | head -20\"}\n- Bash: {\"command\": \"sed -n 1,40p scripts/worktree.sh | cut -c1-200; ls spec/rulings | grep -c R5229; ls spec/pending\"}\n- Bash: {\"command\": \"grep -n \\\"const \\\\(SCORCH\\\\|MACE\\\\|REIGN\\\\|VOLCANIC\\\\|VENOMOUS\\\\|VANILLA\\\\|BIG\\\\|EIGHT\\\\)\\\" crates/ai/src/candidates.rs; grep -n \\\"close(\\\" crates/ai/src/candidates.rs | head -3; grep -n\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5229/.bot-plan.md\", \"content\": \"# Draft plan #5229 (planner notes; the final message is the plan)\\n\\nStatus: research done, final plan written in the \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 2: it changes the AI's decisions (`blow`, `trade_value`, `face_value` and the Taunt walk in `crates/ai/src`), and rule 1: it adds a public read to the engine's `afflictions.rs`.\"} --> ## Goal The AI counts the Burn and Toxic that a hit adds on top of it\u2026"
       },
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-28T00:44:08Z",
-      "owner_why": "it plans it",
+      "owner": "claude-4",
+      "owner_since": "2026-11-28T01:07:52Z",
+      "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
       "pending_request": false,
       "planned_at": "2026-11-28T01:04:46Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-3",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-3",
+      "provider": "claude-4",
       "queued_at": "2026-11-28T00:42:54Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46089476946",
+      "run_id": "pending:6ccab258-1795828051",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T00:44:08Z",
+      "started_at": "2026-11-28T01:07:52Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -21366,9 +21367,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T01:07:19Z",
+    "at": "2026-11-28T01:07:52Z",
     "url": "",
-    "what": "plan #5228 on claude-4"
+    "what": "plan #5229 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-28T00:50:23Z",
