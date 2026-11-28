@@ -19887,7 +19887,7 @@
     "5164": {
       "action": "plan",
       "asks": [],
-      "failures": 1,
+      "failures": 2,
       "forced": false,
       "handoff": {
         "at": "2026-11-27T23:19:38Z",
