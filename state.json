@@ -45962,7 +45962,8 @@
       "2026-11-28T02:30:33Z,claude-8,ping,before,46098200312,44,2026-11-28T06:50:00Z,,,allowed,85,,"
     ],
     "runs": [
-      "2026-11-28T02:19:21Z,46096854739,claude-8,sonnet+opus,review,5241,medium,approved,,4.8,14,4614,385060,0.4951,39,40,,,0.9,,none,,1"
+      "2026-11-28T02:19:21Z,46096854739,claude-8,sonnet+opus,review,5241,medium,approved,,4.8,14,4614,385060,0.4951,39,40,,,0.9,,none,,1",
+      "2026-11-28T02:30:59Z,46098200312,claude-8,opus+sonnet,review,5240,medium,reviewed,,0.4,10,2538,233381,0.1923,44,44,,,26.2,claude-1,none,,1"
     ]
   },
   "version": 1
