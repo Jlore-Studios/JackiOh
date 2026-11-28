@@ -85,7 +85,8 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // #4602: the foundation's 229, less the 32 that are `none` (tokens and keyword-only cards), so the
     // gallery plays 1033. R4596000: Bastion.exe, which was `none`, boots onto the board now: 1034. #4783:
     // Meltdown, whose only hook left is an attack's, which marks nothing, is `none` (R4783023): 1033.
-    expect(cards).toHaveLength(1033);
+    // R5264500: the held Felinors vs Humans set's 190 (its 232 entries less the 42 that are `none`): 1223.
+    expect(cards).toHaveLength(1223);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });

@@ -275,7 +275,7 @@ describe("B42 parseCardAudio", () => {
     const kinded = fixture();
     kinded.cards["core-004"] = { kind: "unit", ...kinded.cards["core-004"] };
     expect(parseError(kinded)).toBe(
-      "card-audio.json5: cards.core-004.kind: unknown hook (expected one of play, attack, death, cast, trigger)",
+      "card-audio.json5: cards.core-004.kind: unknown hook (expected one of play, attack, death, cast, trigger, endOfTurn)",
     );
 
     const slow = fixture();
@@ -389,7 +389,7 @@ describe("R655 parseCardAudio's shape errors", () => {
   it("R655 names an unknown hook", () => {
     expectError((t) => {
       t.cards["core-004"] = { jump: { effect: "zip" } };
-    }, "cards.core-004.jump: unknown hook (expected one of play, attack, death, cast, trigger)");
+    }, "cards.core-004.jump: unknown hook (expected one of play, attack, death, cast, trigger, endOfTurn)");
   });
 
   it("R655 names a hook the card's kind may not carry", () => {

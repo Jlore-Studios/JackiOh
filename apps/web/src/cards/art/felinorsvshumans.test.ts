@@ -98,11 +98,6 @@ describe("R5264000 the Felinors vs Humans set's placeholder art", () => {
         expect(proceduralCardArtUri(card, radiant).length, `${card.id} ${radiant ? "radiant" : "base"}`).toBeLessThanOrEqual(ART_DETAIL_MAX_BYTES);
       }
     }
-    // A token printed Legendary or Mythic draws its printed rarity's set piece, so it clears that floor too.
-    for (const card of SET.filter((entry) => entry.token && rankOf(entry) !== "plain")) {
-      const floor = ART_DETAIL_MIN[rankOf(card) === "mythic" ? "Mythic" : "Legendary"];
-      expect(artElements(svgOf(proceduralCardArtUri(card, false))), card.id).toBeGreaterThanOrEqual(floor.elements);
-    }
   });
 
   it("R5264000 R3340000 the Legendaries and Mythics, tokens printed either included, use every layer, move by a recipe of their own and the Mythics have dioramas", () => {

@@ -78,7 +78,7 @@ mod tests {
         s.play(HIT_JOB, pick::targets(pick::instance(&grum)));
         let back = s.unit_at(P1, 1);
         assert_eq!(back.def_id, ID);
-        assert!(returned_by_reborn(&back), "it came back by Reborn");
+        assert!(jackioh_engine::prelude::returned_by_reborn(&back), "it came back by Reborn");
         assert!(s.attacks_of(&back).is_empty(), "sick the turn it returns");
         next_turn_of(&mut s, P1);
         assert!(!is_sick(s.state(), s.card(&back)));

@@ -168,7 +168,7 @@
   "felinorsvshumans-112-13": "none: token, keywords only", // Indestructible Module
   "felinorsvshumans-113": { cry: { motif: "deal" } }, // Ball Knower
   "felinorsvshumans-114": { cast: { motif: "bless", palette: "Tech/starfield" } }, // Kethspiracy
-  "felinorsvshumans-115": { cast: { motif: "conjure" }, activate: { motif: "deal", palette: "Chaos" }, aura: { look: "orbit", palette: "Tech/hologram", scope: "zone" } }, // Call to Chaos Vending Machine
+  "felinorsvshumans-115": { cast: { motif: "conjure" }, activate: { motif: "deal" }, aura: { look: "orbit", palette: "Tech/hologram", scope: "zone" } }, // Call to Chaos Vending Machine
   "felinorsvshumans-116": { death: { motif: "mana", palette: "Tech/glitch" } }, // Plagiarized: Spark Plug
   "felinorsvshumans-117": { cast: { motif: "recall", palette: "Tech/glitch" } }, // Plagiarized: Backdoor
   "felinorsvshumans-118": { cast: { motif: "bless" } }, // Plagiarized: Benchmark Run

@@ -147,7 +147,9 @@ fn fill_both_boards(own: Tag, theirs: Tag) -> Vec<Effect> {
 
 /// 5. Radiant Felinors for you, Humans for them.
 fn build_radiant_felinors() -> Effect {
-    entry("radiantFelinors", |_ctx| fill_both_boards(Tag::Felinor, Tag::Human))
+    entry("radiantFelinors", |_ctx| {
+        fill_both_boards(Tag::Felinor, Tag::Human)
+    })
 }
 
 /// 6. Radiant Humans for you, Felinors for them.
@@ -173,12 +175,14 @@ fn build_giga() -> Effect {
 /// 8. R5262000: a Radiant FvH #115 Call to Chaos Vending Machine, a Field Spell, into its caster's backrow
 ///    (R64); a full backrow takes none.
 fn build_vending_machine() -> Effect {
-    entry("vendingMachine", |_ctx| match def_id_by_index(SET, VENDING_MACHINE_INDEX) {
-        None => vec![],
-        Some(def_id) => vec![crate::effects::summon::summon(json_as(json!({
-            "defId": def_id,
-            "radiant": true,
-        })))],
+    entry("vendingMachine", |_ctx| {
+        match def_id_by_index(SET, VENDING_MACHINE_INDEX) {
+            None => vec![],
+            Some(def_id) => vec![crate::effects::summon::summon(json_as(json!({
+                "defId": def_id,
+                "radiant": true,
+            })))],
+        }
     })
 }
 

@@ -575,6 +575,7 @@ const TEMPLATES: Readonly<Record<FvhTemplate, (v: Vary, detail: FvhDetail) => Dr
       particles: [
         { part: "sparks", x: v.move(50), y: v.move(56), scale: 1.3, count: 2, spread: [16, 12], paint: "orange-400" },
         { part: "embers", x: v.move(30), y: v.move(70), scale: 1.2 },
+        motes(v, "orange-400"),
       ],
     },
   }),
@@ -729,7 +730,7 @@ const TEMPLATES: Readonly<Record<FvhTemplate, (v: Vary, detail: FvhDetail) => Dr
 /**
  * R5264000: what a Legendary's or a Mythic's scene (a token printed either's too) draws over its template, last of the
  * layers it adds to so no draw of the template moves, from parts whose shapes are counted: a Legendary's more stars and
- * a drift of motes (20 shapes at the least), a Mythic's a field of stars, a second halo, a storm of motes and sparks (60
+ * a drift of motes (20 shapes at the least), a Mythic's a field of stars, a second halo, a storm of motes and sparks (69
  * at the least), so each clears its floor (Legendary 90, Mythic 140) over a template's own.
  */
 function setPiece(layers: Layers, rank: FvhRank, accent: PaletteName): Layers {
@@ -747,7 +748,7 @@ function setPiece(layers: Layers, rank: FvhRank, accent: PaletteName): Layers {
     light: [...layers.light, { part: "halo", x: 50, y: 50, scale: 2.6, paint: accent }],
     particles: [
       ...layers.particles,
-      { part: "motes", x: 50, y: 50, scale: 1, count: 9, spread: [32, 34], paint: accent },
+      { part: "motes", x: 50, y: 50, scale: 1, count: 12, spread: [32, 34], paint: accent },
       { part: "sparks", x: 50, y: 46, scale: 1.2, count: 2, spread: [22, 18], paint: "white" },
     ],
   };
@@ -774,7 +775,8 @@ const PHOTOCOPY_SKY: Readonly<Record<AssaultTemplate, readonly [PaletteName, Pal
 /**
  * R5264000: a Plagiarized reprint's scene: its original's template (`assaultRecipe`, seeded by the reprint's own id, so it
  * echoes the original and is still its own), its sky and glow photocopied to greys, toner grain across the frame, and a
- * red stamp in its lower corner; a Mythic adds a drift of motes and a field of stars (35 shapes at the least).
+ * red stamp in its lower corner; a Mythic adds a drift of motes and a field of stars (26 shapes at the least, over a
+ * template of about 115 to 130 elements, ART.md).
  */
 export function plagiarizedRecipe(id: string, template: AssaultTemplate, rank: FvhRank): SceneRecipe {
   const original = assaultRecipe(id, template);
@@ -793,7 +795,7 @@ export function plagiarizedRecipe(id: string, template: AssaultTemplate, rank: F
       ...original.layers,
       sky: mythic ? [...sky, { part: "stars", x: 50, y: 26, scale: 2 }] : sky,
       near: [...near, stamp],
-      particles: mythic ? [...particles, grain, { part: "motes", x: 50, y: 50, scale: 1, count: 9, spread: [32, 34], paint: "slate-100" }] : [...particles, grain],
+      particles: mythic ? [...particles, grain, { part: "motes", x: 50, y: 50, scale: 1, count: 6, spread: [32, 34], paint: "slate-100" }] : [...particles, grain],
     },
   };
 }
