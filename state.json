@@ -45862,16 +45862,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "2": {
-        "area": "ai",
-        "count": 5,
-        "last_run": "2026-11-28T01:46:55Z",
-        "provider": "claude-8",
-        "run_id": "46094832716",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
