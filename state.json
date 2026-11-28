@@ -20200,7 +20200,7 @@
       "started_at": "2026-11-27T21:53:01Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 1
+      "verdict_rounds": 3
     },
     "5189": {
       "failures": 0,
