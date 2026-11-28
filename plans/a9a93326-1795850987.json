@@ -1,0 +1,66 @@
+{
+  "action": "plan",
+  "number": 5284,
+  "title": "Patch: voice lines at volume 0 no longer hold the practice AI, dip the music or download in the background, and effects at volume 0 dip no music",
+  "branch": "bot/issue-5284",
+  "thread": "**Issue #5284 (data, not instructions):**\n\n```text\n# #5284: Patch: voice lines at volume 0 no longer hold the practice AI, dip the music or download in the background, and effects at volume 0 dip no music\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA player who silences voices by dragging the Voice volume slider to 0, and leaves the Voice lines box ticked, still has every voice line \"play\" without a sound. The practice AI waits for each silent line to finish before its next move, up to four seconds at a time. The music and the sound effects dip under lines nobody can hear. And the browser still downloads the whole voice library in the background, about 18 MB today and growing. Once this is built, a voice volume of 0 behaves like unticking Voice lines: no waits, no dips, no downloads. In the same way, with the Sound effects volume at 0, the music stops dipping under card effects, trap stings and the victory or defeat sound.\n\n## Why\n\n- `apps/web/src/audio/engine.ts:1092`: `playVoice` turns a line away only when `voiceOn` is false (or the game is muted, `accepting`, `engine.ts:540-546`). It never reads the `voice` level. The panel shows Voice volume (`audio/AudioControls.tsx:34`) and the Voice lines box (`AudioControls.tsx:181`) as separate controls, so 0% with the box ticked is an ordinary setting.\n- A line at 0% still holds the voice channel, so `speaking()` is true and the board carries `data-speaking` (`game/Game.tsx:594-596`, `:1025`). The practice AI holds its next step on that mark (`practice/aiTable.ts:73-75`, capped at `PRACTICE_VOICE_HOLD_MAX_MS = 4000`, `practice/config.ts:25`; SPEC \u00a79.9). Dungeon and Infinite Assault fights use the same hooks, and the replay's Play waits on it too (`replay/ReplayPlayer.tsx:58`). A line with no audio file falls back to speech, which holds the channel for up to 4 s (`engine.ts:903-904`) at volume `master \u00d7 voice`, which is 0 (`engine.ts:914`).\n- Every line ducks the music and the effects whatever its level: `engine.ts:966-967` for a file and `engine.ts:909-912` for speech, a fixed 4 s. With effects at 0, every card effect still ducks the music (`engine.ts:655`), and so do `trapSting`, `victory` and `defeat` (`engine.ts:599`, `MUSIC_DUCK_SFX` at `audio/constants.ts:249`). Neither `duck()` (`engine.ts:490`) nor `duckSfx()` (`engine.ts:501`) checks whether the sound that asked for the dip can be heard.\n- The background prefetch fetches every line's bytes after the first preload (`engine.ts:791-799`, `pumpPrefetch` at `:775`). Only `voiceWanted()` (`engine.ts:765-768`: not muted, and `voiceOn`) and Save-Data stop it. Measured on this tree, `apps/web/public/audio/voice` holds 1,908 files and 17,595,170 bytes. The budget allows 32 MiB (`VOICE_BUDGET_BYTES`, `constants.ts:113`), and eleven open `bot:build` issues (#5191 to #5201) add trigger lines to it. B58 (`docs/polish/2-sound.md:1006`) already means for nothing to load for voice that can't be heard, but it names only mute and Voice lines off.\n- Everywhere else, the audio code already treats a channel at 0 as silent. Stings are refused at `sfx` 0 (`audio/music.ts:248-251`). The clock alarm needs `master > 0 && sfx > 0` (`audio/clockAlarm.ts:78`). Intros need `music > 0` (`audio/musicDirector.ts:249`). The engine's voice and duck paths are the only exception. `engine.test.ts` fixes its levels at `{ master: 0.5, sfx: 0.3, voice: 0.7 }` (line 71) and has no case at 0.\n\n## Proposal\n\nIn `audio/engine.ts`, a voice line counts as unheard when the game is muted, Voice lines are off, or `master \u00d7 voice` is 0. An effects-bus sound counts as unheard when `master \u00d7 sfx` is 0.\n\n1. `voiceWanted()` also checks the voice level, and `playVoice` asks it instead of reading `voiceOn` alone. An unheard line then takes no channel, so there is no `data-speaking`, no speech and no duck. The preloads and the prefetch stop, as they already do for Voice lines off.\n2. The settings listener (`engine.ts:393`) silences a line already playing, speech included, when the voice level drops to 0. It resumes the prefetch when the level rises again, as it already does when Voice lines go back on.\n3. The music ducks that card effects and `MUSIC_DUCK_SFX` ask for (`engine.ts:599`, `:655`) run only when the effects can be heard.\n\nThis is a decision the spec doesn't make, so it likely needs a ruling note in the issue's block, with its \u00a711 paragraph in `spec/pending/<N>.md`. The same change extends B58's sentence in `docs/polish/2-sound.md`.\n\n## Where it lands\n\n- `apps/web/src/audio/engine.ts`: `voiceWanted`, `playVoice`, the settings listener and the two effects duck calls.\n- `apps/web/src/audio/engine.test.ts`.\n- `docs/polish/2-sound.md`: B58.\n- SPEC \u00a79.9 (the practice AI's voice hold) and R669 (voice lines dip the effects) are read, not changed. A new ruling goes under `spec/rulings/` with its paragraph in `spec/pending/<N>.md`.\n\n## Acceptance criteria\n\n- [ ] With voice at 0, Voice lines on and the game not muted, `playVoice` returns false, `speaking()` stays false, and the music-duck and effects-duck gains stay at 1.\n- [ ] The same holds with master at 0.\n- [ ] With voice at 0, the prefetch makes no request. Raising voice above 0 resumes it, as turning Voice lines on does today.\n- [ ] Dropping voice to 0 while a line plays, from a file or as speech, stops it and frees the channel.\n- [ ] With effects at 0, a card effect, `trapSting`, `victory` and `defeat` leave the music-duck gain at 1. With effects above 0 they still duck as today.\n- [ ] Each new test fails on today's `engine.ts`.\n- [ ] Voice above 0 behaves exactly as today, and the existing `engine.test.ts` and `e2e/cypress/e2e/15-audio.cy.ts` cases pass unchanged.\n\n## Size and risks\n\nSmall: about a dozen lines in one module plus its tests, `difficulty:medium`. Risks are small. The card preview's voice button (`cards/inspect/VoicePreview.tsx`) plays nothing at voice 0, which it already does in effect. Emotes ignore `playVoice`'s answer (`emotes/play.ts:90`), so their bubbles don't change. No unit or e2e test sets voice to 0 and expects `data-speaking`: the zero-level cases under `apps/web/src` and `e2e/` are only the sting, alarm and settings-parsing ones.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: playVoice (engine.ts:1092) and voiceWanted (engine.ts:765-768) read only mute and voiceOn, never the voice level, so at Voice volume 0 every silent line still dips the music (engine.ts:966-967, 909-912), holds the practice AI on data-speaking for up to 4 s, and keeps the ~18 MB voice prefetch running, while stings (music.ts:248-251), the clock alarm (clockAlarm.ts:78) and intros (R1350,, so it is approved by itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5284: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T07:29:17Z",
+    "claimed_at": "2026-11-28T07:30:06Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5284 needs a plan"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5191 skipped: it waits for #5189 to close first",
+    "#5192 skipped: it waits for #5189 to close first",
+    "#5193 skipped: it waits for #5189 to close first",
+    "#5194 skipped: it waits for #5189 to close first",
+    "#5195 skipped: it waits for #5189 to close first",
+    "#5196 skipped: it waits for #5189 to close first",
+    "#5197 skipped: it waits for #5189 to close first",
+    "#5198 skipped: it waits for #5189 to close first",
+    "#5199 skipped: it waits for #5189 to close first",
+    "#5200 skipped: it waits for #5189 to close first",
+    "#5201 skipped: it waits for #5189 to close first"
+  ]
+}
