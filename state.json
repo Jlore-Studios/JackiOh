@@ -21775,7 +21775,8 @@
       "started_at": "2026-11-28T03:51:00Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 7233654815
     },
     "5266": {
       "action": "review",
