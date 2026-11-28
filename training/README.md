@@ -90,7 +90,7 @@ src/practice/claim.test.ts`, after `sh scripts/build-wasm.sh`) and commits it wi
 `.github/workflows/gather.yml` plays without a pause since #3740
 (it played 5,000 games of each new patch or set, once, on the PC's gather half, before): five of
 GitHub's runners (two until 2026-11-26) each play `GATHER_HOURS` (5) hours of the newest version on
-`main` in one `stats --out-every` stopped at the deadline, which writes each `GATHER_FILE_GAMES` (50)
+`main` in one `stats --out-every` stopped at the deadline, which writes each `GATHER_FILE_GAMES` (250)
 games to a file of their own as soon as all of them have finished, and file each file the same way as
 it appears, so the card statistics take fresh games of the version that is live every few minutes. As a run ends it starts the next on `main` as
 it is then, so a version shipped meanwhile is played from the next run on, within five hours, and a
