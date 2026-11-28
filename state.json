@@ -21518,6 +21518,9 @@
       "requested_by": "jgoetzmann-bot",
       "stop_requested": false,
       "suggestion": true
+    },
+    "5248": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -45011,6 +45014,13 @@
         "at": "2026-11-28T02:36:24Z",
         "number": 5246,
         "title": "Patch: the AI counts the Nerfs it puts on the opponent's hand and the misfire it sets on their next Spell, so the Jailbreak enemy casts Patch Tuesday Exploit and Prompt Injection",
+        "verdict": "auto-approved",
+        "why": "approved by itself: no one voted on it"
+      },
+      {
+        "at": "2026-11-28T02:36:32Z",
+        "number": 5248,
+        "title": "Patch: the shadow-ban sweep counts a slow decision only when it is clearly over the limit, tells it apart from a game that never ended, and flags only the tier that raised it",
         "verdict": "auto-approved",
         "why": "approved by itself: no one voted on it"
       }
