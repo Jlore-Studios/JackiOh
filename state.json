@@ -21484,6 +21484,14 @@
         "sha": "c109844436b72ec93e3944be581ac2cdc4ef025d",
         "tiers": {}
       }
+    },
+    "5244": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-28T01:06:15Z",
+      "issue": 5230,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
