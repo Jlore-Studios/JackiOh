@@ -131,7 +131,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R4424000), #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
 /// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price),
 /// #4666 (R4666000), #4844 (R656's help aims on eight buff Spells' targets), #4828 (R4828000), #5048
-/// (R5048000), #4991 (R4991000) and #5106 (R5106000).
+/// (R5048000), #4991 (R4991000), #5106 (R5106000) and #5226 (R5226000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 /// R4779000: a row's key is that version, or `"fragment:<stem>"` (`FRAGMENT_KEY`), the stem of the
 /// pending fragment that ships the change, which `resolve_kept_key` reads as the version just before
@@ -1614,6 +1614,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c012_living_armor_potion::ID,
         "fragment:hero-armor-wears-down-by-1-with-each-hit-and-the-armor-cards",
         c012_living_armor_potion::script_kept_5183,
+    ),
+    // #5226 (R5226000): Last Hurrah's picks before they passed an Immutable card of the hand over
+    // (R4779000: keyed by the pending fragment).
+    (
+        c037_last_hurrah::ID,
+        "fragment:immutable-keeps-last-hurrah-s-flashback-off-a-card-in-the",
+        c037_last_hurrah::script_kept_5226,
     ),
 ];
 

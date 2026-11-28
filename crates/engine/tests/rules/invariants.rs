@@ -5416,16 +5416,22 @@ mod i23 {
 
     /// `effect` applied as p1's with no card of its own and settled, as a card's effect is (§10.3).
     fn settled(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
+        settled_by(state, None, effect)
+    }
+
+    /// `effect` applied as `source`'s, under its controller (none: p1's with no card of its own), and
+    /// settled, as a card's effect is (§10.3).
+    fn settled_by(state: &mut GameState, source: Option<&CardInstance>, effect: Effect) -> Vec<GameEvent> {
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
         {
             let mut sink = EngineSink::new(state, &mut events, &mut rng);
             {
                 let options = HookOptions {
-                    controller: Some(P1),
+                    controller: Some(source.map_or(P1, |card| card.controller)),
                     ..Default::default()
                 };
-                let mut ctx = make_context(&mut sink, None, options);
+                let mut ctx = make_context(&mut sink, source, options);
                 (effect.apply)(&mut ctx);
             }
             settle(&mut sink, SettleOptions::default());
@@ -6029,17 +6035,31 @@ mod i23 {
             id,
             &["I23 Immutable record changed", "tuning"],
         );
-        // A real keyword kept for good (R1870007, R4154202).
+        // A real keyword kept for good, by the card's own text (R23, R1870007).
+        let gift =
+            || effects::gain_keyword_for_good(json_as(json!({ "keyword": flashback(), "instanceId": id })));
+        let me = find_instance(&state, id).cloned().expect("the holder");
         let mut real = state.clone();
-        let events = settled(
-            &mut real,
-            effects::gain_keyword_for_good(json_as(json!({ "keyword": flashback(), "instanceId": id }))),
-        );
+        let events = settled_by(&mut real, Some(&me), gift());
         assert!(
             find_instance(&real, id).is_some_and(|card| card.tuning.is_some()),
             "{events:?}"
         );
         assert_eq!(i23(&state, &events, &real), Vec::<String>::new());
+        // Another card's is kept off the Immutable card (R5226000).
+        let mut refused = state.clone();
+        let events = settled(&mut refused, gift());
+        assert!(
+            !events
+                .iter()
+                .any(|event| matches!(event, GameEvent::KeywordGranted { .. })),
+            "{events:?}"
+        );
+        assert_eq!(
+            find_instance(&refused, id).map(|card| &card.tuning),
+            find_instance(&state, id).map(|card| &card.tuning)
+        );
+        assert_eq!(i23(&state, &events, &refused), Vec::<String>::new());
     }
 
     #[test]

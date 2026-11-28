@@ -1,6 +1,8 @@
 //! C #37 Last Hurrah (SPEC §8.6 row 37). Spell, cost 0, Epic.
 //!   Base:    "Tradable\nDraw your deck. Give {flashback} random cards in your hand Flashback." (flashback 4)
 //!   Radiant: "Tradable\nDraw your deck. Give all cards in your hand Flashback."
+//!   Until issue #5226 the same words, its picks falling on an Immutable card of the hand too
+//!   (`script_kept_5226`, kept, R767000; R5226000).
 //!   Through v0.6.9n: "Draw your deck." (Radiant: "Draw your deck. Give {flashback} random cards in your
 //!   hand Flashback."), not Tradable (`script_v0_6_9n`, kept, R767000; issue #4440).
 //!   Through v0.6.6h: "Draw your deck. At the end of this turn (Radiant: of your next turn), discard
@@ -16,8 +18,9 @@
 //! reached from the cards that lack Flashback (R60, R129), and the Radiant face every card of the hand
 //! that lacks it, with no draw, each Flashback for good (`gain_keyword_for_good`, R4154202): kept in their
 //! tuning, so a card played or discarded from the hand still has it in the graveyard (R215), where it is
-//! played once (R783012, R783013). The other player learns that cards of that hand gained it, never which
-//! (R177). Tradable (R1838000) is catalog data the engine reads in the hand (`trade.rs`).
+//! played once (R783012, R783013). Since issue #5226 an Immutable card of the hand is passed over on both
+//! faces, as it keeps the keyword off (R5226000). The other player learns that cards of that hand gained
+//! it, never which (R177). Tradable (R1838000) is catalog data the engine reads in the hand (`trade.rs`).
 //! Through v0.6.6h a delayed effect (§10.1, `discardHandAtTurnEnd`) discarded `discard` random cards of
 //! the hand (R682, R3134000) at the end of the turn it was played on (Radiant: its controller's next).
 
@@ -37,12 +40,18 @@ fn draw_deck(ctx: &EffectContext<'_>) -> Effect {
     draw(json_as(json!({ "count": zone_count(ctx.state, ctx.controller, OffFieldZone::Library) })))
 }
 
-/// R4154202: `count` different cards of the controller's hand that lack Flashback, drawn as the clause
-/// is reached; all of them, with no draw, when they are no more than `count` (R129).
-fn flashback_picks(c: &mut EffectContext<'_>, count: usize) -> Vec<String> {
+/// R4154202: `count` different cards of the controller's hand that lack Flashback and, when
+/// `skip_immutable`, are not Immutable (`is_immutable`, an Indestructible Unit's included: it would refuse
+/// the gift, R5226000), drawn as the clause is reached; all of them, with no draw, when they are no more
+/// than `count` (R129).
+fn flashback_picks(c: &mut EffectContext<'_>, count: usize, skip_immutable: bool) -> Vec<String> {
     let candidates: Vec<CardInstance> = zone_cards(&*c.state, c.controller, OffFieldZone::Hand)
         .into_iter()
-        .filter(|card| card.flashback_spent != Some(true) && !unit_has(&*c.state, card, KeywordKind::Flashback))
+        .filter(|card| {
+            card.flashback_spent != Some(true)
+                && !unit_has(&*c.state, card, KeywordKind::Flashback)
+                && !(skip_immutable && is_immutable(&*c.state, card))
+        })
         .collect();
     if candidates.len() <= count {
         return candidates.into_iter().map(|card| card.id).collect();
@@ -62,8 +71,8 @@ enum Grant {
 }
 
 /// One face since issue #4154: draw the deck, then give the cards `grant` names Flashback for good
-/// (R4154201, R4154202).
-fn last_hurrah(grant: Grant) -> Script {
+/// (R4154201, R4154202), passing Immutable cards over when `skip_immutable` (R5226000).
+fn last_hurrah(grant: Grant, skip_immutable: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let mut effects = vec![draw_deck(ctx)];
@@ -75,7 +84,7 @@ fn last_hurrah(grant: Grant) -> Script {
             };
             if let Some(count) = count {
                 effects.push(for_each_card(ForEachCardArgs {
-                    cards: Arc::new(move |c: &mut EffectContext<'_>| flashback_picks(c, count)),
+                    cards: Arc::new(move |c: &mut EffectContext<'_>| flashback_picks(c, count, skip_immutable)),
                     each: Arc::new(|instance_id: &str| {
                         gain_keyword_for_good(json_as(json!({
                             "keyword": { "kind": "Flashback" },
@@ -92,17 +101,27 @@ fn last_hurrah(grant: Grant) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: last_hurrah(Grant::Random),
-        radiant: last_hurrah(Grant::All),
+        base: last_hurrah(Grant::Random, true),
+        radiant: last_hurrah(Grant::All, true),
+    }
+}
+
+/// R767000: the script issue #5226 replaced, whose picks fell on an Immutable card of the hand too
+/// (R5226000); `KEPT_SCRIPTS` folds the replays that ran it under it.
+pub fn script_kept_5226() -> CardScripts {
+    CardScripts {
+        base: last_hurrah(Grant::Random, false),
+        radiant: last_hurrah(Grant::All, false),
     }
 }
 
 /// R767000: after v0.6.6h through v0.6.9n the base face gave no Flashback and the Radiant face `flashback`
-/// random cards (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
+/// random cards (issue #4440), drawn from the Immutable cards of the hand too (R5226000); `KEPT_SCRIPTS`
+/// folds those replays under it.
 pub fn script_v0_6_9n() -> CardScripts {
     CardScripts {
-        base: last_hurrah(Grant::Nothing),
-        radiant: last_hurrah(Grant::Random),
+        base: last_hurrah(Grant::Nothing, false),
+        radiant: last_hurrah(Grant::Random, false),
     }
 }
 
@@ -138,15 +157,16 @@ pub fn script_v0_5_11o() -> CardScripts {
 // cards past 10 burning (§2.4, R317) and a draw limit stopping the rest; an empty deck takes no
 // fatigue; nothing is discarded since issue #4154 (R4154201); `flashback` random cards of the hand gain
 // Flashback for good, kept into the graveyard (R4154202), and on the Radiant face every card (issue #4440);
-// both faces are Tradable (R1838000). The script kept for v0.6.9n gives the base face none and the Radiant
-// face `flashback` random ones. The script kept for v0.6.6h discards
+// an Immutable card is passed over (R5226000); both faces are Tradable (R1838000). The script kept from
+// before issue #5226 picks an Immutable card too. The script kept for v0.6.9n gives the base face none and
+// the Radiant face `flashback` random ones. The script kept for v0.6.6h discards
 // `discard` random cards at the end of this turn (radiant: the controller's next, R62, R682, R3134000),
 // and the one kept for v0.5.11r the whole hand (R767000).
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
 
-    use super::{script_v0_5_11o, script_v0_6_6h, script_v0_6_9n};
+    use super::{script_kept_5226, script_v0_5_11o, script_v0_6_6h, script_v0_6_9n};
     use crate::def_ids;
     use crate::merged;
     use crate::scenario;
@@ -161,6 +181,7 @@ mod tests {
     const MENACE: &str = "core-019";
     const POINTMASTER: &str = "core-020";
     const FELINORS: &str = "core-012";
+    const ROCK: &str = "core-066"; // The Rock: an Indestructible Unit, so Immutable in the hand (R4353000)
 
     const DECK: [&str; 5] = [VANILLA, TIMMY, MENACE, POINTMASTER, FELINORS];
     /// The declared `flashback`, on the base face since issue #4440.
@@ -456,6 +477,56 @@ mod tests {
                 s.play(HURRAH, json!({}));
                 assert_eq!(with_flashback(&s).len(), 3);
             }
+
+            /// R5226000: The Rock keeps the keyword off, so it is no candidate: the other four are no more
+            /// than `flashback` and all gain it with no draw (R129), and the Rock, once in the graveyard,
+            /// has no Flashback to be played from there.
+            #[test]
+            fn r5226000_an_immutable_hand_card_is_passed_over_and_the_other_four_gain_it_with_no_draw() {
+                let mut s = setup(
+                    json!({ "hand": [HURRAH, FILLER, VANILLA, TIMMY, MENACE, ROCK], "library": [] }),
+                    json!({}),
+                    false,
+                );
+                let rock = s.card(ROCK).clone();
+                assert!(is_immutable(s.state(), &rock), "an Indestructible Unit is Immutable in the hand");
+                let cursor = s.state().rng_cursor;
+                s.play(HURRAH, json!({}));
+                assert_eq!(s.state().rng_cursor, cursor, "no random number is drawn");
+                let given = with_flashback(&s);
+                assert_eq!(given.len(), FLASHBACK);
+                assert!(!given.contains(&rock.id), "{given:?}");
+                assert_eq!(s.count("keywordGranted"), FLASHBACK);
+
+                let other = s.card(&given[0]).clone();
+                for card in [&rock, &other] {
+                    let mut moved = s.card(&card.id).clone();
+                    let _ = move_to_zone(s.state_mut(), &mut moved, OffFieldZone::Graveyard, Default::default());
+                    s.expect_in_zone(&card.id, "graveyard");
+                }
+                assert!(!playable_from_graveyard(s.state(), s.card(&rock.id)), "the Rock has no Flashback");
+                assert!(playable_from_graveyard(s.state(), s.card(&other.id)), "its Flashback offers it (R783012)");
+            }
+
+            /// R5226000: with more candidates than `flashback`, the picks never fall on the Immutable card.
+            #[test]
+            fn r5226000_with_a_larger_hand_no_seed_puts_a_pick_on_the_immutable_card() {
+                for n in 0..24 {
+                    let mut s = scenario(json!({
+                        "seed": format!("hurrah-immutable-{n}"),
+                        "p1": {
+                            "hand": [HURRAH, FILLER, VANILLA, TIMMY, MENACE, POINTMASTER, FELINORS, ROCK],
+                            "library": [],
+                        },
+                        "p2": { "hand": [FILLER, FILLER], "library": [FILLER, FILLER, FILLER, FILLER] },
+                    }));
+                    let rock = s.card(ROCK).id.clone();
+                    s.play(HURRAH, json!({}));
+                    let given = with_flashback(&s);
+                    assert_eq!(given.len(), FLASHBACK, "seed {n}");
+                    assert!(!given.contains(&rock), "seed {n}: {given:?}");
+                }
+            }
         }
 
         mod radiant {
@@ -517,6 +588,60 @@ mod tests {
                 s.play(HURRAH, json!({}));
                 assert_eq!(s.count("keywordGranted"), 1, "only the Stockpile gains it");
                 assert_eq!(with_flashback(&s).len(), 2);
+            }
+
+            /// R5226000: every card of the hand but the Immutable ones (The Rock, and Radiant Midrange
+            /// Menace, which prints it) gains it.
+            #[test]
+            fn r5226000_every_hand_card_but_the_immutable_ones_gains_flashback() {
+                let mut s = setup(
+                    json!({
+                        "hand": [{ "def": HURRAH, "radiant": true }, FILLER, VANILLA, ROCK, { "def": MENACE, "radiant": true }],
+                        "library": [],
+                    }),
+                    json!({}),
+                    true,
+                );
+                let immutable = [s.card(ROCK).id.clone(), s.card(MENACE).id.clone()];
+                s.play(HURRAH, json!({}));
+                let mut want: Vec<String> = hand_ids(&s).into_iter().filter(|id| !immutable.contains(id)).collect();
+                want.sort();
+                assert_eq!(want.len(), 2, "the Stockpile and the Vanilla");
+                let mut given = with_flashback(&s);
+                given.sort();
+                assert_eq!(given, want);
+                assert_eq!(s.count("keywordGranted"), 2);
+            }
+        }
+
+        /// R767000: the script kept from before issue #5226, whose picks fell on an Immutable card too.
+        mod before_5226 {
+            use super::*;
+
+            /// Its base face draws among all five cards that lack Flashback, The Rock included, so a game
+            /// in which the picks passed the Rock by folds as it was played; when one falls on it, the
+            /// engine keeps it off (R5226000) and the game no longer folds to its hash.
+            #[test]
+            fn r767000_the_kept_picks_draw_among_the_immutable_cards_too_and_the_engine_keeps_the_keyword_off() {
+                crate::under_kept(HURRAH, script_kept_5226(), || {
+                    let mut fell_on_the_rock = false;
+                    for n in 0..24 {
+                        let mut s = scenario(json!({
+                            "seed": format!("hurrah-kept-5226-{n}"),
+                            "p1": { "hand": [HURRAH, FILLER, VANILLA, TIMMY, MENACE, ROCK], "library": [] },
+                            "p2": { "hand": [FILLER, FILLER], "library": [FILLER, FILLER, FILLER, FILLER] },
+                        }));
+                        let rock = s.card(ROCK).clone();
+                        let cursor = s.state().rng_cursor;
+                        s.play(HURRAH, json!({}));
+                        assert_ne!(s.state().rng_cursor, cursor, "seed {n}: five candidates, so a draw");
+                        assert!(!unit_has(s.state(), s.card(&rock.id), KeywordKind::Flashback), "seed {n}");
+                        let given = with_flashback(&s).len();
+                        assert_eq!(s.count("keywordGranted"), given, "seed {n}");
+                        fell_on_the_rock |= given == FLASHBACK - 1;
+                    }
+                    assert!(fell_on_the_rock, "some seed's picks fell on the Rock");
+                });
             }
         }
 
