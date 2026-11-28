@@ -1,0 +1,65 @@
+{
+  "action": "plan",
+  "number": 5231,
+  "title": "Patch: a finished daily game reloads the Jlore balance, the quests and the card proficiency it paid, as a live game's result does",
+  "branch": "bot/issue-5231",
+  "thread": "**Issue #5231 (data, not instructions):**\n\n```text\n# #5231: Patch: a finished daily game reloads the Jlore balance, the quests and the card proficiency it paid, as a live game's result does\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nA daily game (the slow kind, where each player has days for each move) pays Jlore, XP, quest progress and card proficiency when it ends, just as an unranked live game does. When a live game ends, its result tells the rest of the site at once: the Jlore balance in the menu bar goes up, the Collection shows the new quest progress, and a card level the game earned can be worn straight away. When a daily game ends, nothing is told. The balance keeps its old figure until the site happens to read it again, the Collection can show the quests as they were, and a card proficiency level the game reached does not show, and its stamp cannot be picked, until the page is reloaded. Once built, a daily game's board updates all of these when it shows the game over, as a live game's result does.\n\n## Why\n- \u00a79.13 (`spec/09-architecture/9.13-daily-games.md`, \"Unranked, and it counts\"): a daily game \"pays Jlore and XP, moves quests and counts proficiency as an unranked game ... does\", and a Glitch-voided one pays nothing. The server writes its result through `record_result` (`crates/server/src/daily/games.rs:434`), the same write that pays a live game.\n- The live match screen refreshes after a paid result: `apps/web/src/routes/match.tsx:257-263` calls `announceWallet()` and `reloadOwnProficiency()` (#1664, R4977000). Practice (`routes/practice.tsx:865`) and the co-op board (`duos/DuosBoard.tsx:379`) call `announceWallet()`.\n- Nothing under `apps/web/src/daily/` calls either. `DailyBoard.tsx` only calls `setGame(answer)` when the player's own move ends the game (around lines 206-215) and when a read finds it ended (around 133-160).\n- What that leaves stale: the wallet reads through `getWallet`'s `READ_CACHE_FRESH_MS` window (R3206000, `economy/wallet.ts:1-7`), so a navigation inside that window answers the old balance. Only a no-balance `announceWallet()` drops the kept quest, track and pack reads (`forgetPaidReads`) and the owned cosmetics a Fleet level paid (`forgetOwnedCosmetics`, R4780000). The proficiency copy loads again only through `reloadOwnProficiency()` (`cards/proficiencySync.ts:138`) or a new sync. So the bug R4977000 fixed for live games (\"a level a game reached still read as before, and its stamp could not be picked ... until a reload\") remains for daily games. R4977000 names who refreshes and leaves daily games out.\n- `daily/DailyBoard.test.tsx` makes no wallet or proficiency assertion.\n\n## Proposal\n`DailyBoard` announces a paid result once per board. When the game it shows is over and its result is not `voided`, it calls `announceWallet()` and `reloadOwnProficiency()`, as `match.tsx` does, with a ref so that rereads, rerenders and the auto-end-turn setting's resend fire nothing more. The board remounts per game (`main.tsx`, `key={path}`), so the ref is per game. This covers the move that ends the game, a reread that finds it ended on the opponent's move or on time (R3727000), and a board opened from the \"game ended\" notification after the game ended elsewhere. An expired board (R3934000, the moves purged after 90 days) announces nothing.\n\nA ruling note in the new issue's block amends R4977000 (daily games join the match screen), with its proving test in `DailyBoard.test.tsx` and its \u00a711 paragraph in `spec/pending/<issue>.md`. \u00a79.13's client bullet gains one sentence.\n\nRejected: announcing only on the board's own change from running to over, which misses a game the opponent ended while the player was away and that the player opens from its notification. Announcing from the Daily list's poll, which is often not open when a game ends, while the board is where the result shows. Having the read carry the payout, a server wire change to save two reads.\n\n## Where it lands\n- `apps/web/src/daily/DailyBoard.tsx`, `apps/web/src/daily/DailyBoard.test.tsx`.\n- `spec/rulings/R<issue>000.md`, `spec/pending/<issue>.md`, `spec/09-architecture/9.13-daily-games.md` (the client bullet). \u00a714.8, \u00a714.9 and \u00a714.14 are unchanged.\n\n## Acceptance criteria\n- [ ] A test in `DailyBoard.test.tsx` named after the new ruling: the player's own action answers a finished, non-voided game, `announceWallet`'s event fires once and `reloadOwnProficiency` is called once. It fails on today's code.\n- [ ] A reread that finds the game ended (on the opponent's move, or lost on time) announces once.\n- [ ] A board opened on a game already over announces once, and later rereads and rerenders of it announce nothing more.\n- [ ] A `voided` result, an expired game and a running game announce nothing.\n- [ ] `cargo jackioh spec check`, `pnpm --dir apps/web test src/daily/DailyBoard.test.tsx`, `pnpm --dir apps/web typecheck` and eslint are green.\n\n## Size and risks\nSmall: one effect and a ref in one component, four or five tests and a ruling note; difficulty medium. Cost: two cheap reads (the wallet and `GET /api/proficiency`) each time a finished daily game's board opens, the kind of read R4977000 already accepted per counted game. No server, wire or engine change. The client decides no balance or level (CLAUDE.md rule 7); it only reads what the account answers.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: a daily game's result goes through `record_result` (`daily/games.rs:434` \u2192 `api/results.rs:511`), which pays the economy and counts proficiency (`results.rs:380`) just as a live game does, but nothing under `apps/web/src/daily/` calls `announceWallet()` or `reloadOwnProficiency()`, as `match.tsx:257-263` does since R4977000, so the bug #4977 fixed for live games is still there for daily, so it is approved by itself as it opens, at `priority:low`. `/harness stop` takes it back out of the queue.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5231: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-28T00:52:06Z",
+    "claimed_at": "2026-11-28T00:56:23Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#5189 skipped: it waits for #5188 to close first",
+    "#5191 skipped: it waits for #5188, #5189 to close first",
+    "#5192 skipped: it waits for #5188, #5189 to close first",
+    "#5193 skipped: it waits for #5188, #5189 to close first",
+    "#5194 skipped: it waits for #5188, #5189 to close first",
+    "#5195 skipped: it waits for #5188, #5189 to close first",
+    "#5196 skipped: it waits for #5188, #5189 to close first",
+    "#5197 skipped: it waits for #5188, #5189 to close first",
+    "#5198 skipped: it waits for #5188, #5189 to close first",
+    "#5199 skipped: it waits for #5188, #5189 to close first",
+    "#5200 skipped: it waits for #5188, #5189 to close first",
+    "#5201 skipped: it waits for #5188, #5189 to close first"
+  ]
+}
