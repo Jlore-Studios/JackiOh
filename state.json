@@ -21172,15 +21172,8 @@
       "taken_asks": []
     },
     "5231": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46090549862",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-28T01:03:30Z",
-        "until": "2026-11-28T01:33:30Z"
-      },
       "difficulty_by": {
         "at": "2026-11-28T01:03:20Z",
         "difficulty": "medium",
@@ -21199,10 +21192,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cd apps/web/src/daily && wc -l DailyBoard.tsx DailyBoard.test.tsx && sed -n 1,80p DailyBoard.tsx && grep -n \\\"setGame\\\\|announceWallet\\\\|reloadOwnProficiency\\\\|voided\\\\|expired\\\\|useEffe\u2026\n- Bash: {\"command\": \"sed -n 240,275p apps/web/src/routes/match.tsx; grep -n \\\"announceWallet\\\" -r apps/web/src --include=*.ts --include=*.tsx | grep -v test | head -20; sed -n 120,160p apps/web/src/cards/pro\u2026\n- tool error: Exit code 2 sed: can't read apps/web/src/routes/match.tsx: No such file or directory grep: apps/web/src: No such file or directory sed: can't read apps/web/src/cards/proficiencySync.ts: No such file \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5231 && sed -n 240,275p apps/web/src/routes/match.tsx; grep -n \\\"announceWallet\\\" -r apps/web/src --include=*.ts --include=*.tsx | grep -v test | hea\u2026\n- Bash: {\"command\": \"sed -n 108,240p apps/web/src/daily/DailyBoard.tsx\"}\n- Bash: {\"command\": \"sed -n 1,140p apps/web/src/daily/DailyBoard.test.tsx; grep -n \\\"^ it(\\\\|^describe\\\\|^ describe\\\" apps/web/src/daily/DailyBoard.test.tsx | head -80; ls spec/rulings | tail -5; ls spec/pen\u2026\n- Bash: {\"command\": \"sed -n 60,90p apps/web/src/economy/wallet.ts; grep -n \\\"interface DailyGame\\\\b\\\" -A40 apps/web/src/net/daily.ts | head -70\"}\n- Bash: {\"command\": \"grep -n \\\"WALLET_CHANGED\\\\|export\\\" apps/web/src/economy/wallet.ts | head -20; grep -n \\\"DailyGame\\\\b\\\" apps/web/src/net/daily.ts | head; cat spec/pending/5159.md | head -30; grep -n \\\"c\u2026\n- Bash: {\"command\": \"sed -n 1135,1200p apps/web/src/routes/match.test.tsx; grep -n \\\"reloadOwnProficiency\\\" apps/web/src/routes/match.test.tsx | head; grep -n \\\"Adding a ruling\\\" -A40 spec/README.md | head -\u2026\n- Bash: {\"command\": \"grep -rn \\\"R4977000\\\\|reloadOwnProficiency\\\" apps/web/src --include=*.test.ts --include=*.test.tsx | head; grep -n \\\"vi.mock\\\" apps/web/src/daily/DailyBoard.test.tsx | head; sed -n 1,30p\u2026\n- Bash: {\"command\": \"sed -n 1205,1260p apps/web/src/routes/match.test.tsx; grep -n \\\"readSession\\\\|stubServer\\\\|wallet\\\\|proficiency\\\" apps/web/src/test/stubServer.ts | head -20; ls spec/rulings | grep -c R5\u2026\n- Bash: {\"command\": \"sed -n 173,200p apps/web/src/daily/DailyBoard.test.tsx; cat apps/web/src/test/settle.ts | head -20; sed -n 706,730p apps/web/src/daily/DailyBoard.test.tsx; echo \\\"plan drafted in final m\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: one effect and a ref in one web component, its tests, and a ruling note; no engine, AI, server, wire or migration change, about 5 files.\"} --> ## Goal When `DailyBoard` shows a finished daily game whose result is not `voi\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-28T00:56:23Z",
       "owner_why": "it plans it",
@@ -21215,9 +21207,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-28T00:52:06Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46090549862",
+      "run_id": "pending:4bceb25f-1795827987",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T00:56:23Z",
+      "started_at": "2026-11-28T01:06:46Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -21373,9 +21365,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T01:06:15Z",
+    "at": "2026-11-28T01:06:46Z",
     "url": "",
-    "what": "build #5230 on claude-7"
+    "what": "build #5231 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-28T00:50:23Z",
