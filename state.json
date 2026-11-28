@@ -21330,6 +21330,14 @@
         "sha": "6400df053af8564b20f1967e9dd1c2e6b9b321ba",
         "tiers": {}
       }
+    },
+    "5241": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-28T01:06:46Z",
+      "issue": 5231,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
