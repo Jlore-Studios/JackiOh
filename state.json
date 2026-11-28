@@ -22132,6 +22132,13 @@
     "5302": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-28T12:55:59Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Tooling only in crates/tools plus a ruling note: no engine rules, AI, migration or cross-crate design, and about 5 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
