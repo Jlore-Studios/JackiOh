@@ -22071,15 +22071,8 @@
       }
     },
     "5284": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "46121484660",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-28T07:37:07Z",
-        "until": "2026-11-28T08:07:07Z"
-      },
       "difficulty_by": {
         "at": "2026-11-28T07:37:00Z",
         "difficulty": "medium",
@@ -22098,10 +22091,9 @@
         "reason": "planned on sonnet",
         "trail": "- Grep: {\"pattern\": \"voiceWanted|voiceOn|function duck|function duckSfx|duck\\\\(|duckSfx\\\\(|MUSIC_DUCK_SFX|function playVoice|speaking\", \"path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio/engi\u2026\n- Read: {\"path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio/engine.ts\", \"offset\": 370, \"limit\": 150}\n- tool error: <tool_use_error>InputValidationError: Read failed due to the following issues: The required parameter `file_path` is missing An unexpected parameter `path` was provided</tool_use_error>\n- Read: {\"path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio/engine.ts\", \"offset\": 570, \"limit\": 150}\n- tool error: <tool_use_error>InputValidationError: Read failed due to the following issues: The required parameter `file_path` is missing An unexpected parameter `path` was provided</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio/engine.ts\", \"offset\": 370, \"limit\": 150}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio/engine.ts\", \"offset\": 570, \"limit\": 150}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio/engine.ts\", \"offset\": 740, \"limit\": 240}\n- Grep: {\"pattern\": \"export function mixLevels\", \"path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio\", \"output_mode\": \"content\", \"-A\": 20}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio/engine.ts\", \"offset\": 979, \"limit\": 190}\n- Grep: {\"pattern\": \"accepting|let busy|prefetch|function setSettings|writeAudioSettings|^ const settings|duckGain|musicDuck|sfxDuck|voice: \", \"path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/aud\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio/engine.test.ts\", \"offset\": 1480, \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio/engine.test.ts\", \"offset\": 1720, \"limit\": 60}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio/engine.test.ts\", \"offset\": 1985, \"limit\": 50}\n- Grep: {\"pattern\": \"B58\", \"path\": \"/home/runner/work/_temp/work/item-5284/docs/polish/2-sound.md\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5284; sed -n 1006p docs/polish/2-sound.md | cut -c1-1800; ls spec/pending | head; ls spec/rulings | grep -E 'R528[0-9]{4}|R5284' | head; sed -n 1,40p\u2026\n- Grep: {\"pattern\": \"function (rig|fxRig|unlocked|buses|settle|elapse|tick|drainFetches)\\\\b\", \"path\": \"/home/runner/work/_temp/work/item-5284/apps/web/src/audio/engine.test.ts\", \"output_mode\": \"content\", \"-A\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5284; cat spec/rulings/R5188000.md | head -30; echo ----; cat spec/pending/5188.md | cut -c1-600; echo ---; sed -n 1515,1600p apps/web/src/audio/engi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5284; sed -n 536,552p apps/web/src/audio/engine.ts; sed -n 1,12p spec/rulings/R0669.md | cut -c1-300; grep -n \\\"duckMusic\\\" apps/web/src/audio/settin\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5284; grep -rn \\\"voiceOn\\\" apps/web/src --include=*.ts --include=*.tsx -l | grep -v test; grep -n \\\"cancel\\\" apps/web/src/audio/test/fakeAudio.ts | h\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5284/.bot-plan.md\", \"content\": \"Draft: plan for #5284 \\u2014 engine.ts voiceAudible/voiceWanted/sfxHeard helpers, playVoice, applySettings, speakNow, \u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: the change is client-only presentation in one module (apps/web/src/audio/engine.ts) plus its test, a ruling note and a doc line, about 6 files.\"} --> ## Goal A voice level of 0 (or master 0) behaves like unticking Voice l\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-28T07:30:06Z",
       "owner_why": "it plans it",
@@ -22114,9 +22106,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-28T07:29:17Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46121484660",
+      "run_id": "pending:3718424e-1795851450",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T07:30:06Z",
+      "started_at": "2026-11-28T07:37:50Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -22124,9 +22116,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T07:30:06Z",
+    "at": "2026-11-28T07:37:50Z",
     "url": "",
-    "what": "plan #5284 on claude-8"
+    "what": "build #5284 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-28T07:28:08Z",
