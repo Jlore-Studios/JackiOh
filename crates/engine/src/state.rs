@@ -1773,7 +1773,8 @@ pub struct PlayerState {
     /// R5237002 (FvH #16.2 Travertine Golem): the mana this player left unspent at the end of their last
     /// turn (their last Float, R1563000), set at their cleanup beside `turnLog.unspentAtEnd` and never
     /// reset, so it holds through their next turn (`query::float_last_turn`). Absent before their first
-    /// turn ends.
+    /// turn ends, and in a game holding no Felinors vs Humans card (`recursion_log::fvh_kept`), so no
+    /// other game's hash moves (D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub last_float: Option<i32>,

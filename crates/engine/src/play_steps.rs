@@ -408,7 +408,8 @@ pub struct PlayRun {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from_deck: Option<bool>,
     /// R5237005: where in its player's hand the card was as the announce took it out (`HandPlace`), for
-    /// step 4's `cardPlayed.fromHand`. Absent for any play not from a hand (a cast, a graveyard play).
+    /// step 4's `cardPlayed.fromHand`. Absent for any play not from a hand (a cast, a graveyard play), and
+    /// in a game holding no Felinors vs Humans card (`recursion_log::fvh_kept`, D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from_hand: Option<crate::wire::HandPlace>,
     /// R1086: the host an Equip play fuses into at step 7 (ME-EQUIP), read at step 1 (D14).
@@ -1445,8 +1446,13 @@ fn announce_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         {
             return;
         }
-        // R5237005: a play from a hand notes the card's place there before the announce takes it out.
-        if run.cast != Some(true) && run.replaced != Some(true) && run.source.is_none() {
+        // R5237005: a play from a hand notes the card's place there before the announce takes it out,
+        // only in a game holding a Felinors vs Humans card (`fvh_kept`), so no other game's hash moves.
+        if run.cast != Some(true)
+            && run.replaced != Some(true)
+            && run.source.is_none()
+            && crate::recursion_log::fvh_kept(sink.state)
+        {
             run.from_hand = crate::query::hand_place_of(sink.state, run.player, &run.instance_id);
         }
         if !announce_play(sink, run) {

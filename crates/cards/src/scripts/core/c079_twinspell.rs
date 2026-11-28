@@ -1,7 +1,7 @@
 //! #79 Twinspell (SPEC §8.3 row 79; §2.2, §6.2 Echo, §10.5 step 6, R384, R3044000, R5236006). (1) Field
 //! Spell ((2) until issue #3996), Rare.
-//!   Base:    "Durability 1\nActivate: The next Spell you play this turn gains Echo +{echoGain}." — 1 (until
-//!            issue #5236 "Activate: … Then this goes to the graveyard.", which Durability 1 says)
+//!   Base:    "Durability 1\nActivate: The next Spell you play this turn gains Echo +{echoGain}." — 1
+//!            (until issue #5236 "Activate: … Then this goes to the graveyard.", which Durability 1 says)
 //!   Radiant: "Activate: The next Spell you play this turn gains Echo +{echoGain}." — 1; it stays on the
 //!            field, so it serves once each turn.
 //!   Through v0.5.11r: a lasting grant with no Activate, "Your next Spell gains Echo +{echoGain}. Then this

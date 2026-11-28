@@ -34,7 +34,9 @@ const CRY_DAMAGE: i32 = 2;
 /// A Core Common fixture definition, its Radiant face the same as its base.
 fn def(id: &str, index: u32, type_: &str, cost: i32, stats: Option<(i32, i32)>, keywords: Value) -> CardDef {
     let face = match stats {
-        Some((attack, health)) => json!({ "attack": attack, "health": health, "keywords": keywords, "text": id }),
+        Some((attack, health)) => {
+            json!({ "attack": attack, "health": health, "keywords": keywords, "text": id })
+        }
         None => json!({ "keywords": keywords, "text": id }),
     };
     json_as(json!({

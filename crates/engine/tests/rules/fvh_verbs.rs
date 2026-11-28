@@ -35,9 +35,19 @@ const WATCH_DAMAGE: i32 = 1;
 const BOLT_DAMAGE: i32 = 10;
 
 /// A Core Common fixture definition of `set`, its Radiant face the same as its base.
-fn def_in(set: &str, id: &str, index: u32, type_: &str, cost: i32, stats: Option<(i32, i32)>, tags: Vec<Tag>) -> CardDef {
+fn def_in(
+    set: &str,
+    id: &str,
+    index: u32,
+    type_: &str,
+    cost: i32,
+    stats: Option<(i32, i32)>,
+    tags: Vec<Tag>,
+) -> CardDef {
     let face = match stats {
-        Some((attack, health)) => json!({ "attack": attack, "health": health, "keywords": [], "text": id }),
+        Some((attack, health)) => {
+            json!({ "attack": attack, "health": health, "keywords": [], "text": id })
+        }
         None => json!({ "keywords": [], "text": id }),
     };
     json_as(json!({
@@ -908,7 +918,11 @@ mod r5238010_cheaper_transform {
 
     #[test]
     fn r5238010_a_negative_step_takes_the_highest_price_at_or_below_start_plus_step() {
-        assert_eq!(stepped("r5238010-hole", DOWN_ONE, EIGHT), THREE, "(7) has none: the highest below is (3)");
+        assert_eq!(
+            stepped("r5238010-hole", DOWN_ONE, EIGHT),
+            THREE,
+            "(7) has none: the highest below is (3)"
+        );
         assert_eq!(stepped("r5238010-two", DOWN_TWO, EIGHT), THREE);
         assert_eq!(stepped("r5238010-exact", DOWN_ONE, THREE), ONE);
     }

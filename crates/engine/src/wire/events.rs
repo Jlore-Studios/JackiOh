@@ -367,7 +367,8 @@ pub enum GameEvent {
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         on_draw: Option<bool>,
         /// R5237005: where in its player's hand the card was as it left it (`HandPlace`), on a play from
-        /// a hand only; rules read it (`query::played_leftmost`). Public.
+        /// a hand only, in a game holding a Felinors vs Humans card (`recursion_log::fvh_kept`), so no
+        /// other game's hash moves; rules read it (`query::played_leftmost`). Public.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         from_hand: Option<HandPlace>,

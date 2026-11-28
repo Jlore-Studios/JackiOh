@@ -626,10 +626,14 @@ fn cleanup(sink: &mut EngineSink, player: PlayerId) {
     crate::freeze::thaw_at_cleanup(sink, player);
     // R3548002: then the Warhero Tokens' game-wide worth grows, once any has been minted.
     crate::warhero::grow_at_cleanup(sink);
+    // R5237002: kept only in a game holding a Felinors vs Humans card, so no other game's hash moves.
+    let keeps_float = crate::recursion_log::fvh_kept(sink.state);
     let side = &mut sink.state.players[player];
     side.turn_log.unspent_at_end = Some(side.mana.current);
     // R5237002: and the Float `query::float_last_turn` reads through their next turn, never reset.
-    side.last_float = Some(side.mana.current);
+    if keeps_float {
+        side.last_float = Some(side.mana.current);
+    }
     let handed_over = side.ai_turn;
     if handed_over {
         crate::traps::end_handed_over_turn(sink);

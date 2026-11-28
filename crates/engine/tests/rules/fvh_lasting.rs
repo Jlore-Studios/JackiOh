@@ -46,7 +46,9 @@ const GRANT_KEY: &str = "endTurn";
 /// A Core Common fixture definition, its Radiant face the same as its base.
 fn def(id: &str, index: u32, type_: &str, stats: Option<(i32, i32)>, tags: Vec<Tag>) -> CardDef {
     let face = match stats {
-        Some((attack, health)) => json!({ "attack": attack, "health": health, "keywords": [], "text": id }),
+        Some((attack, health)) => {
+            json!({ "attack": attack, "health": health, "keywords": [], "text": id })
+        }
         None => json!({ "keywords": [], "text": id }),
     };
     json_as(json!({
@@ -742,7 +744,9 @@ mod r5237008_give_cards_keyword {
     fn cards() -> Vec<(CardDef, Script)> {
         vec![(
             spell(LEND, 523_060),
-            cast(|| effects::player_mods::give_cards_keyword(json_as(json!({ "keyword": { "kind": "Taunt" } })))),
+            cast(|| {
+                effects::player_mods::give_cards_keyword(json_as(json!({ "keyword": { "kind": "Taunt" } })))
+            }),
         )]
     }
 

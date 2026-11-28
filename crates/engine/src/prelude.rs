@@ -49,6 +49,8 @@ pub use crate::recursion_log::{
     DeathRecord, FaceUpPlay, RecursionLog, deaths_since_last_turn, deaths_this_game, deaths_this_turn,
     last_plays, last_unit_played, played_this_game, plays_last_turn, returned_by_reborn, units_played_by,
 };
+// R5237002, R5237005: whether the game keeps the Felinors vs Humans records.
+pub use crate::recursion_log::fvh_kept;
 pub use crate::replacements::*;
 pub use crate::restrictions::*;
 pub use crate::revealed_hand::*;
