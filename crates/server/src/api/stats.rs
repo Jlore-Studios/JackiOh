@@ -1210,12 +1210,13 @@ async fn totals_in(
 /// versions' table does, so the page's own read costs the patches it shows and not every version filed.
 /// R5186000: the load runs on a task of its own, so a read that gives up (the client's timeout, a proxy
 /// closing the connection) leaves it running for the next read to join. In the read's own future it was
-/// dropped half done, and the next read began it again from nothing.
+/// dropped half done, and the next read began it again from nothing. R5207000: the kept totals are dated
+/// from when their load finished, so everything cut from them expires with them.
 async fn kept_snapshot(app: &App, reach: Reach) -> Result<KeptTotals, ApiError> {
-    let (made_at, cell, folds) = app.card_stats.totals_cell(now_ms(), reach);
+    let (cell, folds) = app.card_stats.totals_cell(now_ms(), reach);
     if let Some(held) = cell.get() {
         return Ok(KeptTotals {
-            made_at,
+            made_at: held.loaded_at,
             held: Arc::clone(held),
         });
     }
@@ -1231,7 +1232,10 @@ async fn kept_snapshot(app: &App, reach: Reach) -> Result<KeptTotals, ApiError> 
     })
     .await
     .map_err(|error| ApiError::internal(format!("the card statistics' load stopped: {error}")))??;
-    Ok(KeptTotals { made_at, held })
+    Ok(KeptTotals {
+        made_at: held.loaded_at,
+        held,
+    })
 }
 
 /// R5186000: the steps of a load of the kept snapshot, in order, which `GET /api/stats/loading` numbers
@@ -1333,7 +1337,7 @@ impl SnapshotSource {
         ticket.step(LoadStep::CardTotals);
         let totals = totals_in(&self.db, None, false, CardRows::Filed(filing.clone())).await?;
         ticket.step(LoadStep::Snapshot);
-        let snapshot = Arc::new(blocking(|| Snapshot::new(&history, totals, filing)));
+        let snapshot = Arc::new(blocking(|| Snapshot::new(&history, totals, filing, now_ms())));
         ticket.done = true;
         Ok(snapshot)
     }
@@ -1619,7 +1623,6 @@ enum Reach {
 
 /// R3067000, R5174000: the cells of every patch's totals made at one time.
 struct TotalsCells {
-    made_at: i64,
     /// The cell every read takes first.
     kept: KeptTotalsCell,
     /// Whether `kept` folds the older play versions in: it does when the play versions' table asked first.
@@ -1629,7 +1632,8 @@ struct TotalsCells {
     folded: Option<KeptTotalsCell>,
 }
 
-/// R3067000: every patch's totals, and when their cell was first asked for.
+/// R3067000: every patch's totals, and when their load finished (R5207000), which everything cut from
+/// them is dated from.
 struct KeptTotals {
     made_at: i64,
     held: Arc<Snapshot>,
@@ -1641,10 +1645,12 @@ struct Snapshot {
     totals: StatsTotals,
     filing: CardFiling,
     windows: Vec<PatchWindow>,
+    /// R5207000: when its load finished, which its age in the cache counts from.
+    loaded_at: i64,
 }
 
 impl Snapshot {
-    fn new(history: &[PatchStep], totals: StatsTotals, filing: CardFiling) -> Snapshot {
+    fn new(history: &[PatchStep], totals: StatsTotals, filing: CardFiling, loaded_at: i64) -> Snapshot {
         let windows = patch_windows(
             history,
             |version| totals.games(version),
@@ -1654,6 +1660,7 @@ impl Snapshot {
             totals,
             filing,
             windows,
+            loaded_at,
         }
     }
 
@@ -1708,9 +1715,9 @@ pub struct KeptReports {
     versions: Kept<(PublicStatsPilot, PublicStatsMode, PublicStatsScope), Arc<PlayVersionTable>>,
     /// R4681001: the Hall of Fame's bodies `GET /api/stats/hall-of-fame` reads, one per `?mode=`.
     hall: Kept<PublicStatsMode, Arc<HallOfFameBody>>,
-    /// R3067000: every patch's totals, which every kept window and history is cut from, with when they
-    /// were first asked for. R5174000: beside them, the same totals with the older play versions folded in,
-    /// when the play versions' table asked for those after the cards.
+    /// R3067000: every patch's totals, which every kept window and history is cut from. R5174000: beside
+    /// them, the same totals with the older play versions folded in, when the play versions' table asked
+    /// for those after the cards.
     totals: Mutex<Option<TotalsCells>>,
     /// R1583000: the play rates `GET /api/stats/play-rates` reads, with when they were first asked for.
     play_rates: Mutex<Option<(i64, PlayRatesCell)>>,
@@ -1779,30 +1786,41 @@ impl KeptReports {
         }
     }
 
-    /// R3067000: the cell of every patch's totals made less than `CARD_STATS_CACHE_TTL_SECONDS` before
-    /// `now`, or a new empty one in its place, with when it was made. R5174000: and whether it folds the
-    /// older play versions in. A read that needs them takes a cell that does: the one there when it folds,
-    /// or one made beside it with its time, so everything cut from either is kept and dropped together.
-    fn totals_cell(&self, now: i64, reach: Reach) -> (i64, KeptTotalsCell, bool) {
+    /// R3067000: the cell of every patch's totals, or a new empty one in its place once it has expired.
+    /// R5207000: a cell expires `CARD_STATS_CACHE_TTL_SECONDS` after its load finished, and never while it
+    /// is empty: a load under way, which every read joins however long it has run, so one load runs at a
+    /// time, or one that failed, which the next read makes again in the same cell. R5174000: and whether
+    /// it folds the older play versions in. A read that needs them takes a cell that does: the one there
+    /// when it folds, or one made beside it, kept by the same rule.
+    fn totals_cell(&self, now: i64, reach: Reach) -> (KeptTotalsCell, bool) {
+        let live = |cell: &KeptTotalsCell| {
+            cell.get()
+                .is_none_or(|held| now - held.loaded_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND)
+        };
         let mut kept = lock(&self.totals);
         if let Some(cells) = kept.as_mut()
-            && now - cells.made_at < CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND
+            && live(&cells.kept)
         {
             if reach == Reach::Kept || cells.kept_folds {
-                return (cells.made_at, Arc::clone(&cells.kept), cells.kept_folds);
+                return (Arc::clone(&cells.kept), cells.kept_folds);
             }
-            let folded = cells.folded.get_or_insert_with(|| Arc::new(OnceCell::new()));
-            return (cells.made_at, Arc::clone(folded), true);
+            if let Some(folded) = cells.folded.as_ref()
+                && live(folded)
+            {
+                return (Arc::clone(folded), true);
+            }
+            let folded: KeptTotalsCell = Arc::new(OnceCell::new());
+            cells.folded = Some(Arc::clone(&folded));
+            return (folded, true);
         }
         let cell: KeptTotalsCell = Arc::new(OnceCell::new());
         let folds = reach == Reach::Folded;
         *kept = Some(TotalsCells {
-            made_at: now,
             kept: Arc::clone(&cell),
             kept_folds: folds,
             folded: None,
         });
-        (now, cell, folds)
+        (cell, folds)
     }
 
     /// R1583000: the play rates' cell made less than `PLAY_RATES_REFRESH_SECONDS` before `now`, or a
@@ -3035,5 +3053,64 @@ mod tests {
     async fn r5225000_a_one_thread_runtime_runs_the_work_in_place() {
         let asked = std::thread::current().id();
         assert_eq!(blocking(|| std::thread::current().id()), asked);
+    }
+
+    /// How long a kept snapshot lasts, in the milliseconds `totals_cell` reads.
+    const TTL_MS: i64 = CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND;
+
+    /// When the test's load finishes: past one TTL from when it was first asked for (0), as a slow load
+    /// on staging's quarter of a processor does.
+    const LOADED: i64 = 400 * MS_PER_SECOND;
+
+    /// An empty snapshot whose load finished at `loaded_at`.
+    fn loaded(loaded_at: i64) -> Arc<Snapshot> {
+        Arc::new(Snapshot::new(
+            &patch_history(),
+            StatsTotals::default(),
+            CardFiling::default(),
+            loaded_at,
+        ))
+    }
+
+    /// R5207000: a read one TTL after a load began, while it still runs, joins that load rather than
+    /// starting a second beside it. Dated from when it was first asked for, the cell was replaced, so a
+    /// load longer than the TTL finished into a cell no read took again and every read began it anew.
+    #[test]
+    fn r5207000_a_snapshot_still_loading_is_not_replaced_past_its_ttl() {
+        let reports = KeptReports::default();
+        let (first, _) = reports.totals_cell(0, Reach::Kept);
+        let (later, _) = reports.totals_cell(TTL_MS + 1, Reach::Kept);
+        assert!(
+            Arc::ptr_eq(&first, &later),
+            "a read past the TTL began a second load"
+        );
+        let (folded, folds) = reports.totals_cell(TTL_MS + 1, Reach::Folded);
+        assert!(folds);
+        let (folded_later, _) = reports.totals_cell(2 * TTL_MS, Reach::Folded);
+        assert!(
+            Arc::ptr_eq(&folded, &folded_later),
+            "a folded read past the TTL began a second load"
+        );
+    }
+
+    /// R5207000: the snapshot is kept one TTL from when its load finished, and is replaced by an empty cell
+    /// after that.
+    #[test]
+    fn r5207000_the_snapshot_is_kept_from_when_its_load_finished() {
+        let reports = KeptReports::default();
+        let (cell, _) = reports.totals_cell(0, Reach::Kept);
+        assert!(cell.set(loaded(LOADED)).is_ok());
+        let (kept, _) = reports.totals_cell(LOADED + TTL_MS - 1, Reach::Kept);
+        assert!(
+            Arc::ptr_eq(&cell, &kept),
+            "the snapshot expired before one TTL from its load"
+        );
+        assert_eq!(kept.get().map(|held| held.loaded_at), Some(LOADED));
+        let (fresh, _) = reports.totals_cell(LOADED + TTL_MS, Reach::Kept);
+        assert!(
+            !Arc::ptr_eq(&cell, &fresh),
+            "the snapshot outlived one TTL from its load"
+        );
+        assert!(fresh.get().is_none());
     }
 }
