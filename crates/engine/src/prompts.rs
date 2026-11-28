@@ -1077,7 +1077,19 @@ fn run_resume_now(sink: &mut EngineSink<'_>, resume: &Resume, options: ResumeOpt
         }
     };
 
-    let Some(hook) = hook_for(&face_of(sink.state, &resume.def_id, resume.radiant), resume) else {
+    // R5237006: a card holding a granted End of turn runs its own End of turn and then each grant's, one
+    // list, rebuilt the same on a resume as a granted Death is (`grants::end_of_turn_hook_of`).
+    let granted = match instance.as_ref() {
+        Some(card)
+            if resume.hook == crate::resolve::HookName::EndOfTurn.as_str()
+                && crate::grants::has_end_of_turn_grant(card) =>
+        {
+            crate::grants::end_of_turn_hook_of(sink.state, card)
+        }
+        _ => None,
+    };
+    let Some(hook) = granted.or_else(|| hook_for(&face_of(sink.state, &resume.def_id, resume.radiant), resume))
+    else {
         return true;
     };
 

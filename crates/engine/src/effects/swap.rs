@@ -266,6 +266,132 @@ pub struct SwapHandsArgs {
     /// discount), on top of what they hold. Absent, the taken cards keep their price.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_mod: Option<i32>,
+    /// R5238013: at the end of the swapping player's turn (this one, or their next when the swap came on
+    /// the other player's turn), every swapped card still in the hand the swap put it in goes back to the
+    /// hand it came from, owned and controlled there again, and a card the swapper took gives back its
+    /// `costMod`. A card that left that hand since (played, discarded, moved) stays where it is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub until_end_of_turn: Option<bool>,
+}
+
+/// R5238013: the `Resume.hook` an `untilEndOfTurn` hand swap's return waits under, which the engine
+/// runs itself (`effects::delay::run_engine_delayed`).
+pub const DELAYED_SWAP_BACK_HOOK: &str = "@delayedSwapBack";
+/// R5238013: the return's `data` key: each swapped card as `[instanceId, seat]`, the seat ("p1"/"p2")
+/// whose hand it was in before the swap, in hand order, the swapper's hand first.
+pub const SWAP_BACK_FROM_KEY: &str = "from";
+/// R5238013: the return's `data` key for the swap's `costMod`, given back by the cards the swapper took.
+pub const SWAP_BACK_COST_KEY: &str = "costMod";
+
+/// R5238013: schedule the return of `was_mine` and `was_theirs` at the end of `mine`'s turn: one engine
+/// delayed entry watching each card's stay in the hand the swap put it in (`DelayedEffect.handWatch`,
+/// R1140), so a card that leaves that hand drops out of it, and the entry with the last. No mark.
+fn schedule_swap_back(
+    ctx: &mut EffectContext<'_>,
+    mine: PlayerId,
+    was_mine: &[CardInstance],
+    was_theirs: &[CardInstance],
+    cost_mod: Option<i32>,
+) {
+    let theirs = opponent_of(mine);
+    let mut from: Vec<serde_json::Value> = Vec::new();
+    let mut ids: Vec<String> = Vec::new();
+    for (seat, cards) in [(mine, was_mine), (theirs, was_theirs)] {
+        for card in cards {
+            from.push(serde_json::Value::Array(vec![
+                serde_json::Value::String(card.id.clone()),
+                serde_json::Value::String(seat.as_str().to_string()),
+            ]));
+            ids.push(card.id.clone());
+        }
+    }
+    if ids.is_empty() {
+        return;
+    }
+    let mut data: indexmap::IndexMap<String, serde_json::Value> = indexmap::IndexMap::new();
+    data.insert(SWAP_BACK_FROM_KEY.to_string(), serde_json::Value::Array(from));
+    if let Some(discount) = cost_mod {
+        data.insert(SWAP_BACK_COST_KEY.to_string(), serde_json::Value::from(discount));
+    }
+    let def_id = ctx
+        .def_id
+        .clone()
+        .or_else(|| ctx.self_.as_ref().map(|card| card.def_id.clone()))
+        .unwrap_or_default();
+    let resume = crate::state::Resume {
+        def_id,
+        hook: DELAYED_SWAP_BACK_HOOK.to_string(),
+        step: "back".to_string(),
+        radiant: ctx.radiant,
+        instance_id: None,
+        data,
+    };
+    let at = crate::state::DelayedAt {
+        phase: crate::wire::Phase::End,
+        player: mine,
+    };
+    let entry = crate::modifiers::schedule_delayed(ctx, mine, at, resume, None, None);
+    if let Some(stored) = ctx.state.delayed.iter_mut().find(|due| due.id == entry.id) {
+        stored.hand_watch = Some(ids);
+    }
+}
+
+/// R5238013: the swap's return, as its entry comes due: each card it still watches goes back from the
+/// hand the swap put it in to the hand it came from (`ownership::change_owner`, then the move, its stay
+/// in the old hand ended), at that hand's right end in the order it left, with no hand cap (as the swap
+/// has none); a card the swapper took gives back the swap's `costMod`.
+pub(crate) fn swap_back(ctx: &mut EffectContext<'_>, effect: &crate::state::DelayedEffect) {
+    let watched: Vec<String> = effect.hand_watch.clone().unwrap_or_default();
+    let swapper = effect.owner;
+    let discount = effect
+        .resume
+        .data
+        .get(SWAP_BACK_COST_KEY)
+        .and_then(serde_json::Value::as_i64)
+        .map(|discount| i32::try_from(discount).unwrap_or(0));
+    let from: Vec<(String, PlayerId)> = effect
+        .resume
+        .data
+        .get(SWAP_BACK_FROM_KEY)
+        .and_then(serde_json::Value::as_array)
+        .map(|pairs| {
+            pairs
+                .iter()
+                .filter_map(|pair| {
+                    let id = pair.get(0)?.as_str()?;
+                    let seat = pair.get(1)?.as_str()?;
+                    let seat = crate::wire::PLAYER_IDS
+                        .into_iter()
+                        .find(|player| player.as_str() == seat)?;
+                    Some((id.to_string(), seat))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    for (id, origin) in from {
+        if !watched.contains(&id) {
+            continue;
+        }
+        let Some(card) = crate::state::find_instance(ctx.state, &id).cloned() else {
+            continue;
+        };
+        let Zone::Hand { player: holder } = card.zone else {
+            continue;
+        };
+        if holder == origin {
+            continue;
+        }
+        crate::ownership::change_owner(&mut ctx.sink, &card, origin);
+        let mut card = card;
+        crate::zones::remove_from_any_zone(ctx.state, &mut card);
+        card.zone = Zone::Hand { player: origin };
+        if origin != swapper
+            && let Some(discount) = discount
+        {
+            card.cost_mod -= discount;
+        }
+        ctx.state.players[origin].hand.push(card);
+    }
 }
 
 /// R4586008 (Infinite Assault #48 Ego Death): both hands change holders at once, each card owned
@@ -300,6 +426,10 @@ pub fn swap_hands(args: SwapHandsArgs) -> Effect {
                     live.cost_mod += discount;
                 }
             }
+        }
+        // R5238013: the return at the end of the swapper's turn.
+        if args.until_end_of_turn == Some(true) {
+            schedule_swap_back(ctx, mine, &was_mine, &was_theirs, args.cost_mod);
         }
     })
 }
