@@ -71,6 +71,7 @@ mod tests {
     const THEIR_DRAW: &str = "stand-in (3) 9/9";
     /// What p1 draws.
     const OUR_DRAW: &str = "stand-in (2) 5/5";
+    const HINDER: &str = "core-021"; // Hinder: Cast on draw
 
     fn board(radiant: bool, their_hand: Value) -> Scenario {
         scenario(json!({
@@ -115,6 +116,22 @@ mod tests {
             s.end_turn();
             assert_eq!(copies_in_hand(&s, P1, OUR_DRAW).len(), 1, "p1's own draw, and no copy of it");
             assert_eq!(copies_in_hand(&s, P2, OUR_DRAW).len(), 0);
+        }
+
+        #[test]
+        fn r5261000_a_card_cast_on_draw_is_copied() {
+            let mut s = scenario(json!({
+                "p1": { "field": [{ "def": ID, "lane": 1 }], "hand": [FILLER], "library": [OUR_DRAW, OUR_DRAW] },
+                "p2": { "hand": [FILLER], "library": [HINDER, THEIR_DRAW, THEIR_DRAW] },
+            }));
+            s.end_turn();
+            let cast = s.pile(P2, "graveyard").into_iter().filter(|card| card.def_id == HINDER).count();
+            assert_eq!(cast, 1, "their draw cast Hinder");
+            let copies = copies_in_hand(&s, P1, HINDER);
+            assert_eq!(copies.len(), 1, "and its copy is in p1's hand");
+            for copy in nonempty(copies, "the copy") {
+                assert_eq!(effective_cost(s.state(), &copy, Default::default()), 1);
+            }
         }
 
         #[test]

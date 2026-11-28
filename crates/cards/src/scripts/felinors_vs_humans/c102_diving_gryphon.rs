@@ -99,6 +99,11 @@ mod tests {
         use super::*;
 
         #[test]
+        fn declares_no_tuned_numbers() {
+            assert!(crate::card_def(ID).params.is_none());
+        }
+
+        #[test]
         fn rush_reaches_play_it_attacks_a_unit_the_turn_it_is_played() {
             let mut s = scenario(json!({
                 "p1": { "hand": [ID, FILLER], "library": crate::filler(4) },

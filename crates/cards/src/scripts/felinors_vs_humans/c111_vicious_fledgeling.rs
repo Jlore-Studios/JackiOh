@@ -153,6 +153,11 @@ mod tests {
         use super::*;
 
         #[test]
+        fn declares_no_tuned_numbers() {
+            assert!(crate::card_def(ID).params.is_none());
+        }
+
+        #[test]
         fn r5261003_after_it_attacks_the_enemy_hero_it_discovers_a_combat_keyword_and_gains_it() {
             let mut s = board(false, json!([]));
             let fledgeling = s.unit_at(P1, 1);

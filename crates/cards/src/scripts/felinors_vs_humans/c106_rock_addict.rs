@@ -60,6 +60,11 @@ mod tests {
         use super::*;
 
         #[test]
+        fn declares_no_tuned_numbers() {
+            assert!(crate::card_def(ID).params.is_none());
+        }
+
+        #[test]
         fn its_cry_adds_a_dud() {
             let got = added(false);
             assert_eq!(crate::def_ids(&got), vec![DUD]);

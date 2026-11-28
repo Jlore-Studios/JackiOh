@@ -86,6 +86,11 @@ mod tests {
         use super::*;
 
         #[test]
+        fn declares_no_tuned_numbers() {
+            assert!(crate::card_def(ID).params.is_none());
+        }
+
+        #[test]
         fn at_the_start_of_your_turn_it_transforms_into_a_random_4_cost_unit() {
             becomes_a_4_cost_unit(false);
         }

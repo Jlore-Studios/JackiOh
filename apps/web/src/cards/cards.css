@@ -2755,3 +2755,21 @@
   width: 22%;
   font-size: 2.1em;
 }
+
+/* R5264500: a granted Felinor tag's cat ears (CatEars.tsx), standing on the card's top edge, its middle; they
+   hold still and take no pointer. */
+.cf-cat-ears {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 44%;
+  aspect-ratio: 2;
+  transform: translate(-50%, -55%);
+  pointer-events: none;
+}
+
+.cf-cat-ears > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

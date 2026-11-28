@@ -119,6 +119,11 @@ mod tests {
         use super::*;
 
         #[test]
+        fn declares_no_tuned_numbers() {
+            assert!(crate::card_def(ID).params.is_none());
+        }
+
+        #[test]
         fn r5236010_its_cry_gives_every_other_unit_on_both_sides_fragile() {
             let (s, jakrov, ours, theirs) = played(false);
             assert!(fragile(&s, &ours), "its own side's other Unit");
