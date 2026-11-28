@@ -21722,6 +21722,13 @@
     "5265": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-28T03:57:45Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "Test-only change in one file of crates/tools (tooling, not engine/AI), about 30 lines, no cross-crate contract, no migration."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
