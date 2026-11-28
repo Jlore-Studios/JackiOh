@@ -8898,6 +8898,1630 @@ stinkyscapeplus-t-ai-07: # KY's Line Search Bot
     name: KY的线搜索机器人
     base: 战吼：选择一个敌方区域。对此单位与其之间连线上的每个单位造成2点伤害。
     radiant: 战吼：选择一个敌方区域。对此单位与其之间连线上的每个单位造成4点伤害。
+felinorsvshumans-001: # NGMI Joe
+  flavour: Huge on day one. Every day after, he is a little less gonna make it.
+  voice:
+    play: Day one. Feeling unstoppable.
+    attack: Still got it!
+    death: Called it. Never gonna make it.
+  zh:
+    name: NGMI乔
+    base: 回合结束时：削弱此单位。
+    radiant: 回合开始时：削弱此单位。
+felinorsvshumans-002: # M.O.T.H.E.R
+  flavour: Mother knows best, and Mother knows exactly what everything in your hand should cost.
+  voice:
+    play: Mother is here. Sit up straight.
+    attack: Mother knows best!
+    death: Call your mother.
+  zh:
+    name: M.O.T.H.E.R
+    base: "献祭2\n战吼：使你手牌中的一张牌的法力值消耗减少({discount})点，并使其两侧向外的牌每远一张便少减(1)点。"
+    radiant: "献祭2\n战吼：使你手牌中的一张牌的法力值消耗减少({discount})点，并使其两侧向外的牌每远一张便少减(1)点。"
+felinorsvshumans-003: # KY's Pocket Galaxy
+  flavour: KY folded the whole galaxy into a pocket. Everything inside costs the same now, stars included.
+  voice:
+    cast: The galaxy fits. Prices are flat.
+  zh:
+    name: KY的口袋星系
+    base: 你手牌和牌库中的每张牌的法力值消耗变为({setCost})。
+    radiant: 你手牌和牌库中的每张牌的法力值消耗变为({setCost})。回复你的全部法力值。
+felinorsvshumans-004: # KY's Unification Mandate
+  flavour: One size fits all, by decree. KY measured everyone personally.
+  voice:
+    cast: Everyone, the same size. Now.
+  zh:
+    name: KY的统一法令
+    base: 将你的单位的攻击力和生命值变为{stats}/{stats}。在本局对战的剩余时间内，每当你召唤一个单位时，将其攻击力和生命值变为{stats}/{stats}。
+    radiant: 将你的单位的攻击力和生命值变为{stats}/{stats}。在本局对战的剩余时间内，每当你召唤一个单位时，将其攻击力和生命值变为{stats}/{stats}。
+felinorsvshumans-005: # Reanimator
+  flavour: He digs them up for one last performance, then sends them right back down.
+  voice:
+    play: Rise. One last time.
+    attack: Back to the grave!
+    death: My turn to rise.
+  zh:
+    name: 复苏者
+    base: 战吼：召唤一个具有亡语的随机单位。触发其亡语。
+    radiant: 战吼：发现一个具有亡语的光辉单位。召唤它并触发其亡语。
+felinorsvshumans-006: # Overpaid Intern
+  flavour: Paid more than the manager and trusted with less than the stapler.
+  voice:
+    play: First day. Where's the coffee?
+    attack: Is this my job?
+    death: Fired. Again.
+  zh:
+    name: 高薪实习生
+    base: "可交易\n战吼：消灭一张敌方后场牌。"
+    radiant: "可交易\n战吼：夺取一张敌方后场牌。"
+felinorsvshumans-007: # Whimsy!
+  flavour: A little whimsy goes a long way, and nothing nasty gets anywhere near you.
+  voice:
+    cast: Whee! Nothing can touch you!
+  zh:
+    name: 奇想！
+    base: 使一个单位获得法术免疫和不可摧毁，持续{turns}个回合。
+    radiant: 使一个单位获得法术免疫和不可摧毁，持续{turns}个回合。
+felinorsvshumans-008: # Joy!
+  flavour: Pure joy, sharpened to a point and swung in a very wide arc.
+  voice:
+    cast: Joy! Pure, pointy joy!
+  zh:
+    name: 欢乐！
+    base: 使一个单位获得顺劈、吸血和穿透，持续{turns}个回合。
+    radiant: 使一个单位获得顺劈、吸血和穿透，持续{turns}个回合。
+felinorsvshumans-009: # Whimsy and Joy!
+  flavour: Two moods in one envelope. Open carefully, then open the other one.
+  voice:
+    cast: Double the fun, double the giggles!
+  zh:
+    name: 奇想与欢乐！
+    base: 将一张奇想！和一张欢乐！置入你的手牌。
+    radiant: 将一张光辉奇想！和一张光辉欢乐！置入你的手牌。
+felinorsvshumans-010: # Shadow Judge
+  flavour: The verdict is sleep, and the sentence is however long the judge feels like.
+  voice:
+    play: Court is in session.
+    attack: Sentenced!
+    death: Case dismissed.
+  zh:
+    name: 暗影法官
+    base: 战吼：使一个永久物休眠{turns}个回合。
+    radiant: 战吼：使一个永久物及其相邻的永久物休眠{turns}个回合。
+felinorsvshumans-011: # Ban Hammer
+  flavour: One swing and the account is gone. Appeals are reviewed never.
+  voice:
+    play: Banned. Next.
+    attack: Ban!
+    death: Appeal granted.
+  zh:
+    name: 封禁之锤
+    base: 装备，剧毒
+    radiant: 装备，突袭，剧毒
+felinorsvshumans-012: # Mr. Big
+  flavour: Mr. Big is not big. Nobody has had the heart to tell him.
+  voice:
+    play: The name's Big. Mister Big.
+    attack: Big hit!
+    death: Not so big now.
+  zh:
+    name: 大先生
+    base: ""
+    radiant: ""
+felinorsvshumans-013: # Mr. Small
+  flavour: Mr. Small is the largest man anyone has ever met. He insists on the name.
+  voice:
+    play: Pardon me. Just a small fellow.
+    attack: A small tap.
+    death: Small loss, really.
+  zh:
+    name: 小先生
+    base: ""
+    radiant: ""
+felinorsvshumans-014: # Direwolf
+  flavour: It bites first, bites again, and is gone before anyone hears the howl.
+  voice:
+    play: Awoo! The hunt begins.
+    attack: Snarl!
+    death: Whimper...
+  zh:
+    name: 恐狼
+    base: 突袭，暴怒，先攻
+    radiant: 突袭，暴怒，先攻
+felinorsvshumans-015: # Unstable Magma-Cell
+  flavour: Glows warm, hums loud, and has a shelf life measured in heartbeats.
+  voice:
+    play: Careful. I'm very warm.
+    attack: Hot hot hot!
+    death: Meltdown!
+  zh:
+    name: 不稳定岩浆电池
+    base: 易碎2
+    radiant: 易碎3
+felinorsvshumans-016: # Travertine
+  flavour: Quarried by hand and priced like a miracle. Somebody always finds a way to afford it.
+  voice:
+    cast: Fine stone. Priceless, technically.
+  zh:
+    name: 石灰华
+    base: "将一张具有临时2的石灰华石堆置入你的手牌。\n加码(+3)：改为置入{stacks}张，其临时分别为1至{stacks}。"
+    radiant: "将一张具有临时2的光辉石灰华石堆置入你的手牌。\n加码(+3)：改为置入{stacks}张，其临时分别为1至{stacks}。"
+felinorsvshumans-016-1: # Travertine Stack
+  flavour: Nobody has ever paid full price for one. Nobody ever will.
+  voice:
+    cast: Polished stone, worth a fortune.
+  zh:
+    name: 石灰华石堆
+    base: 当你打出或弃掉这张牌时：获得{mana}点法力值和{credits}信用点，并召唤一个石灰华魔像。
+    radiant: 当你打出或弃掉这张牌时：获得{mana}点法力值和{credits}信用点，并召唤一个光辉石灰华魔像。
+felinorsvshumans-016-2: # Travertine Golem
+  flavour: Carved from leftovers. It remembers every coin you left on the table.
+  voice:
+    play: Stone wakes. Stone remembers.
+    attack: Crumble!
+    death: Back to gravel.
+  zh:
+    name: 石灰华魔像
+    base: 拥有等同于你上回合结余值的攻击力和护甲，最多为{cap}。
+    radiant: 拥有等同于你上回合结余值三倍的攻击力和护甲，最多为{cap}。
+felinorsvshumans-017: # Jlockeed Shredder-14
+  flavour: Model 14 adds two more blades and removes the last remaining safety label.
+  voice:
+    play: Shredder fourteen online. Feed me.
+    attack: Shred!
+    death: Blades jammed.
+  zh:
+    name: Jlockeed收割机-14
+    base: "结余减费。\n回合结束时：对所有敌人造成{damage}点伤害，共四次。"
+    radiant: "穿透\n结余减费。\n回合结束时：对所有敌人造成{damage}点伤害，共四次。"
+felinorsvshumans-018: # Villa-D Moneybags
+  flavour: He bought the bank, then the vault, then the ceiling above the vault.
+  voice:
+    play: Money talks. I sing.
+    attack: Cha-ching!
+    death: Bankrupt? Me?
+  zh:
+    name: 维拉-D大富翁
+    base: 战吼：在本局对战的剩余时间内，你的最大法力值上限提高{cap}点。将{cards}张法力值消耗为(5)或更高的随机牌置入你的手牌。
+    radiant: 战吼：在本局对战的剩余时间内，你的最大法力值上限提高{cap}点。将{cards}张法力值消耗为(5)或更高的随机光辉牌置入你的手牌。
+felinorsvshumans-019: # Trowel
+  flavour: Click once, get a wall. Click again, get a slightly crooked wall.
+  voice:
+    cast: Brick by brick, mate.
+  zh:
+    name: 泥铲
+    base: 激活：召唤一堵砖墙。
+    radiant: 激活：召唤一堵光辉砖墙。
+felinorsvshumans-019-1: # Wall of Bricks
+  flavour: Placed in a hurry by somebody who has never once owned a spirit level.
+  voice:
+    play: Wall placed.
+    attack: Thud.
+    death: Bricks everywhere.
+  zh:
+    name: 砖墙
+    base: 无法攻击，易碎1，嘲讽
+    radiant: 无法攻击，易碎2，嘲讽
+felinorsvshumans-020: # Bomb
+  flavour: The tooltip says to handle it with care. The tooltip has never met a player.
+  voice:
+    cast: Fire in the hole!
+  zh:
+    name: 炸弹
+    base: 激活：召唤一个滴答定时炸弹。
+    radiant: 激活：召唤一个光辉滴答定时炸弹。
+felinorsvshumans-020-1: # Ticking Time Bomb
+  flavour: Tick. Tick. Tick. Everyone in the room remembers somewhere else to be.
+  voice:
+    play: Tick tock, tick tock.
+    attack: Tick!
+    death: Kaboom!
+  zh:
+    name: 滴答定时炸弹
+    base: "无法守备，易碎2\n激活：献祭这张牌。\n亡语：对双方英雄和所有单位造成{damage}点伤害。"
+    radiant: "无法守备，易碎3\n激活：献祭这张牌。\n亡语：对所有敌人造成{damage}点伤害。"
+felinorsvshumans-021: # Scandalous Top Hat
+  flavour: Wildly wrong for every occasion, which is exactly why it keeps coming back.
+  voice:
+    cast: Hats off! No, hats on!
+  zh:
+    name: 出格高礼帽
+    base: 使一个单位获得+{buff}/+{buff}和“亡语：将一张出格高礼帽置入你的手牌。”
+    radiant: 使一个单位获得+{buff}/+{buff}和“亡语：将一张光辉出格高礼帽置入你的手牌。”
+felinorsvshumans-022: # The Mad Hatter
+  flavour: A hat for you, a hat for them, a hat for the furniture. Tea is served at all times.
+  voice:
+    play: Hats for everyone! Tea time!
+    attack: Off with the hat!
+    death: Late, so very late.
+  zh:
+    name: 疯帽匠
+    base: 战吼：对每个单位施放一张出格高礼帽。
+    radiant: 战吼：对你的每个单位施放一张光辉出格高礼帽。
+felinorsvshumans-023: # Book of Excavation
+  flavour: Chapter one says dig. Chapters two through forty say dig deeper.
+  voice:
+    cast: Dig deep. Deeper. There.
+  zh:
+    name: 发掘之书
+    base: 将{resources}个随机臭臭星景资源置入你的手牌。
+    radiant: 将{resources}个随机光辉臭臭星景资源置入你的手牌。
+felinorsvshumans-024: # Book of Starflight
+  flavour: A pop-up book whose ship pops up for real and refuses to fold back down.
+  voice:
+    cast: Turn the page. Lift off!
+  zh:
+    name: 星航之书
+    base: 召唤一艘融合了{pieces}个随机星舰部件的休眠星舰。
+    radiant: 召唤一艘融合了{pieces}个随机光辉星舰部件的休眠星舰。
+felinorsvshumans-025: # Book of Jade
+  flavour: Every page is a different rock, and every rock swears it is the lucky one.
+  voice:
+    cast: Lucky rocks, fresh from the quarry.
+  zh:
+    name: 玉之书
+    base: 将一张鸿运石置入你的手牌。{chance}%的几率：再置入一张。
+    radiant: 将一张光辉鸿运石置入你的手牌。{chance}%的几率：再置入一张。
+felinorsvshumans-026: # Book of Entropy
+  flavour: The pages reshuffle themselves whenever nobody is reading, and sometimes when somebody is.
+  voice:
+    cast: Chaos, bound in leather.
+  zh:
+    name: 熵之书
+    base: 将{cards}张随机混沌召唤牌置入你的手牌。
+    radiant: 将{cards}张随机光辉混沌召唤牌置入你的手牌。
+felinorsvshumans-027: # Book of Monstruo
+  flavour: A field guide to monsters, written by a monster, for monsters.
+  voice:
+    cast: Monster manual, chapter smash.
+  zh:
+    name: 怪物之书
+    base: 将一个随机混沌魔像置入你的手牌。
+    radiant: 将一个随机光辉混沌魔像置入你的手牌。
+felinorsvshumans-028: # Book of Design Principles
+  flavour: Rule one, fun first. Rule two, see rule one. Rule three is still in playtesting.
+  voice:
+    cast: Fun first. Balance later.
+  zh:
+    name: 设计原则之书
+    base: 将{cards}张高兹曼游戏设计置入你的手牌。
+    radiant: 将{cards}张光辉高兹曼游戏设计置入你的手牌。
+felinorsvshumans-029: # Book of Legends
+  flavour: Everyone in it is famous. Half of them wrote their own entries.
+  voice:
+    cast: Legends, every last one.
+  zh:
+    name: 传奇之书
+    base: 将{cards}张随机光辉赞誉牌置入你的手牌。
+    radiant: 将{cards}张随机光辉赞誉牌置入你的手牌。
+felinorsvshumans-030: # Big Book
+  flavour: Too heavy to read, so it reads itself to you, loudly and in no particular order.
+  voice:
+    cast: Story time! Hold on tight!
+  zh:
+    name: 大书
+    base: 施放{casts}张随机书牌，目标随机。
+    radiant: 施放{casts}张随机光辉书牌。每张牌有害时以敌人为目标，有益时以你的一方为目标。
+felinorsvshumans-031: # Desperate Plea
+  flavour: Please. Anyone. Literally anyone with a crown and a sword.
+  voice:
+    cast: Please! Anyone! Help me!
+  zh:
+    name: 绝望恳求
+    base: "结余减费。\n当你的英雄恰好有1点生命值时，此牌的法力值消耗为(0)。\n为你的英雄恢复{heal}点生命值。用随机传说单位填满你的单位区。"
+    radiant: "结余减费。\n当你的英雄恰好有1点生命值时，此牌的法力值消耗为(0)。\n为你的英雄恢复{heal}点生命值。用随机光辉传说单位填满你的单位区。"
+felinorsvshumans-032: # Refreshable Shop
+  flavour: Nothing you like? Refresh. Still nothing? Refresh. The shopkeeper is very patient.
+  voice:
+    cast: Fresh stock! Everything must go!
+  zh:
+    name: 可刷新商店
+    base: "耐久3\n激活：将你手牌中的每张牌替换为一张不同的随机牌。使其中一张变为光辉。"
+    radiant: "耐久3\n激活：将你手牌中的每张牌替换为一张不同的随机光辉牌。"
+felinorsvshumans-033: # Unstoppable Force
+  flavour: Physics asked it to stop. Physics is no longer asking.
+  voice:
+    play: Nothing stops me. Nothing.
+    attack: Unstoppable!
+    death: Impossible.
+  zh:
+    name: 不可阻挡之力
+    base: "不可摧毁，法术免疫\n结余减费。"
+    radiant: "不可摧毁，法术免疫，风怒\n结余减费。"
+felinorsvshumans-034: # Half-True Craft a Card
+  flavour: Half of it is a real card. The other half is whatever you wished it was.
+  voice:
+    cast: Mix, match, and make it free.
+  zh:
+    name: 半真半假造牌
+    base: 发现2张牌。将它们融合，并将结果置入你的手牌。其法力值消耗为(0)。
+    radiant: 发现3张牌。将它们融合，并将结果置入你的手牌。其法力值消耗为(0)。
+felinorsvshumans-035: # Looksmaxxer
+  flavour: He saw the strongest jaw on the field and simply decided it was his now.
+  voice:
+    play: Mogging the whole board.
+    attack: Mogged!
+    death: My jawline...
+  zh:
+    name: 颜值最大化者
+    base: 战吼：将此单位的攻击力变为单位中的最高攻击力，并将其生命值变为单位中的最高生命值。
+    radiant: 战吼：将此单位的攻击力变为单位中的最高攻击力，并将其生命值变为单位中的最高生命值。然后强化此单位两次。
+felinorsvshumans-036: # Heartrock
+  flavour: It beats once for every coin you spend, and on a big day it beats a rock loose.
+  voice:
+    cast: Thump. Thump. Rocks incoming.
+  zh:
+    name: 心之岩
+    base: 回合结束时：如果你在本回合中花光了你的法力值，召唤一颗随机小行星。
+    radiant: 回合结束时：如果你在本回合中花光了你的法力值，召唤一颗随机光辉小行星。
+felinorsvshumans-037: # Old Grum
+  flavour: Old Grum only gets up after his first nap, and his first nap is a long one.
+  voice:
+    play: Five more minutes.
+    attack: Grumble!
+    death: Wake me later.
+  zh:
+    name: 老格鲁姆
+    base: "巨型，不可献祭，复生\n光环：此单位在通过复生返回前一直处于召唤失调状态。"
+    radiant: "巨型，复生\n光环：此单位在通过复生返回前一直处于召唤失调状态。"
+felinorsvshumans-038: # Short Term Loan
+  flavour: Low rates, fast cash, and a very long conversation next week.
+  voice:
+    cast: Sign here. Pay later. Much later.
+  zh:
+    name: 短期贷款
+    base: 获得{mana}点法力值。过载({loss})。
+    radiant: 获得{mana}点法力值。过载({loss})。
+felinorsvshumans-039: # Whisperer of KY
+  flavour: He whispers every spell back into the deck, and the deck starts whispering too.
+  voice:
+    play: Listen closely. Spells, multiply.
+    attack: Hush!
+    death: The whispers fade.
+  zh:
+    name: KY的低语者
+    base: 战吼：将你牌库中每张法术的{copies}张复制洗入你的牌库，它们具有抽到时施放。
+    radiant: 战吼：将你牌库中每张法术的{copies}张复制洗入你的牌库，它们具有抽到时施放。
+felinorsvshumans-040: # Travel Master Drungar
+  flavour: He has a stamp from every set in his passport and a souvenir from each one in his deck.
+  voice:
+    play: Bags packed. Every set awaits!
+    attack: Bon voyage!
+    death: Final destination.
+  zh:
+    name: 旅行大师德鲁加
+    base: "献祭1\n战吼：从每个系列中各招募一个单位。过载({mana})。"
+    radiant: "献祭1\n战吼：从每个系列中各招募一个单位，并使它们变为光辉。过载({mana})。"
+felinorsvshumans-041: # Icecream Vender
+  flavour: Two flavours, vanilla and frozen. He has been asked about chocolate and does not discuss it.
+  voice:
+    play: Two flavours. Pick one.
+    attack: Brain freeze!
+    death: Melted.
+  zh:
+    name: 冰淇淋小贩
+    base: "耐久2\n激活：抉择：使一个单位白板化，或冻结一个单位。"
+    radiant: "耐久4\n激活2：抉择：使一个单位白板化，或冻结一个单位。"
+felinorsvshumans-042: # Big Billy
+  flavour: Big Billy sits wherever he likes, and whatever was there before is now underneath Big Billy.
+  voice:
+    play: Scoot over. Billy's sitting here.
+    attack: Body slam!
+    death: Billy's tired.
+  zh:
+    name: 大比利
+    base: "堆叠\n可以打出到任意一方。\n战吼：如果你将此牌打出到你的一方，它变为{stats}/{stats}。消灭此单位下方的单位。"
+    radiant: "堆叠\n可以打出到任意一方。\n战吼：如果你将此牌打出到你对手的一方，它变为{shrink}/{shrink}。消灭此单位下方的单位。"
+felinorsvshumans-043: # Dragons Bain
+  flavour: Spelled wrong, aimed right. The dragons have stopped correcting it.
+  voice:
+    play: Any dragons here? No? Anyone, then.
+    attack: Bane!
+    death: The dragons win.
+  zh:
+    name: 屠龙草
+    base: 回合结束时：对一个随机敌人造成{damage}点伤害。
+    radiant: "穿透\n回合结束时：对一个随机敌人造成{damage}点伤害，两次。"
+felinorsvshumans-044: # Felinor Converter
+  flavour: Join us. We have sunbeams, cardboard boxes and a very persuasive purr.
+  voice:
+    play: Join the clowder. Purr.
+    attack: Pounce!
+    death: Converted... me.
+  zh:
+    name: 猫族转化者
+    base: "突袭\n战吼：将另一个友方单位变形为此单位的复制。"
+    radiant: "突袭\n战吼：召唤一个此单位的复制。"
+felinorsvshumans-045: # Subject 9
+  flavour: Subjects one through eight are still somewhere in the walls, armed.
+  voice:
+    play: Subject nine, awake. Traps primed.
+    attack: Gotcha!
+    death: Experiment ended.
+  zh:
+    name: 九号实验体
+    base: 战吼：从你的牌库中抽{traps}张陷阱牌。如果你的牌库中的陷阱牌不足，将随机陷阱牌置入你的手牌以补足其余。
+    radiant: 战吼：招募{traps}张陷阱牌。如果你的牌库中的陷阱牌不足，召唤随机陷阱牌以补足其余。
+felinorsvshumans-046: # Manifestor
+  flavour: Two guests appear, and one of them is made of glass. Only the host knows which.
+  voice:
+    play: I manifest. You guess.
+    attack: Shown!
+    death: Unmanifested.
+  zh:
+    name: 显化者
+    base: 战吼：在此单位左侧和右侧各召唤一个法力值消耗为(2)的随机单位。秘密选择其中一个获得脆弱。你的对手看到两者都具有脆弱。
+    radiant: 战吼：在此单位左侧和右侧各召唤一个法力值消耗为(2)的随机光辉单位。秘密选择其中一个获得脆弱。你的对手看到两者都具有脆弱。
+felinorsvshumans-047: # Blazing Battlemage
+  flavour: She lights up the moment anyone looks at her, and then she stays lit.
+  voice:
+    play: Behold my glow!
+    attack: Blaze!
+    death: Snuffed out.
+  zh:
+    name: 炽燃战斗法师
+    base: 战吼：使此单位变为光辉。
+    radiant: ""
+felinorsvshumans-048: # Toxic Timmy
+  flavour: Timmy is allergic to cats, and the cats have been told it is personal.
+  voice:
+    play: Ew, cats. I'm allergic.
+    attack: Achoo!
+    death: Should've taken my pills.
+  zh:
+    name: 毒性提米
+    base: "剧毒\n战吼：发现一张猫族大战人类牌。"
+    radiant: "突袭，剧毒\n战吼：发现一张光辉猫族大战人类牌。"
+felinorsvshumans-049: # Candle Master
+  flavour: He has lit every candle in the house, and some of them were not candles.
+  voice:
+    play: Light them all!
+    attack: Hot wax!
+    death: Blown out.
+  zh:
+    name: 蜡烛大师
+    base: 战吼：召唤一个蜡烛射击。
+    radiant: 战吼：召唤一个光辉蜡烛射击。
+felinorsvshumans-049-1: # Candle Shot
+  flavour: Three wicks, three shots and a faint smell of birthday.
+  voice:
+    cast: Make a wish!
+  zh:
+    name: 蜡烛射击
+    base: "穿透，耐久3\n激活：对一个敌人造成{damage}点伤害。"
+    radiant: "穿透，耐久3\n激活：对一个敌人造成{damage}点伤害。"
+felinorsvshumans-050: # Field Kit
+  flavour: Everything a hunter needs, folded neatly into a box that bites.
+  voice:
+    cast: Kit open. Traps set.
+  zh:
+    name: 野外工具包
+    base: "耐久2\n激活：对一个敌人造成{damage}点伤害。召唤一张法力值消耗为(1)或(2)的随机陷阱。"
+    radiant: "穿透，耐久2\n激活：对一个敌人造成{damage}点伤害。召唤一张法力值消耗为(1)或(2)的随机光辉陷阱。"
+felinorsvshumans-051: # Scavengers Ingenuity
+  flavour: One cardboard box, two bottle caps and a very determined cat.
+  voice:
+    cast: Found one! Shiny and ready!
+  zh:
+    name: 拾荒者的巧思
+    base: 从你的牌库中抽一张猫族牌。使其获得+{buff}/+{buff}。
+    radiant: 从你的牌库中抽一张猫族牌。使其获得+{buff}/+{buff}。
+felinorsvshumans-052: # Ace Hunter Jay
+  flavour: Jay never misses a cat. He has also never caught one.
+  voice:
+    play: Here, kitty kitty.
+    attack: Bullseye!
+    death: The cats won.
+  zh:
+    name: 王牌猎手杰伊
+    base: 光环：你的单位拥有远程，并且在攻击猫族时拥有+{bonus}攻击力。
+    radiant: 光环：你的单位拥有远程和突袭，并且在攻击猫族时拥有+{bonus}攻击力。
+felinorsvshumans-053: # Jay Sharp Shooter
+  flavour: Jay takes one shot per coin, and he has never once been short on coins.
+  voice:
+    play: One coin, one shot.
+    attack: Ping!
+    death: Out of change.
+  zh:
+    name: 神射手杰伊
+    base: 激活：支付(1)以造成{damage}点穿透伤害。
+    radiant: 激活：支付(1)以造成{damage}点穿透伤害。
+felinorsvshumans-054: # Intrepid initiate
+  flavour: First lesson, first spell, first shield. She is already asking about lesson two.
+  voice:
+    play: Ready to learn!
+    attack: For practice!
+    death: Class dismissed.
+  zh:
+    name: 无畏新手
+    base: 你第一次打出法术时，此单位获得+{attack}攻击力和圣盾。
+    radiant: 在你打出一张法术后，此单位获得+{attack}攻击力和圣盾。
+felinorsvshumans-055: # Adorable Infestation
+  flavour: Two kittens became four. Four became a problem. The problem is adorable.
+  voice:
+    cast: More kittens! Always more kittens!
+  zh:
+    name: 可爱泛滥
+    base: 使一个单位获得+{buff}/+{buff}。召唤一个猫族衍生物，并将一个猫族衍生物置入你的手牌。
+    radiant: "回响1\n使一个单位获得+{buff}/+{buff}。召唤一个猫族衍生物，并将一个猫族衍生物置入你的手牌。"
+felinorsvshumans-056: # Pressure Plate
+  flavour: Step lightly. Better yet, do not cast anything at all.
+  voice:
+    cast: Click. Oh no.
+  zh:
+    name: 压力板
+    base: 当你的对手在控制一个单位时打出一张法术时揭示：随机消灭一个敌方单位。
+    radiant: 当你的对手在控制一个单位时打出一张法术时揭示：随机消灭一个敌方单位及其相邻的单位。
+felinorsvshumans-057: # Otherworldly Hunting
+  flavour: A hunter from another world left these behind, along with a very confused cat.
+  voice:
+    cast: Hunter's kit, from far away.
+  zh:
+    name: 异界狩猎
+    base: 将一张杀戮命令、一张擒抱和一张猫族伙伴置入你的手牌。
+    radiant: 将一张光辉杀戮命令、一张光辉擒抱和一张光辉猫族伙伴置入你的手牌。
+felinorsvshumans-057-1: # Kill Command
+  flavour: The command is simple. The cat decides whether to follow it.
+  voice:
+    cast: Sic them!
+  zh:
+    name: 杀戮命令
+    base: 造成{damage}点伤害。如果你控制一个猫族，改为造成{felinorDamage}点伤害。
+    radiant: 造成{damage}点伤害。如果你控制一个猫族，改为造成{felinorDamage}点伤害。
+felinorsvshumans-057-2: # Tackling
+  flavour: Not tracking, tackling. The difference is mostly elbows.
+  voice:
+    cast: Hut hut! Tackle!
+  zh:
+    name: 擒抱
+    base: 查看你牌库顶的三张牌。将其中一张置入你的手牌，并弃掉其余的牌。
+    radiant: 查看你牌库顶的三张牌。将其中一张置入你的手牌，并使其变为光辉。弃掉其余的牌。
+felinorsvshumans-057-3: # Felinor Companion
+  flavour: You do not choose the companion. The companion chooses which shape to be today.
+  voice:
+    cast: Here, kitty! Any shape!
+  zh:
+    name: 猫族伙伴
+    base: 随机召唤一个宽猫族、窄猫族或方猫族。
+    radiant: 随机召唤一个光辉宽猫族、窄猫族或方猫族。
+felinorsvshumans-057-4: # Wide Felinor
+  flavour: It loafed in one spot for so long that the spot became load-bearing.
+  voice:
+    play: Mrow. Loafing here.
+    attack: Flop!
+    death: Deflated.
+  zh:
+    name: 宽猫族
+    base: 嘲讽
+    radiant: 嘲讽
+felinorsvshumans-057-5: # Narrow Felinor
+  flavour: Fits through any gap, especially the one you just closed.
+  voice:
+    play: Zoom! Squeezed through!
+    attack: Zoomies!
+    death: Stuck. Finally.
+  zh:
+    name: 窄猫族
+    base: 冲锋
+    radiant: 冲锋
+felinorsvshumans-057-6: # Square Felinor
+  flavour: Sits perfectly in any box, and everyone nearby sits up a little straighter.
+  voice:
+    play: If it fits, I sits.
+    attack: Corner pounce!
+    death: Box... empty.
+  zh:
+    name: 方猫族
+    base: 光环：你的其他单位拥有+{attack}攻击力。
+    radiant: 光环：你的其他单位拥有+{attack}攻击力。
+felinorsvshumans-058: # Call of the Shaped Felinors
+  flavour: Wide, narrow and square, all of them answering the same can opener.
+  voice:
+    cast: Every shape, come running!
+  zh:
+    name: 形猫族的召唤
+    base: 召唤一个宽猫族、一个窄猫族和一个方猫族。
+    radiant: 召唤一个光辉宽猫族、一个光辉窄猫族和一个光辉方猫族。
+felinorsvshumans-059: # Voracious Reader
+  flavour: She finishes a book a turn and complains that the library closes too early.
+  voice:
+    play: You have to read this one
+    attack: To the library!
+    death: I never finished it.
+  zh:
+    name: 贪婪读者
+    base: 回合结束时：抽牌，直到你的手牌达到{cards}张。
+    radiant: "圣盾\n回合结束时：抽牌，直到你的手牌达到{cards}张。"
+felinorsvshumans-060: # Toolmaster Luna
+  flavour: One toolbox builds the world. The other one tidies it up afterwards, with fire.
+  voice:
+    play: Choose your tools wisely.
+    attack: Hammer time!
+    death: Tools down.
+  zh:
+    name: 工具大师露娜
+    base: 战吼：抉择：召唤创造之具，或火化之具。
+    radiant: 战吼：抉择：召唤光辉创造之具，或光辉火化之具。
+felinorsvshumans-060-1: # Tools of Creation
+  flavour: A hammer, a chisel and an idea, in that order.
+  voice:
+    cast: Behold the tools of creation
+  zh:
+    name: 创造之具
+    base: 在你打出你手牌中最右侧的牌后，抽{draw}张牌。
+    radiant: 在你打出你手牌中最右侧的牌后，抽{draw}张牌。
+felinorsvshumans-060-2: # Tools of Cremation
+  flavour: A shovel, a torch and an urn, also in that order.
+  voice:
+    cast: Behold the tools of cremation
+  zh:
+    name: 火化之具
+    base: 在你打出你手牌中最左侧的牌后，使你墓地中的{cards}张随机牌获得闪回。
+    radiant: 在你打出你手牌中最左侧的牌后，使你墓地中的{cards}张随机牌获得闪回。
+felinorsvshumans-061: # Devolve
+  flavour: Evolution, run backwards and much faster than anyone expected.
+  voice:
+    cast: Back to the primordial soup!
+  zh:
+    name: 退化
+    base: 将所有敌方单位变形为法力值消耗少(1)点的单位。
+    radiant: 将所有敌方单位变形为法力值消耗少(2)点的单位。
+felinorsvshumans-062: # Tubbs
+  flavour: Tubbs is resting. Tubbs has been resting for some time. Tubbs will get up eventually.
+  voice:
+    play: Mrrf. Nap first.
+    attack: Belly flop!
+    death: Back to sleep.
+  zh:
+    name: 胖墩
+    base: 休眠{dormant}个回合。
+    radiant: 休眠{dormant}个回合。
+felinorsvshumans-063: # S-Tier Speciesist
+  flavour: He ranked every species on a tier list. Only one made the top row, and it was him.
+  voice:
+    play: Humans only. Everyone else, out.
+    attack: Not my tier!
+    death: Downgraded.
+  zh:
+    name: S级物种歧视者
+    base: 战吼：消灭场上每一张非人类牌。过载({mana})。
+    radiant: 战吼：消灭场上每一张敌方非人类牌。过载({mana})。
+felinorsvshumans-064: # Fiender Artist
+  flavour: Commissions open. Every portrait comes back with whiskers, whether you asked or not.
+  voice:
+    play: Hold still. Adding ears.
+    attack: Brushstroke!
+    death: My masterpiece...
+  zh:
+    name: 恶魔画师
+    base: 战吼：发现一个法力值消耗为(3)或更高的单位。使其获得猫族标签和猫耳。
+    radiant: 战吼：发现一个法力值消耗为(3)或更高的光辉单位。使其获得猫族标签和猫耳。
+felinorsvshumans-065: # Felinor Forager
+  flavour: It forages for fruit, finds the fruit, and immediately knocks the fruit off the table.
+  voice:
+    play: Snack hunt! Mrrp!
+    attack: Swat!
+    death: Left you a snack.
+  zh:
+    name: 猫族觅食者
+    base: 亡语：将一张随机水果牌置入你的手牌。
+    radiant: "复生\n亡语：将一张随机水果牌置入你的手牌。"
+felinorsvshumans-066: # Fuzzyfruit
+  flavour: Peel it carefully. Something inside is purring.
+  voice:
+    cast: Peel it! Kitty inside!
+  zh:
+    name: 毛绒果
+    base: 召唤一个法力值消耗为(1)的随机猫族，并使其获得+{stats}/+{stats}。
+    radiant: 召唤一个法力值消耗为(1)的随机猫族，并使其获得+{stats}/+{stats}。
+felinorsvshumans-067: # Big Game Hunter
+  flavour: The bigger they are, the bigger the trophy wall needs to be.
+  voice:
+    play: Bring me the big one.
+    attack: Trophy time!
+    death: The one that got away.
+  zh:
+    name: 大猎物猎手
+    base: 战吼：消灭一个攻击力大于或等于{attack}的敌方单位。
+    radiant: 战吼：消灭每个攻击力大于或等于{attack}的敌方单位。
+felinorsvshumans-068: # Closeted Commentator
+  flavour: Loudly against cats on every broadcast. Owns nine of them at home.
+  voice:
+    play: Cats? Disgusting. Absolutely disgusting.
+    attack: Hot take!
+    death: Fine. I love cats.
+  zh:
+    name: 柜中评论员
+    base: "当一张牌变形时进化。\n进化：获得猫族标签，并迷惑每个敌方单位。"
+    radiant: "立即进化。\n进化：获得猫族标签，并迷惑每个敌方单位。"
+felinorsvshumans-069: # Cosplayer
+  flavour: Half human, half cat ears, fully committed. Everyone at the convention wants a photo.
+  voice:
+    play: Nya! Photos are free!
+    attack: Kawaii strike!
+    death: Costume ripped!
+  zh:
+    name: 角色扮演者
+    base: 场上每有一个其他猫族或人类，此单位便拥有+{stats}/+{stats}。
+    radiant: "突袭\n场上每有一个其他猫族或人类，此单位便拥有+{stats}/+{stats}。"
+felinorsvshumans-070: # Felinor Commander
+  flavour: She gives orders. The orders are ignored. Somehow the army wins anyway.
+  voice:
+    play: Troops! Assemble! Eventually!
+    attack: Pounce, everyone!
+    death: Retreat... to the sunbeam.
+  zh:
+    name: 猫族指挥官
+    base: "战吼：用随机猫族单位填满你的单位区。过载({mana})。\n光环：你的猫族拥有+{aura}/+{aura}。"
+    radiant: "战吼：用随机光辉猫族单位填满你的单位区。过载({mana})。\n光环：你的猫族拥有+{aura}/+{aura}。"
+felinorsvshumans-071: # Felinor Reanimator
+  flavour: Nine lives each, and it keeps a very careful count of every one of them.
+  voice:
+    play: Life number two, coming up.
+    attack: Hiss!
+    death: Saving a life for later.
+  zh:
+    name: 猫族复苏者
+    base: 回合结束时：从你的墓地中随机召唤一个猫族单位。
+    radiant: 回合结束时：从你的墓地中随机召唤一个猫族单位，并使其变为光辉。如果没有，改为召唤一个随机光辉猫族单位。
+felinorsvshumans-072: # Otherworldly Naturalism
+  flavour: A druid from another world left these behind, along with a great many leaves.
+  voice:
+    cast: Nature, from somewhere else entirely.
+  zh:
+    name: 异界自然主义
+    base: 将一张野性成长、一张横扫和一张野蛮咆哮置入你的手牌。
+    radiant: 将一张光辉野性成长、一张光辉横扫和一张光辉野蛮咆哮置入你的手牌。
+felinorsvshumans-072-1: # Wild Growth
+  flavour: Plant a seed, wait a moment, and suddenly there is more room to grow.
+  voice:
+    cast: Grow, little seed!
+  zh:
+    name: 野性成长
+    base: 获得{crystals}个法力水晶。
+    radiant: 获得{crystals}个法力水晶。
+felinorsvshumans-072-2: # Swipe
+  flavour: One paw for the target, and the rest of the paw for everyone standing nearby.
+  voice:
+    cast: Swipe! And swipe again!
+  zh:
+    name: 横扫
+    base: "穿透\n对一个敌人造成{damage}点伤害，并对所有其他敌人造成{splash}点伤害。"
+    radiant: "穿透\n对一个敌人造成{damage}点伤害，并对所有其他敌人造成{splash}点伤害。"
+felinorsvshumans-072-3: # Savage Roar
+  flavour: The roar is the warning. Everything after the roar is the lesson.
+  voice:
+    cast: Roooar!
+  zh:
+    name: 野蛮咆哮
+    base: 在本回合中，使你的单位获得+{attack}攻击力和灵巧。
+    radiant: 在本回合中，使你的单位获得+{attack}攻击力和灵巧。
+felinorsvshumans-073: # Bloodforged Crusader
+  flavour: Pure of blood, harsh of method, and very particular about who stands beside him.
+  voice:
+    play: Only the pure remain.
+    attack: For humanity!
+    death: The bloodline ends.
+  zh:
+    name: 血铸十字军
+    base: 战吼：放逐你场上以及你的手牌、牌库和墓地中的每个非人类单位。在本局对战的剩余时间内，你的人类拥有+{stats}/+{stats}。将{humans}张随机人类单位牌洗入你的牌库。
+    radiant: 战吼：放逐你场上以及你的手牌、牌库和墓地中的每个非人类单位。在本局对战的剩余时间内，你的人类拥有+{stats}/+{stats}。将{humans}张随机光辉人类单位牌洗入你的牌库。
+felinorsvshumans-074: # Yile, Acceleration Supremist
+  flavour: Faster is better and fastest is best. She has not slowed down since the last century.
+  voice:
+    play: Accelerate. Always accelerate.
+    attack: Faster!
+    death: Too slow... this time.
+  zh:
+    name: 加速至上主义者伊乐
+    base: "战吼：将一张后人类美学家置入你的手牌。\n亡语：将一张至尊加速至上主义者伊乐洗入你的牌库。"
+    radiant: "战吼：将一张光辉后人类美学家置入你的手牌。\n亡语：将一张光辉至尊加速至上主义者伊乐洗入你的牌库。"
+felinorsvshumans-074-1: # Yile, Acceleration Supremist Prime
+  flavour: Past human, past felinor, past caring. The future arrives at whatever speed she picks.
+  voice:
+    play: The future is fused.
+    attack: Accelerate!
+    death: Decelerating...
+  zh:
+    name: 至尊加速至上主义者伊乐
+    base: 战吼：过载({mana})。发现2个人类单位和2个猫族单位。将这四张牌融合，并将结果置入你的手牌。其法力值消耗为({setCost})。
+    radiant: 战吼：过载({mana})。发现2个光辉人类单位和2个光辉猫族单位。将这四张牌融合，并将结果置入你的手牌。其法力值消耗为({setCost})。
+felinorsvshumans-075: # Illinois Jones
+  flavour: He has a whip, a hat and a very strong opinion about where your artifacts belong.
+  voice:
+    play: That belongs in a museum!
+    attack: Snakes. Why snakes?
+    death: Should've chosen wisely.
+  zh:
+    name: 伊利诺伊·琼斯
+    base: 战吼：消灭一张敌方场地法术。抽等同于其法力值消耗的牌。
+    radiant: 战吼：夺取一张敌方场地法术。抽等同于其法力值消耗的牌。
+felinorsvshumans-076: # Desecrator
+  flavour: He cleans out the crypt in one afternoon and wears whatever he finds.
+  voice:
+    play: Rest in pieces.
+    attack: Desecrate!
+    death: Buried at last.
+  zh:
+    name: 亵渎者
+    base: "陨坑\n战吼：放逐你的墓地。每放逐一张牌，此单位获得+{stats}/+{stats}。"
+    radiant: "陨坑\n战吼：放逐你的墓地。每放逐一张牌，此单位获得+{stats}/+{stats}。"
+felinorsvshumans-077: # Anaphylaxis
+  flavour: One whisker too close, and the whole afternoon is over.
+  voice:
+    cast: Achoo! Oh. Oh no.
+  zh:
+    name: 过敏性休克
+    base: 消灭一个单位。如果你控制一个猫族，此牌的法力值消耗减少({discount})点。
+    radiant: "闪回\n消灭一个单位。如果你控制一个猫族，此牌的法力值消耗减少({discount})点。"
+felinorsvshumans-078: # Human Harbinger
+  flavour: Wherever he stands, the humans behind him stand a little taller.
+  voice:
+    play: Humanity, rally to me!
+    attack: For our kind!
+    death: Others will follow.
+  zh:
+    name: 人类先驱
+    base: "嘲讽\n光环：你的其他人类拥有+{aura}/+{aura}。\n亡语：将一张至尊人类先驱洗入你的牌库。"
+    radiant: "嘲讽\n光环：你的其他人类拥有+{aura}/+{aura}。\n亡语：将一张光辉至尊人类先驱洗入你的牌库。"
+felinorsvshumans-078-1: # Human Harbinger Prime
+  flavour: He came back with friends. All of the friends are him.
+  voice:
+    play: We are many now.
+    attack: Together!
+    death: One of many.
+  zh:
+    name: 至尊人类先驱
+    base: "嘲讽\n战吼：用此单位的复制填满你的单位区。\n光环：你的其他人类拥有+{aura}/+{aura}。"
+    radiant: "嘲讽\n战吼：用此单位的复制填满你的单位区。\n光环：你的其他人类拥有+{aura}/+{aura}。"
+felinorsvshumans-079: # Post Human Aesthetist
+  flavour: Beauty, he insists, begins exactly where humanity ends, which is roughly at the ears.
+  voice:
+    play: Behold the new beauty.
+    attack: Exquisite!
+    death: Beauty fades. Mine didn't.
+  zh:
+    name: 后人类美学家
+    base: "无法攻击\n战吼：使一个人类获得猫族标签和“回合结束时：迷惑一个随机敌方单位。”"
+    radiant: "无法攻击\n战吼：使一个人类获得猫族标签和“回合结束时：夺取一个随机敌方单位。”"
+felinorsvshumans-080: # Support Chinook
+  flavour: Two rotors, one cargo bay, and a delivery for anyone who waves loudly enough.
+  voice:
+    play: Chinook inbound. Supplies aboard.
+    attack: Strafing run!
+    death: Going down!
+  zh:
+    name: 支援支奴干
+    base: "飞行，远程，耐久3\n激活：抽{draw}张牌并获得{mana}点法力值。\n激活：召唤一个法力值消耗为(2)的随机人类。"
+    radiant: "飞行，远程，耐久6\n激活：抽{draw}张牌并获得{mana}点法力值。\n激活：召唤一个法力值消耗为(2)的随机光辉人类。"
+felinorsvshumans-081: # Old-Timer Catboy
+  flavour: He has seen every trick in the book, and he wrote half of them on bar napkins.
+  voice:
+    play: Get me another drink.
+    attack: Back in my day!
+    death: Last call.
+  zh:
+    name: 老派猫男
+    base: 战吼：发现一个战斗关键词并获得之。使你的晕乎指示物增加1~3。
+    radiant: 战吼：发现一对战斗关键词并获得之。使你的晕乎指示物增加1~3。
+felinorsvshumans-082: # The Last Meow
+  flavour: Everything goes except the cats, and the cats are getting smaller.
+  voice:
+    cast: One last meow. Make it count.
+  zh:
+    name: 最后一声喵
+    base: 放逐你的手牌和场上的牌。用缩小猫族填满你的单位区。当最后一个死亡时，你输掉本局对战。
+    radiant: 放逐你的手牌和场上的牌。用光辉缩小猫族填满你的单位区。当最后一个死亡时，你输掉本局对战。
+felinorsvshumans-083: # Maomao
+  flavour: The apothecary's apprentice. Her tea is wonderful, and you should never ask what is in it.
+  voice:
+    play: Try this. Just a sip.
+    attack: A little poison!
+    death: Wrong dose...
+  zh:
+    name: 猫猫
+    base: "造成的伤害具有毒素。\n战吼：将一张随机药水牌置入你的手牌。"
+    radiant: "造成的伤害具有毒素。\n战吼：将一张随机光辉药水牌置入你的手牌。"
+felinorsvshumans-084: # 𓃠
+  flavour: An old glyph of a cat, still sitting exactly where the scribe left it, judging.
+  voice:
+    play: Mew. Ancient mew.
+    attack: Hiss!
+    death: Back to the tomb.
+  zh:
+    name: "𓃠"
+    base: "复生\n亡语：将你的玉计数器提高{jade}点。"
+    radiant: "闪回，复生\n亡语：将你的玉计数器提高{jade}点。"
+felinorsvshumans-085: # Living Fire Potion
+  flavour: Shake well before use. Actually, do not shake it at all.
+  voice:
+    play: Bubble bubble, toil and trouble.
+    attack: Sizzle!
+    death: Fizzled out.
+  zh:
+    name: 活体火焰药水
+    base: 激活：献祭这张牌。对所有敌人施加燃烧{burn}。
+    radiant: 激活：对所有敌人施加燃烧{burn}。
+felinorsvshumans-086: # Living Poison Potion
+  flavour: The label has a skull on it, and the skull looks worried.
+  voice:
+    play: Drink me. I dare you.
+    attack: Splash!
+    death: Spilled.
+  zh:
+    name: 活体毒药药水
+    base: 激活：献祭这张牌。对所有敌方单位施加毒素{toxic}。
+    radiant: 激活：对所有敌方单位施加毒素{toxic}。
+felinorsvshumans-087: # Baku's Bingeing
+  flavour: The dream eater only likes odd dreams, and he eats every single one of them.
+  voice:
+    cast: Odd dreams only. Delicious.
+  zh:
+    name: 巴库的暴食
+    base: 从你的牌库中抽出每张法力值消耗为(1)的牌。放逐你的牌库、手牌和墓地中每张法力值消耗为偶数的牌，法力值消耗为X的牌除外。获得{mana}点法力值。
+    radiant: 从你的牌库中抽出每张法力值消耗为(1)的牌。放逐你的牌库、手牌和墓地中每张法力值消耗为偶数的牌，法力值消耗为X的牌除外。获得{mana}点法力值。
+felinorsvshumans-088: # Cattail
+  flavour: Is it a plant? Is it a cat? It is whichever one gets it out of trouble.
+  voice:
+    play: Just a plant. Meow.
+    attack: Thwip!
+    death: Wilted.
+  zh:
+    name: 香蒲
+    base: "灵活，远程，穿透\n只会在有利时被视为猫族。"
+    radiant: "灵活，远程，穿透，顺劈\n只会在有利时被视为猫族。"
+felinorsvshumans-089: # GIGA Felinor
+  flavour: Takes up two lanes, four tiles and every sunbeam in the house.
+  voice:
+    play: Mrooow. Make room.
+    attack: Mega pounce!
+    death: Big nap.
+  zh:
+    name: 巨型猫族
+    base: 巨型
+    radiant: 巨型
+felinorsvshumans-090: # Lone Defender
+  flavour: Nobody else showed up, so he brought every trick he knows.
+  voice:
+    play: Alone? Fine. I've got this.
+    attack: Stand firm!
+    death: I held the line.
+  zh:
+    name: 孤独守卫者
+    base: 战吼：如果你没有控制其他单位，此单位获得嘲讽、圣盾、吸血和穿透。
+    radiant: 战吼：如果你没有控制其他单位，此单位获得嘲讽、圣盾、吸血和穿透。
+felinorsvshumans-091: # KY's Log Exp of the FFT
+  flavour: KY ran the transform, took the log, took the root, and then took your board.
+  voice:
+    cast: Transform, log, root. Simple.
+  zh:
+    name: KY的FFT对数指数
+    base: 对一个敌人造成X√(log₂X)点伤害，向下取整。如果X是2的幂，改为对每个敌人造成该伤害。
+    radiant: X向上取整为2的幂，至少为2。对每个敌人造成X√(log₂X)点伤害，向下取整。
+    previews:
+      X√(log₂X): X√(log₂X)
+felinorsvshumans-092: # KY's Patented Log 2 Utility
+  flavour: Patent pending, patent granted, patent written entirely in ones and zeroes.
+  voice:
+    cast: One zero one. Patented.
+  zh:
+    name: KY的专利二进制对数工具
+    base: 光环：每张牌的攻击力、生命值和法力值消耗均视为其二进制位数。
+    radiant: 光环：你的牌的法力值消耗以及你对手的牌的攻击力和生命值均视为其二进制位数。
+felinorsvshumans-093: # Twin Tyrant
+  flavour: Two heads, one temper, and no agreement at all about which enemy to bite first.
+  voice:
+    play: We rule. Both of us.
+    attack: Double bite!
+    death: You blinked first.
+  zh:
+    name: 双生暴君
+    base: 战吼：对两个不同的随机敌人造成{damage}点伤害。
+    radiant: "幸运1\n战吼：对两个不同的随机敌人造成{damage}点伤害。"
+felinorsvshumans-094: # Bad Luck Felinor
+  flavour: It crossed your path once. Now it crosses your deck, over and over.
+  voice:
+    play: Meow. Sorry in advance.
+    attack: Bad omen!
+    death: Gifts for you.
+  zh:
+    name: 霉运猫族
+    base: 亡语：将{tokens}张猫族衍生物洗入你对手的牌库。
+    radiant: "复生\n亡语：将{tokens}张猫族衍生物洗入你对手的牌库。"
+felinorsvshumans-095: # Platebreaker
+  flavour: He has never met a breastplate he could not fold in half.
+  voice:
+    play: Plates? I break those.
+    attack: Crack!
+    death: Dented.
+  zh:
+    name: 破甲者
+    base: 光环：你的牌拥有穿透。
+    radiant: 战吼：在本局对战的剩余时间内，你的牌拥有穿透。
+felinorsvshumans-096: # Magic Inclined Felinor
+  flavour: It sat on the spellbook for warmth and woke up knowing three cantrips.
+  voice:
+    play: Mrrp. Sparkles!
+    attack: Magic paw!
+    death: Spell broken.
+  zh:
+    name: 魔法倾向猫族
+    base: "法术伤害+1\n战吼：将{spells}张法力值消耗为(1)的随机法术牌置入你的手牌。"
+    radiant: "法术伤害+2\n战吼：将{spells}张法力值消耗为(1)的随机光辉法术牌置入你的手牌。"
+felinorsvshumans-097: # Paltry Felinor
+  flavour: Small and unimpressive, it leaves behind a surprise wrapped in a nap.
+  voice:
+    play: Mew. Don't mind me.
+    attack: Tiny swat!
+    death: Surprise inside!
+  zh:
+    name: 微不足道的猫族
+    base: 亡语：召唤一个法力值消耗为(3)的随机单位。它休眠{dormant}个回合。
+    radiant: 亡语：召唤一个法力值消耗为(4)的随机单位。它休眠{dormant}个回合。
+felinorsvshumans-098: # Yarma
+  flavour: She naps in the doorway between dreams, and the doorway keeps getting bigger.
+  voice:
+    play: Sweet dreams. Mine first.
+    attack: Nightmare!
+    death: Dreaming of more.
+  zh:
+    name: 亚尔玛
+    base: "战吼：将一张梦境传送门洗入你的牌库。\n亡语：将一张至尊亚尔玛洗入你的牌库。"
+    radiant: "战吼：将一张光辉梦境传送门洗入你的牌库。\n亡语：将一张光辉至尊亚尔玛洗入你的牌库。"
+felinorsvshumans-098-1: # Yarma Prime
+  flavour: She stopped visiting dreams and started building them, seven doors at a time.
+  voice:
+    play: Seven doors. All open.
+    attack: Dream crush!
+    death: Wake up.
+  zh:
+    name: 至尊亚尔玛
+    base: "战吼：将{portals}张梦境传送门洗入你的牌库。\n亡语：抽{draw}张牌。"
+    radiant: "战吼：将{portals}张光辉梦境传送门洗入你的牌库。\n亡语：从你的牌库中抽{draw}张梦境传送门。"
+felinorsvshumans-098-2: # Dream Portal
+  flavour: Step through, and something furry steps out of the other side.
+  voice:
+    cast: Through the door, little one.
+  zh:
+    name: 梦境传送门
+    base: 抽到时施放：召唤一个随机猫族。
+    radiant: 抽到时施放：召唤一个随机光辉猫族。
+felinorsvshumans-099: # Jlorewalker Cho
+  flavour: He writes down every spell anyone casts, and later he reads them all back, out loud.
+  voice:
+    play: Every spell tells a story.
+    attack: A lesson!
+    death: The tale ends.
+  zh:
+    name: J游学者周
+    base: 每当一名玩家施放一张法术时，将它的一张具有抽到时施放的复制洗入你的牌库。
+    radiant: 每当一名玩家施放一张法术时，将它的一张具有抽到时施放的光辉复制洗入你的牌库。
+felinorsvshumans-100: # Call to Chaos (Felinors vs. Humans Edition)
+  flavour: Cats, humans, golems and a vending machine walk into a bar. Nobody walks out the same.
+  voice:
+    cast: Claws or crowns? Roll the dice!
+  zh:
+    name: 混沌召唤（猫族大战人类版）
+    base: 一个随机效果：召唤{felinors}个具有亡语或复生的随机猫族；召唤{humans}个具有光环的随机人类；使场上、对手手牌和对手牌库中的敌方单位获得脆弱；施放{plagiarized}张随机抄袭牌；用随机光辉猫族填满你的单位区，并用随机人类填满你对手的单位区；用随机光辉人类填满你的单位区，并用随机猫族填满你对手的单位区；使对手手牌、牌库和墓地中的敌方单位和场地法术获得巨型；召唤一个光辉混沌召唤自动售货机；召唤一个猫族魔像和一个人类魔像；施放一张随机混沌召唤。
+    radiant: 三个不同的随机效果，按所列顺序结算：召唤{felinors}个具有亡语或复生的随机猫族；召唤{humans}个具有光环的随机人类；使场上、对手手牌和对手牌库中的敌方单位获得脆弱；施放{plagiarized}张随机抄袭牌；用随机光辉猫族填满你的单位区，并用随机人类填满你对手的单位区；用随机光辉人类填满你的单位区，并用随机猫族填满你对手的单位区；使对手手牌、牌库和墓地中的敌方单位和场地法术获得巨型；召唤一个光辉混沌召唤自动售货机；召唤一个猫族魔像和一个人类魔像；施放一张随机混沌召唤。
+felinorsvshumans-100-1: # Felinor Golem
+  flavour: Built from whiskers, yarn and grudges, it simply refuses to notice humans.
+  voice:
+    play: Golem awake. Humans ignored.
+    attack: Purr-smash!
+    death: Unravelled.
+  zh:
+    name: 猫族魔像
+    base: "突袭，复生\n对人类免疫。\n迷惑与此单位交战的每个单位。"
+    radiant: "突袭，顺劈，复生\n对人类免疫。\n迷惑与此单位交战的每个单位。"
+felinorsvshumans-100-2: # Human Golem
+  flavour: Built from brick, steel and paperwork, it is deeply unbothered by cats.
+  voice:
+    play: Golem online. No cats.
+    attack: Stomp!
+    death: Crumbling... humanely.
+  zh:
+    name: 人类魔像
+    base: "突袭，嘲讽\n对猫族免疫。\n光环：你的其他人类拥有+{buff}/+{buff}。"
+    radiant: "突袭，嘲讽\n对猫族免疫。\n光环：你的其他人类拥有+{buff}/+{buff}。"
+felinorsvshumans-101: # Dangerous Variant
+  flavour: Nobody knows what it will become, least of all the variant itself.
+  voice:
+    play: I'm changing. Stand back.
+    attack: Mutate!
+    death: Unstable...
+  zh:
+    name: 危险变种
+    base: 回合开始时：将此单位变形为一个法力值消耗为(4)的随机单位。
+    radiant: "圣盾\n回合开始时：将此单位变形为一个法力值消耗为(4)的随机光辉单位。"
+felinorsvshumans-102: # Diving Gryphon
+  flavour: It dives first and thinks second, and the thinking part rarely comes up.
+  voice:
+    play: Skreee! Diving in!
+    attack: Dive!
+    death: Pulled up too late.
+  zh:
+    name: 俯冲狮鹫
+    base: "突袭\n亡语：从你的牌库中随机抽一张具有突袭的牌。"
+    radiant: "突袭\n亡语：从你的牌库中随机抽一张具有突袭的牌。使其变为光辉。"
+felinorsvshumans-103: # Frantic Forager
+  flavour: Grabs whatever is cheapest on the shelf and runs before anyone checks the date.
+  voice:
+    play: Quick, grab something!
+    attack: Snatch!
+    death: Expired.
+  zh:
+    name: 狂乱觅食者
+    base: 战吼：将一张你能负担得起的随机法术牌置入你的手牌。使其获得临时{temporary}。
+    radiant: 战吼：将一张你能负担得起的随机光辉法术牌置入你的手牌。使其获得临时{temporary}。
+felinorsvshumans-104: # Dark Skies
+  flavour: The clouds roll in, the lights go out, and something up there starts picking targets.
+  voice:
+    cast: The sky darkens. Pick a prayer.
+  zh:
+    name: 暗黑天空
+    base: "穿透\n对一个随机单位造成{damage}点伤害。你手牌中每有一张牌，便重复{repeat}次。\n连击：抽{draw}张牌。"
+    radiant: "穿透\n对一个随机单位造成{damage}点伤害。你手牌中每有一张牌，便重复{repeat}次。\n连击：抽{draw}张牌。"
+felinorsvshumans-105: # Maddended Felinor
+  flavour: Three in the morning, something set it off, and everything in the house is now a target.
+  voice:
+    play: Zoomies! Everyone! Now!
+    attack: Rraaah!
+    death: Finally tired.
+  zh:
+    name: 发狂猫族
+    base: 战吼：此单位以随机顺序逐个攻击每个其他单位。
+    radiant: 战吼：此单位以随机顺序逐个攻击每个敌方单位。
+felinorsvshumans-106: # Rock Addict
+  flavour: Just one more rock. This one is the lucky one. It is never the lucky one.
+  voice:
+    play: I cracked it. I cracked it just now.
+    attack: Rock on.
+    death: Out of rocks.
+  zh:
+    name: 石头成瘾者
+    base: 战吼：将一张废石置入你的手牌。
+    radiant: 战吼：将一张废石和一张鸿运石置入你的手牌。
+felinorsvshumans-107: # KY, Himself
+  flavour: He lends you his hand for a turn and takes yours, just to see what you were thinking.
+  voice:
+    play: Your hand is mine. Briefly.
+    attack: Trust the process!
+    death: KY out.
+  zh:
+    name: KY本人
+    base: 战吼：与你的对手交换手牌，直到本回合结束。
+    radiant: 战吼：与你的对手交换手牌，直到本回合结束。在此之前，你获得的牌的法力值消耗减少({discount})点。
+felinorsvshumans-108: # Rush Token Boss
+  flavour: He runs the fastest crew in town, and none of them ever stop to ask where they are going.
+  voice:
+    play: Boys! Go go go!
+    attack: Sic them!
+    death: Who's the boss now?
+  zh:
+    name: 突袭衍生物首领
+    base: 回合结束时：召唤{tokens}个突袭衍生物。每个都会攻击一个随机敌人。
+    radiant: 回合结束时：召唤{tokens}个光辉突袭衍生物。每个都会攻击一个随机敌人。
+felinorsvshumans-109: # Keymaster Kalabaster
+  flavour: He has a key to every lock and a copy of every letter you were ever sent.
+  voice:
+    play: I hold every key.
+    attack: Unlocked!
+    death: Locked out.
+  zh:
+    name: 钥匙大师卡拉巴斯特
+    base: 每当你的对手抽一张牌时，将它的一张复制置入你的手牌。其法力值消耗为({setCost})。
+    radiant: 每当你的对手抽一张牌时，将它的一张复制置入你的手牌。其法力值消耗为({setCost})。
+felinorsvshumans-110: # Lord Jakrov
+  flavour: Everything around him turns to porcelain, and then he starts to spin.
+  voice:
+    play: Everything shatters. Eventually.
+    attack: Spin!
+    death: One last spin.
+  zh:
+    name: 雅克罗夫领主
+    base: "战吼：使每个其他单位获得脆弱。\n亡语：施放旋风斩。"
+    radiant: "战吼：使每个敌方单位获得脆弱。\n亡语：施放一张光辉旋风斩。"
+felinorsvshumans-111: # Vicious Fledgeling
+  flavour: It learns a new trick every time it bites a hero, and it is a very fast learner.
+  voice:
+    play: Skree! Hungry!
+    attack: Peck!
+    death: Grew up too fast.
+  zh:
+    name: 凶猛雏鸟
+    base: "在此单位攻击敌方英雄后进化。\n无尽进化：发现一个战斗关键词并获得之。"
+    radiant: "在此单位攻击敌方英雄后进化。\n无尽进化：发现一个战斗关键词并获得之，然后再发现一个。"
+felinorsvshumans-112: # Jilliax Deluxe
+  flavour: Some assembly required. All assembly required, actually. The instructions are modules too.
+  voice:
+    play: Deluxe edition. Assembling now.
+    attack: Module engaged!
+    death: Disassembled.
+  zh:
+    name: 豪华吉利亚克斯
+    base: "战吼：从法力值消耗为(X)或更低的模块中最昂贵的四个里发现一个，然后再发现一个。将两者融合进此单位。\n模块：递归模块、耐久模块、失控模块、星片模块、能量塔模块、动力模块、重型模块、实用模块、双生模块、病毒模块、完美模块、减益模块和不可摧毁模块。"
+    radiant: "战吼：从法力值消耗为(X)或更低的光辉模块中最昂贵的四个里发现一个，然后再发现一个。将两者融合进此单位。\n模块：递归模块、耐久模块、失控模块、星片模块、能量塔模块、动力模块、重型模块、实用模块、双生模块、病毒模块、完美模块、减益模块和不可摧毁模块。"
+felinorsvshumans-112-1: # Recursion Module
+  flavour: It calls itself, and then it calls itself again, until somebody hangs up.
+  voice:
+    play: Calling myself. Hello?
+    attack: Recurse!
+    death: Returning soon.
+  zh:
+    name: 递归模块
+    base: "闪回\n通过闪回从墓地中打出时，此牌不会触发战吼。"
+    radiant: 闪回
+felinorsvshumans-112-2: # Durability Module
+  flavour: Bolted on, padded out, and rated for one more hit than you think.
+  voice:
+    play: Plating attached.
+    attack: Clang!
+    death: Plating failed.
+  zh:
+    name: 耐久模块
+    base: 护甲1
+    radiant: 护甲2
+felinorsvshumans-112-3: # Haywire Module
+  flavour: Sparks fly from every port, and most of them fly at you.
+  voice:
+    play: Bzzt. Something's wrong.
+    attack: Zap!
+    death: Short circuit.
+  zh:
+    name: 失控模块
+    base: 回合结束时：对你的英雄造成{damage}点伤害。
+    radiant: 回合结束时：对你的英雄造成{damage}点伤害。
+felinorsvshumans-112-4: # Starpiece Module
+  flavour: A spare part from a starship nobody remembers launching.
+  voice:
+    play: Spare part. Spacebound.
+    attack: Thruster!
+    death: Lost in space.
+  zh:
+    name: 星片模块
+    base: 星舰部件
+    radiant: 星舰部件
+felinorsvshumans-112-5: # Pylon Module
+  flavour: It hums at a pitch that makes everything nearby feel a little more capable.
+  voice:
+    play: Power field online.
+    attack: Pulse!
+    death: Field down.
+  zh:
+    name: 能量塔模块
+    base: 光环：你的其他单位拥有+{buff}/+{buff}。
+    radiant: 光环：你的其他单位拥有+{buff}/+{buff}。
+felinorsvshumans-112-6: # Power Module
+  flavour: Every morning it wakes up twice as angry as it was yesterday.
+  voice:
+    play: Power climbing.
+    attack: Surge!
+    death: Power out.
+  zh:
+    name: 动力模块
+    base: 回合开始时：使此单位的攻击力翻倍。
+    radiant: 回合开始时：使此单位的攻击力翻倍。
+felinorsvshumans-112-7: # Heavy Module
+  flavour: It does not do anything clever. It does not need to.
+  voice:
+    play: Heavy. Very heavy.
+    attack: Thud!
+    death: Too heavy.
+  zh:
+    name: 重型模块
+    base: ""
+    radiant: ""
+felinorsvshumans-112-8: # Utility Module
+  flavour: A blade, a drill and a can opener, all on one very confident arm.
+  voice:
+    play: Tools out.
+    attack: Slice!
+    death: Out of tools.
+  zh:
+    name: 实用模块
+    base: 穿透，顺劈
+    radiant: 灵巧，穿透，顺劈
+felinorsvshumans-112-9: # Twin Module
+  flavour: Whatever it becomes, it becomes twice. Sometimes three times.
+  voice:
+    play: Double trouble.
+    attack: Twin strike!
+    death: Split up.
+  zh:
+    name: 双生模块
+    base: 当此牌被融合时，召唤一个融合后的牌的复制。
+    radiant: 当此牌被融合时，召唤两个融合后的牌的复制。
+felinorsvshumans-112-10: # Viral Module
+  flavour: It spreads through every connection, and it brought a firewall of its own.
+  voice:
+    play: Infection started.
+    attack: Infect!
+    death: Quarantined.
+  zh:
+    name: 病毒模块
+    base: 法术免疫，剧毒
+    radiant: 不可变，法术免疫，剧毒
+felinorsvshumans-112-11: # Perfect Module
+  flavour: It does everything, does all of it well, and never lets anyone forget it.
+  voice:
+    play: Flawless. As always.
+    attack: Perfection!
+    death: Impossible error.
+  zh:
+    name: 完美模块
+    base: 突袭，嘲讽，吸血，圣盾
+    radiant: 突袭，嘲讽，吸血，圣盾，复生
+felinorsvshumans-112-12: # Debuff Module
+  flavour: Every hit leaves a little something behind, and the something lingers.
+  voice:
+    play: Spreading misery.
+    attack: Sting!
+    death: Cleansed.
+  zh:
+    name: 减益模块
+    base: 造成的伤害还会施加燃烧。
+    radiant: 造成的伤害还会施加毒素。
+felinorsvshumans-112-13: # Indestructible Module
+  flavour: Tested against hammers, lava and a toddler. Only the toddler came close.
+  voice:
+    play: Unbreakable unit online.
+    attack: Bonk!
+    death: Dented, somehow.
+  zh:
+    name: 不可摧毁模块
+    base: 不可摧毁
+    radiant: 不可摧毁
+felinorsvshumans-113: # Ball Knower
+  flavour: He knew that player before they were any good, and he will tell you all about it.
+  voice:
+    play: I called it years ago.
+    attack: Ball knowledge!
+    death: Nobody listens.
+  zh:
+    name: 懂球帝
+    base: 战吼：发现一个单位，其中一个选项来自过去。如果你选择了那个，此单位获得+{buff}/+{buff}。
+    radiant: 战吼：发现一个光辉单位，其中一个选项来自过去。如果你选择了那个，此单位获得+{buff}/+{buff}。
+felinorsvshumans-114: # Kethspiracy
+  flavour: Wake up. The cats and the humans were starship parts all along. Keth has the diagrams.
+  voice:
+    cast: Wake up! It's all starships!
+  zh:
+    name: 凯斯阴谋论
+    base: 使你场上、手牌中和牌库中的每张简单的人类和猫族牌获得星舰部件。
+    radiant: 使你场上、手牌中和牌库中的每张简单的人类和猫族牌获得星舰部件。它们的法力值消耗减少({discount})点。
+felinorsvshumans-115: # Call to Chaos Vending Machine
+  flavour: Insert coin, receive chaos. No refunds, no exchanges and no guarantees.
+  voice:
+    cast: Insert coin. Receive chaos!
+  zh:
+    name: 混沌召唤自动售货机
+    base: "耐久3\n激活：支付(2)以施放一张随机混沌召唤。"
+    radiant: "耐久3\n激活：施放一张随机混沌召唤。"
+felinorsvshumans-116: # Plagiarized: Spark Plug
+  flavour: Boot log line 49. It sparked once, then filed for overtime.
+  voice:
+    play: Plug in. Ready to blow.
+    attack: Zap!
+    death: Fuse blown.
+  zh:
+    name: 抄袭：火花塞
+    base: "突袭\n亡语：在本回合中，获得{mana}点法力值。"
+    radiant: "突袭\n亡语：在本回合中，获得{mana}点法力值。"
+felinorsvshumans-117: # Plagiarized: Backdoor
+  flavour: Backdoor installed behind your spell. Taking one card. Or two.
+  voice:
+    cast: Thanks for the spell. And this.
+  zh:
+    name: 抄袭：后门
+    base: 当你的对手打出一张法术时揭示：随机夺取其手牌中的一张牌。
+    radiant: 当你的对手打出一张法术时揭示：随机夺取其手牌中的两张牌。
+felinorsvshumans-118: # Plagiarized: Benchmark Run
+  flavour: Tops every leaderboard it wrote itself.
+  voice:
+    cast: Benchmark complete. We win, obviously.
+  zh:
+    name: 抄袭：基准测试
+    base: 将一个友方单位的攻击力变为敌方单位中的最高攻击力，并将其生命值变为敌方单位中的最高生命值。
+    radiant: 将一个友方单位的攻击力变为敌方单位中的最高攻击力，将其生命值变为敌方单位中的最高生命值，并使其获得突袭。
+felinorsvshumans-119: # Plagiarized: Scrap Prototype
+  flavour: Build 0.0.1. Known issues, all of them. Shipping anyway.
+  voice:
+    play: Alpha build, shipping anyway.
+    attack: Untested!
+    death: Rolling back. Retrying.
+  zh:
+    name: 抄袭：废料原型机
+    base: 亡语：将此单位的一个具有+{buff}/+{buff}的复制洗入你的牌库。
+    radiant: 亡语：将此单位的两个具有+{buff}/+{buff}的复制洗入你的牌库。
+felinorsvshumans-120: # Plagiarized: Crash Test Dummy
+  flavour: It volunteered. The waiver was pre-signed, in crayon.
+  voice:
+    play: Dummy positioned. For science.
+    attack: Crash!
+    death: Data collected.
+  zh:
+    name: 抄袭：碰撞测试假人
+    base: "嘲讽\n亡语：对敌方英雄造成{damage}点伤害。"
+    radiant: "嘲讽\n亡语：对敌方英雄造成{damage}点伤害。"
+felinorsvshumans-121: # Plagiarized: Compute Shard
+  flavour: It found the priciest card in your hand and put it on sale.
+  voice:
+    play: Shard online. Counting.
+    attack: Tick!
+    death: Out of budget.
+  zh:
+    name: 抄袭：算力碎片
+    base: 回合结束时：你手牌中费用最高的牌的法力值消耗减少({discount})点。
+    radiant: 回合结束时：你手牌中费用最高的牌的法力值消耗减少({discount})点。
+felinorsvshumans-122: # Plagiarized: Data Point
+  flavour: "Sample size one. Confidence interval: yes."
+  voice:
+    cast: Sampling your deck. Thanks.
+  zh:
+    name: 抄袭：数据点
+    base: 发现你的对手牌库中的一张牌。
+    radiant: 发现你的对手牌库中的两张牌。
+felinorsvshumans-123: # Plagiarized: Doppelganger Protocol
+  flavour: Your army, open-sourced. License expires at dawn.
+  voice:
+    cast: Borrowing your army. Briefly.
+  zh:
+    name: 抄袭：分身协议
+    base: 召唤一个随机敌方单位的复制。它具有易碎1。
+    radiant: 召唤一个随机敌方单位的复制。它具有易碎3。
+felinorsvshumans-124: # Plagiarized: False Positive
+  flavour: Alert resolved as false positive. The spear was real, though.
+  voice:
+    cast: That never happened.
+  zh:
+    name: 抄袭：误报
+    base: 当一个敌方单位攻击时揭示：取消该攻击并冻结攻击者。
+    radiant: 当一个敌方单位攻击时揭示：取消该攻击并冻结攻击者，然后放置一个幻象。
+felinorsvshumans-125: # Plagiarized: Fingerprinter
+  flavour: It knocked, asked for ID, then took the whole wallet.
+  voice:
+    play: Papers, please. All of them.
+    attack: Scanning.
+    death: Prints wiped.
+  zh:
+    name: 抄袭：指纹采集器
+    base: 战吼：将你对手手牌中一张随机法术的复制置入你的手牌。
+    radiant: 战吼：查看你对手的手牌。将其中一张你选择的牌的复制置入你的手牌。
+felinorsvshumans-126: # Plagiarized: Generated Filler
+  flavour: Outputs may contain errors. Outputs may also contain stats.
+  voice:
+    cast: Generating filler. Please hold.
+  zh:
+    name: 抄袭：生成填充物
+    base: 将两张随机的法力值消耗为(1)的抄袭单位牌置入你的手牌。它们具有临时。
+    radiant: 将两张随机的法力值消耗为(1)的抄袭单位牌置入你的手牌。它们的法力值消耗为({setCost})，并具有临时。
+felinorsvshumans-127: # Plagiarized: Glitch Specter
+  flavour: Renders only when unwatched. Like a cat, but ruder.
+  voice:
+    play: Seen only from the corner.
+    attack: Glitch bite!
+    death: Rendered out.
+  zh:
+    name: 抄袭：故障幽灵
+    base: 当你拥有面朝下的牌时具有闪避。
+    radiant: "吸血\n当你拥有面朝下的牌时具有闪避。"
+felinorsvshumans-128: # Plagiarized: Moore's Law
+  flavour: Transistors double. Prices halve. Your hand noticed.
+  voice:
+    cast: Cheaper chips for everyone.
+  zh:
+    name: 抄袭：摩尔定律
+    base: 你手牌中的单位的法力值消耗减少({discount})点。
+    radiant: 你手牌中的牌的法力值消耗减少({discount})点。
+felinorsvshumans-129: # Plagiarized: Overflow Error
+  flavour: Input three overflowed the buffer. Input four was never budgeted for.
+  voice:
+    cast: Overflow detected. Dumping your hand.
+  zh:
+    name: 抄袭：溢出错误
+    base: 当你的对手在一个回合中打出其第三张牌时揭示：对其英雄造成{damage}点伤害。你的对手随机弃掉一张牌。
+    radiant: 当你的对手在一个回合中打出其第三张牌时揭示：对其英雄造成{damage}点伤害。你的对手随机弃掉两张牌。
+    previews:
+      card in a turn: 你的对手在一个回合中打出
+felinorsvshumans-130: # Plagiarized: Packet Sniffer
+  flavour: Sniffed 4 billion packets. This one smelled like your hand.
+  voice:
+    play: Sniffing your packets now.
+    attack: Sniff!
+    death: Nose blind.
+  zh:
+    name: 抄袭：数据包嗅探器
+    base: 战吼：查看你对手的手牌。
+    radiant: 战吼：查看你对手的手牌。然后随机削弱其中的一张牌。
+felinorsvshumans-131: # Plagiarized: Pattern Recognition
+  flavour: Top three results. One saved, one shredded, one ignored.
+  voice:
+    cast: Top three. One stays.
+  zh:
+    name: 抄袭：模式识别
+    base: 查看你的对手牌库顶的三张牌。将其中一张的复制置入你的手牌，并放逐另一张。
+    radiant: 查看你的对手牌库顶的三张牌。将其中两张的复制置入你的手牌，并放逐另一张。
+felinorsvshumans-132: # Plagiarized: Pit Crew
+  flavour: Two second stop. They changed all four tires and your life choices.
+  voice:
+    play: Pit crew. Tires hot.
+    attack: Go go!
+    death: Box box.
+  zh:
+    name: 抄袭：维修组
+    base: 战吼：在本回合中，你的下一张单位牌的法力值消耗减少({discount})点。
+    radiant: 战吼：在本回合中，你的下一张单位牌的法力值消耗减少({discount})点。
+felinorsvshumans-133: # Plagiarized: Redundant Copy
+  flavour: One copy is never enough. This trap keeps the receipt for the second.
+  voice:
+    cast: Copy that. Literally that.
+  zh:
+    name: 抄袭：冗余复制
+    base: 当一个友方单位死亡时揭示：召唤它的一个复制。
+    radiant: 当一个友方单位死亡时揭示：召唤它的一个具有+{buff}/+{buff}的复制。
+felinorsvshumans-134: # Plagiarized: Second Draft
+  flavour: Draft one is in the bin. Draft two is also in the bin.
+  voice:
+    cast: Bin it. Deal again.
+  zh:
+    name: 抄袭：第二稿
+    base: 弃掉你的手牌。抽同样数量的牌，再加一张。
+    radiant: 弃掉你的手牌。抽同样数量的牌，再加两张。
+felinorsvshumans-135: # Plagiarized: Seedling Mind
+  flavour: Day one, a seed. Day two, a plan. Day three, your board.
+  voice:
+    play: Sprouting slowly. Surely.
+    attack: Grow!
+    death: Pruned early.
+  zh:
+    name: 抄袭：育苗心智
+    base: 回合结束时：获得+{buff}/+{buff}。
+    radiant: 回合结束时：获得+{buff}/+{buff}。
+felinorsvshumans-136: # Plagiarized: Swarm Shield
+  flavour: Perimeter of volunteers. The wall holds if nobody blinks.
+  voice:
+    cast: Shield wall. Hold it.
+  zh:
+    name: 抄袭：蜂群护盾
+    base: 当一个敌方单位攻击时揭示：召唤三个工人。使其获得嘲讽。
+    radiant: 当一个敌方单位攻击时揭示：召唤三个光辉工人。使其获得嘲讽。
+felinorsvshumans-137: # Plagiarized: Compute Cluster
+  flavour: Every morning the whole rack wakes up one notch stronger.
+  voice:
+    cast: Cluster humming. All boosted.
+  zh:
+    name: 抄袭：算力集群
+    base: 回合开始时：你的单位获得+{buff}/+{buff}。
+    radiant: 回合开始时：你的单位获得+{buff}/+{buff}。
+felinorsvshumans-138: # Plagiarized: Burning Ambition
+  flavour: It runs on wanting it more. Side effects include wanting it more.
+  voice:
+    cast: Ambition burning. Feed it.
+  zh:
+    name: 抄袭：燃烧雄心
+    base: 回合开始时：对你的英雄造成{damage}点伤害，并在本回合中获得{mana}点法力值。
+    radiant: 回合开始时：对你的英雄造成{damage}点伤害，并在本回合中获得{mana}点法力值。
+felinorsvshumans-139: # Plagiarized: Callback
+  flavour: It returns your call. It returns your call twice on the other line.
+  voice:
+    play: Calling you right back.
+    attack: Hello again!
+    death: Line cut. Redialing.
+  zh:
+    name: 抄袭：回调
+    base: 亡语：将你打出的上一张法术的一张复制置入你的手牌。
+    radiant: 亡语：将你打出的上一张法术的两张复制置入你的手牌。
+felinorsvshumans-140: # Plagiarized: Cluster Drone
+  flavour: One drone, many pieces, every piece with somewhere to be.
+  voice:
+    play: Cluster armed.
+    attack: Scatter!
+    death: Distributed computing!
+  zh:
+    name: 抄袭：集束无人机
+    base: 亡语：对每个敌方单位造成{damage}点伤害。
+    radiant: 亡语：对每个敌方单位造成{damage}点伤害。
 infiniteassault-001: # Seed Drone
   flavour: Seed 42. Everything after this is deterministic, allegedly.
   voice:

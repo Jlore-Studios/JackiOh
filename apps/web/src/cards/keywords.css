@@ -58,6 +58,10 @@
   --kw-period-evolve: 3.6s;
   --kw-period-burn: 1.2s;
   --kw-period-toxic: 2.4s;
+  /* R5264500: the Felinors vs Humans kinds. */
+  --kw-period-durability: 3.2s;
+  --kw-period-fragile: 3.8s;
+  --kw-period-unlucky: 3s;
 
   /* The glyph disc: legible on a phone's minion, and larger on a big one. */
   --kw-glyph: max(12px, 20cqmin);
@@ -331,8 +335,10 @@
   opacity: 0;
 }
 
-/* Lucky's X on the clover's corner. */
-.cf .kw-fx[data-keyword-fx="Lucky"]::after {
+/* Lucky's X on the clover's corner; R5264500: Unlucky's X and Durability's uses left on theirs. */
+.cf .kw-fx[data-keyword-fx="Lucky"]::after,
+.cf .kw-fx[data-keyword-fx="Unlucky"]::after,
+.cf .kw-fx[data-keyword-fx="Durability"]::after {
   content: attr(data-n);
   position: absolute;
   right: -2px;
@@ -347,6 +353,24 @@
   font-weight: 900;
   line-height: 1.1;
   text-align: center;
+}
+
+/* R5264500: Unlucky's X on a bruised pill, Durability's uses left on a steel one. */
+.cf .kw-fx[data-keyword-fx="Unlucky"]::after {
+  background: var(--pal-amethyst-700);
+}
+
+.cf .kw-fx[data-keyword-fx="Durability"]::after {
+  background: var(--pal-slate-700);
+}
+
+/* R5264500: Fragile's pane lies over the portrait like glass, its glint crossing it now and then. */
+.cf .kw-pane {
+  opacity: 0.9;
+}
+
+.cf .kw-pane-glint {
+  opacity: 0.7;
 }
 
 /* ------------------------------------------------------------------------------- motion ---- */
@@ -513,6 +537,20 @@
 
 .cf .kw-fx[data-keyword-fx="Toxic"][data-kw-motion="on"] .kw-anim {
   animation: kw-toxic-drip var(--kw-period-toxic) var(--ease-in) infinite;
+}
+
+/* R5264500: the Felinors vs Humans kinds. Durability's tools rock as they wear, a glint crosses Fragile's pane, and
+   Unlucky's cloud sags over its clover. */
+.cf .kw-fx[data-keyword-fx="Durability"][data-kw-motion="on"] .kw-anim {
+  animation: kw-durability-wear var(--kw-period-durability) var(--ease-in-out) infinite alternate;
+}
+
+.cf .kw-fx[data-keyword-fx="Fragile"][data-kw-motion="on"] .kw-anim {
+  animation: kw-fragile-glint var(--kw-period-fragile) var(--ease-in-out) infinite;
+}
+
+.cf .kw-fx[data-keyword-fx="Unlucky"][data-kw-motion="on"] .kw-anim {
+  animation: kw-unlucky-droop var(--kw-period-unlucky) var(--ease-in-out) infinite alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
@@ -914,6 +952,38 @@
   100% {
     transform: translateY(8%);
     opacity: 0;
+  }
+}
+
+@keyframes kw-durability-wear {
+  from {
+    transform: rotate(-6deg);
+  }
+  to {
+    transform: rotate(6deg);
+  }
+}
+
+@keyframes kw-fragile-glint {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateX(-30%);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(30%);
+  }
+}
+
+@keyframes kw-unlucky-droop {
+  from {
+    opacity: 0.85;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(5%);
   }
 }
 

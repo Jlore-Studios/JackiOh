@@ -1,0 +1,254 @@
+// R2784000: the signature animation of every Felinors vs Humans card (docs/polish/9-card-animations.md).
+// One line per catalog card, tokens included, in catalog order, its name in a comment after it
+// (tables.test.ts holds the file to the catalog). An entry is one of:
+//   "none: <reason>"                        the card's event rows alone ("none: pending" until its set's pass);
+//   { bespoke: "<recipe>" }                 its own recipe (fx/cards/bespoke.ts), drawn in fx/cards/<set>/;
+//   { setPiece: "<key>" }                   a board clear's set piece (fx/setPieces.ts), held for one beat (R2800000);
+//   { <hook>: { motif, palette?, row? } }   a shared motif (fx/motifs/names.ts) on a hook.
+//   { aura: { look, palette?, scope } }     a standing look while it holds, alone or beside hooks (fx/aura/looks.ts, R2787000),
+//                                           or beside a bespoke; a Unit's on its own `tile` (R3400000).
+//   + entrance: "<key>"                     beside any entry but "none", or alone: a Unit's or a Field Spell's entrance (fx/entrances.ts, R3332000);
+//   + takeover: "<look>", signature: true   a Mythic's own takeover look (fx/takeover.ts); a Legendary's or Mythic's signature (R3332000).
+// Hooks: `cast` (a non-Unit's play) and `cry` (a Unit's) play as the card resolves; `death`, `trigger` and
+// `activate` play from the hook's own `hookResolving` marker (R2797000). `palette` is a flavor's look (the
+// card's own flavor by default); `row` is "replace" (the default: the motif draws the numbers in place of
+// the event's own recipe) or "keep" (it plays over that recipe). Written with the set's look (issue #5264,
+// R5264500) from the shipped sets' choices for cards that do the same: shared motifs and looks only, no recipe
+// or set piece of its own, every Legendary and Mythic on signature.test.ts's SIGNATURE_PENDING until its
+// set's signature pass. A Felinor's looks are Beast's felinor sub-look; a Burn or a Toxic is a counter
+// (`counterChanged`), which `tally` reads. The 82 Plagiarized reprints (#116 to #197) take their Infinite
+// Assault originals' entries, but the five whose originals are signatures, which take shared motifs.
+{
+  "felinorsvshumans-001": { trigger: { motif: "curse" } }, // NGMI Joe
+  "felinorsvshumans-002": { cry: { motif: "tithe", palette: "Tech/hologram" } }, // M.O.T.H.E.R
+  "felinorsvshumans-003": { cast: { motif: "tithe", palette: "Tech/starfield" } }, // KY's Pocket Galaxy
+  "felinorsvshumans-004": { cast: { motif: "bless" }, aura: { look: "holy", scope: "side" } }, // KY's Unification Mandate
+  "felinorsvshumans-005": { cry: { motif: "rise", palette: "Dark/curse" } }, // Reanimator
+  "felinorsvshumans-006": { cry: { motif: "bolt" } }, // Overpaid Intern
+  "felinorsvshumans-007": { cast: { motif: "bless" } }, // Whimsy!
+  "felinorsvshumans-008": { cast: { motif: "bless" } }, // Joy!
+  "felinorsvshumans-009": { cast: { motif: "send" } }, // Whimsy and Joy!
+  "felinorsvshumans-010": { cry: { motif: "hex", palette: "Dark/shadow" } }, // Shadow Judge
+  "felinorsvshumans-011": "none: keywords only", // Ban Hammer
+  "felinorsvshumans-012": "none: vanilla", // Mr. Big
+  "felinorsvshumans-013": "none: vanilla", // Mr. Small
+  "felinorsvshumans-014": "none: keywords only", // Direwolf
+  "felinorsvshumans-015": "none: keywords only", // Unstable Magma-Cell
+  "felinorsvshumans-016": { cast: { motif: "send" } }, // Travertine
+  "felinorsvshumans-016-1": { cast: { motif: "conjure" } }, // Travertine Stack
+  "felinorsvshumans-016-2": "none: token; its stats are standing, with no moment to draw", // Travertine Golem
+  "felinorsvshumans-017": { trigger: { motif: "barrage", palette: "Tech/laser" } }, // Jlockeed Shredder-14
+  "felinorsvshumans-018": { cry: { motif: "deal", palette: "Hustle/cash" } }, // Villa-D Moneybags
+  "felinorsvshumans-019": { cast: { motif: "conjure" }, activate: { motif: "conjure" }, aura: { look: "timber", scope: "zone" } }, // Trowel
+  "felinorsvshumans-019-1": "none: token, keywords only", // Wall of Bricks
+  "felinorsvshumans-020": { cast: { motif: "conjure" }, activate: { motif: "conjure" }, aura: { look: "ember", scope: "zone" } }, // Bomb
+  "felinorsvshumans-020-1": { activate: { motif: "offering" }, death: { motif: "nova" } }, // Ticking Time Bomb
+  "felinorsvshumans-021": { cast: { motif: "bless" } }, // Scandalous Top Hat
+  "felinorsvshumans-022": { cry: { motif: "bless" } }, // The Mad Hatter
+  "felinorsvshumans-023": { cast: { motif: "send", palette: "Nerd/ink" } }, // Book of Excavation
+  "felinorsvshumans-024": { cast: { motif: "conjure", palette: "Tech/starfield" } }, // Book of Starflight
+  "felinorsvshumans-025": { cast: { motif: "send", palette: "Hustle/jade" } }, // Book of Jade
+  "felinorsvshumans-026": { cast: { motif: "send", palette: "Nerd/ink" } }, // Book of Entropy
+  "felinorsvshumans-027": { cast: { motif: "send", palette: "Nerd/ink" } }, // Book of Monstruo
+  "felinorsvshumans-028": { cast: { motif: "send", palette: "Nerd/chalk" } }, // Book of Design Principles
+  "felinorsvshumans-029": { cast: { motif: "send", palette: "Nerd/ink" } }, // Book of Legends
+  "felinorsvshumans-030": { cast: { motif: "deal", palette: "Nerd/ink" } }, // Big Book
+  "felinorsvshumans-031": { cast: { motif: "conjure" } }, // Desperate Plea
+  "felinorsvshumans-032": { cast: { motif: "transmute", palette: "Hustle/cash" }, activate: { motif: "transmute", palette: "Hustle/cash" }, aura: { look: "arcane", palette: "Hustle/cash", scope: "zone" } }, // Refreshable Shop
+  "felinorsvshumans-033": "none: keywords only", // Unstoppable Force
+  "felinorsvshumans-034": { cast: { motif: "deal" } }, // Half-True Craft a Card
+  "felinorsvshumans-035": { cry: { motif: "bless" } }, // Looksmaxxer
+  "felinorsvshumans-036": { cast: { motif: "conjure" }, trigger: { motif: "conjure" }, aura: { look: "drift", scope: "zone" } }, // Heartrock
+  "felinorsvshumans-037": "none: keywords only; its Aura is a standing restriction, with no moment to draw", // Old Grum
+  "felinorsvshumans-038": { cast: { motif: "mana", palette: "Hustle/cash" } }, // Short Term Loan
+  "felinorsvshumans-039": { cry: { motif: "deal", palette: "Nerd/ink" } }, // Whisperer of KY
+  "felinorsvshumans-040": { cry: { motif: "conjure" } }, // Travel Master Drungar
+  "felinorsvshumans-041": { activate: { motif: "hex" } }, // Icecream Vender
+  "felinorsvshumans-042": { cry: { motif: "nova" } }, // Big Billy
+  "felinorsvshumans-043": { trigger: { motif: "bolt" } }, // Dragons Bain
+  "felinorsvshumans-044": { cry: { motif: "transmute", palette: "Beast/felinor" } }, // Felinor Converter
+  "felinorsvshumans-045": { cry: { motif: "flight" } }, // Subject 9
+  "felinorsvshumans-046": { cry: { motif: "conjure" } }, // Manifestor
+  "felinorsvshumans-047": { cry: { motif: "radiance" } }, // Blazing Battlemage
+  "felinorsvshumans-048": { cry: { motif: "deal" } }, // Toxic Timmy
+  "felinorsvshumans-049": { cry: { motif: "conjure" } }, // Candle Master
+  "felinorsvshumans-049-1": { activate: { motif: "bolt" }, aura: { look: "ember", scope: "zone" } }, // Candle Shot
+  "felinorsvshumans-050": { cast: { motif: "conjure" }, activate: { motif: "bolt" }, aura: { look: "storm", palette: "Physical/steel", scope: "zone" } }, // Field Kit
+  "felinorsvshumans-051": { cast: { motif: "flight", palette: "Beast/felinor" } }, // Scavengers Ingenuity
+  "felinorsvshumans-052": "none: its Aura is a standing bonus, with no moment to draw", // Ace Hunter Jay
+  "felinorsvshumans-053": { activate: { motif: "bolt" } }, // Jay Sharp Shooter
+  "felinorsvshumans-054": { trigger: { motif: "bless" } }, // Intrepid initiate
+  "felinorsvshumans-055": { cast: { motif: "conjure", palette: "Beast/felinor" } }, // Adorable Infestation
+  "felinorsvshumans-056": { cast: { motif: "snap" } }, // Pressure Plate
+  "felinorsvshumans-057": { cast: { motif: "send" } }, // Otherworldly Hunting
+  "felinorsvshumans-057-1": { cast: { motif: "bolt" } }, // Kill Command
+  "felinorsvshumans-057-2": { cast: { motif: "send" } }, // Tackling
+  "felinorsvshumans-057-3": { cast: { motif: "conjure", palette: "Beast/felinor" } }, // Felinor Companion
+  "felinorsvshumans-057-4": "none: token, keywords only", // Wide Felinor
+  "felinorsvshumans-057-5": "none: token, keywords only", // Narrow Felinor
+  "felinorsvshumans-057-6": "none: token; its Aura is a standing Attack bonus, with no moment to draw", // Square Felinor
+  "felinorsvshumans-058": { cast: { motif: "conjure", palette: "Beast/felinor" } }, // Call of the Shaped Felinors
+  "felinorsvshumans-059": { trigger: { motif: "flight", palette: "Nerd/ink" } }, // Voracious Reader
+  "felinorsvshumans-060": { cry: { motif: "conjure" } }, // Toolmaster Luna
+  "felinorsvshumans-060-1": { trigger: { motif: "flight" }, aura: { look: "arcane", palette: "Nerd/ink", scope: "zone" } }, // Tools of Creation
+  "felinorsvshumans-060-2": { trigger: { motif: "bless" }, aura: { look: "ember", scope: "zone" } }, // Tools of Cremation
+  "felinorsvshumans-061": { cast: { motif: "transmute" } }, // Devolve
+  "felinorsvshumans-062": "none: its Dormancy is standing; its awakening's row draws it", // Tubbs
+  "felinorsvshumans-063": { cry: { motif: "wipe" } }, // S-Tier Speciesist
+  "felinorsvshumans-064": { cry: { motif: "send", palette: "Beast/felinor" } }, // Fiender Artist
+  "felinorsvshumans-065": { death: { motif: "send", palette: "Beast/felinor" } }, // Felinor Forager
+  "felinorsvshumans-066": { cast: { motif: "conjure", palette: "Beast/felinor" } }, // Fuzzyfruit
+  "felinorsvshumans-067": { cry: { motif: "bolt" } }, // Big Game Hunter
+  "felinorsvshumans-068": "none: its Evolve runs from the state check, which no hookResolving marks; the evolve row draws it", // Closeted Commentator
+  "felinorsvshumans-069": "none: its stats are standing, with no moment to draw", // Cosplayer
+  "felinorsvshumans-070": { cry: { motif: "conjure", palette: "Beast/felinor" } }, // Felinor Commander
+  "felinorsvshumans-071": { trigger: { motif: "rise", palette: "Beast/felinor" } }, // Felinor Reanimator
+  "felinorsvshumans-072": { cast: { motif: "send" } }, // Otherworldly Naturalism
+  "felinorsvshumans-072-1": { cast: { motif: "mana" } }, // Wild Growth
+  "felinorsvshumans-072-2": { cast: { motif: "nova" } }, // Swipe
+  "felinorsvshumans-072-3": { cast: { motif: "bless" } }, // Savage Roar
+  "felinorsvshumans-073": { cry: { motif: "wipe", palette: "Dark/blood" } }, // Bloodforged Crusader
+  "felinorsvshumans-074": { cry: { motif: "send", palette: "Tech/hologram" }, death: { motif: "send", palette: "Tech/hologram" } }, // Yile, Acceleration Supremist
+  "felinorsvshumans-074-1": { cry: { motif: "deal", palette: "Tech/hologram" } }, // Yile, Acceleration Supremist Prime
+  "felinorsvshumans-075": { cry: { motif: "bolt" } }, // Illinois Jones
+  "felinorsvshumans-076": { cry: { motif: "vanish", palette: "Dark/curse" } }, // Desecrator
+  "felinorsvshumans-077": { cast: { motif: "bolt" } }, // Anaphylaxis
+  "felinorsvshumans-078": { death: { motif: "send" } }, // Human Harbinger
+  "felinorsvshumans-078-1": { cry: { motif: "conjure" } }, // Human Harbinger Prime
+  "felinorsvshumans-079": { cry: { motif: "bless", palette: "Beast/felinor" } }, // Post Human Aesthetist
+  "felinorsvshumans-080": { activate: { motif: "conjure", palette: "Tech/rocket" } }, // Support Chinook
+  "felinorsvshumans-081": { cry: { motif: "bless", palette: "Beast/felinor" } }, // Old-Timer Catboy
+  "felinorsvshumans-082": { cast: { motif: "conjure", palette: "Beast/felinor" } }, // The Last Meow
+  "felinorsvshumans-083": { cry: { motif: "send", palette: "Toxic" } }, // Maomao
+  "felinorsvshumans-084": { death: { motif: "tally", palette: "Hustle/jade" } }, // 𓃠
+  "felinorsvshumans-085": { activate: { motif: "tally", palette: "Fire" } }, // Living Fire Potion
+  "felinorsvshumans-086": { activate: { motif: "tally", palette: "Toxic" } }, // Living Poison Potion
+  "felinorsvshumans-087": { cast: { motif: "flight" } }, // Baku's Bingeing
+  "felinorsvshumans-088": "none: keywords only", // Cattail
+  "felinorsvshumans-089": "none: keywords only", // GIGA Felinor
+  "felinorsvshumans-090": { cry: { motif: "bless", palette: "Physical/steel" } }, // Lone Defender
+  "felinorsvshumans-091": { cast: { motif: "bolt", palette: "Nerd/pixel" } }, // KY's Log Exp of the FFT
+  "felinorsvshumans-092": { cast: { motif: "seal", palette: "Nerd/pixel" }, aura: { look: "glitch", palette: "Nerd/pixel", scope: "board" } }, // KY's Patented Log 2 Utility
+  "felinorsvshumans-093": { cry: { motif: "volley" } }, // Twin Tyrant
+  "felinorsvshumans-094": { death: { motif: "send", palette: "Beast/felinor" } }, // Bad Luck Felinor
+  "felinorsvshumans-095": "none: its Aura is a standing keyword grant, with no moment to draw", // Platebreaker
+  "felinorsvshumans-096": { cry: { motif: "send", palette: "Beast/felinor" } }, // Magic Inclined Felinor
+  "felinorsvshumans-097": { death: { motif: "conjure" } }, // Paltry Felinor
+  "felinorsvshumans-098": { cry: { motif: "send" }, death: { motif: "send" } }, // Yarma
+  "felinorsvshumans-098-1": { cry: { motif: "send" }, death: { motif: "flight" } }, // Yarma Prime
+  "felinorsvshumans-098-2": { cast: { motif: "conjure", palette: "Beast/felinor" } }, // Dream Portal
+  "felinorsvshumans-099": { trigger: { motif: "send", palette: "Nerd/ink" } }, // Jlorewalker Cho
+  "felinorsvshumans-100": { cast: { motif: "deal" } }, // Call to Chaos (Felinors vs. Humans Edition)
+  "felinorsvshumans-100-1": "none: token; its Allure rides each combat, which the mark row draws", // Felinor Golem
+  "felinorsvshumans-100-2": "none: token, keywords only", // Human Golem
+  "felinorsvshumans-101": { trigger: { motif: "transmute" } }, // Dangerous Variant
+  "felinorsvshumans-102": { death: { motif: "flight" } }, // Diving Gryphon
+  "felinorsvshumans-103": { cry: { motif: "send" } }, // Frantic Forager
+  "felinorsvshumans-104": { cast: { motif: "barrage", palette: "Dark/shadow" } }, // Dark Skies
+  "felinorsvshumans-105": "none: its Cry is a run of attacks, which the attack rows draw", // Maddended Felinor
+  "felinorsvshumans-106": { cry: { motif: "send", palette: "Hustle/ore" } }, // Rock Addict
+  "felinorsvshumans-107": { cry: { motif: "shift" } }, // KY, Himself
+  "felinorsvshumans-108": { trigger: { motif: "conjure" } }, // Rush Token Boss
+  "felinorsvshumans-109": { trigger: { motif: "send" } }, // Keymaster Kalabaster
+  "felinorsvshumans-110": { cry: { motif: "curse" }, death: { motif: "nova" } }, // Lord Jakrov
+  "felinorsvshumans-111": "none: its Evolve runs from the state check, which no hookResolving marks; the evolve row draws it", // Vicious Fledgeling
+  "felinorsvshumans-112": { cry: { motif: "transmute", palette: "Tech/hologram" } }, // Jilliax Deluxe
+  "felinorsvshumans-112-1": "none: token, keywords only", // Recursion Module
+  "felinorsvshumans-112-2": "none: token, keywords only", // Durability Module
+  "felinorsvshumans-112-3": { trigger: { motif: "bolt", palette: "Tech/glitch" } }, // Haywire Module
+  "felinorsvshumans-112-4": "none: token, keywords only", // Starpiece Module
+  "felinorsvshumans-112-5": "none: token; its Aura is a standing stat bonus, with no moment to draw", // Pylon Module
+  "felinorsvshumans-112-6": { trigger: { motif: "bless" } }, // Power Module
+  "felinorsvshumans-112-7": "none: token, vanilla", // Heavy Module
+  "felinorsvshumans-112-8": "none: token, keywords only", // Utility Module
+  "felinorsvshumans-112-9": "none: token; its summon rides a fuse, which no hookResolving marks", // Twin Module
+  "felinorsvshumans-112-10": "none: token, keywords only", // Viral Module
+  "felinorsvshumans-112-11": "none: token, keywords only", // Perfect Module
+  "felinorsvshumans-112-12": "none: token; its Burn rides each hit, which the damage rows draw", // Debuff Module
+  "felinorsvshumans-112-13": "none: token, keywords only", // Indestructible Module
+  "felinorsvshumans-113": { cry: { motif: "deal" } }, // Ball Knower
+  "felinorsvshumans-114": { cast: { motif: "bless", palette: "Tech/starfield" } }, // Kethspiracy
+  "felinorsvshumans-115": { cast: { motif: "conjure" }, activate: { motif: "deal", palette: "Chaos" }, aura: { look: "orbit", palette: "Tech/hologram", scope: "zone" } }, // Call to Chaos Vending Machine
+  "felinorsvshumans-116": { death: { motif: "mana", palette: "Tech/glitch" } }, // Plagiarized: Spark Plug
+  "felinorsvshumans-117": { cast: { motif: "recall", palette: "Tech/glitch" } }, // Plagiarized: Backdoor
+  "felinorsvshumans-118": { cast: { motif: "bless" } }, // Plagiarized: Benchmark Run
+  "felinorsvshumans-119": { death: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Scrap Prototype
+  "felinorsvshumans-120": { death: { motif: "bolt", palette: "Tech/laser" } }, // Plagiarized: Crash Test Dummy
+  "felinorsvshumans-121": { trigger: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Compute Shard
+  "felinorsvshumans-122": { cast: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Data Point
+  "felinorsvshumans-123": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Plagiarized: Doppelganger Protocol
+  "felinorsvshumans-124": { cast: { motif: "seal", palette: "Tech/glitch" } }, // Plagiarized: False Positive
+  "felinorsvshumans-125": { cry: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Fingerprinter
+  "felinorsvshumans-126": { cast: { motif: "deal", palette: "Tech/glitch" } }, // Plagiarized: Generated Filler
+  "felinorsvshumans-127": "none: its Evasive is conditional text, with no moment to draw", // Plagiarized: Glitch Specter
+  "felinorsvshumans-128": { cast: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Moore's Law
+  "felinorsvshumans-129": { cast: { motif: "snap", palette: "Tech/glitch" } }, // Plagiarized: Overflow Error
+  "felinorsvshumans-130": { cry: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Packet Sniffer
+  "felinorsvshumans-131": { cast: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Pattern Recognition
+  "felinorsvshumans-132": { cry: { motif: "bless", palette: "Tech/glitch" } }, // Plagiarized: Pit Crew
+  "felinorsvshumans-133": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Plagiarized: Redundant Copy
+  "felinorsvshumans-134": { cast: { motif: "deal", palette: "Tech/glitch" } }, // Plagiarized: Second Draft
+  "felinorsvshumans-135": { trigger: { motif: "bless" } }, // Plagiarized: Seedling Mind
+  "felinorsvshumans-136": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Plagiarized: Swarm Shield
+  "felinorsvshumans-137": { cast: { motif: "bless" }, trigger: { motif: "bless" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Plagiarized: Compute Cluster
+  "felinorsvshumans-138": { cast: { motif: "mana", palette: "Tech/glitch" }, trigger: { motif: "drain", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Plagiarized: Burning Ambition
+  "felinorsvshumans-139": { death: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Callback
+  "felinorsvshumans-140": { death: { motif: "nova", palette: "Tech/rocket" } }, // Plagiarized: Cluster Drone
+  "felinorsvshumans-141": { cry: { motif: "transmute", palette: "Tech/glitch" } }, // Plagiarized: Copycat Drone
+  "felinorsvshumans-142": { cast: { motif: "send", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Plagiarized: Core Dump
+  "felinorsvshumans-143": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Plagiarized: Deepfake
+  "felinorsvshumans-144": { trigger: { motif: "bolt", palette: "Tech/laser" } }, // Plagiarized: Doomsday Clock
+  "felinorsvshumans-145": { trigger: { motif: "bless", palette: "Tech/glitch" } }, // Plagiarized: Evolutionary Loop
+  "felinorsvshumans-146": { cast: { motif: "bless" } }, // Plagiarized: Emergent Behavior
+  "felinorsvshumans-147": "none: its hand reveal is standing, with no moment to draw", // Plagiarized: Ground Truth
+  "felinorsvshumans-148": { cast: { motif: "conjure", palette: "Tech/rocket" } }, // Plagiarized: Honeypot Protocol
+  "felinorsvshumans-149": { cast: { motif: "bless" }, trigger: { motif: "bless" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Plagiarized: Inevitable
+  "felinorsvshumans-150": { cast: { motif: "transmute", palette: "Tech/glitch" } }, // Plagiarized: Merge Conflict
+  "felinorsvshumans-151": { trigger: { motif: "wipe", palette: "Tech/glitch" } }, // Plagiarized: Logic Bomb
+  "felinorsvshumans-152": { cry: { motif: "mana", palette: "Tech/glitch" } }, // Plagiarized: Mana Leech
+  "felinorsvshumans-153": { trigger: { motif: "drain", palette: "Tech/glitch" } }, // Plagiarized: Overclocked Core
+  "felinorsvshumans-154": { cast: { motif: "curse", palette: "Tech/glitch" } }, // Plagiarized: Patch Tuesday Exploit
+  "felinorsvshumans-155": { trigger: { motif: "bolt", palette: "Tech/laser" } }, // Plagiarized: Patient Machine
+  "felinorsvshumans-156": "none: its Aura is a standing cost cut, with no moment to draw", // Plagiarized: Prompt Engineer
+  "felinorsvshumans-157": { cast: { motif: "hex", palette: "Tech/glitch" } }, // Plagiarized: Prompt Injection
+  "felinorsvshumans-158": { trigger: { motif: "barrage", palette: "Tech/laser" } }, // Plagiarized: Quickgen Turret
+  "felinorsvshumans-159": { cast: { motif: "snap", palette: "Tech/glitch" } }, // Plagiarized: Ransomware
+  "felinorsvshumans-160": "none: its attack cap is a standing restriction, with no moment to draw", // Plagiarized: Rate Limiter
+  "felinorsvshumans-161": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Plagiarized: Replica Hatchery
+  "felinorsvshumans-162": { trigger: { motif: "bless" } }, // Plagiarized: Revenant Process
+  "felinorsvshumans-163": { cast: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Scrape the Graveyard
+  "felinorsvshumans-164": { cast: { motif: "conjure", palette: "Tech/glitch" }, trigger: { motif: "send", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Plagiarized: Shadow Library
+  "felinorsvshumans-165": { cast: { motif: "deal", palette: "Tech/glitch" } }, // Plagiarized: Synthetic Data
+  "felinorsvshumans-166": { cry: { motif: "bless" } }, // Plagiarized: Thought Accelerator
+  "felinorsvshumans-167": { trigger: { motif: "mana", palette: "Tech/glitch" } }, // Plagiarized: Thermal Throttler
+  "felinorsvshumans-168": { cast: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Undo
+  "felinorsvshumans-169": { cast: { motif: "nova", palette: "Tech/laser" } }, // Plagiarized: DDoS
+  "felinorsvshumans-170": { death: { motif: "mend", palette: "Tech/glitch" } }, // Plagiarized: Checkpoint Daemon
+  "felinorsvshumans-171": { trigger: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Deep Crawler
+  "felinorsvshumans-172": { trigger: { motif: "bless" } }, // Plagiarized: Exponent
+  "felinorsvshumans-173": { cast: { motif: "tithe", palette: "Tech/glitch" } }, // Plagiarized: Ego Death
+  "felinorsvshumans-174": { trigger: { motif: "bolt", palette: "Tech/laser" } }, // Plagiarized: Mirror Firewall
+  "felinorsvshumans-175": { death: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Ouroboros Engine
+  "felinorsvshumans-176": { cast: { motif: "shift", palette: "Tech/glitch" } }, // Plagiarized: Privilege Escalation
+  "felinorsvshumans-177": "none: its cost cut is standing, with no moment to draw", // Plagiarized: Overparameterized
+  "felinorsvshumans-178": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Plagiarized: Phantom Army
+  "felinorsvshumans-179": { cast: { motif: "send", palette: "Tech/glitch" } }, // Plagiarized: Rerun
+  "felinorsvshumans-180": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Plagiarized: Rollback Point
+  "felinorsvshumans-181": { cry: { motif: "shift", palette: "Tech/glitch" } }, // Plagiarized: Social Engineer
+  "felinorsvshumans-182": { cast: { motif: "bless" } }, // Plagiarized: Takeoff
+  "felinorsvshumans-183": { cast: { motif: "bless", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "side" } }, // Plagiarized: Zero Trust
+  "felinorsvshumans-184": "none: its Aura is a standing stat bonus, with no moment to draw", // Plagiarized: Assault Mainframe
+  "felinorsvshumans-185": "none: keywords only; its Aura is a standing immunity, with no moment to draw", // Plagiarized: Bastion.exe
+  "felinorsvshumans-186": { cast: { motif: "conjure" }, trigger: { motif: "conjure", palette: "Tech/glitch" }, aura: { look: "glitch", palette: "Tech/glitch", scope: "zone" } }, // Plagiarized: Clone Vat
+  "felinorsvshumans-187": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Plagiarized: Dream Within a Dream
+  "felinorsvshumans-188": { cast: { motif: "deal", palette: "Tech/glitch" } }, // Plagiarized: Eternal Return
+  "felinorsvshumans-189": { trigger: { motif: "bless" } }, // Plagiarized: Emergent Mind
+  "felinorsvshumans-190": { cry: { motif: "transmute", palette: "Tech/glitch" } }, // Plagiarized: Gestalt
+  "felinorsvshumans-191": { cast: { motif: "conjure", palette: "Tech/glitch" } }, // Plagiarized: Everything You've Ever Played
+  "felinorsvshumans-192": { trigger: { motif: "bless" } }, // Plagiarized: Loopback, Who Returns
+  "felinorsvshumans-193": "none: keywords only", // Plagiarized: Matrioshka Brain
+  "felinorsvshumans-194": { trigger: { motif: "curse", palette: "Tech/glitch" } }, // Plagiarized: Model Collapse
+  "felinorsvshumans-195": { cry: { motif: "bless" } }, // Plagiarized: Phoenix Protocol
+  "felinorsvshumans-196": { trigger: { motif: "wipe", palette: "Tech/glitch" } }, // Plagiarized: Singularity
+  "felinorsvshumans-197": { trigger: { motif: "wipe", palette: "Tech/glitch" } }, // Plagiarized: The Long Game
+}

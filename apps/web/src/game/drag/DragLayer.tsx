@@ -15,7 +15,7 @@ import { IDLE, boardKeyOf, isBuilding, type Interaction } from "../actions.ts";
 import { arrowCurve } from "../arrowCurve.ts";
 import { currentCardMotion } from "../cardMotion.ts";
 import { CatalogContext, MatchCardsProvider, useCardInfo, useCopiedDef, type CardLookup } from "../catalog.ts";
-import { byTestid, testid, type ClickTarget } from "../contract.ts";
+import { byTestid, sideOf, testid, type ClickTarget } from "../contract.ts";
 import { useLiveFace } from "../faces.ts";
 import { anchorOfTestid, gigaFootprintTestids, isGigaHandCard } from "../giga.ts";
 import BlockedMark, { type Blocked } from "./BlockedMark.tsx";
@@ -471,7 +471,8 @@ function PlayDrag(props: DragLayerProps & { onBlocked: (blocked: Blocked) => voi
           if (card !== null) {
             // R658: a play lifted again from its zone lands in that zone, not on the Cry's target.
             const zone = plan.missed?.stage === "playing" ? plan.missed.picked.zone : undefined;
-            const zoneBox = zone === undefined ? null : byTestid(testid.zone("you", zone.row, zone.lane));
+            // R5238002: a zone of the other side (FvH #42) is that side's.
+            const zoneBox = zone === undefined ? null : byTestid(testid.zone(zone.player === undefined ? "you" : sideOf(view, zone.player), zone.row, zone.lane));
             const settled = zoneBox === null ? null : centerOf(zoneBox);
             // #3347: where the effects layer flies a stand-in from, so the card the player let go of is
             // the one that flies on; the ghost keeps that place meanwhile (and goes to the tile only

@@ -372,6 +372,10 @@ const MARKS: Readonly<Record<KeywordKind, string>> = {
   Frenzy: "FZ",
   Evasive: "EA",
   Woozy: "WZ",
+  // The Felinors vs Humans kinds (R5236031).
+  Durability: "DU",
+  Fragile: "FR",
+  Unlucky: "UL",
 };
 
 type Term = { text: string; term: GlossaryTermId };

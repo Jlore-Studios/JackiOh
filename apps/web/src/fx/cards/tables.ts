@@ -41,6 +41,7 @@ import type { EntranceKey } from "./recipe.ts";
 import rawClassic from "./classic.json5?raw";
 import rawClassicPlus from "./classicplus.json5?raw";
 import rawCore from "./core.json5?raw";
+import rawFelinorsVsHumans from "./felinorsvshumans.json5?raw";
 import rawInfiniteAssault from "./infiniteassault.json5?raw";
 import rawMeditative from "./meditative.json5?raw";
 import rawMeditativePlus from "./meditativeplus.json5?raw";
@@ -63,6 +64,8 @@ export const FX_CARD_FILES: readonly FxCardFile[] = [
   { file: "stinkyscape-2.json5", set: "Stinkyscape", source: rawStinkyscape2 },
   { file: "traininggrounds.json5", set: "Training Grounds", source: rawTrainingGrounds },
   { file: "stinkyscapeplus.json5", set: "Stinkyscape+", source: rawStinkyscapePlus },
+  // R5264500: the held Felinors vs Humans set's, where the catalog puts it, before the single-player set's.
+  { file: "felinorsvshumans.json5", set: "Felinors vs Humans", source: rawFelinorsVsHumans },
   { file: "infiniteassault.json5", set: "Infinite Assault", source: rawInfiniteAssault },
 ];
 
