@@ -1067,6 +1067,7 @@
   "Step {step} of {steps}: {doing}": "第 {step} 步，共 {steps} 步：{doing}",
   "{elapsed} so far": "已用时 {elapsed}",
   "{elapsed} of about {expected}": "已用时 {elapsed}，预计约 {expected}",
+  "{elapsed} · almost done": "已用时 {elapsed} · 即将完成",
   "The card statistics didn't load.": "无法加载卡牌统计数据。",
   "Retry": "重试",
   "No cards match the selected filters.": "没有符合所选筛选条件的卡牌。",
