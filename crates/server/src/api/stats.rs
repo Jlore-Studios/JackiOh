@@ -45,7 +45,9 @@
 //! figures are cut on a task of its own, counted as the load's last step.
 //! R5245000 (amends R978000, R1583000, R3067000, R5186000): a kept snapshot lasts from when its load
 //! finished, and a load under way is joined whatever its age. Once a value is held, no read waits on its
-//! next: a read past its time gets the held value and starts one refresh beside it (`kept_value`).
+//! next: a read past its time gets the held value and starts one refresh beside it (`kept_value`). The
+//! snapshot past its time is let go as its next loads, so one is held at a time, and the figures cut from it
+//! answer meanwhile (`kept_snapshot`).
 //! R5040000: `?scope=major` sends the live play versions alone, each cut to the newest major's line
 //! (`major_line_versions`) and read against those rows' own field, one table per scope too.
 //!
@@ -1215,21 +1217,44 @@ async fn totals_in(
 /// versions' table does, so the page's own read costs the patches it shows and not every version filed.
 /// R5186000: the load runs on a task of its own, so a read that gives up (the client's timeout, a proxy
 /// closing the connection) leaves it running for the next read to join. R5245000: the snapshot is kept
-/// from when its load finished, and once one is held a read past its time gets it at once while the next
-/// loads beside it (`kept_value`).
-async fn kept_snapshot(app: &App, reach: Reach) -> Result<KeptTotals, ApiError> {
+/// from when its load finished. The one past its time is let go as its next begins to load, so one is held
+/// at a time; meanwhile the figure `held` finds, cut from the one let go, answers at once
+/// (`CutFrom::Held`), and only a read with none waits for the load.
+async fn kept_snapshot<T>(
+    app: &App,
+    reach: Reach,
+    held: impl FnOnce() -> Option<T>,
+) -> Result<CutFrom<T>, ApiError> {
     let (keep, folds) = app.card_stats.totals_cell(now_ms(), reach);
+    if let Some(snapshot) = keep.cell.get() {
+        return Ok(CutFrom::Snapshot(KeptTotals {
+            made_at: snapshot.loaded_at,
+            held: Arc::clone(snapshot),
+        }));
+    }
     let source = SnapshotSource {
         db: app.db.clone(),
         version: app.catalog.version.clone(),
         load: Arc::clone(&app.card_stats.load),
         folds,
     };
-    let held = kept_value(keep, async move { source.load().await }).await?;
-    Ok(KeptTotals {
-        made_at: held.loaded_at,
-        held,
-    })
+    if let Some(figure) = held() {
+        refresh(keep, async move { source.load().await });
+        return Ok(CutFrom::Held(figure));
+    }
+    let snapshot = kept_value(keep, async move { source.load().await }).await?;
+    Ok(CutFrom::Snapshot(KeptTotals {
+        made_at: snapshot.loaded_at,
+        held: snapshot,
+    }))
+}
+
+/// R5245000: what a figure cut from the kept snapshot is read from.
+enum CutFrom<T> {
+    /// The snapshot held.
+    Snapshot(KeptTotals),
+    /// The figure cut from the snapshot let go, while its next loads.
+    Held(T),
 }
 
 /// R5245000: a kept value: its cell, filled by the first read that needs it while the others wait on it;
@@ -1263,25 +1288,32 @@ where
     if let Some(value) = keep.cell.get() {
         return Ok(value.clone());
     }
-    let Keep {
-        cell,
-        last,
-        refreshing,
-    } = keep;
-    if let Some(last) = last {
-        if !refreshing.swap(true, atomic::Ordering::SeqCst) {
-            tokio::spawn(async move {
-                if let Err(error) = cell.get_or_try_init(|| fill).await {
-                    tracing::warn!(event = "stats.refresh.failed", message = %error.message);
-                }
-                refreshing.store(false, atomic::Ordering::SeqCst);
-            });
-        }
+    if let Some(last) = keep.last.clone() {
+        refresh(keep, fill);
         return Ok(last);
     }
+    let cell = keep.cell;
     tokio::spawn(async move { cell.get_or_try_init(|| fill).await.cloned() })
         .await
         .map_err(|error| ApiError::internal(format!("the card statistics stopped: {error}")))?
+}
+
+/// R5245000: fills `keep`'s cell with `fill` on a task of its own, unless a refresh fills it already. One
+/// that fails leaves the cell empty for the next read to fill.
+fn refresh<T, F>(keep: Keep<T>, fill: F)
+where
+    T: Send + Sync + 'static,
+    F: Future<Output = Result<T, ApiError>> + Send + 'static,
+{
+    if keep.refreshing.swap(true, atomic::Ordering::SeqCst) {
+        return;
+    }
+    tokio::spawn(async move {
+        if let Err(error) = keep.cell.get_or_try_init(|| fill).await {
+            tracing::warn!(event = "stats.refresh.failed", message = %error.message);
+        }
+        keep.refreshing.store(false, atomic::Ordering::SeqCst);
+    });
 }
 
 /// R5186000: the steps of a load of the kept snapshot, in order, which `GET /api/stats/loading` numbers
@@ -1679,17 +1711,6 @@ struct TotalsCells {
     folded: Option<KeptTotalsCell>,
 }
 
-impl TotalsCells {
-    /// R5174000: the held snapshot that serves a read of `reach`, if one is held.
-    fn held(&self, reach: Reach) -> Option<Arc<Snapshot>> {
-        if reach == Reach::Kept || self.kept_folds {
-            self.kept.cell.get().cloned()
-        } else {
-            self.folded.as_ref().and_then(|folded| folded.cell.get().cloned())
-        }
-    }
-}
-
 /// R3067000: every patch's totals, and when their load finished (R5245000), which every kept window and
 /// history cut from them is kept by.
 struct KeptTotals {
@@ -1815,7 +1836,34 @@ fn kept_cell<K: Hash + Eq, T: Clone>(entries: &Kept<K, T>, key: K, now: i64, ttl
     keep
 }
 
+/// R5245000: the value held for `key` in `entries`, whatever its time: its cell's, or the one that cell
+/// replaced while it fills.
+fn held<K: Hash + Eq, T: Clone>(entries: &Kept<K, T>, key: &K) -> Option<T> {
+    lock(entries)
+        .get(key)
+        .and_then(|(_, keep)| keep.cell.get().cloned().or_else(|| keep.last.clone()))
+}
+
 impl KeptReports {
+    fn held_window(&self, key: &ReportKey) -> Option<Arc<KeptWindow>> {
+        held(&self.windows, key)
+    }
+
+    fn held_history(&self, key: &(PublicStatsPilot, PublicStatsMode, StatsFace)) -> Option<Arc<KeptHistory>> {
+        held(&self.histories, key)
+    }
+
+    fn held_versions(
+        &self,
+        key: &(PublicStatsPilot, PublicStatsMode, PublicStatsScope),
+    ) -> Option<Arc<PlayVersionTable>> {
+        held(&self.versions, key)
+    }
+
+    fn held_hall(&self, key: &PublicStatsMode) -> Option<Arc<HallOfFameBody>> {
+        held(&self.hall, key)
+    }
+
     fn cell(&self, key: ReportKey, now: i64) -> KeptCell {
         kept_cell(&self.entries, key, now, CARD_STATS_CACHE_TTL_SECONDS)
     }
@@ -1861,8 +1909,7 @@ impl KeptReports {
     /// (R5174000). A read that needs them takes a cell that does: the one there when it folds, or one made
     /// beside it, so everything cut from either is kept and dropped together. R5245000: the cells are made
     /// again once the held snapshot's load finished `CARD_STATS_CACHE_TTL_SECONDS` before `now`, never while
-    /// it loads, and each new cell serves the snapshot it replaces while it loads; a folding load under way
-    /// is joined.
+    /// it loads; a folding load under way is joined.
     fn totals_cell(&self, now: i64, reach: Reach) -> (KeptTotalsCell, bool) {
         let mut kept = lock(&self.totals);
         let renew = kept.as_ref().is_none_or(|cells| {
@@ -1873,33 +1920,20 @@ impl KeptReports {
                 .is_some_and(|held| now - held.loaded_at >= CARD_STATS_CACHE_TTL_SECONDS * MS_PER_SECOND)
         });
         if renew {
-            let old = kept.take();
-            let held = |reach| old.as_ref().and_then(|cells: &TotalsCells| cells.held(reach));
-            // A read of the older play versions shares one load with every other read, as R5174000's first
-            // read does, when a folded snapshot is held to serve them all while it loads; else the others
-            // keep the snapshot they read while it loads beside theirs.
-            let folds = reach == Reach::Folded && (old.is_none() || held(Reach::Folded).is_some());
-            let folded = if folds {
-                None
-            } else {
-                old.as_ref()
-                    .and_then(|cells| cells.folded.clone())
-                    .filter(|folded| folded.cell.get().is_none())
-                    .or_else(|| held(Reach::Folded).map(|held| Keep::new(Some(held))))
-            };
+            // R5245000: the snapshots past their time are let go here, so one is held at a time; a folding load
+            // still under way is kept, to be joined.
+            let folds = reach == Reach::Folded;
+            let folded = kept
+                .take()
+                .and_then(|cells| cells.folded)
+                .filter(|folded| !folds && folded.cell.get().is_none());
             *kept = Some(TotalsCells {
-                kept: Keep::new(held(if folds { Reach::Folded } else { Reach::Kept })),
+                kept: Keep::new(None),
                 kept_folds: folds,
                 folded,
             });
         }
         let cells = kept.as_mut().expect("the cells were just made");
-        // R5245000: a filled cell no longer holds the snapshot it replaced.
-        for keep in std::iter::once(&mut cells.kept).chain(cells.folded.as_mut()) {
-            if keep.cell.get().is_some() {
-                keep.last = None;
-            }
-        }
         if reach == Reach::Kept || cells.kept_folds {
             return (cells.kept.clone(), cells.kept_folds);
         }
@@ -1994,12 +2028,15 @@ async fn shipped_window(
     pilot: PublicStatsPilot,
     mode: PublicStatsMode,
 ) -> Result<Arc<KeptWindow>, ApiError> {
-    let snapshot = kept_snapshot(app, Reach::Kept).await?;
     let key = ReportKey {
         patch: at.to_string(),
         source,
         pilot,
         mode,
+    };
+    let snapshot = match kept_snapshot(app, Reach::Kept, || app.card_stats.held_window(&key)).await? {
+        CutFrom::Snapshot(snapshot) => snapshot,
+        CutFrom::Held(window) => return Ok(window),
     };
     let keep = app.card_stats.window_cell(key, snapshot.made_at);
     // R5225000: the cut runs on a task of its own, as the snapshot loads (R5186000), so a read that gives up
@@ -2228,8 +2265,12 @@ async fn kept_history(
     mode: PublicStatsMode,
     face: StatsFace,
 ) -> Result<Arc<KeptHistory>, ApiError> {
-    let snapshot = kept_snapshot(app, Reach::Kept).await?;
-    let keep = app.card_stats.history_cell((pilot, mode, face), snapshot.made_at);
+    let key = (pilot, mode, face);
+    let snapshot = match kept_snapshot(app, Reach::Kept, || app.card_stats.held_history(&key)).await? {
+        CutFrom::Snapshot(snapshot) => snapshot,
+        CutFrom::Held(history) => return Ok(history),
+    };
+    let keep = app.card_stats.history_cell(key, snapshot.made_at);
     let versions = versions.to_vec();
     kept_value(keep, async move {
         // R4965000: the patches whose card totals the snapshot holds as filed.
@@ -2263,10 +2304,12 @@ async fn kept_versions(
     mode: PublicStatsMode,
     scope: PublicStatsScope,
 ) -> Result<Arc<PlayVersionTable>, ApiError> {
-    let snapshot = kept_snapshot(app, Reach::Folded).await?;
-    let keep = app
-        .card_stats
-        .versions_cell((pilot, mode, scope), snapshot.made_at);
+    let key = (pilot, mode, scope);
+    let snapshot = match kept_snapshot(app, Reach::Folded, || app.card_stats.held_versions(&key)).await? {
+        CutFrom::Snapshot(snapshot) => snapshot,
+        CutFrom::Held(table) => return Ok(table),
+    };
+    let keep = app.card_stats.versions_cell(key, snapshot.made_at);
     kept_value(keep, async move {
         let every = deck_play_versions();
         let history = patch_history();
@@ -2406,8 +2449,11 @@ fn hall_body_of(table: &PlayVersionTable, mode: PublicStatsMode) -> HallOfFameBo
 /// table (`kept_versions`, over the snapshot that folds the older play versions in, R5174000), kept as
 /// long as that snapshot, once however many requests miss it together.
 async fn kept_hall(app: &App, mode: PublicStatsMode) -> Result<Arc<HallOfFameBody>, ApiError> {
+    let snapshot = match kept_snapshot(app, Reach::Folded, || app.card_stats.held_hall(&mode)).await? {
+        CutFrom::Snapshot(snapshot) => snapshot,
+        CutFrom::Held(body) => return Ok(body),
+    };
     let table = kept_versions(app, PublicStatsPilot::Merged, mode, PublicStatsScope::All).await?;
-    let snapshot = kept_snapshot(app, Reach::Folded).await?;
     let keep = app.card_stats.hall_cell(mode, snapshot.made_at);
     kept_value(keep, async move {
         Ok::<_, ApiError>(Arc::new(hall_body_of(&table, mode)))
@@ -3167,32 +3213,32 @@ mod tests {
         );
     }
 
-    /// R5245000: a snapshot is kept the TTL from when its load finished; past it the next cell serves it
-    /// while the next snapshot loads, and lets it go once that one is held.
+    /// R5245000: a snapshot is kept the TTL from when its load finished; past it the next cell is made empty
+    /// and the snapshot is let go, so the server never holds two (#5139).
     #[test]
-    fn r5245000_a_snapshot_is_kept_from_when_its_load_finished_and_served_while_the_next_loads() {
+    fn r5245000_a_snapshot_is_kept_from_when_its_load_finished_and_let_go_as_the_next_loads() {
         let reports = KeptReports::default();
         let (first, _) = reports.totals_cell(0, Reach::Kept);
         let held = snapshot_at(LOADED);
         assert!(first.cell.set(Arc::clone(&held)).is_ok());
+        drop(first);
 
         let (kept, _) = reports.totals_cell(LOADED + ttl_ms() - 1, Reach::Kept);
-        assert!(Arc::ptr_eq(&first.cell, &kept.cell));
+        assert!(
+            kept.cell
+                .get()
+                .is_some_and(|snapshot| Arc::ptr_eq(snapshot, &held))
+        );
+        drop(kept);
 
         let (next, folds) = reports.totals_cell(LOADED + ttl_ms(), Reach::Kept);
         assert!(!folds);
         assert!(next.cell.get().is_none(), "no next snapshot was asked for");
-        assert!(
-            next.last.as_ref().is_some_and(|last| Arc::ptr_eq(last, &held)),
-            "the held snapshot is not served while the next loads"
-        );
-
-        assert!(next.cell.set(snapshot_at(LOADED + ttl_ms())).is_ok());
-        let (after, _) = reports.totals_cell(LOADED + ttl_ms(), Reach::Kept);
-        assert!(Arc::ptr_eq(&next.cell, &after.cell));
-        assert!(
-            after.last.is_none(),
-            "the next snapshot still holds the one it replaced"
+        assert!(next.last.is_none());
+        assert_eq!(
+            Arc::strong_count(&held),
+            1,
+            "the snapshot past its time is still held beside its next"
         );
     }
 
