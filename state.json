@@ -43871,6 +43871,10 @@
       "5228": {
         "at": "2026-11-28T00:42:36Z",
         "why": "Confirmed on main: since R5183000 the engine wears a hero's Armor hit by hit (`project_hit` and `ProjectedPools.worn`, `crates/engine/src/damage.rs:1124-1145`), but the AI's Taunt walk sets every free hit against the whole Armor through `projected_hero_damage`, which is `hero_hit_amount_worn(.., 0)` (`crates/ai/src/evaluate.rs:2141`, `damage.rs:291-293`), and nothing under `crates/ai/src` mentions"
+      },
+      "5229": {
+        "at": "2026-11-28T00:42:39Z",
+        "why": "Confirmed on main: the engine adds the also-Burns and Toxic riders after a hit lands (`afflictions::ride_damage`, `crates/engine/src/afflictions.rs:180-216`, called at `damage.rs:822`), but `blow`, `side_of` and `Side` (`crates/ai/src/candidates.rs:197-290`) read only the conversion, nothing in `crates/ai/src` reads the rider flags, and #4897 (2026-11-26, R4783001) moved Volcanic Rounds from the c"
       }
     },
     "auto_approved": [
