@@ -69,6 +69,11 @@ mod tests {
             .collect()
     }
 
+    #[test]
+    fn declares_no_tuned_numbers() {
+        assert!(crate::card_def(ID).params.is_none());
+    }
+
     mod base {
         use super::*;
 

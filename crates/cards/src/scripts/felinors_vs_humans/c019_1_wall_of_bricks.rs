@@ -53,6 +53,11 @@ mod tests {
         s.expect_in_zone(wall, "field");
     }
 
+    #[test]
+    fn declares_no_tuned_numbers() {
+        assert!(crate::card_def(ID).params.is_none());
+    }
+
     mod base {
         use super::*;
 
