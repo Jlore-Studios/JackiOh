@@ -12,7 +12,8 @@
 //! Stage 1 reads the diff: every catalog field but `WORDING_FIELDS` plays; a script's code is what
 //! `catalog loc` counts; a set that ships is a major unless the owner wraps it into an earlier set's
 //! line (`WRAPPED_SETS`, R2204000), and a card of an unshipped set is no change (R1420); other paths
-//! keep their `use` lines, since an import can change which code runs (R2050000). R2173001: moving a
+//! keep their `use` lines, since an import can change which code runs (R2050000), and leave out each
+//! `#[cfg(test)]` item but read what follows it (R5302000). R2173001: moving a
 //! card across a BUSTED or complicated threshold (R1846000) plays every shipped reader differently.
 //!
 //! Stage 2 (`--parent-bin`, the merge base's build) keeps a script-only claim only when its forced games
@@ -327,7 +328,8 @@ fn area(path: &str) -> Area {
 /// Whether a file's code changed, all white space removed (so a reflow is no change): for a card
 /// script the lines `catalog loc` counts, so its `use` lines are no code (R1365000); for any other
 /// Rust or TypeScript file the same lines with its `use` declarations kept, since moving an import
-/// can change which code runs (R2050000); any other file byte for byte. In TypeScript a comma just
+/// can change which code runs (R2050000), and each `#[cfg(test)]` item left out with what follows it
+/// read (R5302000); any other file byte for byte. In TypeScript a comma just
 /// before a closing bracket is layout too, the one a formatter adds when it breaks a call or a list
 /// over lines (R3836000).
 pub(crate) fn code_changed(path: &str, before: Option<&str>, after: Option<&str>) -> bool {
@@ -2526,6 +2528,78 @@ mod tests {
             let diff = read_diff(&both, &both, &[file(path, MODULE, edited)]);
             assert_eq!(diff, Diff::default(), "{path}");
         }
+    }
+
+    // R5302000: outside a card script a `#[cfg(test)]` item is no code, but what follows it is.
+    const HELPERS: &str = "use crate::a::run;\n\n#[cfg(test)]\nmod helpers;\n\npub fn go() {\n    run()\n}\n";
+
+    #[test]
+    fn r5302000_a_change_after_a_cfg_test_item_is_play_code() {
+        let both = side(cards(1, 1, "T."), SHIPPED);
+        let edited = HELPERS.replace("run()", "run(1)");
+        for path in ["crates/engine/src/combat.rs", "crates/cards/src/query.rs"] {
+            assert!(code_changed(path, Some(HELPERS), Some(&edited)), "{path}");
+            let diff = read_diff(&both, &both, &[file(path, HELPERS, &edited)]);
+            assert!(diff.play_code, "{path}");
+            assert_eq!(
+                classify(&diff, None).unchecked,
+                vec!["play-code".to_string()],
+                "{path}"
+            );
+        }
+    }
+
+    /// `source` with its one `from` replaced by `to`.
+    fn edited(source: &str, from: &str, to: &str) -> String {
+        assert_eq!(source.matches(from).count(), 1, "{from}");
+        source.replace(from, to)
+    }
+
+    #[test]
+    fn r5302000_a_change_in_the_real_cards_lib_after_its_first_cfg_test_is_code() {
+        let path = "crates/cards/src/lib.rs";
+        let src = std::fs::read_to_string(repo_root().join(path)).unwrap();
+        for (from, to) in [
+            ("view.max_health)", "view.attack)"),
+            ("busted: BUSTED,", "busted: COMPLICATED,"),
+            (
+                "flags.never_defense = Some(true);",
+                "flags.never_defense = Some(false);",
+            ),
+        ] {
+            assert!(
+                code_changed(path, Some(&src), Some(&edited(&src, from, to))),
+                "{from}"
+            );
+        }
+    }
+
+    #[test]
+    fn r5302000_a_change_in_a_cfg_test_item_is_no_code() {
+        let path = "crates/cards/src/lib.rs";
+        let src = std::fs::read_to_string(repo_root().join(path)).unwrap();
+        for (from, to) in [
+            (
+                "jackioh_engine::testkit::scenario(opts)",
+                "jackioh_engine::testkit::scenario(opts.clone())",
+            ),
+            (
+                ".expect(\"patches.json is JSON\")",
+                ".expect(\"patches.json parses\")",
+            ),
+        ] {
+            assert!(
+                !code_changed(path, Some(&src), Some(&edited(&src, from, to))),
+                "{from}"
+            );
+        }
+        let before = "pub fn go() {}\n\n#[cfg(test)]\nmod tests {\n    fn a() {}\n}\n";
+        let after = before.replace("fn a() {}", "fn a() { 1; }");
+        assert!(!code_changed(
+            "crates/engine/src/combat.rs",
+            Some(before),
+            Some(&after)
+        ));
     }
 
     #[test]

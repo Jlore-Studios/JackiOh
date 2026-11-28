@@ -1617,21 +1617,78 @@ pub fn count_loc(source: &str) -> usize {
     code_lines(source).len()
 }
 
-/// The lines that hold code once comments are removed, each trimmed, above the file's first
-/// `#[cfg(test)]`, its `use` declarations included: what `classify` compares for a Rust or
-/// TypeScript file that is no card script, where an import can change which code a call reaches
-/// (R2050000).
+/// The first line after the `#[cfg(test)]` item whose attribute is `lines[attr]` (R5302000): the
+/// attribute, the attributes after it, and the one item it marks. A line ending in `;` or `,` or a
+/// braced item on one line is the whole item; otherwise it runs to the first later line at the
+/// attribute's indent that starts with `}` (rustfmt puts a braced item's closing brace there), or
+/// with `]` or `)` and ends in `;` (a multi-line `const`). An item whose end is not found drops only
+/// its attribute, so a misreading counts test code as code and never the other way.
+fn test_item_end(lines: &[String], attr: usize) -> usize {
+    let indent = |line: &str| line.len() - line.trim_start().len();
+    let attr_indent = indent(&lines[attr]);
+    let Some(first) = (attr + 1..lines.len()).find(|&at| {
+        let code = lines[at].trim();
+        !code.is_empty() && !code.starts_with("#[")
+    }) else {
+        return attr + 1;
+    };
+    let head = lines[first].trim_end();
+    let braces = head.matches('{').count();
+    if head.ends_with(';')
+        || head.ends_with(',')
+        || (head.ends_with('}') && braces > 0 && braces == head.matches('}').count())
+    {
+        return first + 1;
+    }
+    for (at, line) in lines.iter().enumerate().skip(first + 1) {
+        if indent(line) != attr_indent {
+            continue;
+        }
+        let code = line.trim();
+        if code.starts_with('}') || ((code.starts_with(']') || code.starts_with(')')) && code.ends_with(';'))
+        {
+            return at + 1;
+        }
+    }
+    attr + 1
+}
+
+/// The lines that hold code once comments are removed, each trimmed and blank ones left out, with
+/// each `#[cfg(test)]` item left out and the code after it kept, its `use` declarations included:
+/// what `classify` compares for a Rust or TypeScript file that is no card script, where an import
+/// can change which code a call reaches (R2050000, R5302000). A card script's reading stops at its
+/// first `#[cfg(test)]` instead (`script_lines`).
 pub fn code_lines_with_uses(source: &str) -> Vec<String> {
+    let lines = jackioh_cards::code_lines::without_comments(source);
+    let mut out = Vec::new();
+    let mut at = 0;
+    while at < lines.len() {
+        if lines[at].trim_start().starts_with("#[cfg(test)]") {
+            at = test_item_end(&lines, at);
+            continue;
+        }
+        let code = lines[at].trim();
+        if !code.is_empty() {
+            out.push(code.to_string());
+        }
+        at += 1;
+    }
+    out
+}
+
+/// A card script's code lines, each trimmed, above its first `#[cfg(test)]`, its `use`
+/// declarations included: the reading `count_loc` and the card metrics rest on (R1846000).
+fn script_lines(source: &str) -> Vec<String> {
     jackioh_cards::code_lines::script_code(source).collect()
 }
 
-/// The lines `count_loc` counts, each trimmed: `code_lines_with_uses` without its `use`
+/// The lines `count_loc` counts, each trimmed: `script_lines` without its `use`
 /// declarations, what `classify` compares to tell a change to a card script's code from one to its
 /// comments, tests, imports or layout (R1365000).
 pub fn code_lines(source: &str) -> Vec<String> {
     let mut code = Vec::new();
     let mut in_use = false;
-    for line in code_lines_with_uses(source) {
+    for line in script_lines(source) {
         if !in_use && starts_use(&line) {
             in_use = true;
         }
@@ -2761,6 +2818,45 @@ mod tests {
             ["use crate::a::{", "f,", "};", "pub fn g() -> i32 {", "f()", "}"]
         );
         assert_eq!(code_lines(source), ["pub fn g() -> i32 {", "f()", "}"]);
+    }
+
+    #[test]
+    fn r5302000_code_lines_with_uses_reads_past_a_cfg_test_item() {
+        let reads = |source: &str| code_lines_with_uses(source);
+        assert_eq!(
+            reads("#[cfg(test)]\nmod helpers;\n\npub fn go() {\n    run()\n}\n"),
+            ["pub fn go() {", "run()", "}"]
+        );
+        assert_eq!(
+            reads("#[cfg(test)]\npub(crate) fn h() -> i32 {\n    1\n}\n\npub fn go() {}\n"),
+            ["pub fn go() {}"]
+        );
+        assert_eq!(
+            reads("#[cfg(test)]\npub(crate) fn h(\n    a: i32,\n) -> i32 {\n    a\n}\npub fn go() {}\n"),
+            ["pub fn go() {}"]
+        );
+        assert_eq!(
+            reads("#[cfg(test)]\nconst X: &[&str] = &[\n    \"a\",\n];\npub fn go() {}\n"),
+            ["pub fn go() {}"]
+        );
+        assert_eq!(
+            reads("#[cfg(test)]\n#[allow(dead_code)]\nmod x;\nfn a() {}\n"),
+            ["fn a() {}"]
+        );
+        assert_eq!(reads("#[cfg(test)]\nfn h() {}\nfn a() {}\n"), ["fn a() {}"]);
+        assert_eq!(
+            reads("fn a() {}\n\n#[cfg(test)]\nmod tests {\n    use super::*;\n}\n"),
+            ["fn a() {}"]
+        );
+        // An end that is not found drops only the attribute: test code counts as code.
+        assert_eq!(
+            reads("#[cfg(test)]\nmod t {\n    fn a() {}\n"),
+            ["mod t {", "fn a() {}"]
+        );
+        // A card script keeps its reading: it stops at its first `#[cfg(test)]`.
+        let script = "#[cfg(test)]\nmod helpers;\npub fn go() {\n}\n";
+        assert!(code_lines(script).is_empty());
+        assert_eq!(count_loc(script), 0);
     }
 
     #[test]
