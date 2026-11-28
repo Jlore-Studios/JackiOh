@@ -123,6 +123,23 @@ pub struct CrushArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub row: Option<Row>,
     pub lane: i32,
+    /// R5238003: only the Units lying beneath the running card in that zone's pile, never the running
+    /// card itself nor one above it; none when the running card is not in the zone. Absent: every Unit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub beneath_only: Option<bool>,
+}
+
+/// R5238003: the ids beneath the running card in `slot`, in the zone's order (`zones::zone_contents`, a
+/// pile's top first): every card after it; none when it is not in the zone.
+fn beneath_running(ctx: &crate::script::EffectContext<'_>, slot: ZoneSlot) -> Vec<String> {
+    let Some(me) = ctx.self_.as_ref().map(|card| card.id.clone()) else {
+        return Vec::new();
+    };
+    let contents = crate::zones::zone_contents(&*ctx.state, slot);
+    match contents.iter().position(|card| card.id == me) {
+        Some(at) => contents[at + 1..].iter().map(|card| card.id.clone()).collect(),
+        None => Vec::new(),
+    }
 }
 
 /// R5048000: the Units a crush of `slot` destroys: the zone's cards that are Units (a pile, a Unit
@@ -152,7 +169,12 @@ pub fn crush(args: CrushArgs) -> Effect {
             row: args.row.unwrap_or(Row::Units),
             lane: args.lane,
         };
+        // R5238003: with `beneath_only`, the running card and whatever lies above it stand.
+        let beneath: Option<Vec<String>> = (args.beneath_only == Some(true)).then(|| beneath_running(ctx, slot));
         for card in crushed_in(ctx.state, slot) {
+            if beneath.as_ref().is_some_and(|ids| !ids.contains(&card.id)) {
+                continue;
+            }
             if crate::restrictions::unaffected_by(ctx, &card) {
                 continue;
             }

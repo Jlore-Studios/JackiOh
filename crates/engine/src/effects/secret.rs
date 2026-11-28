@@ -108,6 +108,7 @@ pub fn keep_secret(args: KeepSecretArgs) -> Effect {
                 no_embiggen_premium: None,
                 cost_mod: None,
                 temporary: None,
+                temporary_count: None,
                 chinese: None,
                 stats_override: None,
                 armor_override: None,

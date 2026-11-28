@@ -90,8 +90,10 @@ fn same_keywords(a: &[Keyword], b: &[Keyword]) -> bool {
 /// tuning leaves them and the ones it was granted in the hand or the deck (`layers::card_keywords`) —
 /// set only where they differ from its running face's printed keywords, which the client reads off
 /// the definition. `None` otherwise.
+/// R5236031: a Durability shows the count it has left, so a backrow card whose uses spent some says so.
 pub fn hand_keywords_view(state: &GameState, card: &CardInstance) -> Option<Vec<Keyword>> {
-    let now: Vec<Keyword> = crate::layers::card_keywords(state, card);
+    let now: Vec<Keyword> =
+        crate::subsystems::activate::with_durability_left(&crate::layers::card_keywords(state, card), card);
     let face = crate::faces::running_face(state, card);
     if same_keywords(&now, &face.keywords) {
         None

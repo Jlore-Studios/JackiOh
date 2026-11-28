@@ -1295,11 +1295,11 @@ pub fn roll_weighted(rng: &mut Rng, table: &[RollOdds], lucky: i32) -> String {
         }
         table.len().saturating_sub(1)
     };
-    let extra = lucky.max(0);
-    let index = if extra == 0 {
+    // R5236020: a net luck below 0 rolls again too, keeping the worse entry.
+    let index = if lucky == 0 {
         roll(rng)
     } else {
-        rng.lucky(extra, roll, |a, b| a.max(b))
+        rng.lucky(lucky, roll, |a, b| a.max(b))
     };
     let entry = table.get(index).or_else(|| table.last());
     entry.map(|entry| entry.def_id.to_string()).unwrap_or_default()

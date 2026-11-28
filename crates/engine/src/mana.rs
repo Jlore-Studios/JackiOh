@@ -17,9 +17,14 @@ use crate::wire::{CardCost, CardType, GameEvent, GameEventType, ManaSpentFor, PL
 /// modifiers apply on top of the capped value as for a human. R1854003: moved crystals count in the cap;
 /// R4331001: stolen crystals count on top of it. R5148000: never above `MANA_CEILING`.
 pub fn max_mana_for(side: &PlayerState) -> i32 {
-    let handicap = handicap_of(side);
-    let base = mana_crystal_count(side).min(handicap.mana_cap);
+    let base = mana_crystal_count(side).min(mana_cap_of(side));
     held_mana(base + stolen_mana_crystals_of(side) + side.mana.perm_mod)
+}
+
+/// §2.3, R181, R5237003: the player's mana cap: their seat's `Handicap.mana_cap`, raised by what effects
+/// have raised it for the rest of the game (`PlayerState.mana_cap_bonus`, FvH #18).
+pub fn mana_cap_of(side: &PlayerState) -> i32 {
+    handicap_of(side).mana_cap + side.mana_cap_bonus.unwrap_or(0)
 }
 
 /// §2.3, R5148000: a mana amount as a player may hold it, current or maximum, temporary mana included:
@@ -72,7 +77,7 @@ pub fn move_mana_crystals(
     let side = &mut state.players[thief];
     let gained = match gain {
         CrystalGain::PastTheCap => lost,
-        CrystalGain::ToTheCap => lost.min((handicap_of(side).mana_cap - mana_crystal_count(side)).max(0)),
+        CrystalGain::ToTheCap => lost.min((mana_cap_of(side) - mana_crystal_count(side)).max(0)),
     };
     if gained > 0 {
         let held = side.mana.max;
@@ -103,7 +108,7 @@ pub fn move_some_mana_crystals(
     victim: PlayerId,
     count: i32,
 ) -> (i32, i32) {
-    let cap = handicap_of(&state.players[victim]).mana_cap;
+    let cap = mana_cap_of(&state.players[victim]);
     let side = &mut state.players[victim];
     let held = mana_crystal_count(side).min(cap).max(0);
     let own = count.clamp(0, held);

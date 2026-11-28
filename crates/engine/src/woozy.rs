@@ -38,11 +38,18 @@ pub fn add_on_play(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInsta
     ) else {
         return;
     };
-    if added <= 0 {
+    raise(sink, player, added);
+}
+
+/// R3548000, R5238011: `player`'s Woozy counter rises by `amount`, reported as one `counterChanged` of the
+/// `woozy` kind on `hero-<player>` with the amount it added; a counter that was down starts at it on this
+/// turn. An amount of 0 or less changes and reports nothing. `add_on_play`'s rise and `gain_woozy`'s.
+pub fn raise(sink: &mut EngineSink<'_>, player: PlayerId, amount: i32) {
+    if amount <= 0 {
         return;
     }
     let counter = sink.state.players[player].woozy;
-    let value = counter.map_or(added, |held| held.count + added);
+    let value = counter.map_or(amount, |held| held.count + amount);
     sink.state.players[player].woozy = Some(WoozyCounter {
         count: value,
         since: counter.map_or(sink.state.turn, |held| held.since),
@@ -51,7 +58,7 @@ pub fn add_on_play(sink: &mut EngineSink<'_>, player: PlayerId, card: &CardInsta
         instance_id: format!("hero-{player}"),
         counter: CounterKind::Woozy,
         value,
-        placed: Some(added),
+        placed: Some(amount),
     });
 }
 

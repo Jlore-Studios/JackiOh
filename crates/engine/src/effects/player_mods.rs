@@ -73,6 +73,28 @@ pub fn set_hand_cap(args: SetHandCapArgs) -> Effect {
     })
 }
 
+/// `gainWoozy`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GainWoozyArgs {
+    /// Whose counter, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+    /// How much it rises; 0 or less does nothing.
+    pub amount: i32,
+}
+
+/// R5238011: the player's Woozy counter rises by `amount` outside a play, as a played card's Woozy X
+/// raises it (`woozy::raise`, R3548000): the same `counterChanged`, a counter that was down starting on
+/// this turn, and the same decay at the start of its owner's turn.
+pub fn gain_woozy(args: GainWoozyArgs) -> Effect {
+    Effect::new("gainWoozy", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        crate::woozy::raise(&mut ctx.sink, player, args.amount);
+    })
+}
+
 /// `makeHeroImmune`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]

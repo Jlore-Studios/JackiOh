@@ -190,6 +190,50 @@ pub fn is_leftmost_in_hand(state: &GameState, id: &str) -> bool {
     hand_index(state, id).is_some_and(|(_, at)| at == 0)
 }
 
+/// R5237005: where `id` sits in `player`'s hand now, as a `HandPlace` (index 0 the leftmost, `of` the
+/// hand's size), or `None` when it is not in that hand. The play pipeline reads it as the announce
+/// takes the card out (`play_steps`).
+pub fn hand_place_of(state: &GameState, player: PlayerId, id: &str) -> Option<crate::wire::HandPlace> {
+    let hand = &state.players[player].hand;
+    let index = hand.iter().position(|card| card.id == id)?;
+    Some(crate::wire::HandPlace {
+        index: i32::try_from(index).ok()?,
+        of: i32::try_from(hand.len()).ok()?,
+    })
+}
+
+/// R5237005 (FvH #60.2, "the left-most card in your hand"): whether a `cardPlayed` reports a play of the
+/// leftmost card of its player's hand, read off its `fromHand` (a one-card hand's card is both). Any
+/// other event, and a play from no hand, is false.
+pub fn played_leftmost(event: &GameEvent) -> bool {
+    matches!(
+        event,
+        GameEvent::CardPlayed {
+            from_hand: Some(place),
+            ..
+        } if place.index == 0
+    )
+}
+
+/// R5237005 (FvH #60.1, "the right-most card in your hand"): whether a `cardPlayed` reports a play of
+/// the rightmost card of its player's hand, as `played_leftmost` reads it.
+pub fn played_rightmost(event: &GameEvent) -> bool {
+    matches!(
+        event,
+        GameEvent::CardPlayed {
+            from_hand: Some(place),
+            ..
+        } if place.index == place.of - 1
+    )
+}
+
+/// R5237002 (FvH #16.2 Travertine Golem, "your Float last turn"): the mana `player` left unspent at the
+/// end of their last turn (`PlayerState.last_float`), held through the turns after it until their next
+/// ends; 0 before their first turn has ended.
+pub fn float_last_turn(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].last_float.unwrap_or(0)
+}
+
 /// R1881007: whether a card of one of these definitions is mid-resolution (§10.5's `resolving`) for this
 /// player, as S #138 Pocket Peptides asks of its controller's CN Peptides cast.
 pub fn is_resolving(state: &GameState, player: PlayerId, def_ids: &[&str]) -> bool {
@@ -462,8 +506,13 @@ pub fn tags_of(state: &GameState, card: &CardInstance) -> Vec<Tag> {
 /// §6.1, R1438: a card's Lucky X: what its running face prints, as a Degrade or Upgrade moved it (B3.4),
 /// plus every Lucky it was given (B5 E38), or 0. Every luck roll reads it here, so given Lucky counts
 /// wherever printed Lucky does; the field's auras are the unit's (`unit_view`), not the card's.
+/// R5236020: the net luck, less every Unlucky the card has the same way, so it may be below 0, which
+/// `Rng::lucky` rolls as the worst of the extra rolls.
 pub fn lucky_on(state: &GameState, card: &CardInstance) -> i32 {
-    crate::tuning::numbered_sum(&crate::layers::card_keywords(state, card), KeywordKind::Lucky).unwrap_or(0)
+    let keywords = crate::layers::card_keywords(state, card);
+    let lucky = crate::tuning::numbered_sum(&keywords, KeywordKind::Lucky).unwrap_or(0);
+    let unlucky = crate::tuning::numbered_sum(&keywords, KeywordKind::Unlucky).unwrap_or(0);
+    lucky - unlucky
 }
 
 /// §6.1, R1438: only the Lucky a card instance was given (B5 E38), never its printed Lucky; #23
@@ -1268,7 +1317,12 @@ fn forecast_attack(
         dealt = dealt.min(theirs.health.max(0));
     }
     let poisons = bonus.poisonous || has_keyword(&mine.keywords, KeywordKind::Poisonous);
-    let kills = dealt > 0 && (poisons || exiles_on_damage(state, attacker) || dealt >= theirs.health);
+    // R5236010: a Fragile defender falls to any hit that lowers its Health, as to a Poisonous one.
+    let kills = dealt > 0
+        && (poisons
+            || has_keyword(&theirs.keywords, KeywordKind::Fragile)
+            || exiles_on_damage(state, attacker)
+            || dealt >= theirs.health);
     // One First Strike attacker that destroys its target is not struck back (§4.3 step 1).
     let strikes_first = has_keyword(&mine.keywords, KeywordKind::FirstStrike)
         && !has_keyword(&theirs.keywords, KeywordKind::FirstStrike);
@@ -1280,6 +1334,7 @@ fn forecast_attack(
     let survives = taken <= 0
         || (taken < mine.health
             && !has_keyword(&theirs.keywords, KeywordKind::Poisonous)
+            && !has_keyword(&mine.keywords, KeywordKind::Fragile)
             && !exiles_on_damage(state, defender));
     let (mut splash, besides, overflow) = if falls {
         // R176: an attacker that falls first strikes nothing, so its Cleave never runs.

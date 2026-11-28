@@ -152,6 +152,39 @@ pub fn change_max_mana(args: ChangeMaxManaArgs) -> Effect {
     })
 }
 
+/// `raiseManaCap`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct RaiseManaCapArgs {
+    pub amount: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R5237003 (FvH #18 Villa-D Moneybags): "Your mana cap rises by N for the rest of the game": the
+/// player's `mana_cap_bonus` rises by `amount`, so every refresh from now on fills up to the higher cap
+/// (§2.3, `mana::mana_cap_of`). Max mana is worked out again now: crystals the player had already earned
+/// past the old cap (turns started beyond it) come in empty, current mana unchanged. Never above
+/// `MANA_CEILING` (R5148000). A raise of 0 or less does nothing; one that moves no maximum announces
+/// nothing.
+pub fn raise_mana_cap(args: RaiseManaCapArgs) -> Effect {
+    Effect::new("raiseManaCap", move |ctx| {
+        if args.amount <= 0 {
+            return;
+        }
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let side = &mut ctx.sink.state.players[player];
+        side.mana_cap_bonus = Some(side.mana_cap_bonus.unwrap_or(0) + args.amount);
+        let before = side.mana.max;
+        side.mana.max = crate::mana::max_mana_for(side);
+        if side.mana.max != before {
+            let event = mana_event(player, side);
+            ctx.sink.events.push(event);
+        }
+    })
+}
+
 /// R1854003: "Steal your enemy's mana crystals" (Stinkyscape #7 The Greatest Heist's last reward),
 /// by `mana::move_mana_crystals`, the thief's gain standing past the cap (R4331001). Each side whose
 /// mana changed is announced; a steal from a player with no maximum mana announces nothing.

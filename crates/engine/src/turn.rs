@@ -628,6 +628,8 @@ fn cleanup(sink: &mut EngineSink, player: PlayerId) {
     crate::warhero::grow_at_cleanup(sink);
     let side = &mut sink.state.players[player];
     side.turn_log.unspent_at_end = Some(side.mana.current);
+    // R5237002: and the Float `query::float_last_turn` reads through their next turn, never reset.
+    side.last_float = Some(side.mana.current);
     let handed_over = side.ai_turn;
     if handed_over {
         crate::traps::end_handed_over_turn(sink);

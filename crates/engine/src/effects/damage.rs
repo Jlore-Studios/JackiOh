@@ -205,7 +205,8 @@ fn sweep_amount(rng: &mut Rng, args: &DamageAllArgs) -> i32 {
     };
     let roll = |rng: &mut Rng| roll_odds(rng, odds, args.amount);
     let lucky = args.lucky.unwrap_or(0);
-    if lucky > 0 {
+    // R5236020: a net luck below 0 rolls again too, keeping the lowest.
+    if lucky != 0 {
         rng.lucky(lucky, roll, Ord::max)
     } else {
         roll(rng)

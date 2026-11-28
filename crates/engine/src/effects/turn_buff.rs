@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use super::targets::{TargetSpec, resolve_target};
 use crate::damage::DamageTarget;
 use crate::script::Effect;
-use crate::state::{CardInstance, GameState, TurnBuff, find_instance_mut};
+use crate::state::{CardInstance, GameState, TimedBuff, TurnBuff, find_instance_mut};
 use crate::wire::{GameEvent, Keyword, ZoneName};
 
 /// `buffThisTurn`'s argument: `{ target }` with an Attack gain and keywords for this turn.
@@ -70,6 +70,78 @@ pub fn buff_this_turn(args: BuffThisTurnArgs) -> Effect {
             });
         }
         for keyword in &keywords {
+            ctx.sink.events.push(GameEvent::KeywordGranted {
+                instance_id: instance.id.clone(),
+                keyword: keyword.clone(),
+                lost: None,
+            });
+        }
+    })
+}
+
+/// `grantForTurns`'s argument: `{ target }` with keywords, an Attack gain and how many of the caster's
+/// turns must start before it ends (FV2's "for a turn" is 1, "for two turns" 2).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GrantForTurnsArgs {
+    pub target: TargetSpec,
+    pub keywords: Vec<Keyword>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attack: Option<i32>,
+    pub turns: i32,
+}
+
+/// R5237001: the live card's grants for N turns that still hold: each until its caster has started
+/// `until_turns_started` turns. One whose turns have come holds nothing, though R78's reset is what
+/// takes it off.
+pub fn timed_buffs_of<'a>(state: &GameState, card: &'a CardInstance) -> Vec<&'a TimedBuff> {
+    card.timed_buffs
+        .iter()
+        .flatten()
+        .filter(|buff| state.players[buff.player].turns_started < buff.until_turns_started)
+        .collect()
+}
+
+/// R5237001: the Attack the card's live grants for N turns add (layer 4, beside `turn_buff_of`).
+pub fn timed_attack_of(state: &GameState, card: &CardInstance) -> i32 {
+    timed_buffs_of(state, card).iter().map(|buff| buff.attack).sum()
+}
+
+/// R5237001 (FvH #7 Whimsy!, #8 Joy!): "+N Attack and <keywords> for a turn" on one unit on the field:
+/// held until its caster (`ctx.controller`) has started `turns` more turns, so "for a turn" ends as the
+/// caster's next turn starts and "for two turns" as their second from now does. Each grant is its own
+/// record, so two stack. R5113000: another card's passes an Immutable unit by.
+pub fn grant_for_turns(args: GrantForTurnsArgs) -> Effect {
+    Effect::new("grantForTurns", move |ctx| {
+        let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, &args.target) else {
+            return;
+        };
+        if instance.zone.z() != ZoneName::Field || crate::restrictions::immutable_keeps_off(ctx, &instance) {
+            return;
+        }
+        let attack = args.attack.unwrap_or(0);
+        if args.turns <= 0 || (attack == 0 && args.keywords.is_empty()) {
+            return;
+        }
+        let caster = ctx.controller;
+        let until_turns_started = ctx.sink.state.players[caster].turns_started + args.turns;
+        if let Some(live) = find_instance_mut(ctx.sink.state, &instance.id) {
+            live.timed_buffs.get_or_insert_with(Vec::new).push(TimedBuff {
+                player: caster,
+                until_turns_started,
+                attack,
+                keywords: args.keywords.clone(),
+            });
+        }
+        if attack != 0 {
+            ctx.sink.events.push(GameEvent::Buffed {
+                instance_id: instance.id.clone(),
+                attack,
+                health: 0,
+            });
+        }
+        for keyword in &args.keywords {
             ctx.sink.events.push(GameEvent::KeywordGranted {
                 instance_id: instance.id.clone(),
                 keyword: keyword.clone(),

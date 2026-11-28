@@ -48,7 +48,8 @@ fn book_of_tokens(radiant: bool, even: bool) -> Script {
             let roll = |rng: &mut Rng| -> i32 { roll_of(rng, even) };
             // R987: the controller's Luck rolls extra times beside the card's own Lucky.
             let lucky = lucky_of(ctx) + luck_of(&*ctx.state, ctx.controller);
-            let count = if lucky > 0 {
+            // R5236020: a net luck below 0 rolls again too, keeping the worst.
+            let count = if lucky != 0 {
                 ctx.rng.lucky(lucky, roll, |a, b| a.max(b))
             } else {
                 roll(&mut *ctx.rng)

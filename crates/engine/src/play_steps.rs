@@ -407,6 +407,10 @@ pub struct PlayRun {
     /// R3920001: a cast from the deck (`deck_cast.rs`), a cast and no play as a cast on draw is.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from_deck: Option<bool>,
+    /// R5237005: where in its player's hand the card was as the announce took it out (`HandPlace`), for
+    /// step 4's `cardPlayed.fromHand`. Absent for any play not from a hand (a cast, a graveyard play).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from_hand: Option<crate::wire::HandPlace>,
     /// R1086: the host an Equip play fuses into at step 7 (ME-EQUIP), read at step 1 (D14).
     /// R4834000: cleared at step 4 when the card is handed to the opponent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -493,6 +497,7 @@ fn blank_run(instance_id: String, def_id: String, player: PlayerId) -> PlayRun {
         replaced: None,
         drawn_as: None,
         from_deck: None,
+        from_hand: None,
         copied: None,
         extra_cries: None,
         aim_at: None,
@@ -1438,6 +1443,10 @@ fn announce_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
         {
             return;
         }
+        // R5237005: a play from a hand notes the card's place there before the announce takes it out.
+        if run.cast != Some(true) && run.replaced != Some(true) && run.source.is_none() {
+            run.from_hand = crate::query::hand_place_of(sink.state, run.player, &run.instance_id);
+        }
         if !announce_play(sink, run) {
             run.lost = Some(true);
             return;
@@ -1512,6 +1521,8 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
         arrived_during: arrivals.clone(),
         exits_from: Some(exits_from),
         on_draw: cast_on_draw(run).then_some(true),
+        // R5237005: the card's place in its player's hand as it left it, for a play from a hand.
+        from_hand: run.from_hand,
     });
     // R2250001: a Resource played pays its player its Credits; a cast is no play of theirs.
     if run.cast != Some(true) {

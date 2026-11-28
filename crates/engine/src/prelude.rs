@@ -76,6 +76,8 @@ pub use crate::zones::*;
 
 pub use crate::effects::*;
 pub use crate::subsystems;
+// R5236000: a card's Durability left and one use's spend, for the scripts that read or spend it.
+pub use crate::subsystems::activate::{durability_left, spend_durability};
 pub use crate::wire::*;
 
 // Resolved explicitly: the effects' verbs over `mana`'s engine functions of the same names, and

@@ -326,7 +326,12 @@ pub enum RolledOutcome {
 /// R4707001: the chance that one roll of `lucky` extra rolls, best kept, lands where one plain roll does
 /// with chance `chance` (§6.1 Lucky, R1440: any of the 1 + X lands there).
 fn lucky_chance(chance: f64, lucky: i32) -> f64 {
-    1.0 - (1.0 - chance.clamp(0.0, 1.0)).powi(lucky.max(0) + 1)
+    let chance = chance.clamp(0.0, 1.0);
+    // R5236020: below 0 every one of the 1 + |X| rolls must land there, the worst being kept.
+    if lucky < 0 {
+        return chance.powi(lucky.saturating_neg().saturating_add(1));
+    }
+    1.0 - (1.0 - chance).powi(lucky + 1)
 }
 
 /// R4707001: the chance of exactly `k` of `n` independent tries landing, each with chance `p`.

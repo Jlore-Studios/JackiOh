@@ -74,10 +74,9 @@ pub fn script() -> CardScripts {
 // on this card.
 #[cfg(test)]
 mod tests {
+    use jackioh_engine::catalog::def_of;
     use jackioh_engine::testkit::PlayerId::P1;
     use jackioh_engine::testkit::*;
-
-    use jackioh_engine::catalog::def_of;
 
     use super::ID;
     use crate::{next_turn_of, scenario};

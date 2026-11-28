@@ -95,18 +95,32 @@ impl Rng {
     }
 
     /// Lucky X (§6.1): roll X extra times and keep the best per `better`. `roll` is handed the
-    /// generator, so a roll that draws needs no second borrow of it.
-    pub fn lucky<T>(&mut self, x: i32, mut roll: impl FnMut(&mut Rng) -> T, better: impl Fn(T, T) -> T) -> T {
-        let mut best = roll(self);
-        for _ in 0..x.max(0) {
+    /// generator, so a roll that draws needs no second borrow of it. R5236020: a net luck below 0
+    /// (Unlucky X past the card's Lucky) rolls |X| extra times and keeps the worst: of each pair, the
+    /// one `better` did not keep. With X 0 it is the one draw `roll` takes.
+    pub fn lucky<T: Clone + PartialEq>(
+        &mut self,
+        x: i32,
+        mut roll: impl FnMut(&mut Rng) -> T,
+        better: impl Fn(T, T) -> T,
+    ) -> T {
+        let mut kept = roll(self);
+        for _ in 0..x.unsigned_abs() {
             let next = roll(self);
-            best = better(best, next);
+            kept = if x > 0 {
+                better(kept, next)
+            } else if better(kept.clone(), next.clone()) == kept {
+                next
+            } else {
+                kept
+            };
         }
-        best
+        kept
     }
 
     /// R1440: a coin flip is a luck-based roll whose better side is heads (§6.1), so Lucky X flips X
     /// more coins and keeps heads if any lands heads. With no Lucky it is the one draw `coin` takes.
+    /// R5236020: below 0 it flips |X| more and keeps tails if any lands tails.
     pub fn lucky_coin(&mut self, x: i32) -> bool {
         self.lucky(x, |rng| rng.coin(), |a, b| a || b)
     }

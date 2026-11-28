@@ -846,6 +846,19 @@ pub enum ModifierKind {
         resume: Resume,
         label: String,
     },
+    /// R5237000 (FvH #4 KY's Unification Mandate): "for the rest of the game, whenever you summon a
+    /// Unit, …" — after each card of this player's that later enters one of their zones (a permanent's
+    /// resolved play, or a summon no play made), `resume` re-enters the card's step with the card's id
+    /// in its data, as `LaneWatch` answers but in any lane; with `unitsOnly`, a Unit's only. Expiry
+    /// `never`; several stack, each its own record. `label` is its badge (R169).
+    SummonWatch {
+        resume: Resume,
+        label: String,
+        /// Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        units_only: Option<bool>,
+    },
     /// MD-C21, R1021: Meditative #48 Tranquility — this player's hero is immune to damage: every
     /// damage instance to it is 0 (a cap of 0 `damage::hero_damage_cap` reads at §4.4 step 3).
     /// Expiry is R757's Armor Up expiry, so it is gone as this player's next turn begins.
@@ -946,6 +959,35 @@ pub enum ModifierKind {
         amount: i32,
         /// R4594002: set when a Spell made it (`restrictions::effect_is_from_spell`), so it passes a Unit
         /// Immune to Spells by (§6.1, R4453000). Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        from_spell: Option<bool>,
+    },
+    /// R5237007 (FvH #73 Bloodforged Crusader, "for the rest of the game your Humans have +2/+2"): every
+    /// Unit this player controls on the field whose tags (`query::tags_of`) hold one of `tags` — every
+    /// Unit, absent — has `attack` more Attack and `health` more max Health, those that arrive later too
+    /// (`layers::stats_lent_by_player`), gated as R1859007's lend. Live from the moment it is made until
+    /// its expiry, as `UnitsAttack` is.
+    UnitsStats {
+        attack: i32,
+        health: i32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        tags: Option<Vec<crate::wire::Tag>>,
+        /// Set when a Spell made it, so it passes a Unit Immune to Spells by (R4508000). Only ever
+        /// `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        from_spell: Option<bool>,
+    },
+    /// R5237008 (FvH #95, Radiant face, "for the rest of the game your cards have <keyword>"): every
+    /// card this player controls on the field (any row) or resolving has `keyword`
+    /// (`layers::lent_to_cards`), those that arrive later too, but a Vanilla, Dormant or buried one.
+    /// Expiry `never`; it outlasts the card that gave it.
+    CardsHaveKeyword {
+        keyword: Keyword,
+        /// Set when a Spell made it, so it passes a card Immune to Spells by (R4508000). Only ever
+        /// `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         from_spell: Option<bool>,

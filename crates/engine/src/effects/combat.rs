@@ -492,6 +492,10 @@ pub fn forced_attack_own_hero(args: ForcedAttackOwnHeroArgs) -> Effect {
 pub struct ForcedAttackArgs {
     pub attacker: TargetSpec,
     pub target: TargetSpec,
+    /// R5238012: the target may be a Unit on the attacker's own side (R173 waived, as the melee waives it,
+    /// R1848005); never the attacker itself. Absent: an ally target is passed over in silence (R173).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub allies: Option<bool>,
 }
 
 /// R3550000 (Stinkyscape+ #72 Foreshadow, #73 Ripple): when an enemy Unit is summoned, this attacks
@@ -506,6 +510,19 @@ pub fn forced_attack(args: ForcedAttackArgs) -> Effect {
             return;
         };
         if attacker.zone.z() != ZoneName::Field || target.zone.z() != ZoneName::Field {
+            return;
+        }
+        // R5238012: an ally target, never the attacker itself.
+        if args.allies == Some(true) {
+            if attacker.id == target.id {
+                return;
+            }
+            crate::combat::force_attack_with(
+                &mut ctx.sink,
+                &attacker,
+                &DamageTarget::Unit { instance: target },
+                true,
+            );
             return;
         }
         force_attack(&mut ctx.sink, &attacker, &DamageTarget::Unit { instance: target });

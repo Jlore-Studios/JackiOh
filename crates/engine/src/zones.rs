@@ -1281,6 +1281,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.taunt_suppressed_turn = None;
     // R4587000: a this-turn buff is a status of the stay on the field, gone with R78's reset.
     instance.turn_buff = None;
+    // R5237001: and so is a grant for N turns.
+    instance.timed_buffs = None;
     instance.face_up = None;
     instance.revealed = None;
     instance.last_damaged_by = None;

@@ -37,7 +37,7 @@ pub const LAYERED_NUMBERED_KEYWORDS: &[KeywordKind] = &[
 
 /// R5236020, R5236021: the kinds whose entries sum across their sources rather than count once (§6.1,
 /// §10.4): Armor and Lucky, and Unlucky, which a Lucky offsets.
-pub fn stacks(kind: KeywordKind) -> bool {
+pub fn sums_across_sources(kind: KeywordKind) -> bool {
     matches!(kind, KeywordKind::Armor | KeywordKind::Lucky | KeywordKind::Unlucky)
 }
 
@@ -147,7 +147,7 @@ pub fn tuned_keywords(keywords: &[Keyword], instance: &CardInstance) -> Vec<Keyw
     }
 
     for keyword in tuning.add_keywords.iter().flatten() {
-        if stacks(keyword.kind()) || !out.iter().any(|held| held.kind() == keyword.kind()) {
+        if sums_across_sources(keyword.kind()) || !out.iter().any(|held| held.kind() == keyword.kind()) {
             out.push(keyword.clone());
         }
     }
@@ -294,7 +294,7 @@ pub fn sum_tunings(tunings: &[Option<Tuning>]) -> Option<Tuning> {
         out.attack = Some(out.attack.unwrap_or(0) + tuning.attack.unwrap_or(0));
         out.health = Some(out.health.unwrap_or(0) + tuning.health.unwrap_or(0));
         for keyword in tuning.add_keywords.iter().flatten() {
-            let stacking = stacks(keyword.kind());
+            let stacking = sums_across_sources(keyword.kind());
             let held = out
                 .add_keywords
                 .iter()

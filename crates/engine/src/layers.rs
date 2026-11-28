@@ -433,7 +433,7 @@ fn as_set(keywords: &[Keyword]) -> Vec<Keyword> {
             let kind = keyword.kind();
             // B5 E6: Spell Damage is numbered too, and sums across its sources like Armor; R5236020:
             // so does Unlucky, and R5236000 a fused card's Durability entries, read as one counter.
-            if crate::tuning::stacks(kind)
+            if crate::tuning::sums_across_sources(kind)
                 || matches!(kind, KeywordKind::SpellDamage | KeywordKind::Durability)
             {
                 return true;
@@ -549,6 +549,8 @@ fn compute_layers_on(
     max_health += instance.buffs.health;
     // R4587000: "+N Attack this turn" holds while its turn is now.
     attack += crate::effects::turn_buff::turn_buff_of(state, instance).map_or(0, |buff| buff.attack);
+    // R5237001: and "+N Attack for N turns" while its caster's turns have not come.
+    attack += crate::effects::turn_buff::timed_attack_of(state, instance);
 
     // Layers 1 to 4 of the keywords: printed, conditional, granted and this turn's.
     let mut listed: Vec<Keyword> = Vec::new();
@@ -559,6 +561,10 @@ fn compute_layers_on(
     listed.extend(instance.granted_keywords.iter().cloned());
     // R4587000: "and <keywords> this turn", beside the granted keywords while its turn is now.
     if let Some(held) = crate::effects::turn_buff::turn_buff_of(state, instance) {
+        listed.extend(held.keywords.iter().cloned());
+    }
+    // R5237001: "and <keywords> for N turns", beside them while its caster's turns have not come.
+    for held in crate::effects::turn_buff::timed_buffs_of(state, instance) {
         listed.extend(held.keywords.iter().cloned());
     }
     // R5113000: a card Immutable by those keywords takes no other card's aura and no player's lend, so
@@ -662,7 +668,8 @@ pub fn stats_with_buffs(state: &GameState, instance: &CardInstance) -> BuffedSta
     BuffedStats {
         attack: printed.attack
             + instance.buffs.attack
-            + crate::effects::turn_buff::turn_buff_of(state, instance).map_or(0, |buff| buff.attack),
+            + crate::effects::turn_buff::turn_buff_of(state, instance).map_or(0, |buff| buff.attack)
+            + crate::effects::turn_buff::timed_attack_of(state, instance),
         max_health: printed.health + instance.buffs.health,
     }
 }

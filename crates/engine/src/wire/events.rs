@@ -29,6 +29,22 @@ string_union! {
     }
 }
 
+/// R5237005 (FvH #60.1, #60.2): `cardPlayed.fromHand`, where in its player's hand a played card was as it
+/// left it at the announce (§10.5): `index` 0 is the leftmost card (R3558000), `of` the hand's size then,
+/// the played card included, so `index == of - 1` is the rightmost and a one-card hand's card is both.
+/// Public: every seat sees which card of a hand left it.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct HandPlace {
+    pub index: i32,
+    pub of: i32,
+}
+
 string_union! {
     /// `counterChanged.counter`.
     pub enum CounterKind {
@@ -350,6 +366,11 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         on_draw: Option<bool>,
+        /// R5237005: where in its player's hand the card was as it left it (`HandPlace`), on a play from
+        /// a hand only; rules read it (`query::played_leftmost`). Public.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        from_hand: Option<HandPlace>,
     },
     /// §10.5 step 7: the card has finished resolving — after its Cry and any Echo repeats, and after a
     /// Spell has reached the graveyard or exile. R17 keys the post-resolution traps on this moment
@@ -1713,6 +1734,7 @@ impl GameEvent {
                 arrived_during,
                 exits_from,
                 on_draw,
+                from_hand,
             } => GameEvent::CardPlayed {
                 player: *player,
                 instance_id: instance_id.clone(),
@@ -1726,6 +1748,8 @@ impl GameEvent {
                 arrived_during: arrived_during.clone(),
                 exits_from: *exits_from,
                 on_draw: *on_draw,
+                // R5237005: the hand place is read by the rules (`query::played_leftmost`), so it stays.
+                from_hand: *from_hand,
             },
             // R4707000: a roll's places in its table are the game record's, as `modes` is.
             GameEvent::ChaosRolled {

@@ -184,7 +184,7 @@ pub(crate) fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
     }
 
     // R5236020: Unlucky sums across its grants as Lucky does.
-    let stacks = crate::tuning::stacks(keyword.kind());
+    let stacks = crate::tuning::sums_across_sources(keyword.kind());
     let already = unit.granted_keywords.iter().any(|k| k.kind() == keyword.kind());
     if stacks || !already {
         unit.granted_keywords.push(keyword.clone());

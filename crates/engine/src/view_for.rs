@@ -918,7 +918,8 @@ fn unit_view_of(
         attack: layers.attack,
         max_health: layers.max_health,
         health: layers.health,
-        keywords: shown_keywords(&layers.keywords),
+        // R5236031: Durability shows the count it has left.
+        keywords: shown_keywords(&crate::subsystems::activate::with_durability_left(&layers.keywords, top)),
         armor: layers.armor,
         position: layers.position,
         counters: top.counters,

@@ -45,7 +45,8 @@ fn pick(ctx: &mut EffectContext<'_>) -> Vec<String> {
     let state: &GameState = &*sink.state;
     let rng: &mut Rng = &mut *sink.rng;
     let roll = |rng: &mut Rng| -> Option<CardInstance> { rng.pick(&pool).cloned() };
-    let chosen = if lucky > 0 {
+    // R5236020: a net luck below 0 rolls again too, keeping the worst.
+    let chosen = if lucky != 0 {
         rng.lucky(lucky, roll, |a, b| match (a, b) {
             (None, b) => b,
             (a, None) => a,

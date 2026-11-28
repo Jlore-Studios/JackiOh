@@ -47,7 +47,8 @@ pub const TRADE_OFFER_TAKE_PROMPT: &str = "Trade offer: Discover a card in your 
 pub fn trade_offer() -> Effect {
     Effect::new("tradeOffer", |ctx| {
         let lucky = ctx.self_.as_ref().map_or(0, |card| lucky_on(ctx.state, card));
-        let data = (lucky > 0).then(|| IndexMap::from([(TRADE_OFFER_LUCKY_KEY.to_string(), lucky.into())]));
+        // R5236020: an Unlucky card's offer carries its net luck below 0 too.
+        let data = (lucky != 0).then(|| IndexMap::from([(TRADE_OFFER_LUCKY_KEY.to_string(), lucky.into())]));
         let offer = delay(DelayArgs {
             at: DelayAt {
                 phase: Phase::Start,

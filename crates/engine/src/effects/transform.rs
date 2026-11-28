@@ -316,6 +316,10 @@ pub(crate) fn to_printed_stats(card: &mut CardInstance) {
     if let Some(held) = card.turn_buff.as_mut() {
         held.attack = 0;
     }
+    // R5237001: and a grant for N turns' Attack the same, its keywords staying.
+    for held in card.timed_buffs.iter_mut().flatten() {
+        held.attack = 0;
+    }
     if let Some(tuning) = card.tuning.as_mut() {
         tuning.attack = None;
         tuning.health = None;
@@ -563,7 +567,8 @@ pub struct TransformCostStepArgs {
 /// scope) is Replaced (§6.3, R35) in place, no Cry (R691), keeping its face, by a card of its own type
 /// whose printed price (R65: X as 0, an embiggen card at its base price) is the old card's own plus `step`, one
 /// drawn with `ctx.rng` from §5.1's pool (shipped sets, never a token, R380, R1420), never the running
-/// card (R387). With none at that price the closest higher one is used, and with none at all, or in a
+/// card (R387). With none at that price the closest higher one is used (R5238010: for a negative step, the
+/// closest lower one, never below (0)), and with none at all, or in a
 /// row the card could not stay in, the card stays as it is (R129). The price it starts from is the old
 /// card's printed one, read as the pool reads prices, so cost changes on the field move nothing.
 pub fn transform_cost_step(args: TransformCostStepArgs) -> Effect {
@@ -591,14 +596,26 @@ pub fn transform_cost_step(args: TransformCostStepArgs) -> Effect {
                 continue;
             }
             let start = query_cost(def_of(Some(&*ctx.state), &old.def_id));
+            // R5238010: a negative step (Hearthstone's Devolve) asks for prices at or below `start + step`,
+            // floored at 0 so a (0) becomes a random (0), and takes the highest of them; a step of 0 or
+            // more asks at or above, and takes the lowest.
+            let down = args.step < 0;
+            let range = if down {
+                CostRange {
+                    min: None,
+                    max: Some((start + args.step).max(0)),
+                }
+            } else {
+                CostRange {
+                    min: Some(start + args.step),
+                    max: None,
+                }
+            };
             let asked = excluding_def_id(
                 Some(&*ctx.state),
                 &CatalogQueryArgs {
                     type_: Some(OneOrMany::One(card_type_of(ctx.state, &old))),
-                    cost_range: Some(CostRange {
-                        min: Some(start + args.step),
-                        max: None,
-                    }),
+                    cost_range: Some(range),
                     ..CatalogQueryArgs::default()
                 },
                 own.as_deref(),
@@ -607,8 +624,11 @@ pub fn transform_cost_step(args: TransformCostStepArgs) -> Effect {
                 .into_iter()
                 .filter(|def| can_replace(&*ctx.state, &old, def))
                 .collect();
-            // The exact price when the pool has it, else the cheapest above it.
-            let Some(price) = higher.iter().map(|def| query_cost(def)).min() else {
+            // The exact price when the pool has it, else the closest past it: the cheapest above it, or
+            // for a negative step the dearest below it (R5238010).
+            let prices = higher.iter().map(|def| query_cost(def));
+            let closest = if down { prices.max() } else { prices.min() };
+            let Some(price) = closest else {
                 continue;
             };
             let pool: Vec<&CardDef> = higher

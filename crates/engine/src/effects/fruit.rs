@@ -335,6 +335,11 @@ pub struct ReplaceHandWithRandomArgs {
     pub cost_override: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<PlayerSpec>,
+    /// R5238006: each card that arrives is drawn from the pool without the definition of the card it
+    /// replaces (hand order: the first arrival replaces the first card), so no card is replaced by its own
+    /// definition; a slot whose pool is then empty gets nothing. Absent: one pool for every slot.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exclude_replaced: Option<bool>,
 }
 
 /// C+ #65.5 Mythic Grape: "Replace your hand with random Mythic cards. They cost (0)." Every card in the
@@ -371,26 +376,41 @@ pub fn replace_hand_with_random(args: ReplaceHandWithRandomArgs) -> Effect {
             .as_ref()
             .map(|card| card.def_id.clone())
             .or_else(|| ctx.def_id.clone());
-        let pool = query(&excluding_def_id(
-            Some(&*ctx.sink.state),
-            &args.query,
-            own.as_deref(),
-        ));
+        let asked = excluding_def_id(Some(&*ctx.sink.state), &args.query, own.as_deref());
+        let pool = query(&asked);
         if pool.is_empty() {
             return;
         }
-        for _ in 0..replaced.len() {
+        for gone in &replaced {
             if ctx.sink.state.result.is_some() {
                 return;
             }
+            // R5238006: this slot's pool, without the definition of the card it replaces.
+            let own_pool;
+            let slot_pool = if args.exclude_replaced == Some(true) {
+                own_pool = query(&excluding_def_id(
+                    Some(&*ctx.sink.state),
+                    &asked,
+                    Some(gone.def_id.as_str()),
+                ));
+                if own_pool.is_empty() {
+                    continue;
+                }
+                &own_pool
+            } else {
+                &pool
+            };
             // R673: a card generated into a hand may be Glitch.
             // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
             let Some(def) = pick_generated_unique(
                 &mut *ctx.sink.rng,
-                &pool,
+                slot_pool,
                 Some(&*ctx.sink.state),
                 &mut ctx.draw_tally,
             ) else {
+                if args.exclude_replaced == Some(true) {
+                    continue;
+                }
                 return;
             };
             let def_id = def.id.clone();

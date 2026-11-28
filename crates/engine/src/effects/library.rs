@@ -75,6 +75,10 @@ pub fn exile_bottom_of_library(args: ExileBottomOfLibraryArgs) -> Effect {
 pub struct DiscardLibraryArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<PlayerSpec>,
+    /// R5238007: only these cards of that library, in the library's order and each reported as the whole
+    /// library's are; an id not in it is passed by. Absent: the whole library.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub instance_ids: Option<Vec<String>>,
 }
 
 /// `putOnLibraryBottom`'s arguments: none.
@@ -121,7 +125,11 @@ pub fn put_on_library_bottom(_args: PutOnLibraryBottomArgs) -> Effect {
 pub fn discard_library(args: DiscardLibraryArgs) -> Effect {
     Effect::new("discardLibrary", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        let pile: Vec<CardInstance> = ctx.state.players[player].library.clone();
+        let mut pile: Vec<CardInstance> = ctx.state.players[player].library.clone();
+        // R5238007: named cards only, kept in the library's order.
+        if let Some(ids) = &args.instance_ids {
+            pile.retain(|card| ids.contains(&card.id));
+        }
         for mut card in pile {
             let moved = move_to_zone(ctx.state, &mut card, OffFieldZone::Graveyard, Default::default());
             let landed = find_instance(ctx.state, &card.id).cloned().unwrap_or(card);

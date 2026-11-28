@@ -527,7 +527,7 @@ fn die_insect(radiant: bool, amount: i32) -> Effect {
         // R987: the controller's Luck rolls extra times beside the Radiant face's own Lucky.
         let luck = crate::query::luck_of(&*ctx.sink.state, ctx.controller);
         let lucky = if radiant { DIE_INSECT_LUCKY } else { 0 } + luck;
-        let pick = if lucky > 0 {
+        let pick = if lucky != 0 {
             ctx.sink
                 .rng
                 .lucky(lucky, roll, better_insect_pick(&*ctx.sink.state))

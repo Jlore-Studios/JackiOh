@@ -795,6 +795,25 @@ fn land(
         }
     }
 
+    // R5236010: Fragile is Poisonous on the target's side: a hit that lowered the Unit's Health (1 or
+    // more dealt, so never one Divine Shield, an immunity or Armor took whole), with or without a
+    // source (a Burn or Toxic tick too), destroys it at the state check. Indestructible still holds it,
+    // as it holds a Poisonous hit (`already_killed`).
+    if let Some(live) = &unit
+        && dealt >= 1
+        && crate::layers::unit_has(sink.state, live, KeywordKind::Fragile)
+        && let Some(card) = find_instance_mut(sink.state, &live.id)
+    {
+        card.marked_destroyed = Some(true);
+        if !killed_before {
+            if let Some(source_card) = source {
+                let killer = crate::kill_credit::credited_killer_id(source_card, card);
+                card.last_damaged_by = Some(killer);
+            }
+            note_death_via(sink, &live.id, KeywordKind::Fragile);
+        }
+    }
+
     // MD-D31, R1124: exile on damage rides beside Poisonous: the damaged Unit is marked and the next
     // state check exiles it ahead of deaths (§4.5 step 1). A hit the pipeline stopped never gets here.
     if let (Some(live), Some(source_card)) = (&unit, source)

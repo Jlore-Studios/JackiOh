@@ -27,8 +27,8 @@ use crate::script::{Effect, EffectContext, EffectPart};
 use crate::state::{CardInstance, GameState, SetAs, Slumber, find_instance, find_instance_mut, new_instance};
 use crate::stays::exit_mark;
 use crate::wire::{
-    AttackHealth, CardType, CostRange, GameEvent, Keyword, OneOrMany, PlayerId, RevealAt, Row, Tag, Zone,
-    ZoneName,
+    AttackHealth, CardType, CostRange, GameEvent, Keyword, OneOrMany, PlayerId, RevealAt, Row, SetName, Tag,
+    Zone, ZoneName,
 };
 use crate::zones::{
     PlaceOnFieldOptions, ZoneSlot, fill_board_zones, first_entry_zone, first_entry_zone_where,
@@ -957,6 +957,8 @@ pub fn clone_of(
     };
     // R4587000: a copy keeps the source's this-turn buff (R57).
     copy.turn_buff = source.turn_buff.clone();
+    // R5237001: and its grants for N turns, each to the same caster's turn.
+    copy.timed_buffs = source.timed_buffs.clone();
     copy.vanilla = args.vanilla == Some(true) || source.vanilla;
     if args.granted_keywords != Some(false) {
         copy.granted_keywords = source.granted_keywords.clone();
@@ -1164,6 +1166,9 @@ pub struct RecruitFilter {
     pub cost_range: Option<CostRange>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub def_id: Option<OneOrMany<String>>,
+    /// R5238005: only a card whose definition is of one of these sets (`CardDef.set`). Absent: any set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub set: Option<OneOrMany<SetName>>,
 }
 
 /// No value is an empty list, one value a list of one.
@@ -1185,6 +1190,11 @@ fn matches_filter(ctx: &EffectContext<'_>, card: &CardInstance, filter: &Recruit
     }
     let def_ids = as_list(filter.def_id.as_ref());
     if !def_ids.is_empty() && !def_ids.contains(&def.id) {
+        return false;
+    }
+    // R5238005: the set its definition is filed under, as a catalog pool's `set` reads it.
+    let sets = as_list(filter.set.as_ref());
+    if !sets.is_empty() && !sets.contains(&def.set) {
         return false;
     }
     // MD-B15, R923: a granted tag is part of the card for a Recruit filter too.
