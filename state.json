@@ -20992,9 +20992,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-28T00:33:26Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46088602169",
+      "run_id": "pending:e24c5f8a-1795827272",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T00:34:18Z",
+      "started_at": "2026-11-28T00:54:49Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -21259,9 +21259,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T00:54:19Z",
+    "at": "2026-11-28T00:54:49Z",
     "url": "",
-    "what": "review #5232 on claude-3"
+    "what": "plan #5226 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-28T00:41:17Z",
