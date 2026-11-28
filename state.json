@@ -21285,12 +21285,9 @@
     "what": "review #5218 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-28T01:31:23Z",
+    "at": "2026-11-28T01:38:30Z",
     "notes": [
-      "#5218: `claude-6` can start again, so its hold is lifted",
-      "started review #5218 on claude-6 (run 46093608208)",
-      "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered plan #5229 on claude-4 (run 46091533368): planned"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -21996,7 +21993,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-28T01:31:23Z",
+  "loop_tick": "2026-11-28T01:38:30Z",
   "machine_disk": {
     "issue": null,
     "reading": {
