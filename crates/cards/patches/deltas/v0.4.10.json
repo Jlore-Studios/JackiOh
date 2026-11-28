@@ -1,0 +1,449 @@
+{
+  "set": {
+    "core-051-1": {
+      "id": "core-051-1",
+      "index": "51.1",
+      "name": "KY's Empty Notebook",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [
+        "KY",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 1,
+      "params": [
+        {
+          "key": "cards",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 10,
+      "base": {
+        "keywords": [],
+        "text": "Shuffle {cards|random KY card|random KY cards} into your deck."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Shuffle {cards|random Radiant KY card|random Radiant KY cards} into your deck."
+      }
+    },
+    "classic-080": {
+      "id": "classic-080",
+      "index": "80",
+      "name": "BOOM! Big Max",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Acclaimed"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 4,
+      "base": {
+        "attack": 13,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Trample"
+          },
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Crater"
+          }
+        ],
+        "text": "Tribute 3, Rush, Trample, Indestructible, Crater"
+      },
+      "radiant": {
+        "attack": 26,
+        "health": 16,
+        "keywords": [
+          {
+            "kind": "Charge"
+          },
+          {
+            "kind": "Trample"
+          },
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Crater"
+          }
+        ],
+        "text": "Tribute 3, Charge, Trample, Indestructible, Crater"
+      }
+    },
+    "classicplus-019-2": {
+      "id": "classicplus-019-2",
+      "index": "19.2",
+      "name": "Jungle Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "refs": [
+        "classicplus-019-5"
+      ],
+      "params": [
+        {
+          "key": "chance",
+          "base": 100,
+          "radiant": 100,
+          "better": "up",
+          "step": 10,
+          "min": 1,
+          "max": 100
+        }
+      ],
+      "loc": 37,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          }
+        ],
+        "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser goes Berserk."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          }
+        ],
+        "text": "Can't attack\nEnd of turn: {chance}% chance: This attacks a random enemy Unit. If it destroys the enemy Unit across from your Bot Loser, your Bot Loser gets the kill instead."
+      }
+    },
+    "classicplus-030": {
+      "id": "classicplus-030",
+      "index": "30",
+      "name": "Felinor Fuser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Felinor"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 4,
+      "loc": 33,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Discover a Felinor Unit, then another. Fuse both into this."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Discover a Radiant Felinor Unit, then another. Fuse both into this."
+      }
+    },
+    "classicplus-039": {
+      "id": "classicplus-039",
+      "index": "39",
+      "name": "Book Worm",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "loc": 16,
+      "base": {
+        "attack": 1,
+        "health": 4,
+        "keywords": [],
+        "text": "Start of turn: Place a Plague Counter on this.\nDeath: Add a random Book to your hand for each Plague Counter on this."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 8,
+        "keywords": [],
+        "text": "Start of turn: Place a Plague Counter on this.\nDeath: Add a random Radiant Book to your hand for each Plague Counter on this."
+      }
+    },
+    "classicplus-043": {
+      "id": "classicplus-043",
+      "index": "43",
+      "name": "AI Slop",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "cards",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Fuse {cards|random (1) Cost AI generated card|random (1) Cost AI generated cards} and add the result to your hand. It costs (0)."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Fuse {cards|random (1) Cost Radiant AI generated card|random (1) Cost Radiant AI generated cards} and add the result to your hand. It costs (0)."
+      }
+    },
+    "classicplus-061": {
+      "id": "classicplus-061",
+      "index": "61",
+      "name": "Bauble Bubble",
+      "set": "Classic+",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "core-005"
+      ],
+      "params": [
+        {
+          "key": "cards",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 10,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Brittle",
+            "n": 1
+          }
+        ],
+        "text": "Brittle 1\nDeath: Add {cards|Stockpile|Stockpiles} to your hand. Each costs ({setCost})."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Brittle",
+            "n": 1
+          }
+        ],
+        "text": "Brittle 1\nDeath: Add {cards|Radiant Stockpile|Radiant Stockpiles} to your hand. Each costs ({setCost})."
+      }
+    },
+    "meditative-021": {
+      "id": "meditative-021",
+      "index": "21",
+      "name": "API Key Fishing",
+      "set": "Meditative",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 0,
+        "embiggen": 1
+      },
+      "refs": [
+        "meditative-021"
+      ],
+      "params": [
+        {
+          "key": "chance",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "max": 100
+        },
+        {
+          "key": "paidChance",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 2,
+          "min": 1,
+          "max": 100
+        }
+      ],
+      "loc": 37,
+      "base": {
+        "keywords": [],
+        "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add an API Key Fishing to your hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "{chance}% chance: Steal your opponent's hand.\nEmbiggened (1): {paidChance}% instead.\nEnd of turn: Add a Radiant API Key Fishing to your hand."
+      }
+    },
+    "meditative-094": {
+      "id": "meditative-094",
+      "index": "94",
+      "name": "Shrinking Felinor",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Felinor"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 4,
+      "refs": [
+        "meditative-094"
+      ],
+      "params": [
+        {
+          "key": "shrinkAttack",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "shrinkHealth",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 29,
+      "base": {
+        "attack": 9,
+        "health": 9,
+        "keywords": [],
+        "text": "Death: Summon a Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
+      },
+      "radiant": {
+        "attack": 18,
+        "health": 18,
+        "keywords": [],
+        "text": "Death: Summon a Shrinking Felinor whose base stats are this one's −{shrinkAttack}/−{shrinkHealth}."
+      }
+    },
+    "meditativeplus-004": {
+      "id": "meditativeplus-004",
+      "index": "4",
+      "name": "Jlockeed's Supply Drop",
+      "set": "Meditative+",
+      "type": "Spell",
+      "tags": [
+        "Jlockeed"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "params": [
+        {
+          "key": "turns",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 9,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "cards",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "suppliesCost",
+          "base": 2,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        },
+        {
+          "key": "embiggenedTurns",
+          "base": 5,
+          "radiant": 5,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedDamage",
+          "base": 9,
+          "radiant": 15,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "embiggenedCards",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 101,
+      "base": {
+        "keywords": [],
+        "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (4): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or add {embiggenedCards}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Choose one: In {turns|turn|turns}, deal {damage} damage to each enemy, with Pierce and Lifesteal; or in {turns|turn|turns}, add {cards|random Radiant Jlockeed card|random Radiant Jlockeed cards} to your hand, and each costs ({suppliesCost}).\nEmbiggened (4): In {embiggenedTurns|turn|turns} instead; deal {embiggenedDamage} damage, or fill your hand with them."
+      }
+    }
+  }
+}

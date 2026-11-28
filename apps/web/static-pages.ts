@@ -24,6 +24,7 @@ import { compositionFor, themeFor } from "./src/cards/art/themes.ts";
 import { ALMANAC_SETS, almanacShelf } from "./src/game/deckbuilder/shelf.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor, screenNameFor } from "./src/net/head.ts";
 import { SITE_ORIGIN, originOf, paths } from "./src/net/navigate.ts";
+import { snapshotReader } from "./src/patches/deltas.ts";
 import { RELEASE_ART_DIR, releaseArtAsset, releaseArtAssets } from "./src/patches/releaseArt.ts";
 import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups, technicalLines } from "./src/patches/releases.ts";
 import type { Patch, Snapshot, TechnicalEntry } from "./src/patches/source.ts";
@@ -558,10 +559,11 @@ export function staticPages(): Plugin {
   // Reading here avoids bundling the catalog into each config load.
   const data = (file: string): unknown =>
     JSON.parse(readFileSync(resolve(root, "../../crates/cards", file), "utf8"));
-  const snapshot = (version: string): Snapshot | null => {
-    const file = resolve(root, "../../crates/cards/patches", `${version}.json`);
-    return existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as Snapshot) : null;
-  };
+  // R5268000: each snapshot folded from the deltas, each once.
+  const snapshot = snapshotReader((stem) => {
+    const file = resolve(root, "../../crates/cards/patches", `${stem}.json`);
+    return existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as unknown) : undefined;
+  });
   return {
     name: "jackioh:static-pages",
     configResolved(config) {

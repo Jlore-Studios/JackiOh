@@ -38679,5 +38679,59 @@
     "plays": [],
     "fragment": "radiant-rollback-point-brings-its-units-back-on-their",
     "changes": []
+  },
+  {
+    "version": "v0.6.15q",
+    "date": "2026-11-28",
+    "title": "Card sound hooks for triggered effects",
+    "source": "issue #5188, PR #5218",
+    "notes": "R5188000: cards may carry sounds for six recurring hooks (startOfTurn, endOfTurn, whenever, activate, hurt, hit), any voiced hook may give a pool of lines and an effect may be a list played in order; the card inspector's voice preview (apps/web/src/cards/inspect/VoicePreview.tsx) labels the six new hooks. Effect-only proof hooks on Gravedigger (start of turn), Combo-Index (end of turn), Fed Fauci (Whenever) and Unstable Clone Machine (Activate). R5188001: the voice budget is 32 MiB, with a four-word cap on new lines, a gzip cap on the sound tables and a census. No voice line is written or rendered, and no card plays differently.",
+    "player": {
+      "title": "Cards that sound when their effects trigger",
+      "new": [
+        "Gravedigger, Combo-Index, Fed Fauci and Unstable Clone Machine now make a sound when their start-of-turn, end-of-turn, Whenever or Activate effect runs."
+      ],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "93301fbc0218d0d2f855078a35f605e0150b935c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "card-sound-hooks-for-triggered-effects",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15r",
+    "date": "2026-11-28",
+    "title": "Patch: Immutable keeps Last Hurrah's Flashback off a card in the hand, and its random picks skip Immutable cards",
+    "source": "issue #5226",
+    "notes": "Issue #5226 (R5226000): a keyword another card gives for good (gainKeywordForGood) is kept off an Immutable card, an Indestructible Unit card's included (R4353000); C #37 Last Hurrah's random picks skip Immutable cards and its Radiant face gives Flashback to every other hand card. A card's own keyword for good (S #154 Dice of Doom) is unchanged (R23). Last Hurrah keeps its old script for replays.",
+    "player": {
+      "title": "Last Hurrah passes Immutable cards by",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Last Hurrah's random picks now fall only on cards that can take Flashback, and its Radiant face gives it to every card in your hand that can take it."
+      ],
+      "text": [],
+      "fixes": [
+        "Last Hurrah no longer gives Flashback to an Immutable card in your hand, such as Phase Wall, Megabase or The Rock."
+      ]
+    },
+    "commits": [
+      "0cb4d6fe2f793eda94361875b5d5c3f870ff3011"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-037"
+    ],
+    "fragment": "immutable-keeps-last-hurrah-s-flashback-off-a-card-in-the",
+    "changes": []
   }
 ]

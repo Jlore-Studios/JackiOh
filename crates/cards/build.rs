@@ -34,7 +34,7 @@
 //! R767000, R388: and every shipped version, for the replays of games played on it and for `GET
 //! /api/catalog/:version`. `$OUT_DIR/history.json` holds `{ order, patches, winRates, versions }`:
 //! `order` is every shipped version, oldest first; each of `versions` is one shipped version, with
-//! the catalog ids its snapshot (`patches/<version>.json`) lacks (`absent`), for each id whose entry
+//! the catalog ids its snapshot (the fold of `patches/deltas/` up to it, R5268000) lacks (`absent`), for each id whose entry
 //! differs from `catalog.json`'s, an index into `patches` (`changed`), and, when it has a win-rate
 //! table file (`patches/win_rates/<version>.json`, R1329000), an index into `winRates`, which holds
 //! each table once; when it has a file of the win rates of record (`patches/records/<version>.json`,
@@ -74,7 +74,7 @@
     reason = "a build script runs at compile time, where data may reach a pure crate (SURFACE §3)"
 )]
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
@@ -194,6 +194,7 @@ fn main() {
     let browser = std::env::var("CARGO_CFG_TARGET_ARCH").is_ok_and(|arch| arch == "wasm32");
     let history = history_json(&patches_dir, catalog, browser.then_some(BROWSER_CARRIED_FROM));
     std::fs::write(out_dir.join("history.json"), history).expect("write history.json");
+    std::fs::write(out_dir.join("deltas.rs"), deltas_rs(&patches_dir)).expect("write deltas.rs");
 
     // R1183004: every card's code block, cut to the engine's `CODE_BLOCK_MAX_LINES`.
     let config_path = manifest.join("..").join("engine").join("src").join("config.rs");
@@ -469,13 +470,50 @@ fn history_json(
             .position(|version| version == from)
             .unwrap_or_else(|| panic!("BROWSER_CARRIED_FROM {from} is not in {}", list.display()))
     });
-    for version in versions.iter().skip(first) {
-        let path = patches_dir.join(format!("{version}.json"));
-        let snapshot = read_json(&path);
-        let snapshot = snapshot
-            .as_object()
-            .unwrap_or_else(|| panic!("{}: not a JSON object", path.display()));
-        let absent: Vec<&String> = catalog.keys().filter(|id| !snapshot.contains_key(*id)).collect();
+    // R5268000: each snapshot is the fold of its version's delta and every one before it, so the fold
+    // starts at the first version whatever `from` is; `order.json` places every id a delta sets.
+    let order_path = patches_dir.join("order.json");
+    let order = read_json(&order_path);
+    let order: Vec<&str> = order
+        .as_array()
+        .unwrap_or_else(|| panic!("{}: not a JSON array", order_path.display()))
+        .iter()
+        .map(|id| {
+            id.as_str()
+                .unwrap_or_else(|| panic!("{}: an id that is not a string", order_path.display()))
+        })
+        .collect();
+    let placed: BTreeSet<&str> = order.iter().copied().collect();
+    let mut folded = serde_json::Map::new();
+    for (step, version) in versions.iter().enumerate() {
+        let path = patches_dir.join("deltas").join(format!("{version}.json"));
+        let delta = read_json(&path);
+        if let Some(unset) = delta.get("unset").and_then(|unset| unset.as_array()) {
+            for id in unset.iter().filter_map(|id| id.as_str()) {
+                folded.remove(id);
+            }
+        }
+        let set = delta
+            .get("set")
+            .and_then(|set| set.as_object())
+            .unwrap_or_else(|| panic!("{}: no \"set\" object", path.display()));
+        for (id, entry) in set {
+            assert!(
+                placed.contains(id.as_str()),
+                "{}: \"{id}\" has no place in order.json",
+                path.display()
+            );
+            folded.insert(id.clone(), entry.clone());
+        }
+        if step < first {
+            continue;
+        }
+        // The ids in the map's own order, as when each snapshot was a file this read whole.
+        let snapshot = &folded;
+        let absent: Vec<&String> = catalog
+            .keys()
+            .filter(|id| !folded.contains_key(id.as_str()))
+            .collect();
         let mut changed = serde_json::Map::new();
         for (id, old) in snapshot {
             let Some(now) = catalog.get(id) else {
@@ -547,6 +585,35 @@ fn history_json(
         "fragments": fragments,
     })
     .to_string()
+}
+
+/// R5268000: `$OUT_DIR/deltas.rs`, which only tests include (`src/snapshot_fold.rs`): `DELTAS`, each
+/// shipped version's delta in `patches.json`'s order, and `ORDER`, `order.json`.
+fn deltas_rs(patches_dir: &Path) -> String {
+    let list = patches_dir.join("patches.json");
+    let shipped = read_json(&list);
+    let mut out = String::from("pub const DELTAS: &[(&str, &str)] = &[\n");
+    for patch in shipped.as_array().into_iter().flatten() {
+        let version = patch
+            .get("version")
+            .and_then(|version| version.as_str())
+            .unwrap_or_else(|| panic!("{}: an entry with no string \"version\"", list.display()));
+        let path = patches_dir.join("deltas").join(format!("{version}.json"));
+        writeln!(
+            out,
+            "    ({version:?}, include_str!({:?})),",
+            path.display().to_string()
+        )
+        .expect("a String");
+    }
+    let order = patches_dir.join("order.json");
+    writeln!(
+        out,
+        "];\npub const ORDER: &str = include_str!({:?});",
+        order.display().to_string()
+    )
+    .expect("a String");
+    out
 }
 
 /// R767000: what turns `now`'s entry back into `old`'s: `old`'s top-level keys whose value differs

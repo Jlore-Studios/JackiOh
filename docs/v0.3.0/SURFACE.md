@@ -749,7 +749,8 @@ is `_invariants.ts`'s I1–I4 monitor (used by `cargo jackioh fuzz`). `testkit::
 ## 9. The AI crate
 
 `crates/ai/src/lib.rs` re-exports what `packages/ai/src/index.ts` exported (by §4.2), except the R645
-emote personas, which are presentation and move to `apps/web/src/practice/personas.ts` (part 21).
+emote personas, which are presentation and moved to `apps/web/src/practice/personas.ts` (part 21), and since
+issue #5269 live in `jackioh-shared`'s `bots::persona`, which the page calls through the module's `bots` (R5269000).
 Fixed here:
 
 ```rust
@@ -895,7 +896,7 @@ config alias them:
 | `@jackioh/validator` | `apps/web/src/wire/validator.ts` (types + WASM-backed functions) |
 | `@jackioh/cards/catalog.json`, `@jackioh/cards/flavour.json` | `crates/cards/catalog.json`, `crates/cards/flavour.json` |
 | `@jackioh/cards` | `apps/web/src/wire/cards.ts` (`CATALOG`, `CATALOG_VERSION`, `type CardFlavour`) |
-| `@jackioh/ai`, `@jackioh/ai/config` | `apps/web/src/wire/ai.ts` (`decide`, `aiToAct`, `lethalHint` (R2102000), `buildAiDeck` over WASM; `AI_BUDGET`, `AI_GATE_BUDGET`, `SHADOW_BAN_IDS`, `type SearchBudget`, `AI_EMOTE`, `type AiEmote`, `type EmotePersona`, `createEmotePersona`, `pickPersona` re-exported from `../practice/personas.ts`) |
+| `@jackioh/ai`, `@jackioh/ai/config` | `apps/web/src/wire/ai.ts` (`decide`, `aiToAct`, `lethalHint` (R2102000), `buildAiDeck` over WASM; `AI_BUDGET`, `AI_GATE_BUDGET`, `SHADOW_BAN_IDS`, `type SearchBudget`; the emote personas are `jackioh-shared`'s, through `bots`, R5269000) |
 | `../../server/src/config` (relative, 23 web and 10 e2e files) | replaced by `@jackioh/server-config` → `apps/web/src/wire/serverConfig.ts` (generated, §5.1); part 21 rewrites those import lines |
 
 The hand-kept helpers are the runtime values the web imports from `@jackioh/shared` today
@@ -1393,3 +1394,4 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
 - **§6.3 / §10.8, a fused text's numbers (issue #5049, R5049000):** `params::tuned_value` (a declared number on a face as a `Tuning` moves it, the formula `params_view` reads) is public, and jackioh-shared's face model fills each leaf of a fused definition's text with that leaf's own numbers through it (`face::tuning::with_part_numbers`, `face::fused::leaves_of`). No shape, state or view changes, so no hash moves.
 - **§6.1 / §10.10, a unit holding gear (issue #5050, R5050000):** jackioh-shared's `FaceModel` gains `equipped?: EquippedFace` (`host`, `list` of `StarshipPieceRef`, `term`), set for a fused definition holding Miners or Weapons and one host (`face::fused::equipped_of`), whose face then prints the host's name, text and keywords; the log names such a card for its host (`face::fused::equipped_host`). Absent for every other card; the web's generated `FaceModel.ts` and `EquippedFace.ts` carry it. Nothing in the engine changes.
 - **§6.1 / §10.1 / §10.8, Tipsy renamed Woozy (issue #5181, R5181000):** the keyword kind is `Woozy` (`KeywordKind::Woozy`, `Keyword::Woozy { n }`), reading `Tipsy` as an alias and never writing it; the Rust names follow (`woozy.rs`, `WOOZY_DECAY`, `WOOZY_BLUR_CHANCE_PER_STACK`, `WOOZY_BLUR_CHANCE_CAP`, `WoozyCounter`, `WoozyStamp`, `WoozyBlur`, `CounterKind::Woozy`). What a game writes keeps the old name: `PlayerState` and `CardInstance` store `woozy` as `tipsy`, `SideView` sends `tipsy`, `CardView`, `UnitView` and `PublicBackrowView` send `tipsyBlur`, `CounterKind::Woozy` is the literal `tipsy`, and the blur's seed stream stays `:tipsy-blur`, so a filed game's hash, a view, an event list and a blur are what they were. The client's chip mark is `WZ`.
+- **§4.4 / §9.9, a hero's Armor wearing in a projection (issue #5228, R5228000):** `subsystems::projected_hero_damage_worn` is `projected_hero_damage` for the next of several hits, carrying a worn count, over `damage::hero_hit_wearing`, which `project_hit` now reads too. The AI's Taunt walk reads it; no state, view or wire shape changes.

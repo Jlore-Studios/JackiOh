@@ -1,0 +1,44 @@
+{
+  "set": {
+    "stinkyscape-112": {
+      "id": "stinkyscape-112",
+      "index": "112",
+      "name": "Job Application",
+      "set": "Stinkyscape",
+      "type": "Field Spell",
+      "tags": [
+        "Quest"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "stinkyscape-112-1"
+      ],
+      "params": [
+        {
+          "key": "buffs",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 253,
+      "base": {
+        "keywords": [],
+        "text": "Death: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\nDeath: Resummon this at Stage 1.\nQuest: Stage 1, Upload Resume. Activate this to send a card from your hand in as your resume. Reward: Hear back in 2 to 6 turns.\nQuest: Stage 2, The Interview. One of three, drawn at random: play a card that costs the same as your resume; play 3 cards of different costs in one turn; or take or deal 12 or more damage in one hit. Reward: Add your resume to your hand and Buff it {buffs|time|times}. It costs (0).\nQuest: Stage 3, The Offer. Activate this to accept the offer, or to send in another application, back to Stage 1, with every reward tripled. Reward: From your next turn on, add a Paycheck to your hand at the start of each of your turns."
+      }
+    }
+  }
+}

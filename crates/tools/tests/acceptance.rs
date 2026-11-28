@@ -626,12 +626,13 @@ fn ci_scope_check_finds_a_crate_or_a_path_dependency_the_map_lacks() {
 }
 
 /// What `patches ship` wrote for v0.6.6d (#4089, #4094).
-const SHIP_FILES: [&str; 6] = [
+const SHIP_FILES: [&str; 7] = [
     "crates/cards/patches/card_metrics/v0.6.6d.json",
     "crates/cards/patches/patches.json",
     "crates/cards/patches/pending/tag-scan.json",
     "crates/cards/patches/shipped.json",
-    "crates/cards/patches/v0.6.6d.json",
+    "crates/cards/patches/deltas/v0.6.6d.json",
+    "crates/cards/patches/order.json",
     "crates/server/.env.example",
 ];
 

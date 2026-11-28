@@ -312,6 +312,24 @@ fn hero_hit_amount_worn(state: &GameState, player: PlayerId, amount: i32, pierce
     }
 }
 
+/// R5228000: `hero_hit_amount` for the next of several hits one projection lands on `player`'s hero, `worn`
+/// counting the points its earlier hits wore off the Armor on the hero itself (R5183000). Adds 1 to `worn`
+/// when this hit wears it, as `land` does: it is above 0, does not pierce (R346), and meets Armor of the
+/// hero's own not yet worn on a hero not immune to damage (`armor_wears`). A grant's and a modifier's never wear.
+pub(crate) fn hero_hit_wearing(
+    state: &GameState,
+    player: PlayerId,
+    amount: i32,
+    pierce: bool,
+    worn: &mut i32,
+) -> i32 {
+    let dealt = hero_hit_amount_worn(state, player, amount, pierce, *worn);
+    if amount > 0 && !pierce && *worn < state.players[player].hero.armor && armor_wears(state, player) {
+        *worn += 1;
+    }
+    dealt
+}
+
 /// E6, §4.4 step 0: a player's Spell Damage, summed as Armor sums (a numbered keyword, §10.4): every
 /// "Spell Damage +N" on the units acting on their field, an animated card in a unit zone included, or
 /// on a face-up backrow card they control (R1563002, C #23 Devil's Pact); every aura reaching them from
@@ -1133,18 +1151,11 @@ pub fn project_hit(
     }
     let pierce = pierces(state, source, None);
     let (side, after) = match target {
-        DamageTarget::Hero { player } => {
-            let worn = pools.worn[*player];
-            let after = hero_hit_amount_worn(state, *player, amount, pierce, worn);
-            // R5183000: a hit the Armor meets wears it for the projection's next hit, as `land` wears it.
-            if !pierce
-                && hero_armor_worn(state, *player, worn) > 0
-                && hero_damage_cap(state, *player) != Some(0)
-            {
-                pools.worn[*player] += 1;
-            }
-            (*player, after)
-        }
+        // R5183000: a hit the Armor meets wears it for the projection's next hit, as `land` wears it.
+        DamageTarget::Hero { player } => (
+            *player,
+            hero_hit_wearing(state, *player, amount, pierce, &mut pools.worn[*player]),
+        ),
         DamageTarget::Unit { instance } => {
             // R4591004: a hit on a Unit immune to damage lands nothing, as `land` reads it.
             if crate::effects::firewall::units_immune_now(state, instance) {

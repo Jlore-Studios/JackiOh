@@ -1,0 +1,1466 @@
+{
+  "set": {
+    "core-027": {
+      "id": "core-027",
+      "index": "27",
+      "name": "Blood Ridden Glowy Jelly Bean",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "loc": 13,
+      "base": {
+        "keywords": [],
+        "text": "Cast on draw: Make a random card in your hand Radiant. Lose 5 health."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Cast on draw: Make 2 random cards in your hand Radiant. Lose 5 health."
+      }
+    },
+    "core-028": {
+      "id": "core-028",
+      "index": "28",
+      "name": "Knockoff Temu Glowy Jelly Bean",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 9,
+      "base": {
+        "keywords": [],
+        "text": "Make 2 random cards among your deck, hand and board Radiant."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Make 5 random cards among your deck, hand and board Radiant."
+      }
+    },
+    "core-040": {
+      "id": "core-040",
+      "index": "40",
+      "name": "Echoes of the Forgotten",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 18,
+      "base": {
+        "keywords": [],
+        "text": "Start of turn: Deal damage to the enemy hero equal to the cards in your exile. Then exile the bottom card of your deck."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Start of turn: Deal damage to the enemy hero equal to twice the cards in your exile. Then exile the bottom card of your deck."
+      }
+    },
+    "core-087": {
+      "id": "core-087",
+      "index": "87",
+      "name": "Pocket Chaos",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "refs": [
+        "core-087"
+      ],
+      "loc": 24,
+      "base": {
+        "keywords": [],
+        "text": "Choose one: Swap hero health, boards or decks with your opponent. Then add a Pocket Chaos with a base cost (1) less than this one's to your opponent's hand, unless its base cost would be (0). Exile this."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Choose one: Swap hero health, boards or decks with your opponent. Then you may add a Pocket Chaos with a base cost (1) less than this one's to your opponent's hand, unless its base cost would be (0). Exile this."
+      }
+    },
+    "core-091": {
+      "id": "core-091",
+      "index": "91",
+      "name": "Fed Fauci",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 34,
+      "base": {
+        "attack": 1,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +1 mana per Plague Counter."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 12,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nWhenever this takes damage, it gets a Plague Counter.\nStart of turn: +2 mana per Plague Counter."
+      }
+    },
+    "classic-003": {
+      "id": "classic-003",
+      "index": "3",
+      "name": "Book of Heal",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Book"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "heal",
+          "base": 9,
+          "radiant": 18,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        }
+      ],
+      "loc": 9,
+      "base": {
+        "keywords": [],
+        "text": "Heal a target {heal}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Heal a target {heal}."
+      }
+    },
+    "classic-005": {
+      "id": "classic-005",
+      "index": "5",
+      "name": "Tesla",
+      "set": "Classic",
+      "type": "Field Trap",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 28,
+      "base": {
+        "attack": 1,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Animated"
+          },
+          {
+            "kind": "Lifesteal"
+          }
+        ],
+        "text": "Animated, Lifesteal\nReveals when your opponent summons a Unit: Deal {damage} damage to it. Then summon this as a Unit in Defense Position."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Animated"
+          },
+          {
+            "kind": "Lifesteal"
+          }
+        ],
+        "text": "Animated, Lifesteal\nReveals when your opponent summons a Unit: Deal {damage} damage to it. Then summon this as a Unit in Defense Position."
+      }
+    },
+    "classic-009": {
+      "id": "classic-009",
+      "index": "9",
+      "name": "Income Tax",
+      "set": "Classic",
+      "type": "Trap",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "draws",
+          "base": 2,
+          "radiant": 2,
+          "better": "down",
+          "step": 1,
+          "min": 2
+        },
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 42,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when the cards your opponent has drawn in a turn reach {draws}: They keep one card of their choice and give you the rest of their hand. The cards you get cost ({discount}) less."
+      }
+    },
+    "classic-010": {
+      "id": "classic-010",
+      "index": "10",
+      "name": "Exile",
+      "set": "Classic",
+      "type": "Trap",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "threshold",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 45,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays a ({threshold}) Cost or less card: Counter and exile it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays a ({threshold}) Cost or less card: Counter and exile it. Then exile random enemy permanents that together cost up to ({threshold}) minus its cost."
+      }
+    },
+    "classic-012": {
+      "id": "classic-012",
+      "index": "12",
+      "name": "Book of Blood",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Book"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 7,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Lifesteal"
+          }
+        ],
+        "text": "Lifesteal\nDeal {damage} damage to a Unit."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Lifesteal"
+          }
+        ],
+        "text": "Lifesteal\nDeal {damage} damage to a Unit."
+      }
+    },
+    "classic-014": {
+      "id": "classic-014",
+      "index": "14",
+      "name": "Shadowstep",
+      "set": "Classic",
+      "type": "Trap",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 49,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when any of your Units die: Return them to hand. They cost ({setCost})."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when any of your Units would die: Flicker them instead, so they survive. Add a copy of each to your hand. The copies cost ({setCost})."
+      }
+    },
+    "classic-016": {
+      "id": "classic-016",
+      "index": "16",
+      "name": "Book of Flame",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Book"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 7,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage."
+      }
+    },
+    "classic-017": {
+      "id": "classic-017",
+      "index": "17",
+      "name": "Counterspell",
+      "set": "Classic",
+      "type": "Trap",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 30,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays a Spell: Counter it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays a Spell: Counter it. Add a copy of it to your hand. The copy costs ({setCost})."
+      }
+    },
+    "classic-018": {
+      "id": "classic-018",
+      "index": "18",
+      "name": "Glitch in the System",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 32,
+      "base": {
+        "keywords": [],
+        "text": "Choose a number. Exile every card on the field, in hands and in decks that costs that much."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Choose a number. Exile every card on your opponent's field, in their hand and in their deck that costs that much."
+      }
+    },
+    "classic-025": {
+      "id": "classic-025",
+      "index": "25",
+      "name": "Lag in the System",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "threshold",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 23,
+      "base": {
+        "keywords": [],
+        "text": "Exile every ({threshold}) Cost or less card on the field, in hands and in decks."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Exile every ({threshold}) Cost or less enemy card on the field, in their hand and in their deck."
+      }
+    },
+    "classic-027": {
+      "id": "classic-027",
+      "index": "27",
+      "name": "Pestilent Slime",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "multiplier",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 5,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "Plague Counters placed on this are multiplied by {multiplier}."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Plague Counters placed on this are multiplied by {multiplier}."
+      }
+    },
+    "classic-028": {
+      "id": "classic-028",
+      "index": "28",
+      "name": "Second Wind",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "minCost",
+          "base": 1,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 24,
+      "base": {
+        "keywords": [],
+        "text": "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard. Cards that would go to your graveyard are exiled instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Cry: Exile your deck. Discard your hand.\nAura: You may play cards from your graveyard that cost ({minCost}) or more."
+      }
+    },
+    "classic-038": {
+      "id": "classic-038",
+      "index": "38",
+      "name": "Jackiestan Auctioneer",
+      "set": "Classic",
+      "type": "Field Trap",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "plays",
+          "base": 3,
+          "radiant": 2,
+          "better": "down",
+          "step": 1,
+          "min": 2
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 30,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Animated"
+          }
+        ],
+        "text": "Animated\nReveals when the cards a player has played in a turn reach {plays}: Summon this as a Unit.\nOnce this has revealed: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Animated"
+          }
+        ],
+        "text": "Animated\nReveals when the cards a player has played in a turn reach {plays}: Summon this as a Unit.\nOnce this has revealed: Whenever a player plays a card, draw {draw} and deal {damage} damage to the enemy hero."
+      }
+    },
+    "classic-039": {
+      "id": "classic-039",
+      "index": "39",
+      "name": "Outbreak",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 33,
+      "base": {
+        "keywords": [],
+        "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy permanent with at least as many Plague Counters as its cost, steal it. Otherwise, draw a card for each Plague Counter on it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy permanent with at least as many Plague Counters as its cost, steal it. Otherwise, draw a card for each Plague Counter on it."
+      }
+    },
+    "classic-042": {
+      "id": "classic-042",
+      "index": "42",
+      "name": "Transmutable Toxins",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "stats",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 25,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Counter on them. Enemy Units have −{stats}/−{stats} for each Plague Counter on them.\nActivate: Place a Plague Counter on each of {tokens|random Unit|random Units}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Your Units have +{stats}/+{stats} for each Plague Counter on them. Enemy Units have −{stats}/−{stats} for each Plague Counter on them.\nActivate: Place a Plague Counter on each of {tokens|random Unit|random Units}."
+      }
+    },
+    "classic-043": {
+      "id": "classic-043",
+      "index": "43",
+      "name": "Plague Nuke",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "mana",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 35,
+      "base": {
+        "keywords": [],
+        "text": "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Destroy all Units. Gain {mana} mana for each Plague Counter that was on them. Then summon, under your control, each of those Units that had a Plague Counter from its owner's graveyard."
+      }
+    },
+    "classic-047": {
+      "id": "classic-047",
+      "index": "47",
+      "name": "Recurring Felinor",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Felinor"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "classic-034"
+      ],
+      "params": [
+        {
+          "key": "returnCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 16,
+      "base": {
+        "attack": 3,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps reveals, return this to hand."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: Cast Ancient Acquisition.\nWhile this is in your graveyard: When one of your Traps reveals, return this to hand. It costs ({returnCost})."
+      }
+    },
+    "classic-052": {
+      "id": "classic-052",
+      "index": "52",
+      "name": "Final Gambit",
+      "set": "Classic",
+      "type": "Trap",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "heal",
+          "base": 10,
+          "radiant": 20,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 16,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw your deck."
+      }
+    },
+    "classic-053": {
+      "id": "classic-053",
+      "index": "53",
+      "name": "Plague Crawler",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 26,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on another permanent.\nWhenever Plague Counters are placed on this, draw {draw}."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on another permanent.\nWhenever Plague Counters are placed on this, draw {draw}."
+      }
+    },
+    "classic-059": {
+      "id": "classic-059",
+      "index": "59",
+      "name": "Plague Doctor",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Plague"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 25,
+      "base": {
+        "attack": 2,
+        "health": 3,
+        "keywords": [],
+        "text": "Cry: Deal damage equal to the number of Plague Counters on the field."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this. Then deal damage equal to the number of Plague Counters on the field."
+      }
+    },
+    "classic-060": {
+      "id": "classic-060",
+      "index": "60",
+      "name": "Pile On",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 5,
+      "loc": 6,
+      "base": {
+        "keywords": [],
+        "text": "Recruit every permanent in your deck.\nIf this would go to your graveyard, put it on the bottom of your deck instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Recruit every permanent in your deck."
+      }
+    },
+    "classic-061": {
+      "id": "classic-061",
+      "index": "61",
+      "name": "Plague Bringer Goliath",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 7,
+      "base": {
+        "attack": 7,
+        "health": 7,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Trample"
+          }
+        ],
+        "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      },
+      "radiant": {
+        "attack": 14,
+        "health": 14,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Trample"
+          }
+        ],
+        "text": "Tribute 1, Rush, Trample\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      }
+    },
+    "classic-062": {
+      "id": "classic-062",
+      "index": "62",
+      "name": "Living Bomb",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "loc": 10,
+      "base": {
+        "keywords": [],
+        "text": "At the start of each player's turn: Destroy every permanent that player controls with a Plague Counter on it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "At the start of your opponent's turn: Destroy every permanent they control with a Plague Counter on it."
+      }
+    },
+    "classic-063": {
+      "id": "classic-063",
+      "index": "63",
+      "name": "Crop Dusting",
+      "set": "Classic",
+      "type": "Trap",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 15,
+      "base": {
+        "keywords": [],
+        "text": "Start of turn: Reveal. Place {tokens|Plague Counter|Plague Counters} on each permanent. Draw {draw}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Start of turn: Reveal. Place {tokens|Plague Counter|Plague Counters} on each permanent. Draw {draw}."
+      }
+    },
+    "classic-065": {
+      "id": "classic-065",
+      "index": "65",
+      "name": "Ace in the Hole",
+      "set": "Classic",
+      "type": "Trap",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "recruits",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 16,
+      "base": {
+        "keywords": [],
+        "text": "End of turn: Flip a coin. On heads, this reveals: Recruit {recruits|card|cards}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "End of turn: Flip a coin. On tails, Recruit a card. On heads, this reveals: Recruit {recruits|card|cards}."
+      }
+    },
+    "classic-069": {
+      "id": "classic-069",
+      "index": "69",
+      "name": "Plague Charger",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "attack",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 16,
+      "base": {
+        "attack": 4,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Charge"
+          }
+        ],
+        "text": "Charge\nHas First Strike while it has a Plague Counter.\nHas +{attack} Attack for each Plague Counter on it."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Charge"
+          }
+        ],
+        "text": "Charge\nHas First Strike while it has a Plague Counter.\nHas +{attack} Attack for each Plague Counter on it."
+      }
+    },
+    "classic-070": {
+      "id": "classic-070",
+      "index": "70",
+      "name": "Book of Plague",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [
+        "Book",
+        "Plague"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 3,
+      "base": {
+        "keywords": [],
+        "text": "Place {tokens|Plague Counter|Plague Counters}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Place {tokens|Plague Counter|Plague Counters}."
+      }
+    },
+    "classic-072": {
+      "id": "classic-072",
+      "index": "72",
+      "name": "Grand Counterspell",
+      "set": "Classic",
+      "type": "Trap",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 19,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays a Spell, Field Spell, Trap or Field Trap: Counter it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays a Spell, Field Spell, Trap or Field Trap: Steal it."
+      }
+    },
+    "classic-074": {
+      "id": "classic-074",
+      "index": "74",
+      "name": "Corpse Plantation",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 6,
+      "base": {
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nYou may play Units from your graveyard, paying with Plague Counters from this: each counter pays (1), and each such play spends at least 1 counter."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Cry: Place {tokens|Plague Counter|Plague Counters} on this.\nYou may play Units from your graveyard, paying with Plague Counters from this: each counter pays (1), and each such play spends at least 1 counter."
+      }
+    },
+    "classic-076": {
+      "id": "classic-076",
+      "index": "76",
+      "name": "Plague Bringer",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 5,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Rush\nCry: Place {tokens|Plague Counter|Plague Counters}. Draw {draw}."
+      }
+    },
+    "classic-078": {
+      "id": "classic-078",
+      "index": "78",
+      "name": "Mutate Spell",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "draw",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "attacks",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 22,
+      "base": {
+        "keywords": [],
+        "text": "Activate ♾️: Remove a Plague Counter from a permanent. If it's an enemy permanent, exile it. If it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy {attacks|time|times}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Activate ♾️: Remove a Plague Counter from a permanent. If it's an enemy permanent, fuse it onto a card of yours of its type on your field, in your hand or in your deck, or exile it if you have none. If it's your backrow card, draw {draw}. If it's your Unit, it attacks a random enemy {attacks|time|times}."
+      }
+    },
+    "classic-087": {
+      "id": "classic-087",
+      "index": "87",
+      "name": "Plague Chalice",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": "X",
+      "loc": 28,
+      "base": {
+        "keywords": [],
+        "text": "This enters with X Plague Counters on it.\nAura: Counter every card played whose cost equals the number of Plague Counters on this."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "This enters with X Plague Counters on it.\nAura: Counter every card your opponent plays whose cost equals the number of Plague Counters on this."
+      }
+    },
+    "classicplus-001": {
+      "id": "classicplus-001",
+      "index": "1",
+      "name": "Doom Shroom",
+      "set": "Classic+",
+      "type": "Trap",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when an enemy Unit attacks your hero: Exile all Units. Lock this zone."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when an enemy Unit attacks your hero: Exile all enemy Units. Lock this zone."
+      }
+    },
+    "classicplus-002": {
+      "id": "classicplus-002",
+      "index": "2",
+      "name": "Groom Shroom",
+      "set": "Classic+",
+      "type": "Trap",
+      "tags": [
+        "Felinor"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 30,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when an enemy Unit attacks your hero: Fill your board with random Felinor Units. Give them Taunt."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when an enemy Unit attacks your hero: Fill your board with random Radiant Felinor Units. Give them Taunt."
+      }
+    },
+    "classicplus-003": {
+      "id": "classicplus-003",
+      "index": "3",
+      "name": "Second Amendment Snake",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Plague"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "tokens",
+          "base": 2,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 14,
+      "base": {
+        "attack": 1,
+        "health": 6,
+        "keywords": [],
+        "text": "End of turn: Place {tokens|Plague Counter|Plague Counters} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Counter on this."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 12,
+        "keywords": [],
+        "text": "End of turn: Place {tokens|Plague Counter|Plague Counters} on this.\nDeath: Deal {damage} damage to a random enemy for each Plague Counter on this."
+      }
+    },
+    "classicplus-022": {
+      "id": "classicplus-022",
+      "index": "22",
+      "name": "Blood Moon",
+      "set": "Classic+",
+      "type": "Trap",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "loc": 8,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when an enemy would be healed: For the rest of this turn, healing on enemies deals that much Pierce damage to them instead."
+      },
+      "radiant": {
+        "type": "Field Trap",
+        "keywords": [],
+        "text": "Reveals when an enemy would be healed: From now on, healing on enemies deals that much Pierce damage to them instead."
+      }
+    },
+    "classicplus-029": {
+      "id": "classicplus-029",
+      "index": "29",
+      "name": "Portal to the Past",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "cards",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 9,
+      "base": {
+        "keywords": [],
+        "text": "Discover a card from the board your last game ended with. It costs (0)."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Add {cards|random card|random cards} from the board your last game ended with to your hand. Each costs (0)."
+      }
+    },
+    "classicplus-077": {
+      "id": "classicplus-077",
+      "index": "77",
+      "name": "Anti-Softlock",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 19,
+      "base": {
+        "keywords": [],
+        "text": "Draw {draw}. Every card on the field, in hands and in decks gains Stack and Pierce. Unlock every zone."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Draw {draw}. Choose all cards or only yours: Each card on the field, in hands and in decks gains Stack and Pierce. Unlock every zone."
+      }
+    },
+    "classicplus-t-ai-08": {
+      "id": "classicplus-t-ai-08",
+      "index": "T-AI-8",
+      "name": "Rate Limit",
+      "set": "Classic+",
+      "type": "Trap",
+      "tags": [
+        "AI",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 1,
+      "loc": 16,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays their 3rd card in a turn: After it resolves, their turn ends."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays their 2nd card in a turn: After it resolves, their turn ends."
+      }
+    },
+    "classicplus-t-ai-09": {
+      "id": "classicplus-t-ai-09",
+      "index": "T-AI-9",
+      "name": "Refusal",
+      "set": "Classic+",
+      "type": "Trap",
+      "tags": [
+        "AI",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 1,
+      "loc": 27,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays a Spell that targets one of your Units: Counter it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays a Spell that targets you or one of your cards: Counter it. Draw 1."
+      }
+    }
+  }
+}

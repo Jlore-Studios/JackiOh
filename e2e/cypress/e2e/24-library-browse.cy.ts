@@ -3,21 +3,7 @@
 
 import { CARD_NAMES } from "../../support/cards.ts";
 import { seedFor } from "../../support/config.ts";
-import {
-  BOARD,
-  BROWSABLE,
-  COACH,
-  INSPECT_CLOSE,
-  INSPECT_LIST_CARD,
-  INSPECT_LIST_COUNT,
-  INSPECT_LIST_HOVER,
-  INSPECT_LIST_SHEET,
-  TUTORIAL_EXIT,
-  TUTORIAL_HUD,
-  libraryCountId,
-  libraryId,
-  ts,
-} from "../../support/testids.ts";
+import { BROWSABLE, libraryCountId, libraryId, ts } from "../../support/testids.ts";
 import {
   TUTORIAL_BOOT_TIMEOUT,
   currentView,
@@ -28,6 +14,15 @@ import {
   type Moment,
 } from "../../support/tutorial.ts";
 import type { PlayerId } from "../../support/types.ts";
+import {
+  INSPECT_CLOSE,
+  INSPECT_LIST_CARD,
+  INSPECT_LIST_COUNT,
+  INSPECT_LIST_HOVER,
+  INSPECT_LIST_SHEET,
+} from "../../../apps/web/src/cards/inspect/testids.ts";
+import { tutorialTestid } from "../../../apps/web/src/tutorial/testids.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 const SEED = seedFor("24-library");
 const DECK_A = "01-aggro-a";
@@ -78,7 +73,7 @@ const YOUR_SEAT = '[data-side="you"][data-player]';
 
 function shownSeat(): Cypress.Chainable<Seat> {
   return cy
-    .get(`${ts(BOARD)} ${YOUR_SEAT}`)
+    .get(`${ts(gameTestid.board)} ${YOUR_SEAT}`)
     .invoke("attr", "data-player")
     .then((seat) => {
       expect(seat, "the board names the seat it shows").to.match(/^p[12]$/);
@@ -147,7 +142,7 @@ function expectOpponentLibraryClosed(): void {
 
 /** R314: no Skip controls in the HUD or coach bubble. */
 function expectNoSkip(doc: Document): void {
-  for (const region of [TUTORIAL_HUD, COACH]) {
+  for (const region of [tutorialTestid.hud, tutorialTestid.coach]) {
     const root = doc.querySelector(ts(region));
     const skips = Array.from(root?.querySelectorAll("button, [data-testid], [aria-label]") ?? []).filter((element) =>
       /skip/i.test(
@@ -183,7 +178,7 @@ describe("24 — your library, without its order (R310–R313)", () => {
 
     shownSeat().then((first) => {
       cy.endTurn();
-      cy.get(`${ts(BOARD)} ${YOUR_SEAT}`).invoke("attr", "data-player").should("not.eq", first);
+      cy.get(`${ts(gameTestid.board)} ${YOUR_SEAT}`).invoke("attr", "data-player").should("not.eq", first);
       expectOwnLibraryBrowsable();
       expectOpponentLibraryClosed();
     });
@@ -193,8 +188,8 @@ describe("24 — your library, without its order (R310–R313)", () => {
 describe("24 — the tutorial (R313, R314)", () => {
   it("R314 R313 lesson 1: no Skip step in the HUD or the bubble, Exit tutorial is there, and your library opens its list", () => {
     visitTutorial(lessonUrl(LESSON), { reducedMotion: true });
-    cy.get(ts(TUTORIAL_HUD), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("have.attr", "data-lesson", LESSON);
-    cy.get(ts(TUTORIAL_EXIT)).should("be.visible");
+    cy.get(ts(tutorialTestid.hud), { timeout: TUTORIAL_BOOT_TIMEOUT }).should("have.attr", "data-lesson", LESSON);
+    cy.get(ts(tutorialTestid.exit)).should("be.visible");
     cy.document().then(expectNoSkip);
     untilMyTurn(MOMENT_BUDGET);
 

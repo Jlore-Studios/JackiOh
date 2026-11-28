@@ -1,0 +1,24 @@
+{
+  "set": {
+    "core-097": {
+      "id": "core-097",
+      "index": "97",
+      "name": "Zephrys",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 1,
+      "loc": 27,
+      "base": {
+        "keywords": [],
+        "text": "Discover the \"perfect\" card. Exile this."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Discover the \"perfect\" Radiant card. Exile this."
+      }
+    }
+  }
+}

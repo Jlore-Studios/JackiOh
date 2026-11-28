@@ -1,0 +1,107 @@
+{
+  "set": {
+    "classicplus-074": {
+      "id": "classicplus-074",
+      "index": "74",
+      "name": "Twice Forward One Step Backwards",
+      "set": "Classic+",
+      "type": "Field Trap",
+      "tags": [],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "plays",
+          "base": 2,
+          "radiant": 2,
+          "better": "down",
+          "step": 1,
+          "min": 2
+        },
+        {
+          "key": "brittleGain",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 5,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Animated"
+          },
+          {
+            "kind": "Brittle",
+            "n": 2
+          }
+        ],
+        "text": "Animated, Brittle 2\nEvery {plays|card|cards} your opponent plays, fuse a copy of the last into this and gain +{brittleGain} Brittle."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Animated"
+          },
+          {
+            "kind": "Brittle",
+            "n": 4
+          }
+        ],
+        "text": "Animated, Brittle 4\nEvery {plays|card|cards} your opponent plays, fuse a Radiant copy of the last into this and gain +{brittleGain} Brittle."
+      }
+    },
+    "stinkyscape-016": {
+      "id": "stinkyscape-016",
+      "index": "16",
+      "name": "Rod of Ages",
+      "set": "Stinkyscape",
+      "type": "Field Spell",
+      "tags": [
+        "Quickdraw"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "keywords",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 24,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Animated"
+          },
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Animated, Flying\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}.\nUpon reaching 10 keywords, make this Radiant."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Animated"
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Animated, Flying, Indestructible\nThe first Unit you play onto this is Equipped into it.\nEnd of turn: Gain {keywords|random combat keyword|random combat keywords}."
+      }
+    }
+  }
+}

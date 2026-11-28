@@ -1,0 +1,578 @@
+{
+  "set": {
+    "core-022": {
+      "id": "core-022",
+      "index": "22",
+      "name": "Carnivorous Cube",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "copies",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ],
+      "loc": 85,
+      "base": {
+        "attack": 4,
+        "health": 6,
+        "keywords": [],
+        "text": "Cry: Tribute one of your other Units and remember it.\nDeath: Summon {copies|copy|copies} of it."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 12,
+        "keywords": [],
+        "text": "Cry: Tribute one of your other Units and remember it.\nDeath: Fill your board with copies of it."
+      }
+    },
+    "core-060": {
+      "id": "core-060",
+      "index": "60",
+      "name": "Bear Honeypot",
+      "set": "Core",
+      "type": "Trap",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "core-t-rush"
+      ],
+      "params": [
+        {
+          "key": "costLimit",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ],
+      "loc": 39,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays a ({costLimit}) Cost or less card, if you have an empty unit zone: Summon 2 Rush Tokens. If it's a Unit, they attack it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when your opponent plays a card, if you have an empty unit zone: Fill your board with Rush Tokens. If it's a Unit, they attack it."
+      }
+    },
+    "core-072": {
+      "id": "core-072",
+      "index": "72",
+      "name": "Reminisce",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 17,
+      "base": {
+        "keywords": [],
+        "text": "Discover a card from your graveyard. It costs ({discount}) less. Exile this."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Discover a card from your graveyard. It costs ({setCost}). Exile this."
+      }
+    },
+    "core-098": {
+      "id": "core-098",
+      "index": "98",
+      "name": "Heroic Power",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [
+        "Quickdraw"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 0,
+      "refs": [
+        "core-t-rush",
+        "core-t-felinor",
+        "core-t-ghoul"
+      ],
+      "params": [
+        {
+          "key": "shot",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 2,
+          "min": 1,
+          "power": "burn"
+        },
+        {
+          "key": "tapDraw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "draw"
+        },
+        {
+          "key": "tapDamage",
+          "base": 2,
+          "radiant": 2,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base",
+          "power": "draw"
+        },
+        {
+          "key": "ping",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "ping"
+        },
+        {
+          "key": "stitchCost",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "stitching"
+        },
+        {
+          "key": "armor",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "armor"
+        },
+        {
+          "key": "insect",
+          "base": 8,
+          "radiant": 8,
+          "better": "up",
+          "step": 2,
+          "min": 1,
+          "power": "insect"
+        },
+        {
+          "key": "discount",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "power": "brainstorm"
+        },
+        {
+          "key": "fruitCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0,
+          "power": "pluck"
+        }
+      ],
+      "loc": 11,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent.\n(1) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(1) Steady Shot: Deal {shot} damage to the enemy hero.\n(2) Ranching: Summon a Rush Token.\n(1) Cat Cafe: Summon a Felinor Token.\n(1) Ping: Pierce. Deal {ping} damage.\n(2) Witness Value: Discover a Unit.\n(2) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(1) Armor Up: Your hero gains {armor} Armor until your next turn.\n(2) Die Insect: Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Trap to summon."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nStart of game: Gain one of 13 random powers. Each is an Activate that spends its (X).\n(3) Expedition Map: Recruit a permanent. Make it Radiant.\n(1) Life Tap: Draw {tapDraw} from each player's deck.\n(1) Steady Shot: Deal {shot} damage to the enemy hero. Upgrade this permanently by +2 damage.\n(2) Ranching: Summon a Radiant Rush Token.\n(1) Cat Cafe: Summon a random Felinor.\n(1) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(2) Witness Value: Discover a Radiant Unit.\n(2) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(1) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(2) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(2) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(2) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(3) Terminus Tricks: Discover a Radiant Trap to summon."
+      }
+    },
+    "classic-002": {
+      "id": "classic-002",
+      "index": "2",
+      "name": "The Trickster",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "discount",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 8,
+      "base": {
+        "attack": 2,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Your next Trap or Field Spell costs ({discount}) less."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Your next Trap or Field Spell costs ({setCost})."
+      }
+    },
+    "classic-011": {
+      "id": "classic-011",
+      "index": "11",
+      "name": "Mind Melt",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "cards",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ],
+      "loc": 23,
+      "base": {
+        "keywords": [],
+        "text": "Look at your opponent's hand. Exile {cards|card|cards} from it."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Look at your opponent's hand. Choose a cost. Exile every card of that cost from it."
+      }
+    },
+    "classic-013": {
+      "id": "classic-013",
+      "index": "13",
+      "name": "Boots on the Ground",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        },
+        {
+          "key": "recruits",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 7,
+      "base": {
+        "attack": 2,
+        "health": 1,
+        "keywords": [
+          {
+            "kind": "Charge"
+          }
+        ],
+        "text": "Charge\nAfter this attacks, draw {draw}."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Charge"
+          }
+        ],
+        "text": "Charge\nAfter this attacks, Recruit {recruits|card|cards}."
+      }
+    },
+    "classic-044": {
+      "id": "classic-044",
+      "index": "44",
+      "name": "Back from the GY",
+      "set": "Classic",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "budget",
+          "base": 5,
+          "radiant": 5,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ],
+      "loc": 29,
+      "base": {
+        "keywords": [],
+        "text": "Summon Units from your graveyard that cost ({budget}) or less in total. Exile this."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Summon every Unit from your graveyard. Exile this."
+      }
+    },
+    "classic-052": {
+      "id": "classic-052",
+      "index": "52",
+      "name": "Final Gambit",
+      "set": "Classic",
+      "type": "Trap",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "heal",
+          "base": 10,
+          "radiant": 20,
+          "better": "up",
+          "step": 2,
+          "min": 1
+        },
+        {
+          "key": "draw",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ],
+      "loc": 16,
+      "base": {
+        "keywords": [],
+        "text": "Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw {draw}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Reveals when a hit would bring your hero to 0 or less: Redirect the hit to the enemy hero. Then heal your hero {heal} and draw your deck."
+      }
+    },
+    "classic-056": {
+      "id": "classic-056",
+      "index": "56",
+      "name": "Spell Tyrant",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "spells",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ],
+      "loc": 26,
+      "base": {
+        "attack": 5,
+        "health": 5,
+        "keywords": [],
+        "text": "Cry: Choose up to {spells|Spell|Spells} in your graveyard. Cast them, then exile them."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [],
+        "text": "Cry: Cast every Spell in your graveyard, oldest first, then exile them."
+      }
+    },
+    "classic-068": {
+      "id": "classic-068",
+      "index": "68",
+      "name": "Small Card Lobbyist",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "surcharge",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        },
+        {
+          "key": "threshold",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 9,
+      "base": {
+        "attack": 11,
+        "health": 13,
+        "keywords": [],
+        "text": "Aura: ({threshold})+ Cost cards cost ({surcharge}) more."
+      },
+      "radiant": {
+        "attack": 22,
+        "health": 26,
+        "keywords": [],
+        "text": "Aura: Your opponent can't play ({threshold})+ Cost cards."
+      }
+    },
+    "classic-088": {
+      "id": "classic-088",
+      "index": "88",
+      "name": "Siphon Squad",
+      "set": "Classic",
+      "type": "Field Trap",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "multiplier",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        }
+      ],
+      "loc": 17,
+      "base": {
+        "keywords": [],
+        "text": "Start of turn: Reveal.\nAura: Enemy Units have −X Attack, where X is {multiplier}× the number of Units your opponent controls.\nWhen your opponent controls no Units, Tribute this."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Start of turn: Reveal.\nAura: Enemy Units have 0 Attack.\nWhen your opponent controls no Units, Tribute this."
+      }
+    },
+    "classicplus-008": {
+      "id": "classicplus-008",
+      "index": "8",
+      "name": "Withering Storm",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "cards",
+          "base": 4,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        },
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 18,
+      "base": {
+        "keywords": [],
+        "text": "Degrade {cards|random card|random cards} in your opponent's deck. Draw {draw}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Degrade every card in your opponent's deck. Draw {draw}."
+      }
+    }
+  }
+}

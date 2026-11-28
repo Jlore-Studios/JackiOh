@@ -1,0 +1,1039 @@
+{
+  "set": {
+    "core-002": {
+      "id": "core-002",
+      "index": "2",
+      "name": "Speciesist",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 3,
+      "loc": 10,
+      "base": {
+        "attack": 7,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Destroy an enemy non-Human Unit."
+      },
+      "radiant": {
+        "attack": 14,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Destroy all enemy non-Human Units."
+      }
+    },
+    "core-013": {
+      "id": "core-013",
+      "index": "13",
+      "name": "Jlockeed Shredder-10",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Jlockeed"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 10,
+      "base": {
+        "attack": 5,
+        "health": 7,
+        "keywords": [],
+        "text": "End of turn: Deal {damage} damage to each enemy."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 14,
+        "keywords": [],
+        "text": "End of turn: Deal {damage} damage to each enemy."
+      }
+    },
+    "core-052": {
+      "id": "core-052",
+      "index": "52",
+      "name": "Silly Silas",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 14,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "Summon this for your opponent.\nCry: Choose left or right. Rotate every card on the field one step that way. Cards that cross sides change control."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: Choose left or right. Rotate every card on the field one step that way. Cards crossing to your opponent's side are Bounced instead and cost (0)."
+      }
+    },
+    "core-070": {
+      "id": "core-070",
+      "index": "70",
+      "name": "Spiteful Stab",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "healthStep",
+          "base": 5,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "perExile",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "dealsDamage": true,
+      "loc": 24,
+      "base": {
+        "keywords": [],
+        "text": "Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Deal {damage} damage, +1 per full {healthStep} health your hero is below 30, +{perExile} per card in your exile."
+      }
+    },
+    "classic-068": {
+      "id": "classic-068",
+      "index": "68",
+      "name": "Small Card Lobbyist",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "surcharge",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        },
+        {
+          "key": "threshold",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 9,
+      "base": {
+        "attack": 9,
+        "health": 12,
+        "keywords": [],
+        "text": "Aura: ({threshold})+ Cost cards cost ({surcharge}) more."
+      },
+      "radiant": {
+        "attack": 18,
+        "health": 24,
+        "keywords": [],
+        "text": "Aura: Your opponent can't play ({threshold})+ Cost cards."
+      }
+    },
+    "classic-073": {
+      "id": "classic-073",
+      "index": "73",
+      "name": "Nurse Cleaver",
+      "set": "Classic",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "loc": 3,
+      "base": {
+        "attack": 2,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Lifesteal"
+          }
+        ],
+        "text": "Rush, Cleave, Lifesteal"
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Charge"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Lifesteal"
+          }
+        ],
+        "text": "Charge, Cleave, Lifesteal"
+      }
+    },
+    "classic-075": {
+      "id": "classic-075",
+      "index": "75",
+      "name": "Argusland",
+      "set": "Classic",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "divisor",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 2
+        }
+      ],
+      "loc": 5,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Damage to your hero is divided by {divisor}, rounded up."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Damage to your hero is divided by {divisor}, rounded up."
+      }
+    },
+    "classicplus-019-3": {
+      "id": "classicplus-019-3",
+      "index": "19.3",
+      "name": "Mid Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "params": [
+        {
+          "key": "heads",
+          "base": 3,
+          "radiant": 6,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        },
+        {
+          "key": "tails",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        },
+        {
+          "key": "oppMana",
+          "base": 1,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        }
+      ],
+      "loc": 18,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "Cry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Lucky",
+            "n": 1
+          }
+        ],
+        "text": "Lucky 1\nCry: Flip a coin. Heads (Fed): This gains +{heads}/+{heads}. Tails (Int): This gains −{tails}/−{tails} and your opponent gains {oppMana} mana next turn."
+      }
+    },
+    "classicplus-019-5": {
+      "id": "classicplus-019-5",
+      "index": "19.5",
+      "name": "Bot Loser",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 2,
+      "params": [
+        {
+          "key": "attackGain",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 23,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "First Strike"
+          }
+        ],
+        "text": "Rush, First Strike\nAfter this destroys a Unit, it gains +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Charge"
+          },
+          {
+            "kind": "First Strike"
+          }
+        ],
+        "text": "Charge, First Strike\nAfter this destroys a Unit, it gains +{attackGain} Attack.\nThis can't go Berserk."
+      }
+    },
+    "classicplus-029": {
+      "id": "classicplus-029",
+      "index": "29",
+      "name": "Portal to the Past",
+      "set": "Classic+",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "cards",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        },
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 9,
+      "base": {
+        "keywords": [],
+        "text": "Discover a card from the board your last game ended with (if none, a (3) or (4) Cost Unit or Field Spell). It costs ({setCost})."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Add {cards|random card|random cards} from the board your last game ended with (if none, (3) or (4) Cost Units or Field Spells) to your hand. Each costs ({setCost})."
+      }
+    },
+    "classicplus-033": {
+      "id": "classicplus-033",
+      "index": "33",
+      "name": "Ivory Tower",
+      "set": "Classic+",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "loc": 38,
+      "base": {
+        "keywords": [],
+        "text": "The first Unit you stack onto this is fused into it.\nAura: Your Units have Flying and Stack."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "The first Unit you stack onto this becomes Radiant and is fused into it.\nAura: Your Units have Flying and Stack."
+      }
+    },
+    "classicplus-037": {
+      "id": "classicplus-037",
+      "index": "37",
+      "name": "Wardrum",
+      "set": "Classic+",
+      "type": "Unit",
+      "tags": [
+        "Quickdraw",
+        "Acclaimed"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "threshold",
+          "base": 3,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 2,
+          "read": "handOrDeck"
+        }
+      ],
+      "loc": 61,
+      "base": {
+        "attack": 5,
+        "health": 5,
+        "keywords": [
+          {
+            "kind": "Divine Shield"
+          }
+        ],
+        "text": "Divine Shield\nWhile in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of a random non-Unit you played this turn."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Divine Shield"
+          }
+        ],
+        "text": "Divine Shield\nWhile in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Cast a copy of each non-Unit you played this turn."
+      }
+    },
+    "meditative-040": {
+      "id": "meditative-040",
+      "index": "40",
+      "name": "Feng Shui",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [
+        "CN"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "meditative-039-1"
+      ],
+      "loc": 35,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui is rewarded, bad punished.\nActivate: Add an Auspicious Rock to your hand.\nYour last element, your opponent's last element."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Cards have elements (水, 木, 火, 金, 土); good feng shui rewards you, bad hurts your opponent heavily.\nActivate: Add a Radiant Auspicious Rock to your hand.\nYour last element, your opponent's last element."
+      }
+    },
+    "meditative-044": {
+      "id": "meditative-044",
+      "index": "44",
+      "name": "CN Jade Well",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [
+        "CN"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "refs": [
+        "meditative-039-1"
+      ],
+      "loc": 16,
+      "base": {
+        "keywords": [],
+        "text": "Activate: Add an Auspicious Rock to your hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Activate: Add a Radiant Auspicious Rock to your hand."
+      }
+    },
+    "meditative-087": {
+      "id": "meditative-087",
+      "index": "87",
+      "name": "Tatches the Totem",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Felinor",
+        "KY",
+        "CN",
+        "Jlockeed"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 0,
+      "params": [
+        {
+          "key": "cards",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 58,
+      "base": {
+        "attack": 0,
+        "health": 3,
+        "keywords": [],
+        "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 6,
+        "keywords": [],
+        "text": "While in your deck: After you play a card with a tribal tag, summon this.\nEnd of turn: Buff {cards|random card|random cards} in your hand and each adjacent Unit."
+      }
+    },
+    "meditative-092": {
+      "id": "meditative-092",
+      "index": "92",
+      "name": "Unan",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "loc": 20,
+      "base": {
+        "attack": 3,
+        "health": 13,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 2
+          }
+        ],
+        "text": "Armor 2\nLethal damage your hero or your other Units would take is redirected to this."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 26,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 4
+          }
+        ],
+        "text": "Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
+      }
+    },
+    "stinkyscape-048": {
+      "id": "stinkyscape-048",
+      "index": "48",
+      "name": "Ultralight Chassis",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "loc": 6,
+      "base": {
+        "attack": 3,
+        "health": 1,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          },
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Starship Piece, Equip, Rush"
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          },
+          {
+            "kind": "Rush"
+          }
+        ],
+        "text": "Starship Piece, Equip, Rush"
+      }
+    },
+    "stinkyscape-063": {
+      "id": "stinkyscape-063",
+      "index": "63",
+      "name": "Miner v2",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "loc": 35,
+      "base": {
+        "attack": 0,
+        "health": 1,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate: Gain a random Stinkyscape Resource."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate: Gain a random Radiant Stinkyscape Resource."
+      }
+    },
+    "stinkyscape-064": {
+      "id": "stinkyscape-064",
+      "index": "64",
+      "name": "Miner v3",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "loc": 36,
+      "base": {
+        "attack": 0,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate 2: Gain a random Stinkyscape Resource."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate 2: Gain a random Radiant Stinkyscape Resource."
+      }
+    },
+    "stinkyscape-065": {
+      "id": "stinkyscape-065",
+      "index": "65",
+      "name": "Miner v4",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 36,
+      "base": {
+        "attack": 0,
+        "health": 3,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate 3: Gain a random Stinkyscape Resource."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 6,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate 3: Gain a random Radiant Stinkyscape Resource."
+      }
+    },
+    "stinkyscape-066": {
+      "id": "stinkyscape-066",
+      "index": "66",
+      "name": "Miner v5",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "loc": 36,
+      "base": {
+        "attack": 0,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate 5: Gain a random Stinkyscape Resource."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Starship Piece, Equip\nActivate 5: Gain a random Radiant Stinkyscape Resource."
+      }
+    },
+    "stinkyscape-072": {
+      "id": "stinkyscape-072",
+      "index": "72",
+      "name": "Paragon Mk1",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 6,
+      "base": {
+        "attack": 5,
+        "health": 1,
+        "keywords": [
+          {
+            "kind": "Charge"
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          }
+        ],
+        "text": "Charge, Flying, Ranged"
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Charge"
+          },
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Charge, Flying, Ranged, Pierce"
+      }
+    },
+    "stinkyscape-096": {
+      "id": "stinkyscape-096",
+      "index": "96",
+      "name": "Ocean Tsunami",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 4,
+      "loc": 18,
+      "base": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [],
+        "text": "Tribute 1\nCry: Discard your hand. Fill your hand with random Stinkyscape Resources."
+      },
+      "radiant": {
+        "attack": 12,
+        "health": 12,
+        "keywords": [],
+        "text": "Tribute 1\nCry: Discard your hand. Fill your hand with random Radiant Stinkyscape Resources."
+      }
+    },
+    "stinkyscape-108": {
+      "id": "stinkyscape-108",
+      "index": "108",
+      "name": "Trila 3",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 3,
+      "loc": 6,
+      "base": {
+        "attack": 7,
+        "health": 5,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Windfury"
+          }
+        ],
+        "text": "Starship Piece, Ranged, Windfury"
+      },
+      "radiant": {
+        "attack": 14,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Starship Piece"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Windfury"
+          }
+        ],
+        "text": "Starship Piece, Ranged, Rush, Windfury"
+      }
+    },
+    "stinkyscape-129": {
+      "id": "stinkyscape-129",
+      "index": "129",
+      "name": "Jlockeed's Missile Pod",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Jlockeed"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": {
+        "base": 1,
+        "embiggen": 2
+      },
+      "params": [
+        {
+          "key": "divisor",
+          "base": 4,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 26,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [],
+        "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [],
+        "text": "End of turn: Deal damage equal to its Attack divided by {divisor}, rounded up, to all enemies.\nEmbiggened (2): Starship Piece and Equip."
+      }
+    },
+    "traininggrounds-035": {
+      "id": "traininggrounds-035",
+      "index": "35",
+      "name": "Corpse Recycler",
+      "set": "Training Grounds",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "refs": [
+        "core-t-rush"
+      ],
+      "loc": 29,
+      "base": {
+        "keywords": [],
+        "text": "After a non-Token Unit dies, summon a Rush Token for you."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "After a non-Token Unit dies, summon a Radiant Rush Token for you."
+      }
+    },
+    "traininggrounds-041": {
+      "id": "traininggrounds-041",
+      "index": "41",
+      "name": "Legacy: Speciesist",
+      "set": "Training Grounds",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Legacy"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "loc": 23,
+      "base": {
+        "attack": 2,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Destroy an enemy non-Human Unit."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Destroy all enemy non-Human Units."
+      }
+    },
+    "traininggrounds-048": {
+      "id": "traininggrounds-048",
+      "index": "48",
+      "name": "Legacy: Jlockeed Shredder-10",
+      "set": "Training Grounds",
+      "type": "Unit",
+      "tags": [
+        "Jlockeed",
+        "Legacy"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "damage",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 12,
+      "base": {
+        "attack": 8,
+        "health": 10,
+        "keywords": [],
+        "text": "End of turn: Deal {damage} damage to each enemy."
+      },
+      "radiant": {
+        "attack": 16,
+        "health": 20,
+        "keywords": [],
+        "text": "End of turn: Deal {damage} damage to each enemy."
+      }
+    }
+  }
+}

@@ -3,8 +3,9 @@
 // The choice-free 01-aggro decks let the test end turns until a unit is offered.
 
 import { seedFor } from "../../support/config.ts";
-import { BOARD, LEGAL, cardId, handCardId, ts, zoneId } from "../../support/testids.ts";
+import { LEGAL, cardId, handCardId, ts, zoneId } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId } from "../../support/types.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 const SEED = seedFor("15-audio");
 const DECK_A = "01-aggro-a";
@@ -146,7 +147,7 @@ describe("polish 2 — audio on the hotseat board", () => {
     });
 
     // Board padding avoids the mulligan panel and toggle; the prompt scrim is click-through.
-    cy.get(ts(BOARD)).click(4, 4);
+    cy.get(ts(gameTestid.board)).click(4, 4);
 
     expectAudio((audio) => {
       expect(audio.contextsCreated(), "the first gesture constructs one AudioContext").to.eq(1);

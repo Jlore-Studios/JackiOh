@@ -3,7 +3,7 @@
 // Strike) attacks heroes on player-turn 3 (§6.1): from HERO_HEALTH (30, §2), one hit leaves 27.
 
 import { constants, seedFor } from "../../support/config.ts";
-import { BOARD, attackIs, cardId, handCardId, healthIs, heroId, ts, zoneId } from "../../support/testids.ts";
+import { attackIs, cardId, handCardId, healthIs, heroId, ts, zoneId } from "../../support/testids.ts";
 import {
   DRAGGING_ATTR,
   DRAG_ARROW,
@@ -29,6 +29,7 @@ import {
   settingId,
 } from "../../support/ux.ts";
 import { ensureSeat } from "../../support/hotseat.ts";
+import { testid as gameTestid } from "../../../apps/web/src/game/contract.ts";
 
 const SEED = seedFor("04-combat-1604");
 const DECK_A = "04-combat-a";
@@ -137,7 +138,7 @@ describe("Polish 7 B40 — drag to play in a seeded hotseat game", () => {
 
   it("B40 with drag to play turned off in the settings panel, still off after a reload, click-click plays a card", () => {
     startGame();
-    cy.get(ts(BOARD)).should("have.attr", DRAG_ATTR, "on");
+    cy.get(ts(gameTestid.board)).should("have.attr", DRAG_ATTR, "on");
 
     cy.get(ts(SETTINGS_OPEN_GAME)).click();
     cy.get(ts(SETTINGS_PANEL)).should("be.visible");
@@ -145,7 +146,7 @@ describe("Polish 7 B40 — drag to play in a seeded hotseat game", () => {
     cy.get(ts(settingId("dragToPlay"))).should("not.be.checked");
     cy.get(ts(SETTINGS_CLOSE)).click();
     cy.get(ts(SETTINGS_PANEL)).should("not.exist");
-    cy.get(ts(BOARD)).should("have.attr", DRAG_ATTR, "off");
+    cy.get(ts(gameTestid.board)).should("have.attr", DRAG_ATTR, "off");
 
     cy.reload();
     cy.jackioh().should((handle) => {
@@ -155,7 +156,7 @@ describe("Polish 7 B40 — drag to play in a seeded hotseat game", () => {
     cy.keepMulligans();
     ensureSeat("p1");
 
-    cy.get(ts(BOARD)).should("have.attr", DRAG_ATTR, "off");
+    cy.get(ts(gameTestid.board)).should("have.attr", DRAG_ATTR, "off");
     cy.get(ts(SETTINGS_OPEN_GAME)).click();
     cy.get(ts(settingId("dragToPlay"))).should("not.be.checked");
     cy.get(ts(SETTINGS_CLOSE)).click();

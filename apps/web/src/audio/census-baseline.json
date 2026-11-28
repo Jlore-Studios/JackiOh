@@ -1,0 +1,5026 @@
+{
+ "core-001": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-002": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-003": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-004": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-005": [
+  "cast"
+ ],
+ "core-006": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-007": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-008": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-009": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-010": [
+  "cast"
+ ],
+ "core-011": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-012": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-013": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "fx:play",
+  "play"
+ ],
+ "core-014": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-015": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-016": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-017": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-018": [
+  "cast"
+ ],
+ "core-019": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-020": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-021": [
+  "cast"
+ ],
+ "core-022": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-023": [
+  "cast"
+ ],
+ "core-024": [
+  "cast"
+ ],
+ "core-025": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-026": [
+  "cast"
+ ],
+ "core-027": [
+  "cast"
+ ],
+ "core-028": [
+  "cast"
+ ],
+ "core-029": [
+  "cast"
+ ],
+ "core-030": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-031": [
+  "cast"
+ ],
+ "core-032": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-033": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-034": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-035": [
+  "cast"
+ ],
+ "core-036": [
+  "cast"
+ ],
+ "core-037": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-038": [
+  "cast"
+ ],
+ "core-039": [
+  "cast"
+ ],
+ "core-040": [
+  "cast"
+ ],
+ "core-041": [
+  "cast"
+ ],
+ "core-042": [
+  "cast"
+ ],
+ "core-043": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-044": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-045": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-046": [
+  "cast"
+ ],
+ "core-047": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-048": [
+  "cast"
+ ],
+ "core-049": [
+  "cast"
+ ],
+ "core-050": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-051": [
+  "cast"
+ ],
+ "core-051-1": [
+  "cast"
+ ],
+ "core-052": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-053": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-054": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:play",
+  "play"
+ ],
+ "core-055": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "play"
+ ],
+ "core-056": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "play"
+ ],
+ "core-057": [
+  "cast"
+ ],
+ "core-058": [
+  "cast"
+ ],
+ "core-059": [
+  "cast"
+ ],
+ "core-060": [
+  "cast"
+ ],
+ "core-061": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-062": [
+  "cast"
+ ],
+ "core-063": [
+  "cast"
+ ],
+ "core-064": [
+  "cast"
+ ],
+ "core-065": [
+  "cast"
+ ],
+ "core-065-1": [
+  "attack",
+  "death",
+  "fx:death",
+  "play"
+ ],
+ "core-066": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "fx:play",
+  "play"
+ ],
+ "core-067": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-068": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-069": [
+  "cast"
+ ],
+ "core-070": [
+  "cast"
+ ],
+ "core-071": [
+  "cast"
+ ],
+ "core-072": [
+  "cast"
+ ],
+ "core-073": [
+  "cast"
+ ],
+ "core-074": [
+  "cast"
+ ],
+ "core-075": [
+  "cast"
+ ],
+ "core-076": [
+  "cast"
+ ],
+ "core-077": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-078": [
+  "cast"
+ ],
+ "core-079": [
+  "cast"
+ ],
+ "core-080": [
+  "cast"
+ ],
+ "core-081": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-082": [
+  "cast"
+ ],
+ "core-083": [
+  "cast"
+ ],
+ "core-084": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-085": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-086": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-087": [
+  "cast"
+ ],
+ "core-088": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-089": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-090": [
+  "cast"
+ ],
+ "core-090-1": [
+  "cast"
+ ],
+ "core-091": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-092": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-093": [
+  "cast"
+ ],
+ "core-093-1": [
+  "cast"
+ ],
+ "core-094": [
+  "cast"
+ ],
+ "core-095": [
+  "cast"
+ ],
+ "core-095-1": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-096": [
+  "cast",
+  "fx:cast"
+ ],
+ "core-097": [
+  "cast"
+ ],
+ "core-098": [
+  "cast"
+ ],
+ "core-099": [
+  "cast"
+ ],
+ "core-100": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-t-rush": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-t-sheep": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-t-felinor": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "core-t-bread": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "core-t-coin": [
+  "cast"
+ ],
+ "core-t-ghoul": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classic-001": [
+  "cast"
+ ],
+ "classic-002": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-003": [
+  "cast"
+ ],
+ "classic-004": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-005": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-006": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-007": [
+  "cast"
+ ],
+ "classic-008": [
+  "cast"
+ ],
+ "classic-009": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-010": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-011": [
+  "cast"
+ ],
+ "classic-012": [
+  "cast"
+ ],
+ "classic-013": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-014": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-015": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-016": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-017": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-018": [
+  "cast"
+ ],
+ "classic-019": [
+  "cast"
+ ],
+ "classic-020": [
+  "cast"
+ ],
+ "classic-021": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classic-022": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-023": [
+  "cast"
+ ],
+ "classic-024": [
+  "cast"
+ ],
+ "classic-025": [
+  "cast"
+ ],
+ "classic-026": [
+  "cast"
+ ],
+ "classic-027": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "play"
+ ],
+ "classic-028": [
+  "cast"
+ ],
+ "classic-029": [
+  "cast"
+ ],
+ "classic-030": [
+  "cast"
+ ],
+ "classic-031": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-032": [
+  "cast"
+ ],
+ "classic-033": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classic-034": [
+  "cast"
+ ],
+ "classic-035": [
+  "cast"
+ ],
+ "classic-036": [
+  "cast"
+ ],
+ "classic-037": [
+  "cast"
+ ],
+ "classic-038": [
+  "cast"
+ ],
+ "classic-039": [
+  "cast"
+ ],
+ "classic-040": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-041": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-042": [
+  "cast"
+ ],
+ "classic-043": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-044": [
+  "cast"
+ ],
+ "classic-045": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classic-046": [
+  "cast"
+ ],
+ "classic-047": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-048": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-049": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "fx:play",
+  "play"
+ ],
+ "classic-050": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classic-051": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classic-052": [
+  "cast"
+ ],
+ "classic-053": [
+  "attack",
+  "death",
+  "fx:death",
+  "play"
+ ],
+ "classic-054": [
+  "cast"
+ ],
+ "classic-055": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-056": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-057": [
+  "cast"
+ ],
+ "classic-058": [
+  "cast"
+ ],
+ "classic-059": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-060": [
+  "cast"
+ ],
+ "classic-061": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classic-062": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-063": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-064": [
+  "cast"
+ ],
+ "classic-065": [
+  "cast"
+ ],
+ "classic-066": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-067": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-068": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-069": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classic-070": [
+  "cast"
+ ],
+ "classic-071": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classic-072": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-073": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classic-074": [
+  "cast"
+ ],
+ "classic-075": [
+  "cast"
+ ],
+ "classic-076": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-077": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-078": [
+  "cast"
+ ],
+ "classic-079": [
+  "cast"
+ ],
+ "classic-080": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "play"
+ ],
+ "classic-081": [
+  "cast"
+ ],
+ "classic-082": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-083": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-084": [
+  "cast",
+  "fx:cast"
+ ],
+ "classic-085": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-086": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classic-087": [
+  "cast"
+ ],
+ "classic-088": [
+  "cast"
+ ],
+ "classic-089": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "play"
+ ],
+ "classic-090": [
+  "cast"
+ ],
+ "classic-t-glitch": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-001": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-002": [
+  "cast"
+ ],
+ "classicplus-003": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classicplus-004": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classicplus-005": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-006": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-007": [
+  "cast"
+ ],
+ "classicplus-008": [
+  "cast"
+ ],
+ "classicplus-009": [
+  "cast"
+ ],
+ "classicplus-010": [
+  "cast"
+ ],
+ "classicplus-011": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-012": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-012-1": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-012-2": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-012-3": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-012-4": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-012-5": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-012-6": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-012-7": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-012-8": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-013": [
+  "attack",
+  "death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-014": [
+  "cast"
+ ],
+ "classicplus-015": [
+  "cast"
+ ],
+ "classicplus-016": [
+  "cast"
+ ],
+ "classicplus-017": [
+  "cast"
+ ],
+ "classicplus-018": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-019": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-019-1": [
+  "attack",
+  "death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-019-2": [
+  "attack",
+  "death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-019-3": [
+  "attack",
+  "death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-019-4": [
+  "attack",
+  "death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-019-5": [
+  "attack",
+  "death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-020": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-021": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-022": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-023": [
+  "cast"
+ ],
+ "classicplus-024": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-025": [
+  "cast"
+ ],
+ "classicplus-026": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-027": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-028": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-029": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-030": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-031": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-032": [
+  "cast"
+ ],
+ "classicplus-032-1": [
+  "cast"
+ ],
+ "classicplus-032-2": [
+  "cast"
+ ],
+ "classicplus-032-3": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-033": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-034": [
+  "cast"
+ ],
+ "classicplus-035": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-036": [
+  "cast"
+ ],
+ "classicplus-036-1": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-037": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-038": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-038-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-039": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-040": [
+  "cast"
+ ],
+ "classicplus-041": [
+  "cast"
+ ],
+ "classicplus-042": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-042-1": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-043": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-044": [
+  "cast"
+ ],
+ "classicplus-045": [
+  "cast"
+ ],
+ "classicplus-046": [
+  "attack",
+  "death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-046-1": [
+  "attack",
+  "death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-047": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-048": [
+  "attack",
+  "death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-049": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-050": [
+  "cast"
+ ],
+ "classicplus-051": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-052": [
+  "cast"
+ ],
+ "classicplus-053": [
+  "cast"
+ ],
+ "classicplus-054": [
+  "cast"
+ ],
+ "classicplus-055": [
+  "cast"
+ ],
+ "classicplus-056": [
+  "cast"
+ ],
+ "classicplus-057": [
+  "cast"
+ ],
+ "classicplus-058": [
+  "cast"
+ ],
+ "classicplus-059": [
+  "cast"
+ ],
+ "classicplus-060": [
+  "cast"
+ ],
+ "classicplus-061": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-062": [
+  "cast"
+ ],
+ "classicplus-063": [
+  "cast"
+ ],
+ "classicplus-064": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classicplus-065": [
+  "cast"
+ ],
+ "classicplus-065-1": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-065-2": [
+  "cast"
+ ],
+ "classicplus-065-3": [
+  "cast"
+ ],
+ "classicplus-065-4": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-065-5": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-066": [
+  "cast"
+ ],
+ "classicplus-067": [
+  "cast"
+ ],
+ "classicplus-068": [
+  "cast"
+ ],
+ "classicplus-069": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-070": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-071": [
+  "cast"
+ ],
+ "classicplus-072": [
+  "cast"
+ ],
+ "classicplus-073": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-073-1": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-074": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-075": [
+  "attack",
+  "death",
+  "fx:play",
+  "play"
+ ],
+ "classicplus-075-1": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-076": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "classicplus-076-1": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classicplus-077": [
+  "cast"
+ ],
+ "classicplus-078": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-t-ai-01": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classicplus-t-ai-02": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "classicplus-t-ai-03": [
+  "cast"
+ ],
+ "classicplus-t-ai-04": [
+  "cast"
+ ],
+ "classicplus-t-ai-05": [
+  "cast"
+ ],
+ "classicplus-t-ai-06": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-t-ai-07": [
+  "cast"
+ ],
+ "classicplus-t-ai-08": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-t-ai-09": [
+  "cast",
+  "fx:cast"
+ ],
+ "classicplus-t-ai-10": [
+  "cast"
+ ],
+ "meditative-001": [
+  "cast"
+ ],
+ "meditative-002": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-003": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-004": [
+  "cast"
+ ],
+ "meditative-005": [
+  "cast"
+ ],
+ "meditative-006": [
+  "cast"
+ ],
+ "meditative-007": [
+  "cast"
+ ],
+ "meditative-008": [
+  "cast"
+ ],
+ "meditative-009": [
+  "cast"
+ ],
+ "meditative-010": [
+  "cast"
+ ],
+ "meditative-011": [
+  "cast"
+ ],
+ "meditative-012": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-013": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-014": [
+  "cast"
+ ],
+ "meditative-015": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-016": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-017": [
+  "cast"
+ ],
+ "meditative-018": [
+  "cast"
+ ],
+ "meditative-019": [
+  "cast"
+ ],
+ "meditative-019-1": [
+  "cast"
+ ],
+ "meditative-020": [
+  "cast"
+ ],
+ "meditative-021": [
+  "cast"
+ ],
+ "meditative-022": [
+  "cast"
+ ],
+ "meditative-022-1": [
+  "cast"
+ ],
+ "meditative-023": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-024": [
+  "cast"
+ ],
+ "meditative-025": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-026": [
+  "cast"
+ ],
+ "meditative-027": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-028": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-028-1": [
+  "cast"
+ ],
+ "meditative-029": [
+  "cast"
+ ],
+ "meditative-030": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-030-1": [
+  "cast"
+ ],
+ "meditative-031": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-032": [
+  "cast"
+ ],
+ "meditative-033": [
+  "cast"
+ ],
+ "meditative-034": [
+  "cast"
+ ],
+ "meditative-035": [
+  "cast"
+ ],
+ "meditative-036": [
+  "cast"
+ ],
+ "meditative-037": [
+  "cast"
+ ],
+ "meditative-038": [
+  "cast"
+ ],
+ "meditative-039": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-039-1": [
+  "cast",
+  "fx:cast"
+ ],
+ "meditative-039-2": [
+  "cast",
+  "fx:cast"
+ ],
+ "meditative-039-3": [
+  "cast",
+  "fx:cast"
+ ],
+ "meditative-039-4": [
+  "cast",
+  "fx:cast"
+ ],
+ "meditative-039-5": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-040": [
+  "cast"
+ ],
+ "meditative-041": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-042": [
+  "cast"
+ ],
+ "meditative-043": [
+  "cast"
+ ],
+ "meditative-044": [
+  "cast",
+  "fx:cast"
+ ],
+ "meditative-045": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-045-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-046": [
+  "cast"
+ ],
+ "meditative-047": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-048": [
+  "cast"
+ ],
+ "meditative-049": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-049-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-049-2": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-049-3": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-050": [
+  "cast"
+ ],
+ "meditative-051": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-052": [
+  "cast"
+ ],
+ "meditative-053": [
+  "cast"
+ ],
+ "meditative-054": [
+  "cast"
+ ],
+ "meditative-055": [
+  "cast"
+ ],
+ "meditative-056": [
+  "cast"
+ ],
+ "meditative-057": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-058": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-059": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-060": [
+  "cast"
+ ],
+ "meditative-061": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-062": [
+  "cast"
+ ],
+ "meditative-063": [
+  "cast",
+  "trigger1",
+  "trigger2",
+  "trigger3"
+ ],
+ "meditative-064": [
+  "cast"
+ ],
+ "meditative-065": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-066": [
+  "cast"
+ ],
+ "meditative-067": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-068": [
+  "cast"
+ ],
+ "meditative-069": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-070": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-070-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-071": [
+  "cast"
+ ],
+ "meditative-071-1": [
+  "cast"
+ ],
+ "meditative-072": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-073": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-074": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-075": [
+  "cast"
+ ],
+ "meditative-076": [
+  "cast"
+ ],
+ "meditative-077": [
+  "cast"
+ ],
+ "meditative-078": [
+  "cast"
+ ],
+ "meditative-079": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-080": [
+  "cast"
+ ],
+ "meditative-081": [
+  "cast"
+ ],
+ "meditative-082": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-083": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-084": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-085": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-086": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-087": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-088": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-089": [
+  "cast"
+ ],
+ "meditative-090": [
+  "cast"
+ ],
+ "meditative-091": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-091-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-092": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-093": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-093-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-093-2": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-093-3": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-094": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-095": [
+  "cast"
+ ],
+ "meditative-095-1": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "meditative-096": [
+  "cast"
+ ],
+ "meditative-096-1": [
+  "cast"
+ ],
+ "meditative-097": [
+  "cast"
+ ],
+ "meditative-097-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-097-2": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-097-3": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-097-4": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-097-5": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-097-6": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-097-7": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-097-8": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-097-9": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-098": [
+  "cast"
+ ],
+ "meditative-099": [
+  "cast"
+ ],
+ "meditative-100": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-101": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditative-102": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-001": [
+  "cast"
+ ],
+ "meditativeplus-001-1": [
+  "cast"
+ ],
+ "meditativeplus-001-2": [
+  "cast"
+ ],
+ "meditativeplus-001-3": [
+  "cast"
+ ],
+ "meditativeplus-001-4": [
+  "cast"
+ ],
+ "meditativeplus-001-5": [
+  "cast"
+ ],
+ "meditativeplus-002": [
+  "cast"
+ ],
+ "meditativeplus-003": [
+  "cast"
+ ],
+ "meditativeplus-004": [
+  "cast"
+ ],
+ "meditativeplus-005": [
+  "cast"
+ ],
+ "meditativeplus-006": [
+  "cast"
+ ],
+ "meditativeplus-007": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-008": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-009": [
+  "cast"
+ ],
+ "meditativeplus-010": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-011": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-012": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-013": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-014": [
+  "cast"
+ ],
+ "meditativeplus-015": [
+  "cast"
+ ],
+ "meditativeplus-016": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-016-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-017": [
+  "cast"
+ ],
+ "meditativeplus-018": [
+  "cast"
+ ],
+ "meditativeplus-019": [
+  "cast"
+ ],
+ "meditativeplus-020": [
+  "cast"
+ ],
+ "meditativeplus-020-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-021": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-022": [
+  "cast"
+ ],
+ "meditativeplus-023": [
+  "cast"
+ ],
+ "meditativeplus-024": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "meditativeplus-025": [
+  "cast"
+ ],
+ "meditativeplus-026": [
+  "cast"
+ ],
+ "stinkyscape-001": [
+  "cast"
+ ],
+ "stinkyscape-002": [
+  "cast"
+ ],
+ "stinkyscape-003": [
+  "cast"
+ ],
+ "stinkyscape-004": [
+  "cast"
+ ],
+ "stinkyscape-004-1": [
+  "cast"
+ ],
+ "stinkyscape-004-2": [
+  "cast"
+ ],
+ "stinkyscape-004-3": [
+  "cast"
+ ],
+ "stinkyscape-004-4": [
+  "cast"
+ ],
+ "stinkyscape-004-5": [
+  "cast"
+ ],
+ "stinkyscape-004-6": [
+  "cast"
+ ],
+ "stinkyscape-005": [
+  "cast"
+ ],
+ "stinkyscape-006": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-007": [
+  "cast"
+ ],
+ "stinkyscape-008": [
+  "cast"
+ ],
+ "stinkyscape-008-1": [
+  "cast"
+ ],
+ "stinkyscape-009": [
+  "cast"
+ ],
+ "stinkyscape-010": [
+  "cast"
+ ],
+ "stinkyscape-010-1": [
+  "cast"
+ ],
+ "stinkyscape-010-2": [
+  "cast"
+ ],
+ "stinkyscape-010-3": [
+  "cast"
+ ],
+ "stinkyscape-011": [
+  "cast"
+ ],
+ "stinkyscape-011-1": [
+  "cast"
+ ],
+ "stinkyscape-011-2": [
+  "cast"
+ ],
+ "stinkyscape-011-3": [
+  "cast"
+ ],
+ "stinkyscape-012": [
+  "cast"
+ ],
+ "stinkyscape-012-1": [
+  "cast"
+ ],
+ "stinkyscape-012-2": [
+  "cast"
+ ],
+ "stinkyscape-012-3": [
+  "cast"
+ ],
+ "stinkyscape-013": [
+  "cast"
+ ],
+ "stinkyscape-014": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-015": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-016": [
+  "cast"
+ ],
+ "stinkyscape-017": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-018": [
+  "cast"
+ ],
+ "stinkyscape-018-1": [
+  "cast"
+ ],
+ "stinkyscape-018-2": [
+  "cast"
+ ],
+ "stinkyscape-018-3": [
+  "cast"
+ ],
+ "stinkyscape-019": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-020": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-021": [
+  "cast"
+ ],
+ "stinkyscape-022": [
+  "cast"
+ ],
+ "stinkyscape-023": [
+  "cast"
+ ],
+ "stinkyscape-024": [
+  "cast"
+ ],
+ "stinkyscape-025": [
+  "cast"
+ ],
+ "stinkyscape-026": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-027": [
+  "cast"
+ ],
+ "stinkyscape-028": [
+  "cast"
+ ],
+ "stinkyscape-029": [
+  "cast"
+ ],
+ "stinkyscape-030": [
+  "cast"
+ ],
+ "stinkyscape-031": [
+  "cast"
+ ],
+ "stinkyscape-032": [
+  "cast"
+ ],
+ "stinkyscape-033": [
+  "cast"
+ ],
+ "stinkyscape-034": [
+  "cast"
+ ],
+ "stinkyscape-035": [
+  "cast"
+ ],
+ "stinkyscape-036": [
+  "cast"
+ ],
+ "stinkyscape-037": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-038": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-039": [
+  "cast"
+ ],
+ "stinkyscape-040": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-041": [
+  "cast"
+ ],
+ "stinkyscape-042": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-043": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-044": [
+  "cast"
+ ],
+ "stinkyscape-045": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-046": [
+  "cast"
+ ],
+ "stinkyscape-047": [
+  "cast"
+ ],
+ "stinkyscape-048": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-049": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-050": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-051": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-052": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-053": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-054": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-055": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-056": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-057": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-058": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-059": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-060": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-061": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-062": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-063": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-064": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-065": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-066": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-067": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-068": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-069": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-070": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-071": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-072": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-073": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-074": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-075": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-076": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-077": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-078": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-079": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-080": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-081": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-082": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-083": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-084": [
+  "cast"
+ ],
+ "stinkyscape-084-1": [
+  "cast"
+ ],
+ "stinkyscape-085": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-086": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-087": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-088": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-089": [
+  "cast"
+ ],
+ "stinkyscape-090": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-091": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-092": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-093": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-094": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-095": [
+  "cast"
+ ],
+ "stinkyscape-096": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-097": [
+  "cast"
+ ],
+ "stinkyscape-098": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-099": [
+  "cast"
+ ],
+ "stinkyscape-100": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-101": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-102": [
+  "cast"
+ ],
+ "stinkyscape-103": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-104": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-105": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-106": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-107": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-108": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-109": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-110": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-111": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-112": [
+  "cast"
+ ],
+ "stinkyscape-112-1": [
+  "cast"
+ ],
+ "stinkyscape-113": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-114": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-115": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-116": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-117": [
+  "cast"
+ ],
+ "stinkyscape-118": [
+  "cast"
+ ],
+ "stinkyscape-119": [
+  "cast"
+ ],
+ "stinkyscape-120": [
+  "cast"
+ ],
+ "stinkyscape-121": [
+  "cast"
+ ],
+ "stinkyscape-122": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-123": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-124": [
+  "cast"
+ ],
+ "stinkyscape-125": [
+  "cast"
+ ],
+ "stinkyscape-126": [
+  "cast"
+ ],
+ "stinkyscape-127": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-128": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-129": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-130": [
+  "cast"
+ ],
+ "stinkyscape-131": [
+  "cast"
+ ],
+ "stinkyscape-132": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-133": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-134": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-135": [
+  "cast"
+ ],
+ "stinkyscape-135-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-136": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-137": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-137-1": [
+  "cast"
+ ],
+ "stinkyscape-137-2": [
+  "cast"
+ ],
+ "stinkyscape-137-3": [
+  "cast"
+ ],
+ "stinkyscape-137-4": [
+  "cast"
+ ],
+ "stinkyscape-138": [
+  "cast"
+ ],
+ "stinkyscape-139": [
+  "cast"
+ ],
+ "stinkyscape-140": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-141": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-142": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-143": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-144": [
+  "cast"
+ ],
+ "stinkyscape-145": [
+  "cast"
+ ],
+ "stinkyscape-146": [
+  "cast"
+ ],
+ "stinkyscape-147": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-147-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-147-2": [
+  "cast"
+ ],
+ "stinkyscape-148": [
+  "cast"
+ ],
+ "stinkyscape-148-1": [
+  "cast"
+ ],
+ "stinkyscape-149": [
+  "cast"
+ ],
+ "stinkyscape-150": [
+  "cast"
+ ],
+ "stinkyscape-150-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-151": [
+  "cast"
+ ],
+ "stinkyscape-152": [
+  "cast"
+ ],
+ "stinkyscape-153": [
+  "cast"
+ ],
+ "stinkyscape-154": [
+  "cast"
+ ],
+ "stinkyscape-155": [
+  "cast"
+ ],
+ "stinkyscape-156": [
+  "cast"
+ ],
+ "stinkyscape-157": [
+  "cast"
+ ],
+ "stinkyscape-158": [
+  "cast"
+ ],
+ "stinkyscape-159": [
+  "cast"
+ ],
+ "stinkyscape-160": [
+  "cast"
+ ],
+ "stinkyscape-161": [
+  "cast"
+ ],
+ "stinkyscape-162": [
+  "cast"
+ ],
+ "stinkyscape-163": [
+  "cast"
+ ],
+ "stinkyscape-164": [
+  "cast"
+ ],
+ "stinkyscape-165": [
+  "cast"
+ ],
+ "stinkyscape-166": [
+  "cast"
+ ],
+ "stinkyscape-167": [
+  "cast"
+ ],
+ "stinkyscape-168": [
+  "cast"
+ ],
+ "stinkyscape-169": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-170": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-171": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-172": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-173": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-174": [
+  "cast"
+ ],
+ "stinkyscape-175": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-176": [
+  "cast"
+ ],
+ "stinkyscape-177": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-t-dormant-starship": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-t-drone-interceptor": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-t-drone-corvette": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-t-shield-layer": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-t-propagation-layer": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-t-meltdown-layer": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-t-reknite": [
+  "cast"
+ ],
+ "stinkyscape-t-korrelite": [
+  "cast"
+ ],
+ "stinkyscape-t-gellium": [
+  "cast"
+ ],
+ "stinkyscape-t-axnit": [
+  "cast"
+ ],
+ "stinkyscape-t-narcor": [
+  "cast"
+ ],
+ "stinkyscape-t-red-narcor": [
+  "cast"
+ ],
+ "stinkyscape-t-anomaly-found": [
+  "cast"
+ ],
+ "stinkyscape-t-ai-01": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-t-ai-02": [
+  "cast"
+ ],
+ "stinkyscape-t-ai-03": [
+  "cast"
+ ],
+ "stinkyscape-t-ai-04": [
+  "cast"
+ ],
+ "stinkyscape-t-ai-05": [
+  "cast"
+ ],
+ "stinkyscape-t-ai-06": [
+  "cast"
+ ],
+ "stinkyscape-t-ai-07": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscape-t-ai-08": [
+  "cast"
+ ],
+ "stinkyscape-t-ai-09": [
+  "cast"
+ ],
+ "stinkyscape-t-ai-10": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-001": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-002": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-003": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-004": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-005": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-006": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-007": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-008": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-009": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-010": [
+  "cast"
+ ],
+ "traininggrounds-011": [
+  "cast"
+ ],
+ "traininggrounds-012": [
+  "cast"
+ ],
+ "traininggrounds-013": [
+  "cast"
+ ],
+ "traininggrounds-014": [
+  "cast"
+ ],
+ "traininggrounds-015": [
+  "cast"
+ ],
+ "traininggrounds-016": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-017": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-018": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-019": [
+  "cast"
+ ],
+ "traininggrounds-020": [
+  "cast"
+ ],
+ "traininggrounds-021": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-022": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-023": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-024": [
+  "cast"
+ ],
+ "traininggrounds-025": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-026": [
+  "cast"
+ ],
+ "traininggrounds-027": [
+  "cast"
+ ],
+ "traininggrounds-028": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-029": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-030": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-031": [
+  "cast"
+ ],
+ "traininggrounds-032": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-033": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-034": [
+  "cast"
+ ],
+ "traininggrounds-035": [
+  "cast"
+ ],
+ "traininggrounds-036": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-037": [
+  "cast"
+ ],
+ "traininggrounds-038": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-039": [
+  "cast"
+ ],
+ "traininggrounds-039-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-040": [
+  "cast"
+ ],
+ "traininggrounds-041": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-042": [
+  "cast"
+ ],
+ "traininggrounds-043": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-044": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "traininggrounds-045": [
+  "cast",
+  "fx:cast"
+ ],
+ "traininggrounds-046": [
+  "cast",
+  "fx:cast"
+ ],
+ "traininggrounds-047": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-048": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "fx:play",
+  "play"
+ ],
+ "traininggrounds-049": [
+  "cast"
+ ],
+ "traininggrounds-050": [
+  "cast"
+ ],
+ "traininggrounds-051": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "traininggrounds-052": [
+  "cast"
+ ],
+ "traininggrounds-053": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "traininggrounds-054": [
+  "attack",
+  "death",
+  "fx:attack",
+  "fx:death",
+  "fx:play",
+  "play"
+ ],
+ "traininggrounds-055": [
+  "cast"
+ ],
+ "traininggrounds-056": [
+  "attack",
+  "death",
+  "fx:attack",
+  "play"
+ ],
+ "traininggrounds-057": [
+  "cast"
+ ],
+ "traininggrounds-058": [
+  "cast",
+  "fx:cast"
+ ],
+ "traininggrounds-059": [
+  "cast",
+  "fx:cast"
+ ],
+ "traininggrounds-060": [
+  "cast"
+ ],
+ "stinkyscapeplus-001": [
+  "cast"
+ ],
+ "stinkyscapeplus-002": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-003": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-004": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-004-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-005": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-006": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-006-1": [
+  "cast"
+ ],
+ "stinkyscapeplus-006-2": [
+  "cast"
+ ],
+ "stinkyscapeplus-007": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-008": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-009": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-010": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-011": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-012": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-013": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-014": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-015": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-016": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-017": [
+  "cast"
+ ],
+ "stinkyscapeplus-018": [
+  "cast"
+ ],
+ "stinkyscapeplus-019": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-020": [
+  "cast"
+ ],
+ "stinkyscapeplus-021": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-022": [
+  "cast"
+ ],
+ "stinkyscapeplus-023": [
+  "cast"
+ ],
+ "stinkyscapeplus-024": [
+  "cast"
+ ],
+ "stinkyscapeplus-025": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-026": [
+  "cast"
+ ],
+ "stinkyscapeplus-026-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-027": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-027-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-028": [
+  "cast"
+ ],
+ "stinkyscapeplus-029": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-030": [
+  "cast"
+ ],
+ "stinkyscapeplus-031": [
+  "cast"
+ ],
+ "stinkyscapeplus-032": [
+  "cast"
+ ],
+ "stinkyscapeplus-033": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-034": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-035": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-036": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-037": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-038": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-039": [
+  "cast"
+ ],
+ "stinkyscapeplus-040": [
+  "cast"
+ ],
+ "stinkyscapeplus-041": [
+  "cast"
+ ],
+ "stinkyscapeplus-042": [
+  "cast"
+ ],
+ "stinkyscapeplus-043": [
+  "cast"
+ ],
+ "stinkyscapeplus-044": [
+  "cast"
+ ],
+ "stinkyscapeplus-045": [
+  "cast"
+ ],
+ "stinkyscapeplus-046": [
+  "cast"
+ ],
+ "stinkyscapeplus-047": [
+  "cast"
+ ],
+ "stinkyscapeplus-048": [
+  "cast"
+ ],
+ "stinkyscapeplus-049": [
+  "cast"
+ ],
+ "stinkyscapeplus-050": [
+  "cast"
+ ],
+ "stinkyscapeplus-051": [
+  "cast"
+ ],
+ "stinkyscapeplus-052": [
+  "cast"
+ ],
+ "stinkyscapeplus-053": [
+  "cast"
+ ],
+ "stinkyscapeplus-054": [
+  "cast"
+ ],
+ "stinkyscapeplus-055": [
+  "cast"
+ ],
+ "stinkyscapeplus-056": [
+  "cast"
+ ],
+ "stinkyscapeplus-057": [
+  "cast"
+ ],
+ "stinkyscapeplus-058": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-059": [
+  "cast"
+ ],
+ "stinkyscapeplus-060": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-061": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-061-1": [
+  "cast"
+ ],
+ "stinkyscapeplus-062": [
+  "cast"
+ ],
+ "stinkyscapeplus-063": [
+  "cast"
+ ],
+ "stinkyscapeplus-064": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-065": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-066": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-067": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-068": [
+  "cast"
+ ],
+ "stinkyscapeplus-069": [
+  "cast"
+ ],
+ "stinkyscapeplus-069-1": [
+  "cast"
+ ],
+ "stinkyscapeplus-070": [
+  "cast"
+ ],
+ "stinkyscapeplus-071": [
+  "cast"
+ ],
+ "stinkyscapeplus-072": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-073": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-074": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-075": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-075-1": [
+  "cast"
+ ],
+ "stinkyscapeplus-076": [
+  "cast"
+ ],
+ "stinkyscapeplus-076-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-077": [
+  "cast"
+ ],
+ "stinkyscapeplus-078": [
+  "cast"
+ ],
+ "stinkyscapeplus-079": [
+  "cast"
+ ],
+ "stinkyscapeplus-080": [
+  "cast"
+ ],
+ "stinkyscapeplus-081": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-082": [
+  "cast"
+ ],
+ "stinkyscapeplus-083": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-084": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-085": [
+  "cast"
+ ],
+ "stinkyscapeplus-086": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-087": [
+  "cast"
+ ],
+ "stinkyscapeplus-088": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-089": [
+  "cast"
+ ],
+ "stinkyscapeplus-090": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-091": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-092": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-093": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-094": [
+  "cast"
+ ],
+ "stinkyscapeplus-095": [
+  "cast"
+ ],
+ "stinkyscapeplus-096": [
+  "cast"
+ ],
+ "stinkyscapeplus-097": [
+  "cast"
+ ],
+ "stinkyscapeplus-098": [
+  "cast"
+ ],
+ "stinkyscapeplus-099": [
+  "cast"
+ ],
+ "stinkyscapeplus-100": [
+  "cast"
+ ],
+ "stinkyscapeplus-101": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-102": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-103": [
+  "cast"
+ ],
+ "stinkyscapeplus-104": [
+  "cast"
+ ],
+ "stinkyscapeplus-105": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-106": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-107": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-108": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-109": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-110": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-111": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-112": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-113": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-114": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-115": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-116": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-117": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-118": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-119": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-120": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-121": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-121-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-122": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-123": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-124": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-125": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-126": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-127": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-128": [
+  "cast"
+ ],
+ "stinkyscapeplus-129": [
+  "cast"
+ ],
+ "stinkyscapeplus-130": [
+  "cast"
+ ],
+ "stinkyscapeplus-131": [
+  "cast"
+ ],
+ "stinkyscapeplus-132": [
+  "cast"
+ ],
+ "stinkyscapeplus-133": [
+  "cast"
+ ],
+ "stinkyscapeplus-133-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-133-2": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-133-3": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-133-4": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-133-5": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-134": [
+  "cast"
+ ],
+ "stinkyscapeplus-135": [
+  "cast"
+ ],
+ "stinkyscapeplus-136": [
+  "cast"
+ ],
+ "stinkyscapeplus-137": [
+  "cast"
+ ],
+ "stinkyscapeplus-138": [
+  "cast"
+ ],
+ "stinkyscapeplus-139": [
+  "cast"
+ ],
+ "stinkyscapeplus-140": [
+  "cast"
+ ],
+ "stinkyscapeplus-141": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-142": [
+  "cast"
+ ],
+ "stinkyscapeplus-142-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-142-2": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-143": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-144": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-145": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-146": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-147": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-148": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-149": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-150": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-151": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-152": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-153": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-154": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-155": [
+  "cast"
+ ],
+ "stinkyscapeplus-156": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-157": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-158": [
+  "cast"
+ ],
+ "stinkyscapeplus-159": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-160": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-161": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-162": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-163": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-164": [
+  "cast"
+ ],
+ "stinkyscapeplus-165": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-166": [
+  "cast"
+ ],
+ "stinkyscapeplus-t-tears-of-the-kwzki-tree": [
+  "cast"
+ ],
+ "stinkyscapeplus-t-supernova": [
+  "cast"
+ ],
+ "stinkyscapeplus-t-alnilam": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-the-enigmata": [
+  "cast"
+ ],
+ "stinkyscapeplus-t-warhero-token": [
+  "cast"
+ ],
+ "stinkyscapeplus-t-terminus-starship-ark-of-ashes": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-terminus-starship-dying-ember": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-terminus-starship-heat-death-pilgrim": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-terminus-starship-entropys-wake": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-terminus-starship-red-giant-requiem": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-terminus-starship-cold-exodus": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-terminus-starship-omega-drift": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-terminus-starship-farthest-shore": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-terminus-starship-nightfall-covenant": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-terminus-starship-vacuum-psalm": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-ai-01": [
+  "cast"
+ ],
+ "stinkyscapeplus-t-ai-02": [
+  "cast"
+ ],
+ "stinkyscapeplus-t-ai-03": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-ai-04": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-ai-05": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "stinkyscapeplus-t-ai-06": [
+  "cast"
+ ],
+ "stinkyscapeplus-t-ai-07": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-001": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-002": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-003": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-004": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-004-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-005": [
+  "cast"
+ ],
+ "infiniteassault-006": [
+  "cast"
+ ],
+ "infiniteassault-007": [
+  "cast"
+ ],
+ "infiniteassault-008": [
+  "cast"
+ ],
+ "infiniteassault-009": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-010": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-010-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-011": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-012": [
+  "cast"
+ ],
+ "infiniteassault-013": [
+  "cast"
+ ],
+ "infiniteassault-014": [
+  "cast"
+ ],
+ "infiniteassault-015": [
+  "cast"
+ ],
+ "infiniteassault-016": [
+  "cast"
+ ],
+ "infiniteassault-017": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-018": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-019": [
+  "cast"
+ ],
+ "infiniteassault-020": [
+  "cast"
+ ],
+ "infiniteassault-021": [
+  "cast"
+ ],
+ "infiniteassault-022": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-023": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-024": [
+  "cast"
+ ],
+ "infiniteassault-025": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-025-1": [
+  "cast"
+ ],
+ "infiniteassault-026": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-027": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-028": [
+  "cast"
+ ],
+ "infiniteassault-029": [
+  "cast"
+ ],
+ "infiniteassault-030": [
+  "cast"
+ ],
+ "infiniteassault-031": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-032": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-033": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-034": [
+  "cast"
+ ],
+ "infiniteassault-034-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-035": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-035-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-036": [
+  "cast"
+ ],
+ "infiniteassault-037": [
+  "cast"
+ ],
+ "infiniteassault-038": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-039": [
+  "cast"
+ ],
+ "infiniteassault-040": [
+  "cast"
+ ],
+ "infiniteassault-040-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-041": [
+  "cast"
+ ],
+ "infiniteassault-041-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-042": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-043": [
+  "cast"
+ ],
+ "infiniteassault-044": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-045": [
+  "cast"
+ ],
+ "infiniteassault-046": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-047": [
+  "cast"
+ ],
+ "infiniteassault-048": [
+  "cast"
+ ],
+ "infiniteassault-049": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-050": [
+  "cast"
+ ],
+ "infiniteassault-051": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-052": [
+  "cast"
+ ],
+ "infiniteassault-053": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-054": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-055": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-056": [
+  "cast"
+ ],
+ "infiniteassault-057": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-058": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-059": [
+  "cast"
+ ],
+ "infiniteassault-060": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-061": [
+  "cast"
+ ],
+ "infiniteassault-062": [
+  "cast"
+ ],
+ "infiniteassault-063": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-064": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-065": [
+  "cast"
+ ],
+ "infiniteassault-066": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-067": [
+  "cast"
+ ],
+ "infiniteassault-068": [
+  "cast"
+ ],
+ "infiniteassault-069": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-070": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-071": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-072": [
+  "cast"
+ ],
+ "infiniteassault-073": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-074": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-074-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-075": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-076": [
+  "cast"
+ ],
+ "infiniteassault-077": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-078": [
+  "cast"
+ ],
+ "infiniteassault-078-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-079": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-080": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-081": [
+  "cast"
+ ],
+ "infiniteassault-082": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-082-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-083": [
+  "cast"
+ ],
+ "infiniteassault-084": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-085": [
+  "cast"
+ ],
+ "infiniteassault-086": [
+  "cast"
+ ],
+ "infiniteassault-087": [
+  "cast"
+ ],
+ "infiniteassault-088": [
+  "cast"
+ ],
+ "infiniteassault-089": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-090": [
+  "cast"
+ ],
+ "infiniteassault-091": [
+  "cast"
+ ],
+ "infiniteassault-092": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-093": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-094": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-095": [
+  "cast"
+ ],
+ "infiniteassault-096": [
+  "cast"
+ ],
+ "infiniteassault-097": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-098": [
+  "cast"
+ ],
+ "infiniteassault-099": [
+  "cast"
+ ],
+ "infiniteassault-100": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-101": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-102": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-103": [
+  "cast"
+ ],
+ "infiniteassault-104": [
+  "cast"
+ ],
+ "infiniteassault-105": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-106": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-107": [
+  "cast"
+ ],
+ "infiniteassault-108": [
+  "cast"
+ ],
+ "infiniteassault-109": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-110": [
+  "cast"
+ ],
+ "infiniteassault-111": [
+  "cast"
+ ],
+ "infiniteassault-112": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-113": [
+  "cast"
+ ],
+ "infiniteassault-114": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-115": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-116": [
+  "cast"
+ ],
+ "infiniteassault-117": [
+  "cast"
+ ],
+ "infiniteassault-118": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-119": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-120": [
+  "cast"
+ ],
+ "infiniteassault-121": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-122": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-123": [
+  "cast"
+ ],
+ "infiniteassault-124": [
+  "cast"
+ ],
+ "infiniteassault-125": [
+  "cast"
+ ],
+ "infiniteassault-126": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-127": [
+  "cast"
+ ],
+ "infiniteassault-128": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-129": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-130": [
+  "cast"
+ ],
+ "infiniteassault-131": [
+  "cast"
+ ],
+ "infiniteassault-132": [
+  "cast"
+ ],
+ "infiniteassault-133": [
+  "cast"
+ ],
+ "infiniteassault-134": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-135": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-136": [
+  "cast"
+ ],
+ "infiniteassault-137": [
+  "cast"
+ ],
+ "infiniteassault-138": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-139": [
+  "cast"
+ ],
+ "infiniteassault-140": [
+  "cast"
+ ],
+ "infiniteassault-141": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-142": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-143": [
+  "cast"
+ ],
+ "infiniteassault-143-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-144": [
+  "cast"
+ ],
+ "infiniteassault-145": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-146": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-147": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-148": [
+  "cast"
+ ],
+ "infiniteassault-149": [
+  "cast"
+ ],
+ "infiniteassault-150": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-151": [
+  "cast"
+ ],
+ "infiniteassault-152": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-153": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-154": [
+  "cast"
+ ],
+ "infiniteassault-154-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-155": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-156": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-157": [
+  "cast"
+ ],
+ "infiniteassault-158": [
+  "cast"
+ ],
+ "infiniteassault-159": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-160": [
+  "cast"
+ ],
+ "infiniteassault-161": [
+  "cast"
+ ],
+ "infiniteassault-162": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-163": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-164": [
+  "cast"
+ ],
+ "infiniteassault-165": [
+  "cast"
+ ],
+ "infiniteassault-166": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-167": [
+  "cast"
+ ],
+ "infiniteassault-168": [
+  "cast"
+ ],
+ "infiniteassault-169": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-170": [
+  "cast"
+ ],
+ "infiniteassault-171": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-172": [
+  "cast"
+ ],
+ "infiniteassault-173": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-174": [
+  "cast"
+ ],
+ "infiniteassault-175": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-176": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-177": [
+  "cast"
+ ],
+ "infiniteassault-178": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-179": [
+  "cast"
+ ],
+ "infiniteassault-180": [
+  "cast"
+ ],
+ "infiniteassault-181": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-182": [
+  "cast"
+ ],
+ "infiniteassault-183": [
+  "cast"
+ ],
+ "infiniteassault-184": [
+  "cast"
+ ],
+ "infiniteassault-185": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-186": [
+  "cast"
+ ],
+ "infiniteassault-187": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-188": [
+  "cast"
+ ],
+ "infiniteassault-189": [
+  "cast"
+ ],
+ "infiniteassault-190": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-191": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-192": [
+  "cast"
+ ],
+ "infiniteassault-193": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-194": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-195": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-196": [
+  "cast"
+ ],
+ "infiniteassault-197": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-198": [
+  "cast"
+ ],
+ "infiniteassault-199": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-200": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-200-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-201": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-202": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-203": [
+  "cast"
+ ],
+ "infiniteassault-204": [
+  "cast"
+ ],
+ "infiniteassault-205": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-206": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-207": [
+  "cast"
+ ],
+ "infiniteassault-208": [
+  "cast"
+ ],
+ "infiniteassault-209": [
+  "cast"
+ ],
+ "infiniteassault-210": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-211": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-212": [
+  "cast"
+ ],
+ "infiniteassault-213": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-214": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-215": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-216": [
+  "cast"
+ ],
+ "infiniteassault-216-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-217": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-218": [
+  "cast"
+ ],
+ "infiniteassault-219": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-220": [
+  "cast"
+ ],
+ "infiniteassault-221": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-222": [
+  "cast"
+ ],
+ "infiniteassault-223": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-224": [
+  "cast"
+ ],
+ "infiniteassault-225": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-226": [
+  "cast"
+ ],
+ "infiniteassault-227": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-228": [
+  "cast"
+ ],
+ "infiniteassault-229": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-230": [
+  "cast"
+ ],
+ "infiniteassault-231": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-232": [
+  "cast"
+ ],
+ "infiniteassault-233": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-234": [
+  "cast"
+ ],
+ "infiniteassault-235": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-235-1": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-236": [
+  "cast"
+ ],
+ "infiniteassault-237": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-238": [
+  "cast"
+ ],
+ "infiniteassault-239": [
+  "attack",
+  "death",
+  "play"
+ ],
+ "infiniteassault-240": [
+  "cast"
+ ]
+}

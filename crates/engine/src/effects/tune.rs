@@ -1386,7 +1386,9 @@ pub struct GainKeywordForGoodArgs {
 /// names (R4154202), keeps `keyword` in every zone, in its `tuning` as an Upgrade's is (R386), so neither
 /// leaving the field (R78) nor a graveyard (R215) takes it. A numbered Armor or Lucky stacks
 /// (`tuning::tuned_keywords`); another kind is not had twice. The `keywordGranted` it reports names a
-/// card in a hidden zone to no one else (`view_for`, R177).
+/// card in a hidden zone to no one else (`view_for`, R177). An Immutable card other than the running one
+/// keeps it off and nothing is reported (R5226000, R5113000); the running card's own text still gives it
+/// (R23).
 pub fn gain_keyword_for_good(args: GainKeywordForGoodArgs) -> Effect {
     Effect::new("gainKeywordForGood", move |ctx| {
         let card_id = match &args.instance_id {
@@ -1396,6 +1398,13 @@ pub fn gain_keyword_for_good(args: GainKeywordForGoodArgs) -> Effect {
         let Some(card_id) = card_id else {
             return;
         };
+        let Some(target) = find_instance(ctx.state, &card_id).cloned() else {
+            return;
+        };
+        // R5226000: another card's keyword for good passes an Immutable card by (R5113000); its own lands (R23).
+        if crate::restrictions::immutable_keeps_off(ctx, &target) {
+            return;
+        }
         let Some(card) = find_instance_mut(ctx.state, &card_id) else {
             return;
         };

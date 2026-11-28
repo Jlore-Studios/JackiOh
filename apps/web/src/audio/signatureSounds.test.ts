@@ -21,7 +21,7 @@ describe("Classic+'s signature sounds (R3399004)", () => {
       const hook = CATALOG[id]?.type === "Unit" ? "play" : "cast";
       const name = CARD_AUDIO.cards[id]?.[hook]?.effect;
       expect(name, `${id} ${hook} names an effect`).toBeTypeOf("string");
-      return name ?? "";
+      return typeof name === "string" ? name : "";
     });
     expect(new Set(names).size, "35 distinct effect names").toBe(35);
 

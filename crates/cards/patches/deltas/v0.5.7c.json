@@ -1,0 +1,64 @@
+{
+  "set": {
+    "stinkyscape-116": {
+      "id": "stinkyscape-116",
+      "index": "116",
+      "name": "Megabase",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Quickdraw"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 1,
+      "loc": 68,
+      "base": {
+        "attack": 0,
+        "health": 20,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Untributable"
+          },
+          {
+            "kind": "Armor",
+            "n": 15
+          }
+        ],
+        "text": "Can't attack, Immune to Spells, Immutable, Untributable, Armor 15\nCan't be in Defense Position.\nActivate: Choose one: Both players gain 5, 10 or 15 Credits.\nDeath: Both players gain 100 Credits."
+      },
+      "radiant": {
+        "attack": 0,
+        "health": 40,
+        "keywords": [
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Immune to Spells"
+          },
+          {
+            "kind": "Immutable"
+          },
+          {
+            "kind": "Untributable"
+          },
+          {
+            "kind": "Armor",
+            "n": 30
+          }
+        ],
+        "text": "Can't attack, Immune to Spells, Immutable, Untributable, Armor 30\nCan't be in Defense Position.\nActivate: Choose one: You gain 5, 10 or 15 Credits, and your opponent gains 5 fewer.\nDeath: Both players gain 200 Credits."
+      }
+    }
+  }
+}

@@ -232,7 +232,17 @@ mod tests {
             "player": { "title": "t", "changes": ["A card changed."] },
         }]);
         write(root, "crates/cards/patches/patches.json", &patches.to_string());
-        write(root, "crates/cards/patches/v0.1.1.json", &catalog.to_string());
+        // R5268000: the history keeps v0.1.1 as its delta, every card set.
+        write(
+            root,
+            "crates/cards/patches/deltas/v0.1.1.json",
+            &json!({ "set": catalog }).to_string(),
+        );
+        write(
+            root,
+            "crates/cards/patches/order.json",
+            &json!(["core-001", "core-002"]).to_string(),
+        );
         write(root, "crates/cards/catalog.json", &catalog.to_string());
         write(root, "crates/cards/src/scripts/core/c001_reader.rs", READER);
         write(root, "crates/cards/src/scripts/core/c002_other.rs", OTHER);

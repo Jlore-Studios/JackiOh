@@ -1,0 +1,24 @@
+{
+  "set": {
+    "stinkyscape-089": {
+      "id": "stinkyscape-089",
+      "index": "89",
+      "name": "Spice",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "loc": 40,
+      "base": {
+        "keywords": [],
+        "text": "Gives Credits like a Resource when played or discarded.\nDiscover a Stinkyscape card."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Gives Credits like a Resource when played or discarded.\nDiscover a Radiant Stinkyscape card."
+      }
+    }
+  }
+}

@@ -12,6 +12,7 @@ import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 import type { CardDef } from "@jackioh/shared";
 import { describe, expect, it } from "vitest";
 
+import { snapshotReader } from "./deltas.ts";
 import {
   RELEASE_ART_CARD_LIMIT,
   RELEASE_ART_HEIGHT,
@@ -309,9 +310,11 @@ describe("#2681 the real history's artwork", () => {
   const dir = join(dirname(fileURLToPath(import.meta.url)), "../../../../crates/cards/patches");
   const read = <T>(file: string): T => JSON.parse(readFileSync(join(dir, file), "utf8")) as T;
   const patches = read<Patch[]>("patches.json");
+  // R5268000: each snapshot folded from the deltas.
+  const snapshotAt = snapshotReader((stem) => read<unknown>(`${stem}.json`));
 
   it("R3012001 gives every real major and patch artwork, a major its companion, and no micro after the cut any", () => {
-    const assets = releaseArtAssets(patches, (version) => read<Snapshot>(`${version}.json`));
+    const assets = releaseArtAssets(patches, snapshotAt);
     const tierList = tiers(patches);
     const cut = patches.findIndex((patch) => patch.version === RELEASE_ART_LEGACY_MICRO_LAST);
     // The cut is a version of the history, and every micro up to it keeps the file its published links name.
@@ -352,7 +355,8 @@ describe("#2681 the real history's artwork", () => {
     // Each patch shows cards its own record names, at most the limit of them (a major's headlines, the major limit), and cards when it names any.
     let before: Snapshot | null = null;
     for (const [at, patch] of patches.entries()) {
-      const after = read<Snapshot>(`${patch.version}.json`);
+      const after = snapshotAt(patch.version);
+      if (after === null) throw new Error(`${patch.version} has no snapshot`);
       const major = tierList[at] === "major";
       const shown = (major ? releaseArtHeadlines(patch, after, before) : releaseArtCards(patch, after, before)).map((def) => def.id);
       const named = patch.changes.map((change) => change.id).filter((id) => id !== GLITCH_DEF_ID);
@@ -361,7 +365,7 @@ describe("#2681 the real history's artwork", () => {
       before = after;
     }
     // The asset of the first patch, and every other, is drawn the same each time.
-    const again = releaseArtAssets(patches, (version) => read<Snapshot>(`${version}.json`));
+    const again = releaseArtAssets(patches, snapshotAt);
     expect(again).toEqual(assets);
   }, 60_000);
 });

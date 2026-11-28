@@ -1,0 +1,795 @@
+{
+  "set": {
+    "core-038": {
+      "id": "core-038",
+      "index": "38",
+      "name": "Quickstriker",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 7,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Your cards gain \"Combo X: Deal X damage to the enemy hero.\" X = cards you played earlier this turn."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Your cards gain \"Combo X: Deal 2X damage to the enemy hero.\" X = cards you played earlier this turn."
+      }
+    },
+    "core-064": {
+      "id": "core-064",
+      "index": "64",
+      "name": "Gifted Program",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "giftLimit",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 5,
+      "base": {
+        "keywords": [],
+        "text": "Aura: The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
+      }
+    },
+    "core-073": {
+      "id": "core-073",
+      "index": "73",
+      "name": "Anti-oneshot Armor",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        },
+        {
+          "key": "cap",
+          "base": 4,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "armor",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Your hero can't take more than {cap} damage at a time. Your hero has Armor {armor}.\nCry: Draw {draw}."
+      }
+    },
+    "core-075": {
+      "id": "core-075",
+      "index": "75",
+      "name": "Infinite Reserves",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 0,
+      "refs": [
+        "core-t-rush"
+      ],
+      "params": [
+        {
+          "key": "draw",
+          "base": 1,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "cry"
+        }
+      ],
+      "loc": 37,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
+      }
+    },
+    "core-084": {
+      "id": "core-084",
+      "index": "84",
+      "name": "Going Long",
+      "set": "Core",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": {
+        "base": 2,
+        "embiggen": 4
+      },
+      "params": [
+        {
+          "key": "armor",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "paidArmor",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 8,
+      "base": {
+        "keywords": [],
+        "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
+      }
+    },
+    "meditative-011": {
+      "id": "meditative-011",
+      "index": "11",
+      "name": "Double Header",
+      "set": "Meditative",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "setCost",
+          "base": 0,
+          "radiant": 0,
+          "better": "down",
+          "step": 1,
+          "min": 0
+        }
+      ],
+      "loc": 53,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Tradable"
+          }
+        ],
+        "text": "Tradable, Indestructible\nAura: The first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          },
+          {
+            "kind": "Tradable"
+          }
+        ],
+        "text": "Tradable, Indestructible\nAura: The first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
+      }
+    },
+    "meditative-065": {
+      "id": "meditative-065",
+      "index": "65",
+      "name": "Keymaster Keenus",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "keywords",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 50,
+      "base": {
+        "attack": 1,
+        "health": 1,
+        "keywords": [
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Equip\nHas {keywords|random combat keyword|random combat keywords}."
+      },
+      "radiant": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Equip"
+          }
+        ],
+        "text": "Equip\nHas {keywords|random combat keyword|random combat keywords}."
+      }
+    },
+    "meditative-092": {
+      "id": "meditative-092",
+      "index": "92",
+      "name": "Unan",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "loc": 20,
+      "base": {
+        "attack": 3,
+        "health": 13,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 2
+          }
+        ],
+        "text": "Armor 2\nAura: Lethal damage your hero or your other Units would take is redirected to this."
+      },
+      "radiant": {
+        "attack": 6,
+        "health": 26,
+        "keywords": [
+          {
+            "kind": "Armor",
+            "n": 4
+          }
+        ],
+        "text": "Armor 4\nAura: Lethal damage your hero or your other Units would take is redirected to this."
+      }
+    },
+    "stinkyscape-111": {
+      "id": "stinkyscape-111",
+      "index": "111",
+      "name": "Shockwave447",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Acclaimed"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 4,
+      "params": [
+        {
+          "key": "keywords",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 42,
+      "base": {
+        "attack": 4,
+        "health": 7,
+        "keywords": [],
+        "text": "Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both players' hands with random complicated cards."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 14,
+        "keywords": [],
+        "text": "Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both players' hands with random complicated cards. Make yours Radiant."
+      }
+    },
+    "stinkyscape-148": {
+      "id": "stinkyscape-148",
+      "index": "148",
+      "name": "Alteran Reach",
+      "set": "Stinkyscape",
+      "type": "Field Spell",
+      "tags": [
+        "Wincon",
+        "Quickdraw"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "stinkyscape-148-1"
+      ],
+      "loc": 18,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nAura: Your first travel each turn is free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Indestructible"
+          }
+        ],
+        "text": "Indestructible\nAura: Your first two travels each turn are free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
+      }
+    },
+    "stinkyscape-157": {
+      "id": "stinkyscape-157",
+      "index": "157",
+      "name": "The Gauntlet",
+      "set": "Stinkyscape",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 1,
+      "params": [
+        {
+          "key": "brittleGain",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ],
+      "loc": 41,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Brittle",
+            "n": 3
+          }
+        ],
+        "text": "Brittle 3\nAura: The unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can attack only each other, and no other Unit can attack them."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Brittle",
+            "n": 3
+          }
+        ],
+        "text": "Brittle 3\nAura: The unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can attack only each other, and no other Unit can attack them.\nActivate: Choose one: give this +{brittleGain} Brittle, or Tribute this."
+      }
+    },
+    "stinkyscape-t-drone-interceptor": {
+      "id": "stinkyscape-t-drone-interceptor",
+      "index": "T-drone-interceptor",
+      "name": "Drone Interceptor",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Common",
+      "token": true,
+      "cost": 1,
+      "params": [
+        {
+          "key": "keywords",
+          "base": 1,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 37,
+      "base": {
+        "attack": 2,
+        "health": 2,
+        "keywords": [
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
+      },
+      "radiant": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
+      }
+    },
+    "stinkyscape-t-drone-corvette": {
+      "id": "stinkyscape-t-drone-corvette",
+      "index": "T-drone-corvette",
+      "name": "Drone Corvette",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Rare",
+      "token": true,
+      "cost": 3,
+      "params": [
+        {
+          "key": "keywords",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 37,
+      "base": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
+      },
+      "radiant": {
+        "attack": 16,
+        "health": 16,
+        "keywords": [
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Flying"
+          }
+        ],
+        "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
+      }
+    },
+    "stinkyscape-t-shield-layer": {
+      "id": "stinkyscape-t-shield-layer",
+      "index": "T-shield-layer",
+      "name": "Drone Battleship (Shield Layer)",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Mythic",
+      "token": true,
+      "cost": 5,
+      "loc": 20,
+      "base": {
+        "attack": 12,
+        "health": 12,
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Armor",
+            "n": 4
+          }
+        ],
+        "text": "Can't attack, Taunt, Flying, Ranged, Armor 4\nAura: Lethal damage your hero or your other Units would take is redirected to this."
+      },
+      "radiant": {
+        "attack": 24,
+        "health": 24,
+        "keywords": [
+          {
+            "kind": "Flying"
+          },
+          {
+            "kind": "Ranged"
+          },
+          {
+            "kind": "Can't attack"
+          },
+          {
+            "kind": "Taunt"
+          },
+          {
+            "kind": "Armor",
+            "n": 8
+          }
+        ],
+        "text": "Can't attack, Taunt, Flying, Ranged, Armor 8\nAura: Lethal damage your hero or your other Units would take is redirected to this."
+      }
+    },
+    "stinkyscapeplus-030": {
+      "id": "stinkyscapeplus-030",
+      "index": "30",
+      "name": "Yeah I’m a War Hero",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "loc": 15,
+      "base": {
+        "keywords": [],
+        "text": "Aura: The first card you draw each turn is replaced with a Warhero Token."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: The first card you draw each turn is replaced with a Radiant Warhero Token."
+      },
+      "refs": [
+        "stinkyscapeplus-t-warhero-token"
+      ]
+    },
+    "stinkyscapeplus-042": {
+      "id": "stinkyscapeplus-042",
+      "index": "42",
+      "name": "Force Projector",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 3,
+      "loc": 57,
+      "base": {
+        "keywords": [],
+        "text": "Aura: The first {pool} damage allies would take per turn is nullified."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Aura: The first {pool} damage allies would take per turn is nullified."
+      },
+      "params": [
+        {
+          "key": "pool",
+          "base": 5,
+          "radiant": 10,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-062": {
+      "id": "stinkyscapeplus-062",
+      "index": "62",
+      "name": "Overdrive Projector",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 42,
+      "base": {
+        "keywords": [],
+        "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
+      },
+      "params": [
+        {
+          "key": "dormant",
+          "base": 2,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "spellEcho",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-063": {
+      "id": "stinkyscapeplus-063",
+      "index": "63",
+      "name": "Overdrive Dome",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Mindustrial"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 4,
+      "loc": 42,
+      "base": {
+        "keywords": [],
+        "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
+      },
+      "params": [
+        {
+          "key": "dormant",
+          "base": 2,
+          "radiant": 1,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "spellEcho",
+          "base": 2,
+          "radiant": 2,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ]
+    },
+    "stinkyscapeplus-087": {
+      "id": "stinkyscapeplus-087",
+      "index": "87",
+      "name": "Frontier Flora",
+      "set": "Stinkyscape+",
+      "type": "Field Spell",
+      "tags": [
+        "Swarm"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 1,
+      "loc": 38,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Animated"
+          }
+        ],
+        "text": "Animated\nEvolves when a Starship is launched.\nEvolve: Place {counters|Plague Counter|Plague Counters} on this.\nHas 3X/3X stats for each Plague Counter."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Animated"
+          }
+        ],
+        "text": "Animated\nEvolves when a Starship is launched.\nEvolve: Place {counters|Plague Counter|Plague Counters} on this.\nHas 3X/3X stats for each Plague Counter."
+      },
+      "params": [
+        {
+          "key": "counters",
+          "base": 2,
+          "radiant": 4,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "read": "evolve"
+        }
+      ]
+    },
+    "stinkyscapeplus-163": {
+      "id": "stinkyscapeplus-163",
+      "index": "163",
+      "name": "Accelerationist",
+      "set": "Stinkyscape+",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Swarm"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 3,
+      "loc": 28,
+      "base": {
+        "attack": 6,
+        "health": 6,
+        "keywords": [],
+        "text": "Has +{buff}/+{buff} for every card that Evolved this game."
+      },
+      "radiant": {
+        "attack": 12,
+        "health": 12,
+        "keywords": [],
+        "text": "Has +{buff2}/+{buff2} for every card that Evolved this game."
+      },
+      "params": [
+        {
+          "key": "buff",
+          "base": 3,
+          "radiant": 3,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "base"
+        },
+        {
+          "key": "buff2",
+          "base": 6,
+          "radiant": 6,
+          "better": "up",
+          "step": 1,
+          "min": 1,
+          "tunedOn": "radiant"
+        }
+      ]
+    }
+  }
+}

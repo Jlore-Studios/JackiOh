@@ -1,0 +1,350 @@
+{
+  "set": {
+    "core-002": {
+      "id": "core-002",
+      "index": "2",
+      "name": "Speciesist",
+      "set": "Core",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "loc": 10,
+      "base": {
+        "attack": 4,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Destroy an enemy non-Human Unit."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Destroy all enemy non-Human Units."
+      }
+    },
+    "core-042": {
+      "id": "core-042",
+      "index": "42",
+      "name": "Selective Breeding",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "params": [
+        {
+          "key": "chance",
+          "base": 30,
+          "radiant": 100,
+          "better": "up",
+          "step": 10,
+          "min": 1,
+          "max": 100,
+          "tunedOn": "base"
+        }
+      ],
+      "loc": 12,
+      "base": {
+        "keywords": [],
+        "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck has a {chance}% chance to become Radiant."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Exile all cards in your deck that cost (2) or less. Each card left in your deck becomes Radiant."
+      }
+    },
+    "core-090": {
+      "id": "core-090",
+      "index": "90",
+      "name": "Super-Virus Injection",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [
+        "CN"
+      ],
+      "rarity": "Rare",
+      "token": false,
+      "cost": 1,
+      "refs": [
+        "core-090-1"
+      ],
+      "loc": 11,
+      "base": {
+        "keywords": [],
+        "text": "Shuffle a Super-Virus into your opponent's deck."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Shuffle a Radiant Super-Virus into your opponent's deck."
+      }
+    },
+    "core-090-1": {
+      "id": "core-090-1",
+      "index": "90.1",
+      "name": "Super-Virus",
+      "set": "Core",
+      "type": "Spell",
+      "tags": [
+        "CN",
+        "Token"
+      ],
+      "rarity": "Token",
+      "token": true,
+      "cost": 1,
+      "params": [
+        {
+          "key": "damage",
+          "base": 1,
+          "radiant": 2,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        },
+        {
+          "key": "copies",
+          "base": 2,
+          "radiant": 3,
+          "better": "down",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 26,
+      "base": {
+        "keywords": [
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Pierce\nCast on draw: Take {damage} damage. At the end of this turn, shuffle {copies|copy|copies} of this into your deck."
+      },
+      "radiant": {
+        "keywords": [
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Pierce\nCast on draw: Take {damage} damage. At the end of this turn, shuffle {copies|copy|copies} of this into your deck."
+      }
+    },
+    "meditative-061": {
+      "id": "meditative-061",
+      "index": "61",
+      "name": "Joon Juicer",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "Human"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 3,
+      "params": [
+        {
+          "key": "times",
+          "base": 4,
+          "radiant": 8,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 27,
+      "base": {
+        "attack": 7,
+        "health": 5,
+        "keywords": [],
+        "text": "End of turn: Buff the Unit to the right of this {times|time|times}."
+      },
+      "radiant": {
+        "attack": 14,
+        "health": 10,
+        "keywords": [],
+        "text": "End of turn: Buff the Unit to the right of this {times|time|times}."
+      }
+    },
+    "meditative-095-1": {
+      "id": "meditative-095-1",
+      "index": "95.1",
+      "name": "CN Golem",
+      "set": "Meditative",
+      "type": "Unit",
+      "tags": [
+        "CN",
+        "Token"
+      ],
+      "rarity": "Token",
+      "printedRarity": "Legendary",
+      "token": true,
+      "cost": 4,
+      "refs": [
+        "core-090-1"
+      ],
+      "params": [
+        {
+          "key": "viruses",
+          "base": 1,
+          "radiant": 1,
+          "better": "up",
+          "step": 1,
+          "min": 1
+        }
+      ],
+      "loc": 37,
+      "base": {
+        "attack": 10,
+        "health": 10,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Poisonous"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Pierce"
+          }
+        ],
+        "text": "Rush, Poisonous, Cleave, Pierce\nWhenever this destroys a Unit, shuffle {viruses|Super-Virus|Super-Viruses} into your opponent's deck."
+      },
+      "radiant": {
+        "attack": 20,
+        "health": 20,
+        "keywords": [
+          {
+            "kind": "Rush"
+          },
+          {
+            "kind": "Poisonous"
+          },
+          {
+            "kind": "Cleave"
+          },
+          {
+            "kind": "Pierce"
+          },
+          {
+            "kind": "Windfury"
+          }
+        ],
+        "text": "Rush, Poisonous, Cleave, Pierce, Windfury\nWhenever this destroys a Unit, shuffle {viruses|Radiant Super-Virus|Radiant Super-Viruses} into your opponent's deck."
+      }
+    },
+    "stinkyscape-044": {
+      "id": "stinkyscape-044",
+      "index": "44",
+      "name": "Great Paperclip Theory",
+      "set": "Stinkyscape",
+      "type": "Spell",
+      "tags": [
+        "Quickdraw"
+      ],
+      "rarity": "Mythic",
+      "token": false,
+      "cost": 2,
+      "refs": [
+        "stinkyscape-027"
+      ],
+      "loc": 57,
+      "base": {
+        "keywords": [],
+        "text": "Add a Drone Core I to your hand. For the rest of the game, the first time you play each tier of Drone Core, add the next tier to your hand."
+      },
+      "radiant": {
+        "keywords": [],
+        "text": "Add a Radiant Drone Core I to your hand. For the rest of the game, the first time you play each tier of Drone Core, add a Radiant one of the next tier to your hand."
+      }
+    },
+    "stinkyscape-088": {
+      "id": "stinkyscape-088",
+      "index": "88",
+      "name": "Siva 2",
+      "set": "Stinkyscape",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Acclaimed"
+      ],
+      "rarity": "Legendary",
+      "token": false,
+      "cost": 3,
+      "refs": [
+        "core-002"
+      ],
+      "loc": 33,
+      "base": {
+        "attack": 4,
+        "health": 4,
+        "keywords": [],
+        "text": "Aura: Your Humans have Poisonous."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 8,
+        "keywords": [],
+        "text": "Aura: Your Humans have Poisonous.\nCry: Fill your hand with Speciesists."
+      }
+    },
+    "traininggrounds-029": {
+      "id": "traininggrounds-029",
+      "index": "29",
+      "name": "Easterner",
+      "set": "Training Grounds",
+      "type": "Unit",
+      "tags": [
+        "CN"
+      ],
+      "rarity": "Epic",
+      "token": false,
+      "cost": 3,
+      "loc": 29,
+      "base": {
+        "attack": 5,
+        "health": 9,
+        "keywords": [],
+        "text": "Cry: Destroy all permanents in the leftmost lane."
+      },
+      "radiant": {
+        "attack": 10,
+        "health": 18,
+        "keywords": [],
+        "text": "Cry: Destroy all enemy permanents in the leftmost lane."
+      }
+    },
+    "traininggrounds-041": {
+      "id": "traininggrounds-041",
+      "index": "41",
+      "name": "Legacy: Speciesist",
+      "set": "Training Grounds",
+      "type": "Unit",
+      "tags": [
+        "Human",
+        "Legacy"
+      ],
+      "rarity": "Common",
+      "token": false,
+      "cost": 2,
+      "loc": 23,
+      "base": {
+        "attack": 4,
+        "health": 1,
+        "keywords": [],
+        "text": "Cry: Destroy an enemy non-Human Unit."
+      },
+      "radiant": {
+        "attack": 8,
+        "health": 2,
+        "keywords": [],
+        "text": "Cry: Destroy all enemy non-Human Units."
+      }
+    }
+  }
+}

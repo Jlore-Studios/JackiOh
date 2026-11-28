@@ -8,7 +8,14 @@
 // scripts/shard-specs.mjs, which does not hold 46, since it took a smoke shard to itself (7 minutes);
 // super.yml plays it. Networked: the signed-in menus need `E2E=1 cargo run --release -p jackioh-server`.
 
-import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, shellTestid } from "../../../apps/web/src/auth/testids.ts";
+import {
+  consentTestid,
+  inviteTestid,
+  landingTestid,
+  loginTestid,
+  resetTestid,
+  shellTestid,
+} from "../../../apps/web/src/auth/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
 import { menuShellTestid } from "../../../apps/web/src/shell/testids.ts";
@@ -18,31 +25,33 @@ import { allCardIds, cardId } from "../../support/cards.ts";
 import { MENU_SIZES, accounts, constants, routes, timeouts, type MenuSize } from "../../support/config.ts";
 import { visitStatsFigures } from "../../support/stats.ts";
 import {
-  CARD_POOL,
   COLLECTION_DECKS,
   COLLECTION_GRID,
   COLLECTION_JLORE,
   COLLECTION_SCREEN,
-  DB_SIDEBAR,
-  DECK_COMPARE_SELECT,
-  DECK_DELETE,
-  DECK_EDITOR,
-  DECK_LIST,
-  DECK_NAME_INPUT,
   NAV_BACK,
   PLAY_HUB,
   PLAY_SIGN_IN,
   REPLAYS_ROOT,
   SERIES_SCORE,
   SHOP_PANEL,
-  TOGETHER_ROOT,
-  WORKSHOP,
   deckRowId,
   ts,
 } from "../../support/testids.ts";
 import { expectShellNav } from "../../support/shell.ts";
 import { expectBackLinkBarOrder, expectLandingCornerOrder } from "../../support/topBar.ts";
 import { SETTINGS_OPEN_NAV, SETTINGS_PANEL } from "../../support/ux.ts";
+import {
+  CARD_POOL,
+  DB_SIDEBAR,
+  DECK_COMPARE_SELECT,
+  DECK_DELETE,
+  DECK_EDITOR,
+  DECK_LIST,
+  DECK_NAME_INPUT,
+  WORKSHOP,
+} from "../../../apps/web/src/game/deckbuilder/testids.ts";
+import { togetherTestid } from "../../../apps/web/src/together/testids.ts";
 
 /** #1576's tavern home: its main screen and one more below the floor. */
 const LANDING_SCREENS = 2;
@@ -526,7 +535,7 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 R3218000 /together", () => {
           cy.visitAs(SPARE(), "/together");
-          cy.get(ts(TOGETHER_ROOT), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(togetherTestid.root), { timeout: timeouts.view }).should("be.visible");
           expectBackLinkBarOrder();
           expectShellNav(true);
           expectOnScreen(viewport, ONE_SCREEN);
