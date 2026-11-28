@@ -21281,9 +21281,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-28T14:20:55Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "46156423431",
+      "run_id": "pending:5170da3e-1795877645",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-28T14:46:57Z",
+      "started_at": "2026-11-28T14:54:22Z",
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": []
@@ -22433,7 +22433,7 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-28T14:46:57Z",
+    "at": "2026-11-28T14:54:22Z",
     "url": "",
     "what": "plan #5242 on claude-6"
   },
