@@ -20042,7 +20042,7 @@
     "5189": {
       "action": "build",
       "asks": [],
-      "died": 1,
+      "died": 2,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20068,7 +20068,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "queued_at": "2026-11-28T08:12:02Z",
+      "queued_at": "2026-11-28T12:56:35Z",
       "requested_by": "jgoetzmann",
       "round_tier": "strong",
       "run_id": "46137159220",
