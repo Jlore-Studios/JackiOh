@@ -1192,6 +1192,238 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | stinkyscapeplus-t-ai-05 | Lantern Distiller | Meets | Stats double 1/2 → 2/4 and each Evolve gains +4/+4 instead of +2/+2 (2×), so both halves meet R275. |
 | stinkyscapeplus-t-ai-06 | Abacus Optimizer | Meets | The leftmost and rightmost cards in your hand cost (2) less instead of (1) less (2×), so it meets R275. |
 | stinkyscapeplus-t-ai-07 | KY's Line Search Bot | Meets | Stats double 2/2 → 4/4, and the Cry's damage to every Unit on the line between it and the chosen enemy tile rises 2 → 4 (2×), so both halves meet R275. |
+| felinorsvshumans-001 | NGMI Joe | Meets | Stats double 8/8 → 16/16, and the Nerf moves from the end of your turn to the start of it, so the Radiant body keeps its full size through the opponent's turn: a lighter drawback, which R275 counts as the upgrade. |
+| felinorsvshumans-002 | M.O.T.H.E.R | Meets | Stats double 9/7 → 18/14 with Tribute 2 on both, and the cut on the chosen card rises (3) → (5); the cascade outward then runs five steps instead of three, about 2.8× the total discount on a full hand. |
+| felinorsvshumans-003 | KY's Pocket Galaxy | Meets | The same set to (2) on every card in your hand and deck, and the Radiant face also Replenishes your mana: an added rider. |
+| felinorsvshumans-004 | KY's Unification Mandate | Designer's word (effect half) | The set stats rise 5/5 → 8/8 (1.6×) for the board now and every later summon, short of 2×: the designer's printed numbers stand. |
+| felinorsvshumans-005 | Reanimator | Meets | Stats double 2/5 → 4/10, and the random Unit with a Death becomes a Discovered Radiant one (a choice of three, twice the stats), summoned before its Death runs. |
+| felinorsvshumans-006 | Overpaid Intern | Meets | Stats double 2/2 → 4/4 with Tradable on both, and the Cry Steals the enemy backrow card instead of destroying it: the card changes sides, a stronger effect. |
+| felinorsvshumans-007 | Whimsy! | Meets | The same Immune to Spells and Indestructible on a Unit, held for two turns instead of one (2×). |
+| felinorsvshumans-008 | Joy! | Meets | The same Cleave, Lifesteal and Pierce on a Unit, held for two turns instead of one (2×). |
+| felinorsvshumans-009 | Whimsy and Joy! | Meets | It adds a Radiant Whimsy! and a Radiant Joy! instead of plain ones, each lasting twice as long: about 2×. |
+| felinorsvshumans-010 | Shadow Judge | Designer's word (stat half) | The Cry widens from one permanent to it and the permanents beside it (a broader scope), but the stats rise only 4/3 → 6/4 (1.5× and 1.33×), below the stat half: the designer's printed numbers. |
+| felinorsvshumans-011 | Ban Hammer | Meets | Stats double 1/1 → 2/2, and the Radiant face adds Rush to Equip and Poisonous: a keyword more. |
+| felinorsvshumans-012 | Mr. Big | Meets | A vanilla Unit with no effect to raise; its stats triple 2/3 → 6/9. |
+| felinorsvshumans-013 | Mr. Small | Meets | A vanilla Unit with no effect to raise; its stats triple 20/20 → 60/60. |
+| felinorsvshumans-014 | Direwolf | Designer's word (effect half) | Stats double 7/2 → 14/4, but the keywords are the same on both faces (Rush, Frenzy, First Strike): none is added or strengthened. |
+| felinorsvshumans-015 | Unstable Magma-Cell | Meets | Stats double 5/5 → 10/10, and Brittle 2 → 3 keeps it on the field a turn longer: a lighter drawback. |
+| felinorsvshumans-016 | Travertine | Meets | The same Travertine Stacks (one, or six Embiggened), each a Radiant Stack instead of a plain one (twice the mana and Credits, and a Radiant Golem): about 2×. |
+| felinorsvshumans-016-1 | Travertine Stack | Meets | The mana rises 2 → 4 and the Credits 15 → 30 (2×), and the Golem it summons is a Radiant one. |
+| felinorsvshumans-016-2 | Travertine Golem | Designer's word (stat half) | Its Attack and Armor rise from your Float last turn to three times it (3×, under the same cap of 15), but its printed 0/5 stays 0/5, below the stat half: the designer's printed numbers. |
+| felinorsvshumans-017 | Jlockeed Shredder-14 | Meets | Stats double 16/22 → 32/44, the End of turn's damage rises 2 → 4 (2×) four times over, and the Radiant face adds Pierce; the Float line is on both faces. |
+| felinorsvshumans-018 | Villa-D Moneybags | Meets | Stats double 4/4 → 8/8, the raise to the max mana cap rises 2 → 4 (2×), and the two cards of (5) or more are Radiant ones. |
+| felinorsvshumans-019 | Trowel | Meets | The Activate's Wall of Bricks is a Radiant one (0/10, Brittle 2): twice the wall for the same use. |
+| felinorsvshumans-019-1 | Wall of Bricks | Meets | Health doubles 0/5 → 0/10 with Can't attack and Taunt on both faces, and Brittle 1 → 2 keeps it up a turn longer: a lighter drawback. |
+| felinorsvshumans-020 | Bomb | Meets | The Activate's Ticking Time Bomb is a Radiant one, whose blast spares your side: a stronger body for the same use. |
+| felinorsvshumans-020-1 | Ticking Time Bomb | Meets | Health doubles 0/2 → 0/4, the same 3 damage hits only enemies instead of both heroes and all Units, and Brittle 2 → 3: a lighter drawback on both counts. |
+| felinorsvshumans-021 | Scandalous Top Hat | Meets | The buff rises +1/+1 → +3/+3 (3×), and the hat it leaves behind is a Radiant one. |
+| felinorsvshumans-022 | The Mad Hatter | Meets | Stats double 2/4 → 4/8, and the Cry casts Radiant Top Hats (+3/+3) at your Units only instead of plain ones (+1/+1) at every Unit: 3× the buff, with the enemy's share gone. |
+| felinorsvshumans-023 | Book of Excavation | Meets | The same three random Stinkyscape Resources, Radiant ones instead of plain ones: a rider-level raise. |
+| felinorsvshumans-024 | Book of Starflight | Meets | The same Dormant Starship with two random Starship Pieces fused, Radiant pieces instead of plain ones: a rider-level raise. |
+| felinorsvshumans-025 | Book of Jade | Meets | The same Auspicious Rock and 66% chance of another, a Radiant Rock (Lucky 2 on its pick) instead of a plain one: a rider-level raise. |
+| felinorsvshumans-026 | Book of Entropy | Meets | The same two random Call to Chaos cards, Radiant ones (three effects each instead of one): about 3×. |
+| felinorsvshumans-027 | Book of Monstruo | Meets | A Radiant Chaos Golem instead of a plain one (twice the stats, Charge for Rush): about 2×. |
+| felinorsvshumans-028 | Book of Design Principles | Meets | The same two Goetzmann Game Designs, Radiant ones (each adding a Radiant card): a rider-level raise. |
+| felinorsvshumans-029 | Book of Legends | Meets | It adds three random Radiant Acclaimed cards instead of one (3×). |
+| felinorsvshumans-030 | Big Book | Meets | The same five random Books, Radiant ones, and each aims where it helps you instead of at random: a stronger effect and a rider. |
+| felinorsvshumans-031 | Desperate Plea | Meets | The heal rises 30 → 60 (2×), and the board it fills holds Radiant Legendaries instead of plain ones; the Float and 1-Health lines are on both faces. |
+| felinorsvshumans-032 | Refreshable Shop | Meets | The same Durability 3 reroll of your hand, every new card Radiant instead of one of them: several times the Radiant cards. |
+| felinorsvshumans-033 | Unstoppable Force | Meets | Stats double 50/50 → 100/100, and the Radiant face adds Windfury to Indestructible and Immune to Spells: a keyword more. |
+| felinorsvshumans-034 | Half-True Craft a Card | Designer's word (effect half) | It Discovers and fuses three cards instead of two into the free result (1.5×), short of 2×: the designer's printed numbers stand. |
+| felinorsvshumans-035 | Looksmaxxer | Meets | Stats double 1/1 → 2/2, the same copy of the highest Attack and Health, and the Radiant face then Buffs it twice: an added rider. |
+| felinorsvshumans-036 | Heartrock | Meets | The same Asteroid each end of turn you spend all your mana, a Radiant one instead of a plain one: a rider-level raise. |
+| felinorsvshumans-037 | Old Grum | Meets | Stats double 20/20 → 40/40 with GIGA and Reborn on both faces, and the Radiant face drops Untributable: a lighter drawback. |
+| felinorsvshumans-038 | Short Term Loan | Meets | The same 3 mana now, and the Overload falls 4 → 1: a much lighter drawback, which R275 counts as the upgrade. |
+| felinorsvshumans-039 | Whisperer of KY | Meets | Stats double 5/8 → 10/16, and the Cry shuffles three Cast on draw copies of each Spell instead of one (3×). |
+| felinorsvshumans-040 | Travel Master Drungar | Meets | Stats double 3/3 → 6/6 with Tribute 1 on both faces, the Units it Recruits become Radiant, and the Overload falls 4 → 2: a rider and a lighter drawback. |
+| felinorsvshumans-041 | Icecream Vender | Meets | Stats double 2/8 → 4/16, Durability rises 2 → 4 and the Activate's uses per turn 1 → 2 (2× each). |
+| felinorsvshumans-042 | Big Billy | Meets | Stats double 6/6 → 12/12; the shrink to 3/3 moves from your own side to the opponent's, so a Radiant Billy keeps his size on your side: a lighter drawback. |
+| felinorsvshumans-043 | Dragons Bain | Meets | Stats double 3/5 → 6/10, the End of turn's 5 damage lands twice instead of once (2×), and the Radiant face adds Pierce. |
+| felinorsvshumans-044 | Felinor Converter | Meets | Stats double 5/4 → 10/8 with Rush on both faces, and the Cry summons a copy of this instead of transforming another friendly Unit into one: a body more instead of a swap. |
+| felinorsvshumans-045 | Subject 9 | Meets | Stats double 5/5 → 10/10, and the same five Traps are Recruited (put on the field) instead of drawn, the shortfall summoned too: a broader effect for no mana. |
+| felinorsvshumans-046 | Manifestor | Meets | Stats double 2/1 → 4/2, and the two (2) Cost Units are Radiant ones (twice the stats each): about 2×. |
+| felinorsvshumans-047 | Blazing Battlemage | Designer's word (effect half) | The base Cry makes it Radiant, and the Radiant face is that result, a 3/3 with no text: stats triple 1/1 → 3/3 but the text is blank. R276 refuses a blank Radiant text on a card whose base face has one, so the face needs a ruling or a line before release. |
+| felinorsvshumans-048 | Toxic Timmy | Meets | Stats double 3/4 → 6/8, the Radiant face adds Rush to Poisonous, and the Discovered card is a Radiant one. |
+| felinorsvshumans-049 | Candle Master | Meets | Stats double 2/1 → 4/2, and the Candle Shot it summons is a Radiant one (twice the damage per use). |
+| felinorsvshumans-049-1 | Candle Shot | Meets | The same Pierce and Durability 3, and each Activate's damage rises 1 → 2 (2×). |
+| felinorsvshumans-050 | Field Kit | Meets | The Activate's damage rises 2 → 4 (2×), the Radiant face adds Pierce, and the Trap it summons is a Radiant one; Durability 2 on both faces. |
+| felinorsvshumans-051 | Scavengers Ingenuity | Meets | The same Felinor drawn from your deck, whose gift rises +3/+3 → +9/+9 (3×). |
+| felinorsvshumans-052 | Ace Hunter Jay | Meets | Stats double 2/4 → 4/8, the bonus against Felinors rises +3 → +6 (2×), and the Aura adds Rush to Ranged. |
+| felinorsvshumans-053 | Jay Sharp Shooter | Meets | Stats double 1/4 → 2/8, and each (1) Activate's Pierce damage rises 3 → 6 (2×). |
+| felinorsvshumans-054 | Intrepid initiate | Designer's word (stat half) | The gain rises +3 → +6 Attack (2×) and comes after every Spell instead of the first one only, but Attack stays 2 (2/3 → 2/6), below the stat half: the designer's printed numbers. |
+| felinorsvshumans-055 | Adorable Infestation | Meets | Echo 1 casts the same +1/+1, Felinor Token and Felinor Token in hand twice (2×). |
+| felinorsvshumans-056 | Pressure Plate | Meets | The same random enemy Unit destroyed, and the Radiant face takes the Units adjacent to it too: a broader scope. |
+| felinorsvshumans-057 | Otherworldly Hunting | Meets | The same Kill Command, Tackling and Felinor Companion, all Radiant: about 2× each. |
+| felinorsvshumans-057-1 | Kill Command | Meets | Its damage rises 3 → 6, or 5 → 10 with a Felinor (2× each). |
+| felinorsvshumans-057-2 | Tackling | Meets | The same look at three, keep one and discard the rest, and the kept card becomes Radiant: an added rider. |
+| felinorsvshumans-057-3 | Felinor Companion | Meets | The same random shaped Felinor, a Radiant one (twice the stats): about 2×. |
+| felinorsvshumans-057-4 | Wide Felinor | Designer's word (effect half) | Stats double 4/4 → 8/8, but its only text, Taunt, is the same on both faces: no keyword is added. |
+| felinorsvshumans-057-5 | Narrow Felinor | Designer's word (effect half) | Stats double 4/2 → 8/4, but its only text, Charge, is the same on both faces: no keyword is added. |
+| felinorsvshumans-057-6 | Square Felinor | Meets | Stats double 2/4 → 4/8, and the Aura on your other Units rises +1 → +2 Attack (2×). |
+| felinorsvshumans-058 | Call of the Shaped Felinors | Meets | The same three shaped Felinors, all Radiant (twice the stats each): about 2×. |
+| felinorsvshumans-059 | Voracious Reader | Meets | Stats double 1/3 → 2/6, the hand it refills to rises 3 → 4 cards, and the Radiant face adds Divine Shield: a keyword more on top. |
+| felinorsvshumans-060 | Toolmaster Luna | Meets | Stats double 2/4 → 4/8, and the chosen Tools are Radiant ones (three draws or Flashbacks instead of one). |
+| felinorsvshumans-060-1 | Tools of Creation | Meets | The draw after you play your rightmost card rises 1 → 3 (3×). |
+| felinorsvshumans-060-2 | Tools of Cremation | Meets | The Flashback after you play your leftmost card goes to three graveyard cards instead of one (3×). |
+| felinorsvshumans-061 | Devolve | Meets | Every enemy Unit becomes one costing (2) less instead of (1) less (2× the step down). |
+| felinorsvshumans-062 | Tubbs | Meets | Stats double 12/12 → 24/24, and the Dormant falls 3 → 2 turns: a lighter drawback. |
+| felinorsvshumans-063 | S-Tier Speciesist | Meets | Stats double 10/1 → 20/2 with the same Overload (2), and the Cry destroys only enemy non-Human cards instead of every one on the field: a lighter drawback. |
+| felinorsvshumans-064 | Fiender Artist | Meets | Stats double 3/4 → 6/8, and the Discovered (3)+ Cost Unit is a Radiant one: a rider-level raise. |
+| felinorsvshumans-065 | Felinor Forager | Meets | Stats double 2/1 → 4/2, and the Radiant face adds Reborn, so its Death's random Fruit comes twice: about 2×. |
+| felinorsvshumans-066 | Fuzzyfruit | Designer's word (effect half) | The text is the same on both faces (a random (1) Cost Felinor with +1/+1) and it prints no stats, so the Radiant face changes nothing. R276 refuses such a card, so the face needs a Radiant change before release. |
+| felinorsvshumans-067 | Big Game Hunter | Meets | Stats double 4/2 → 8/4, and the Cry destroys every enemy Unit with 7 or more Attack instead of one: a broader scope. |
+| felinorsvshumans-068 | Closeted Commentator | Meets | Stats double 3/1 → 6/2, and it evolves at once instead of waiting for a card to transform: the same Allure of every enemy Unit, sure to happen. |
+| felinorsvshumans-069 | Cosplayer | Meets | Stats double 2/2 → 4/4, the gain per other Felinor or Human rises +1/+1 → +2/+2 (2×), and the Radiant face adds Rush. |
+| felinorsvshumans-070 | Felinor Commander | Meets | Stats double 7/7 → 14/14 with the same Overload (4), the board fills with Radiant Felinors, and the Aura rises +2/+2 → +4/+4 (2×). |
+| felinorsvshumans-071 | Felinor Reanimator | Meets | Stats double 2/4 → 4/8, the Felinor it brings back becomes Radiant, and with none in the graveyard it summons a random Radiant one instead: two riders. |
+| felinorsvshumans-072 | Otherworldly Naturalism | Meets | The same Wild Growth, Swipe and Savage Roar, all Radiant (2× each) by FV0's call on the Radiant face: about 2×. |
+| felinorsvshumans-072-1 | Wild Growth | Meets | It gains two mana crystals instead of one (2×). |
+| felinorsvshumans-072-2 | Swipe | Meets | The damage rises 4 → 8 to the target and 1 → 2 to the rest (2×), with Pierce on both faces. |
+| felinorsvshumans-072-3 | Savage Roar | Meets | The Attack given to your Units rises +2 → +4 (2×), with Deft on both faces. |
+| felinorsvshumans-073 | Bloodforged Crusader | Meets | Stats double 3/2 → 6/4, the rest-of-game gift to your Humans rises +2/+2 → +4/+4 (2×), and the five Human Units shuffled in are Radiant ones. |
+| felinorsvshumans-074 | Yile, Acceleration Supremist | Designer's word (stat half) | Its Cry and Death add a Radiant Post Human Aesthetist and shuffle a Radiant Prime instead of plain ones, but the stats stay 2/6 → 2/6 (FV2 keeps the designer's numbers), below the stat half. |
+| felinorsvshumans-074-1 | Yile, Acceleration Supremist Prime | Meets | Stats double 9/5 → 18/10 with the same Overload (4) and (2) price, and the four Discovered Units it fuses are Radiant ones. |
+| felinorsvshumans-075 | Illinois Jones | Meets | Stats double 5/4 → 10/8, and the Cry Steals the enemy Field Spell instead of destroying it, with the same draw: a stronger effect. |
+| felinorsvshumans-076 | Desecrator | Meets | Stats double 1/1 → 2/2 with Crater on both faces, and the gain per exiled card rises +1/+1 → +2/+2 (2×). |
+| felinorsvshumans-077 | Anaphylaxis | Meets | The discount with a Felinor rises (2) → (3), and the Radiant face adds Flashback, so the same destroy can be cast twice: about 2×. |
+| felinorsvshumans-078 | Human Harbinger | Meets | Stats double 6/6 → 12/12 with Taunt on both faces, the Aura rises +2/+2 → +4/+4 (2×), and the Prime it shuffles in is a Radiant one. |
+| felinorsvshumans-078-1 | Human Harbinger Prime | Meets | Stats double 6/6 → 12/12 with Taunt and the same board of copies, and the Aura rises +2/+2 → +4/+4 (2×). |
+| felinorsvshumans-079 | Post Human Aesthetist | Meets | Stats double 2/8 → 4/16 with Can't attack on both faces, and the granted End of turn Steals a random enemy Unit at once instead of Alluring one: a stronger effect. |
+| felinorsvshumans-080 | Support Chinook | Meets | Stats double 2/7 → 4/14 with Flying and Ranged, Durability rises 3 → 6 and the draw and mana 1 → 2 (2× each), and the (2) Cost Human is a Radiant one. |
+| felinorsvshumans-081 | Old-Timer Catboy | Meets | Stats double 7/6 → 14/12, and the Cry Discovers a pair of combat keywords instead of one (2×) for the same Woozy. |
+| felinorsvshumans-082 | The Last Meow | Meets | The same exile and the same lose condition, and the board fills with Radiant Shrinking Felinors (twice the stats at each step): about 2×. |
+| felinorsvshumans-083 | Maomao | Meets | Stats double 2/1 → 4/2 with Toxic damage on both faces, and the random Potion is a Radiant one: a rider-level raise. |
+| felinorsvshumans-084 | 𓃠 | Meets | Stats double 1/1 → 2/2 with Reborn and the same 1 Jade, and the Radiant face adds Flashback, so it can be played again from the graveyard: a keyword more. |
+| felinorsvshumans-085 | Living Fire Potion | Meets | Stats double 4/2 → 8/4, and the Activate's Burn 2 to all enemies no longer Tributes it, so it can burn every turn: several times the effect. |
+| felinorsvshumans-086 | Living Poison Potion | Meets | Stats double 4/2 → 8/4, and the Activate's Toxic 2 to all enemy Units no longer Tributes it, so it can poison every turn: several times the effect. |
+| felinorsvshumans-087 | Baku's Bingeing | Meets | The same draw of every (1) Cost card and the same exile of even costs, and the mana gained rises 1 → 5 (5×). |
+| felinorsvshumans-088 | Cattail | Meets | Stats double 5/3 → 10/6, and the Radiant face adds Cleave to Flexible, Ranged and Pierce: a keyword more. |
+| felinorsvshumans-089 | GIGA Felinor | Designer's word (effect half) | Its only text, GIGA, is the same on both faces, and its stats triple 16/16 → 48/48 instead (above the stat half; FV2 keeps the designer's 48/48). |
+| felinorsvshumans-090 | Lone Defender | Designer's word (effect half) | Stats double 3/5 → 6/10, but the Cry (Taunt, Divine Shield, Lifesteal and Pierce when it stands alone) is the same on both faces: nothing is added. |
+| felinorsvshumans-091 | KY's Log Exp of the FFT | Meets | X rounds up to the next power of 2 (at least 2), so the formula's damage always reaches every enemy instead of one, and at a larger X: a broader scope and a larger term. |
+| felinorsvshumans-092 | KY's Patented Log 2 Utility | Meets | The same binary-digit Aura, read only where it helps you (your costs, the enemy's Attack and Health) instead of on every card: the drawback half is gone. |
+| felinorsvshumans-093 | Twin Tyrant | Meets | Stats double 4/10 → 8/20, the Cry's two hits rise 4 → 8 (2×), and the Radiant face adds Lucky 1. |
+| felinorsvshumans-094 | Bad Luck Felinor | Meets | Stats double 4/3 → 8/6, and the Radiant face adds Reborn, so its Death shuffles two Felinor Tokens into the opponent's deck twice: 2×. |
+| felinorsvshumans-095 | Platebreaker | Meets | Stats double 6/6 → 12/12, and the Pierce Aura on your cards becomes a rest-of-game gift that outlives it: a stronger effect. |
+| felinorsvshumans-096 | Magic Inclined Felinor | Meets | Stats double 3/5 → 6/10, Spell Damage rises +1 → +2 (2×), and the two (1) Cost Spells are Radiant ones. |
+| felinorsvshumans-097 | Paltry Felinor | Meets | Stats double 1/1 → 2/2, and its Death's Unit costs (4) instead of (3), Dormant the same 2 turns: a rider-level raise. |
+| felinorsvshumans-098 | Yarma | Meets | Stats double 1/3 → 2/6, and the Dream Portal and Yarma Prime it shuffles in are Radiant ones: a rider-level raise on each. |
+| felinorsvshumans-098-1 | Yarma Prime | Meets | Stats double 4/12 → 8/24, the seven Dream Portals are Radiant ones, and the Death draws two Dream Portals (each cast on draw) instead of two cards: a stronger draw. |
+| felinorsvshumans-098-2 | Dream Portal | Meets | The same Cast on draw summon, a Radiant Felinor instead of a plain one: a rider-level raise. |
+| felinorsvshumans-099 | Jlorewalker Cho | Meets | 0 attack stays 0 and health doubles 4 → 8, and each copy it shuffles in is a Radiant one: a rider-level raise. |
+| felinorsvshumans-100 | Call to Chaos (Felinors vs. Humans Edition) | Meets | Three different random effects instead of one (3×), resolved in the order listed, as on every Call to Chaos edition's Radiant face. |
+| felinorsvshumans-100-1 | Felinor Golem | Meets | Stats double 5/5 → 10/10, and the Radiant face adds Cleave to Rush and Reborn, so its Allure reaches more Units: a keyword more. |
+| felinorsvshumans-100-2 | Human Golem | Meets | Stats double 5/5 → 10/10 with Rush and Taunt on both faces, and the Aura on your other Humans rises +5/+5 → +10/+10 (2×). |
+| felinorsvshumans-101 | Dangerous Variant | Meets | Stats double 1/1 → 2/2, the Radiant face adds Divine Shield, and the (4) Cost Unit it becomes is a Radiant one. |
+| felinorsvshumans-102 | Diving Gryphon | Meets | Stats double 3/1 → 6/2 with Rush on both faces, and the Rush card its Death draws becomes Radiant: an added rider. |
+| felinorsvshumans-103 | Frantic Forager | Meets | Stats double 2/2 → 4/4, and the affordable Spell with Temporary 1 is a Radiant one: a rider-level raise. |
+| felinorsvshumans-104 | Dark Skies | Meets | Each hit rises 1 → 2 (2×) over the same two hits per card in hand, with Pierce and the Combo draw on both faces. |
+| felinorsvshumans-105 | Maddended Felinor | Meets | Stats double 12/12 → 24/24, and the Cry attacks only enemy Units instead of every other Unit: the friendly half of the drawback is gone. |
+| felinorsvshumans-106 | Rock Addict | Meets | Stats double 2/3 → 4/6, and the Radiant face adds an Auspicious Rock beside the Dud: a card more. |
+| felinorsvshumans-107 | KY, Himself | Designer's word (stat half) | The same hand swap, and the Radiant face cuts the cards you get by (1): an added rider; but the stats rise only 1/3 → 2/3, health below the stat half. |
+| felinorsvshumans-108 | Rush Token Boss | Meets | Stats double 8/10 → 16/20, and the two Rush Tokens it summons each end of turn are Radiant ones (twice the stats, and Cleave). |
+| felinorsvshumans-109 | Keymaster Kalabaster | Meets | Stats double 6/8 → 12/16, and each copy of the opponent's draws costs (0) instead of (1): a cheaper copy on every draw. |
+| felinorsvshumans-110 | Lord Jakrov | Meets | Stats double 3/2 → 6/4, the Cry's Fragile spares your own Units, and its Death casts a Radiant Whirlwind: a lighter drawback and a stronger rider. |
+| felinorsvshumans-111 | Vicious Fledgeling | Meets | Stats double 3/3 → 6/6, and each Endless Evolve Discovers two combat keywords instead of one (2×). |
+| felinorsvshumans-112 | Jilliax Deluxe | Meets | An X Unit printed 0/0 on both faces (its stats are its Modules'), and the two Modules it Discovers are Radiant ones (twice the stats or a keyword more each): about 2×. |
+| felinorsvshumans-112-1 | Recursion Module | Meets | Stats double 1/1 → 2/2 with Flashback on both faces, and the Radiant face drops the line that keeps a Flashback play from running its Cry: a lighter drawback. |
+| felinorsvshumans-112-2 | Durability Module | Meets | 0 attack stays 0, health doubles 1 → 2, and Armor rises 1 → 2 (2×). |
+| felinorsvshumans-112-3 | Haywire Module | Designer's word (effect half) | Stats double 2/2 → 4/4, but the End of turn's 3 damage to your hero is the same on both faces: the drawback is no lighter. |
+| felinorsvshumans-112-4 | Starpiece Module | Designer's word (effect half) | 0 attack stays 0 and health triples 1 → 3, but its only text, Starship Piece, is the same on both faces. |
+| felinorsvshumans-112-5 | Pylon Module | Meets | Stats double 2/2 → 4/4, and the Aura on your other Units rises +1/+1 → +2/+2 (2×). |
+| felinorsvshumans-112-6 | Power Module | Designer's word (effect half) | Stats double 1/3 → 2/6, but the Start of turn doubling of its Attack is the same on both faces. |
+| felinorsvshumans-112-7 | Heavy Module | Meets | A vanilla Module with no effect to raise; its stats triple 5/5 → 15/15. |
+| felinorsvshumans-112-8 | Utility Module | Meets | Stats double 3/1 → 6/2, and the Radiant face adds Deft to Pierce and Cleave: a keyword more. |
+| felinorsvshumans-112-9 | Twin Module | Meets | Stats double 3/3 → 6/6, and fusing it summons two copies of the fused card instead of one (2×). |
+| felinorsvshumans-112-10 | Viral Module | Meets | Stats double 2/5 → 4/10, and the Radiant face adds Immutable to Immune to Spells and Poisonous: a keyword more. |
+| felinorsvshumans-112-11 | Perfect Module | Meets | Stats double 3/2 → 6/4, and the Radiant face adds Reborn to Rush, Taunt, Lifesteal and Divine Shield: a keyword more. |
+| felinorsvshumans-112-12 | Debuff Module | Meets | Stats double 6/2 → 12/4, and its damage applies Toxic, which ticks every turn, instead of a Burn that ticks once: a stronger rider. |
+| felinorsvshumans-112-13 | Indestructible Module | Designer's word (effect half) | Its only text, Indestructible, is the same on both faces, and its stats rise tenfold 2/2 → 20/20 instead: the designer's numbers. |
+| felinorsvshumans-113 | Ball Knower | Meets | Stats double 1/1 → 2/2, the gain for picking the Unit from the past rises +3/+3 → +6/+6 (2×), and the Discovered Unit is a Radiant one. |
+| felinorsvshumans-114 | Kethspiracy | Meets | The same Starship Piece for every simple Human and Felinor card of yours, and the Radiant face also cuts their cost by (2): an added rider. |
+| felinorsvshumans-115 | Call to Chaos Vending Machine | Meets | The same Durability 3 random Call to Chaos, with no (2) to pay on the Radiant face: the same effect free, about 2× at its cost. |
+| felinorsvshumans-116 | Plagiarized: Spark Plug | Meets | Stats double 2/1 → 4/2 with Rush on both, and the Death's mana rises 1 → 2 (2×), so both halves meet R275. |
+| felinorsvshumans-117 | Plagiarized: Backdoor | Meets | It Steals two random cards from their hand instead of one (2×) when they play a Spell, so it meets R275. |
+| felinorsvshumans-118 | Plagiarized: Benchmark Run | Meets | The same copy of the highest enemy Attack and Health, and the Radiant face adds Rush, so the copied body can trade the turn it is set: an added rider. |
+| felinorsvshumans-119 | Plagiarized: Scrap Prototype | Meets | Stats double 2/2 → 4/4 (FV4), and the Death shuffles two copies instead of one (2×), each with +2/+2 instead of +1/+1 (2×), so both halves meet R275. |
+| felinorsvshumans-120 | Plagiarized: Crash Test Dummy | Meets | Stats double 1/6 → 2/12 with Taunt on both, and the Death's damage to the enemy hero rises 5 → 10 (2×), so both halves meet R275. |
+| felinorsvshumans-121 | Plagiarized: Compute Shard | Meets | Stats double 0/3 → 0/6, and the End of turn discount (FV4: IA #194's Start of turn) deepens to (2) less from (1) less (2×), so both halves meet R275. |
+| felinorsvshumans-122 | Plagiarized: Data Point | Meets | It Discovers two cards from the opponent's deck instead of one (2×), so it meets R275. |
+| felinorsvshumans-123 | Plagiarized: Doppelganger Protocol | Meets | The same copy of a random enemy Unit on both faces, whose Brittle fade runs slower 1 → 3 (about 3× the field life), so the Radiant copy fights longer. |
+| felinorsvshumans-124 | Plagiarized: False Positive | Meets | The same cancel-and-Freeze on an attacking enemy Unit on both faces, and the Radiant face sets a Figment besides: an added rider. |
+| felinorsvshumans-125 | Plagiarized: Fingerprinter | Meets | Stats double 1/3 → 2/6, and the Cry copies a card of your choice in the opponent's hand instead of a random Spell's: a targeted raise. |
+| felinorsvshumans-126 | Plagiarized: Generated Filler | Meets | The same two (1) Cost Temporary Units, which the Radiant face makes cost (0): a tangential rider, free bodies instead of (1) ones. |
+| felinorsvshumans-127 | Plagiarized: Glitch Specter | Meets | Stats double 3/1 → 6/2, and the Radiant face adds Lifesteal to the same conditional Evasive: one keyword more. |
+| felinorsvshumans-128 | Plagiarized: Moore's Law | Meets | The hand discount is the same (1) less, but the Radiant face covers every card in your hand instead of Units alone: a broader rider, so it meets R275. |
+| felinorsvshumans-129 | Plagiarized: Overflow Error | Meets | The damage to their hero rises 3 → 6 (2×) and they discard two random cards instead of one (2×); the third-card condition is the same on both faces. |
+| felinorsvshumans-130 | Plagiarized: Packet Sniffer | Meets | Stats double 2/2 → 4/4, and the Radiant Cry Nerfs a random card in the opponent's hand after the same look: an added rider. |
+| felinorsvshumans-131 | Plagiarized: Pattern Recognition | Meets | The same look at the top three with one exiled, and the copies rise one → two (2×), so it meets R275. |
+| felinorsvshumans-132 | Plagiarized: Pit Crew | Meets | Stats double 2/3 → 4/6, and the Cry's cut on your next Unit this turn deepens (2) → (3), so it meets R275. |
+| felinorsvshumans-133 | Plagiarized: Redundant Copy | Meets | The same copy of a friendly Unit that died on both faces, which the Radiant face gives +2/+2: a tangential rider on the body, so it meets R275. |
+| felinorsvshumans-134 | Plagiarized: Second Draft | Meets | The hand redraw is the same on both faces, and the extra draw rises plus one → plus two: more cards for the same discard, so it meets R275. |
+| felinorsvshumans-135 | Plagiarized: Seedling Mind | Meets | Stats double 1/2 → 2/4, and the End of turn gain rises +1/+1 → +2/+2 (2×), so both halves meet R275. |
+| felinorsvshumans-136 | Plagiarized: Swarm Shield | Meets | Three Radiant Workers (twice the stats) with Taunt instead of three plain ones: about 2× the bodies, so it meets R275. |
+| felinorsvshumans-137 | Plagiarized: Compute Cluster | Meets | The Start of turn gift to your Units rises +1/+1 → +2/+2 (2×), so it meets R275. |
+| felinorsvshumans-138 | Plagiarized: Burning Ambition | Meets | The 2 to your hero is the same and the mana gained each start of turn rises 1 → 2 (2×): the same price for twice the fuel, so it meets R275. |
+| felinorsvshumans-139 | Plagiarized: Callback | Meets | Stats double 3/4 → 6/8, and the Death adds two copies of the last Spell you played instead of one (2×), so both halves meet R275. |
+| felinorsvshumans-140 | Plagiarized: Cluster Drone | Meets | Stats double 3/2 → 6/4, and the Death's damage to every enemy Unit rises 2 → 4 (2×), so both halves meet R275. |
+| felinorsvshumans-141 | Plagiarized: Copycat Drone | Meets | Stats double 2/3 → 4/6, and the Cry's copy of the last Unit the opponent played is a Radiant one (twice the stats). |
+| felinorsvshumans-142 | Plagiarized: Core Dump | Meets | The same copy shuffled into your deck on both faces, a Radiant copy (twice the stats) on the Radiant face: about 2× the body banked, so it meets R275. |
+| felinorsvshumans-143 | Plagiarized: Deepfake | Meets | The same chosen-enemy copy on both faces, whose Brittle 2 fade is gone on the Radiant face: a lighter drawback as the upgrade. |
+| felinorsvshumans-144 | Plagiarized: Doomsday Clock | Meets | Stats double 0/8 → 0/16 with Can't attack on both faces, and the countdown's damage rises 20 → 40 (2×; FV4, IA #205's 10 → 20), so both halves meet R275. |
+| felinorsvshumans-145 | Plagiarized: Evolutionary Loop | Meets | Stats double 2/3 → 4/6, and the Evolve's gain rises +2/+2 → +4/+4 (2×) with Reborn on both faces, so both halves meet R275. |
+| felinorsvshumans-146 | Plagiarized: Emergent Behavior | Meets | The gift rises +1/+1 → +2/+2 per turn started (2×), so it meets R275. |
+| felinorsvshumans-147 | Plagiarized: Ground Truth | Meets | Stats double 3/5 → 6/10 with the same revealed hand on both faces, and the Radiant face hikes their cards (1) more: an added rider. |
+| felinorsvshumans-148 | Plagiarized: Honeypot Protocol | Meets | The same summoned Decoy Server with the attack redirected to it on both faces, Radiant ones (twice the stats) on the Radiant face: about 2×. |
+| felinorsvshumans-149 | Plagiarized: Inevitable | Meets | The End of turn gift rises +1/+1 → +2/+2 per turn on the field (2×), so it meets R275. |
+| felinorsvshumans-150 | Plagiarized: Merge Conflict | Meets | The same Fuse of two friendly Units, and the Radiant result has Rush and Divine Shield: added riders, so it meets R275. |
+| felinorsvshumans-151 | Plagiarized: Logic Bomb | Meets | Stats double 0/6 → 0/12 with Can't attack on both faces, and the countdown shortens to 2 turns from 3, so it meets R275. |
+| felinorsvshumans-152 | Plagiarized: Mana Leech | Meets | Stats double 2/4 → 4/8, and the Cry Steals two mana crystals instead of one (2×), so both halves meet R275. |
+| felinorsvshumans-153 | Plagiarized: Overclocked Core | Meets | Stats double 1/5 → 2/10; the (1) cut and the 1 to your hero are the same, and the Radiant face adds +1 Attack to your Units: an added rider, so it meets R275. |
+| felinorsvshumans-154 | Plagiarized: Patch Tuesday Exploit | Meets | It Nerfs every card in the opponent's hand twice instead of once (2×), so it meets R275. |
+| felinorsvshumans-155 | Plagiarized: Patient Machine | Meets | Stats double 5/6 → 10/12 with the same 1-turn Dormant, and the Radiant awakening deals 4 damage to a random enemy: an added rider, so it meets R275. |
+| felinorsvshumans-156 | Plagiarized: Prompt Engineer | Meets | Stats double 2/4 → 4/8; the Aura's (1) cut on Created cards, floored at (1), is the same, and the Radiant face adds +1/+1 to your Created Units: an added rider. |
+| felinorsvshumans-157 | Plagiarized: Prompt Injection | Meets | It scrambles the targets of the opponent's next two Spells instead of one (2×), so it meets R275. |
+| felinorsvshumans-158 | Plagiarized: Quickgen Turret | Meets | Stats double 2/5 → 4/10, Ranged on both, and the Start of turn's damage per Created card in your hand rises 1 → 2 (2×), so both halves meet R275. |
+| felinorsvshumans-159 | Plagiarized: Ransomware | Meets | The same Freeze on the played Unit on both faces, and the mana they lose next turn rises 1 → 2 (2×), so it meets R275. |
+| felinorsvshumans-160 | Plagiarized: Rate Limiter | Meets | Stats double 3/5 → 6/10, Taunt on both, and the cap tightens from three Units to two each turn: a stronger effect, so it meets R275. |
+| felinorsvshumans-161 | Plagiarized: Replica Hatchery | Meets | The same cheapest-Unit copy each end of turn, and the Radiant copy loses Brittle 1: a lighter drawback, which R275 counts as the upgrade. |
+| felinorsvshumans-162 | Plagiarized: Revenant Process | Meets | Stats double 4/2 → 8/4 with Reborn on both, and the Reborn return's gain rises +3/+3 → +6/+6 (2×), so both halves meet R275. |
+| felinorsvshumans-163 | Plagiarized: Scrape the Graveyard | Meets | It adds copies of three random cards in the opponent's graveyard instead of two: one more full card, so it meets R275. |
+| felinorsvshumans-164 | Plagiarized: Shadow Library | Meets | The same copy of a random card the opponent played last turn each start of turn, two copies instead of one (2×). |
+| felinorsvshumans-165 | Plagiarized: Synthetic Data | Meets | The same full hand of Temporary Infinite Assault cards, which the Radiant face makes cost (1) less: a tangential rider on every card it makes. |
+| felinorsvshumans-166 | Plagiarized: Thought Accelerator | Meets | Stats double 2/4 → 4/8, and the Cry that awakens your Dormant Units also gives them +2/+2 on Radiant: an added rider, so it meets R275. |
+| felinorsvshumans-167 | Plagiarized: Thermal Throttler | Meets | Stats double 3/6 → 6/12, and the Start of turn counts missing Health in 5s instead of 10s (2× the mana at any deficit) for the same 1 per step, so it meets R275. |
+| felinorsvshumans-168 | Plagiarized: Undo | Meets | The bounce taxes (1) more on the base face and (2) more on Radiant, which also draws a card: a heavier tax plus a rider, so it meets R275. |
+| felinorsvshumans-169 | Plagiarized: DDoS | Meets | The same Freeze on every enemy Unit on both faces, and the Radiant face deals 2 damage to them besides: an added rider. |
+| felinorsvshumans-170 | Plagiarized: Checkpoint Daemon | Meets | Stats double 2/6 → 4/12, the end-of-turn snapshot and Death restore on both faces, and the Radiant Death also gains 5 Armor: an added rider, so it meets R275. |
+| felinorsvshumans-171 | Plagiarized: Deep Crawler | Raised | Stats double 5/7 → 10/14 but the printed Radiant face adds no effect, so the Start of turn Discovers twice instead of once (2×) and the verdict is Raised. |
+| felinorsvshumans-172 | Plagiarized: Exponent | Meets | Stats double 2/2 → 4/4, and the Start of turn doubles Attack and Health instead of Attack alone (2× the stats), so both halves meet R275. |
+| felinorsvshumans-173 | Plagiarized: Ego Death | Meets | The same hand swap on both faces, whose taken cards cost ({discount}) 1 less on the base face and 2 less on Radiant (2× the cut). |
+| felinorsvshumans-174 | Plagiarized: Mirror Firewall | Raised | Stats double 2/8 → 4/16, Taunt on both, and the Radiant face deals back twice the damage taken instead of the damage taken: a stronger effect at the card's role, so it is raised. |
+| felinorsvshumans-175 | Plagiarized: Ouroboros Engine | Meets | Stats double 5/5 → 10/10, the Death shuffles your graveyard into your deck on both faces, and the Radiant face draws two cards besides: an added rider, so it meets R275. |
+| felinorsvshumans-176 | Plagiarized: Privilege Escalation | Meets | It Steals a (3) Cost or less enemy Unit instead of a (2) one, a wider cast over the same single steal, so it meets R275. |
+| felinorsvshumans-177 | Plagiarized: Overparameterized | Raised | Stats double 6/6 → 12/12, and the Radiant face cuts (2) less per other Unit instead of (1) (2×): a better line, so it meets R275 with the raise. |
+| felinorsvshumans-178 | Plagiarized: Phantom Army | Meets | The same full board of Phantoms on both faces, Radiant ones (twice the stats) on the Radiant face: about 2×. |
+| felinorsvshumans-179 | Plagiarized: Rerun | Meets | It casts the last four Spells you played instead of three at random targets: one more full Spell, so it meets R275. |
+| felinorsvshumans-180 | Plagiarized: Rollback Point | Meets | The same three most-expensive dead-friendly copies on both faces, which the Radiant face gives Rush: an added rider, so it meets R275. |
+| felinorsvshumans-181 | Plagiarized: Social Engineer | Meets | Stats double 4/6 → 8/12, and the Cry takes the highest-Attack enemy Unit instead of a random one: a targeted raise. |
+| felinorsvshumans-182 | Plagiarized: Takeoff | Meets | The same doubling of a friendly Unit's Attack and Health, and the Radiant face adds Rush, so the doubled body can attack at once: an added rider. |
+| felinorsvshumans-183 | Plagiarized: Zero Trust | Meets | The Defense Position Aura's Health rises +0/+3 → +0/+6 (2×) with Immune to Spells on both faces, so it meets R275. |
+| felinorsvshumans-184 | Plagiarized: Assault Mainframe | Meets | Stats double 6/10 → 12/20, Taunt on both, and the Aura on your Created Units rises +2/+2 → +4/+4 (2×), so both halves meet R275. |
+| felinorsvshumans-185 | Plagiarized: Bastion.exe | Meets | Stats double 4/16 → 8/32, the Armor thickens 5 → 10, and the same hero immunity Aura holds on both faces, so it meets R275. |
+| felinorsvshumans-186 | Plagiarized: Clone Vat | Meets | The same random-enemy copy each end of turn, and the Radiant copy loses Brittle 2: a lighter drawback, which R275 counts as the upgrade. |
+| felinorsvshumans-187 | Plagiarized: Dream Within a Dream | Meets | The same copy of every enemy Unit on both faces, whose Brittle fade runs slower 1 → 2 (about 2× the field life), so the Radiant copies fight longer. |
+| felinorsvshumans-188 | Plagiarized: Eternal Return | Meets | The same shuffle of every card played into your deck at ({discount}) less, (1) → (2) (2× the cut), and the draw rises three → four cards, so it meets R275. |
+| felinorsvshumans-189 | Plagiarized: Emergent Mind | Meets | Stats double 4/4 → 8/8, and the Start of turn gain rises +1/+1 → +2/+2 per card played last turn (2×), so both halves meet R275. |
+| felinorsvshumans-190 | Plagiarized: Gestalt | Meets | Stats double 2/2 → 4/4, and the same fuse-everything Cry then gains Rush and Divine Shield on the Radiant face: added riders, so both halves meet R275. |
+| felinorsvshumans-191 | Plagiarized: Everything You've Ever Played | Meets | A board of Radiant copies (twice the stats) of random Units the opponent played instead of plain ones: about 2×, so it meets R275. |
+| felinorsvshumans-192 | Plagiarized: Loopback, Who Returns | Meets | Stats double 6/6 → 12/12, Reborn on both faces, and the return's gain rises +3/+3 → +6/+6 (2×) with Reborn granted again, up to three times a game on both faces, so both halves meet R275. |
+| felinorsvshumans-193 | Plagiarized: Matrioshka Brain | Raised | Stats double 10/20 → 20/40 with GIGA and Taunt on both, and the Radiant face adds Divine Shield: one keyword more on a keyword-only unit, which meets R275 with the raise. |
+| felinorsvshumans-194 | Plagiarized: Model Collapse | Meets | Stats double 7/7 → 14/14, and the Start of turn Nerfs every enemy Unit and every card in the opponent's hand twice instead of once (2×), so both halves meet R275. |
+| felinorsvshumans-195 | Plagiarized: Phoenix Protocol | Raised | Stats double 7/7 → 14/14 but the printed Radiant face adds no effect, so the Cry also grants Divine Shield besides Reborn and the verdict is Raised. |
+| felinorsvshumans-196 | Plagiarized: Singularity | Meets | Stats double 0/30 → 0/60 with Taunt, Can't attack and Immutable (FV4) on both faces, and the countdown shortens to 4 turns from 5, so it meets R275. |
+| felinorsvshumans-197 | Plagiarized: The Long Game | Raised | Stats double 8/8 → 16/16 with the same 2-turn Dormant, and the Radiant awakening destroys every enemy Unit and draws a card: a better line, so it meets R275 with the raise. |
 | infiniteassault-001 | Seed Drone | Meets | Stats double 2/2 → 4/4, and the Cry's random card is a Rare one instead of a Common one, a rider-level raise. |
 | infiniteassault-002 | Scrap Prototype | Meets | Stats double 1/2 → 2/4, and the Death shuffles two copies instead of one (2×), each with +2/+2 instead of +1/+1 (2×), so both halves meet R275. |
 | infiniteassault-003 | Assault Trooper | Meets | Stats double 3/2 → 6/4, and the Radiant face adds First Strike to Rush: one keyword more on a keyword-only unit, which meets R275. |

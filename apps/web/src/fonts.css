@@ -161,11 +161,21 @@
   line-gap-override: 0%;
 }
 
+/* R5264500: Felinors vs Humans #84's name is one Egyptian hieroglyph, 𓃠 (U+130E0), which neither web face nor the
+   old system stacks hold. This names the systems' own faces that do, for that block alone (its unicode-range), so
+   no other text moves: Noto Sans Egyptian Hieroglyphs (macOS, iOS, Android, ChromeOS and the Linux desktops' Noto)
+   and Segoe UI Historic (Windows 10 and later). No file is shipped for it. */
+@font-face {
+  font-family: "Hieroglyphs Fallback";
+  src: local("Noto Sans Egyptian Hieroglyphs"), local("NotoSansEgyptianHieroglyphs-Regular"), local("Segoe UI Historic"), local("SegoeUIHistoric");
+  unicode-range: U+13000-1345F;
+}
+
 :root {
-  /* The display face, then its fallback, then the old system stack for anything outside Latin. */
-  --font-display: "Alegreya", "Alegreya Fallback", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  /* The display face, then its fallback, then (R5264500) the hieroglyphs', then the old system stack for anything outside Latin. */
+  --font-display: "Alegreya", "Alegreya Fallback", "Hieroglyphs Fallback", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
   /* The text face, likewise. */
-  --font-text: "Inter", "Inter Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-text: "Inter", "Inter Fallback", "Hieroglyphs Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   /* The code face: the system's own monospace, which no file is shipped for. */
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   /* R2655003: the signature face, then the systems' own script faces. */
