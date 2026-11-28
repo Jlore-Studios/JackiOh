@@ -21704,17 +21704,26 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-4",
+        "built_by": "claude-8",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "crates/ai/src/evaluate.rs",
+            "spec/09-architecture/9.9-practice-ai.md"
+          ],
+          "from": "d24d9bd58a0e135490205869970ebcad127a426b",
+          "main": "9264821f309524d89bf3b5594ceda24366fddefe"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "provider": "claude-4",
-            "run": "46111782759",
+            "provider": "claude-8",
+            "run": "46122639092",
             "tier": "strong"
           }
         ],
-        "sha": "d24d9bd58a0e135490205869970ebcad127a426b",
+        "sha": "95196720e3dfffd80e3a75d7605e5525dc2922c5",
         "tiers": {
           "claude": "strong"
         }
