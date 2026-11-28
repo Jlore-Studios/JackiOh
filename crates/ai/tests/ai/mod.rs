@@ -52,6 +52,7 @@ pub mod marketplace;
 pub mod match_refusal;
 pub mod match_setup;
 pub mod meditative_plus;
+pub mod nerf_misfire;
 pub mod observe;
 pub mod observe_instance_data;
 pub mod outside_data;
