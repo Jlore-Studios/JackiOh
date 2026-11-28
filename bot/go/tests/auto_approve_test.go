@@ -5,6 +5,7 @@
 package tests
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -354,4 +355,122 @@ func TestAutoApprove_WithNoCapEveryOneTheJudgeApprovesGoesAhead(t *testing.T) {
 	for n := 60; n < 65; n++ {
 		assertNotIn(t, config.LabelSuggestion, h.gh.LabelNames(n))
 	}
+}
+
+// ---------------------------------------------------------------------------- RejudgeTests (#5104)
+
+// autoSurveyJudges is a survey that suggests `titles`, and a judge whose calls answer `judges` in
+// order, the last answering every call after.
+func autoSurveyJudges(judges []string, titles ...string) *runner.FakeRunner {
+	items := []string{}
+	for _, title := range titles {
+		items = append(items, pyjson.Dumps(pyjson.New("title", title, "body", "## Why\nx", "class", "ai")))
+	}
+	handlers := map[string][]runner.Handler{
+		"suggest": {workReviewer("<!-- suggestions: [" + strings.Join(items, ",") + "] -->")}}
+	for _, judged := range judges {
+		handlers["judge"] = append(handlers["judge"], workReviewer(judged))
+	}
+	return runner.NewFakeRunner(handlers)
+}
+
+// unjudged adds open suggestion `number`, opened with no judge's word in its footer.
+func unjudged(h *flowHarness, number int, title string) {
+	h.gh.AddIssue(number, fakes.Issue{Title: title, Labels: []string{config.LabelSuggestion},
+		Body: "## Why\nIt fixes a thing.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty."})
+}
+
+func commentsOn(h *flowHarness, number int) string {
+	bodies := []string{}
+	for _, c := range h.ctx.GH.ListComments(number, 100) {
+		bodies = append(bodies, c.Str("body"))
+	}
+	return strings.Join(bodies, "\n\n")
+}
+
+func TestAutoApprove_TheJudgeTriesAgainForWhatItLeftUnanswered(t *testing.T) {
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll})
+	testsupport.IdleFor(h.ctx)
+	r := autoSurveyJudges([]string{
+		`<!-- judgements: [{"n": 1, "verdict": "approve", "why": "A rules bug, confirmed at a.rs:1."}] -->`,
+		`<!-- judgements: [{"n": 1, "verdict": "person", "why": "A design call."}] -->`},
+		"Patch: the first idea", "Patch: the second idea")
+	h.night(r)
+	roles := []string{}
+	for _, c := range r.Calls {
+		roles = append(roles, c.Role)
+	}
+	assertEqual(t, roles, []string{"suggest", "judge", "judge"})
+	retry := r.Calls[2].Prompt
+	assertIn(t, "### Suggestion 1: Patch: the second idea", retry)
+	assertNotIn(t, "Patch: the first idea", retry)
+	byTitle := map[string]*pyjson.Object{}
+	for _, thread := range h.gh.Threads.Values() {
+		byTitle[pyjson.Str(thread.Get("title"))] = thread
+	}
+	assertIn(t, "**Judge:** would approve it: A rules bug, confirmed at a.rs:1",
+		byTitle["Patch: the first idea"].Str("body"))
+	assertIn(t, "**Judge:** leaves it to a person: A design call.", byTitle["Patch: the second idea"].Str("body"))
+}
+
+func TestAutoApprove_ALaterSurveyJudgesASuggestionOpenedWithoutAVerdict(t *testing.T) {
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll})
+	unjudged(h, 70, "Patch: an idea the judge never answered")
+	testsupport.IdleFor(h.ctx)
+	r := autoSurveyJudges([]string{
+		`<!-- judgements: [{"n": 1, "verdict": "approve", "why": "Confirmed at b.rs:2."}] -->`,
+		`<!-- judgements: [{"n": 1, "verdict": "person", "why": "A design call."}] -->`},
+		"Patch: a new idea")
+	h.night(r)
+	first := r.Calls[0]
+	assertEqual(t, first.Role, "judge") // before the survey's own work
+	assertIn(t, "Patch: an idea the judge never answered (already open as #70)", first.Prompt)
+	assertNotIn(t, "Patch: a new idea", first.Prompt)
+	comments := commentsOn(h, 70)
+	assertIn(t, "**Judge:** would approve it: Confirmed at b.rs:2. It opened before the judge could answer, "+
+		"so it is approved by itself now, at `priority:low`.", comments)
+	assertIn(t, plan.JudgeMarker, comments)
+	assertIn(t, "Approved by itself: the judge, which argues against every suggestion", comments)
+	labels := h.gh.LabelNames(70)
+	assertIn(t, config.LabelBuild, labels)
+	assertNotIn(t, config.LabelSuggestion, labels)
+	assertEqual(t, len(plan.Unjudged(h.ctx)), 0)
+}
+
+func TestAutoApprove_AfterThreeTriesTheJudgeLeavesItToAPerson(t *testing.T) {
+	h := newFlowHarness(t, flowHarnessOpts{Env: crossAll})
+	unjudged(h, 71, "Patch: an idea no judge can answer")
+	for night := 1; night <= plan.RejudgeTries; night++ {
+		testsupport.IdleFor(h.ctx)
+		h.night(autoSurvey("", fmt.Sprintf("Patch: night %d's idea", night))) // no judge: each call fails
+		if night < plan.RejudgeTries {
+			assertNotIn(t, "could not answer", commentsOn(h, 71))
+		}
+	}
+	assertIn(t, "**Judge:** could not answer after 3 tries, so this suggestion waits for a person's vote",
+		commentsOn(h, 71))
+	assertIn(t, config.LabelSuggestion, h.gh.LabelNames(71))
+	for _, left := range plan.Unjudged(h.ctx) {
+		assertTrue(t, left.Int("number") != 71, "#71 is left to a person, not judged again")
+	}
+	assertTrue(t, !h.ctx.Store.Load().Obj("suggest").Obj("judge_tries").Has("71"), "its tries are forgotten")
+}
+
+func TestAutoApprove_UnjudgedSkipsTheJudgedAndTheHeld(t *testing.T) {
+	h := newFlowHarness(t)
+	h.gh.AddIssue(80, fakes.Issue{Title: "Judged as it opened", Labels: []string{config.LabelSuggestion},
+		Body: "## Why\nx\n\n---\nSuggested by @jgoetzmann-bot.\n\n**Judge:** leaves it to a person: no."})
+	for n := 81; n <= 87; n++ {
+		unjudged(h, n, "Idea "+strconv.Itoa(n))
+	}
+	h.ctx.GH.CreateComment(81, "**Judge:** leaves it to a person.\n\n"+plan.JudgeMarker)
+	h.gh.AddComment(82, "Let me think about this one.")
+	h.gh.Threads.Item(83).Set("reactions", pyjson.New("+1", 0, "-1", 1))
+	left := plan.Unjudged(h.ctx)
+	numbers := []int{}
+	for _, l := range left {
+		numbers = append(numbers, l.Int("number"))
+	}
+	assertEqual(t, numbers, []int{84, 85, 86}) // oldest first, at most RejudgeMax
+	assertEqual(t, left[0].Str("body"), "## Why\nIt fixes a thing.")
 }

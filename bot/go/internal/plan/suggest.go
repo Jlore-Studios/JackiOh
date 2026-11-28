@@ -174,6 +174,8 @@ func SuggestionPlan(ctx *hctx.Context, lanes *Lanes, force bool, quietOK string 
 		"declined", prompts.Data(declined.Lines(state), "Suggestions that came to nothing"),
 		// The judge's rolling window (`suggestions.auto_approve.window`, `prompts/judge.md`).
 		"decided", prompts.Data(declined.DecidedLines(state, cfg.AutoApprove.Window), "Recent decisions on suggestions"),
+		// The open suggestions an earlier judge never answered, judged first (#5104, `Unjudged`).
+		"rejudge", pyjson.ListOf(Unjudged(ctx)),
 		"forced", force,
 		"was_requested", wasRequested,
 		"previous_last_run", previous.Get("last_run"),

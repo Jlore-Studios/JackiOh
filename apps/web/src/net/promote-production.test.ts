@@ -380,7 +380,7 @@ describe("the production issue", () => {
     for (const command of ["`/promote`", "`/promote <sha>`", "`/skip-super <reason>`", "`/cancel`"]) {
       expect(only?.body).toContain(`| ${command} |`);
     }
-    expect(only?.body).toContain("**Next for production:** the next daily full test run (super) on `_staging` that passes every job puts the commit it tested live.");
+    expect(only?.body).toContain("**Next for production:** the next daily full test run (super) on `_staging` that passes every gating job puts the commit it tested live.");
     expect(only?.body).toContain("### How the sites move");
     expect(only?.body).toContain(
       "- **Staging** moves by itself every two hours: the `_staging` branch takes `main`'s newest commit whose checks (`ci.yml`) passed, and the site deploys it. While the full test run on `_staging` is red it holds still, until the night bot's fix closes \"CI: daily super run failed\"; then it takes `main`'s first green commit after that, and the full test run starts on it at once.",
@@ -531,12 +531,12 @@ describe("the daily promotion", () => {
     expect(r.output).toContain("promoted=true");
     const p = pr(w, 2);
     expect(p).toMatchObject({ base: "_production", state: "closed", merged: true, labels: [LABEL, "human"], assignees: PEOPLE });
-    expect(p.body).toContain("The daily promotion: the super run on `_staging` passed every job on this commit ([run](https://github.com/acme/game/actions/runs/501)), so this merges at once");
+    expect(p.body).toContain("The daily promotion: the super run on `_staging` passed every gating job on this commit ([run](https://github.com/acme/game/actions/runs/501)), so this merges at once");
     expect(p.body).toContain("- Started by: the daily promotion\n");
     expect(tree(w, "_production")).toBe(tree(w, w.sha.c3 as string));
     expect(git(w.origin, "for-each-ref", "refs/heads/promote")).toBe("");
     expect(lastReply(w)).toContain(
-      `Merged to production in #2, the daily promotion: the super run on \`_staging\` passed every job on \`${short(w.sha.c3, 12)}\` ([run](https://github.com/acme/game/actions/runs/501)). 2 commit(s), catalog v0.2.0b; the deploy follows.`,
+      `Merged to production in #2, the daily promotion: the super run on \`_staging\` passed every gating job on \`${short(w.sha.c3, 12)}\` ([run](https://github.com/acme/game/actions/runs/501)). 2 commit(s), catalog v0.2.0b; the deploy follows.`,
     );
     expect(daily(issue(w, 1))).toBe("501");
     expect(issue(w, 1).title).toBe("Production: everything on main is live");
@@ -731,7 +731,7 @@ describe("the super run", () => {
     expect(tree(w, "_production")).toBe(tree(w, w.sha.c3 as string));
     expect(git(w.origin, "rev-list", "--parents", "-n1", "_production").split(" ")).toHaveLength(3);
     expect(git(w.origin, "for-each-ref", "refs/heads/promote")).toBe("");
-    expect(lastReply(w)).toContain(`Merged to production in #2: the super run passed every job on \`${short(w.sha.c3, 12)}\` ([run](https://github.com/acme/game/actions/runs/77)). 2 commit(s), catalog v0.2.0b`);
+    expect(lastReply(w)).toContain(`Merged to production in #2: the super run passed every gating job on \`${short(w.sha.c3, 12)}\` ([run](https://github.com/acme/game/actions/runs/77)). 2 commit(s), catalog v0.2.0b`);
     expect(issue(w, 1)).toMatchObject({ state: "open", title: "Production: everything on main is live" });
     expect(gh(w).issues).toHaveLength(1);
   });
@@ -1359,6 +1359,8 @@ if (pos[0] === "api") {
   const DAILY = setting("DAILY_TITLE");
   const CANDIDATE = setting("CANDIDATE_TITLE");
   const BOT = setting("BOT_LOGIN");
+  const FINDINGS = setting("FINDINGS_TITLE");
+  const REPORT_ONLY = setting("REPORT_ONLY_JOBS");
 
   const dirs: string[] = [];
   afterEach(() => {
@@ -1397,6 +1399,8 @@ if (pos[0] === "api") {
         DAILY_TITLE: DAILY,
         CANDIDATE_TITLE: CANDIDATE,
         BOT_LOGIN: BOT,
+        REPORT_ONLY_JOBS: REPORT_ONLY,
+        FINDINGS_TITLE: FINDINGS,
         STAGING_BRANCH: "_staging",
       },
     });
@@ -1405,6 +1409,7 @@ if (pos[0] === "api") {
   }
 
   const FUZZ = [{ name: "fuzz (1/4)", status: "completed", conclusion: "failure", html_url: "https://github.com/acme/game/actions/runs/88/job/1" }];
+  const E2E = [{ name: "e2e (3/8)", status: "completed", conclusion: "failure", html_url: "https://github.com/acme/game/actions/runs/88/job/2" }];
   const handed = (i: ReportIssue): boolean =>
     i.assignees.some((a) => a.login === BOT) && ["bot:build", "priority:high", "difficulty:hard"].every((l) => i.labels.includes(l));
 
@@ -1412,38 +1417,111 @@ if (pos[0] === "api") {
     expect(DAILY).toBe("CI: daily super run failed");
     expect(CANDIDATE).toBe("CI: super run failed on a production candidate");
     expect(BOT).toBe("jgoetzmann-bot");
+    expect(FINDINGS).toBe("CI: super run's report-only jobs failed");
     expect(STEP).toContain("set -euo pipefail");
   });
 
+  // #5287: the report-only jobs, which leave the run green when they fail (the header), are the jobs
+  // REPORT_ONLY_JOBS names, so a job never holds production without the report calling it gating, nor
+  // the reverse.
+  it("names in REPORT_ONLY_JOBS exactly the jobs that carry continue-on-error", () => {
+    const jobs = SUPER.slice(SUPER.indexOf("\njobs:\n"));
+    const blocks = jobs.split(/^ {2}(?=[a-z0-9-]+:$)/mu).slice(1);
+    const named = (block: string): string => (/^ {4}name: ([^\n]+)$/mu.exec(block)?.[1] ?? "").replace(/ \(.*$/u, "");
+    const lenient = blocks.filter((b) => /^ {4}continue-on-error: true\b/mu.test(b)).map(named);
+    expect([...new Set(lenient)].sort()).toEqual(REPORT_ONLY.split(",").sort());
+    expect(lenient).toEqual(expect.arrayContaining(["fuzz", "ai gates", "daily tests", "coverage", "notebooks"]));
+    for (const gating of ["release build", "wasm and client build", "golden check", "e2e", "e2e component", "web", "db", "report"]) {
+      expect(lenient, gating).not.toContain(gating);
+    }
+  });
+
+  it("reports a report-only failure on its own issue for the bot, and closes staging's: production waits on nothing", () => {
+    const r = report("staging", false, { issues: [open(4, DAILY, [BOT])], jobs: FUZZ });
+    expect(r.status, r.output).toBe(0);
+    expect(r.state.issues.map((i) => [i.number, i.title, i.state])).toEqual([[4, DAILY, "closed"], [5, FINDINGS, "open"]]);
+    const findings = r.state.issues[1] as ReportIssue;
+    expect(handed(findings)).toBe(true);
+    expect(findings.comments[0]).toContain("[fuzz (1/4)](https://github.com/acme/game/actions/runs/88/job/1)");
+    expect(findings.comments[0]).toContain("These jobs hold neither `_staging` nor production");
+    expect(r.state.issues[0]?.comments.at(-1)).toContain("passed every gating job.");
+  });
+
+  it("calls a run red only for a gating job, whatever `needs` reads for a report-only one", () => {
+    // Were `needs` to read a report-only job's failure as `failure`, RESULTS would hold it: still not red.
+    const r = report("staging", true, { issues: [], jobs: FUZZ });
+    expect(r.status, r.output).toBe(0);
+    expect(r.state.issues.map((i) => i.title)).toEqual([FINDINGS]);
+  });
+
+  it("comments on the open findings issue when report-only jobs fail again, and keeps who has it", () => {
+    const r = report("promotion", false, { issues: [open(7, FINDINGS, ["someone"])], jobs: FUZZ });
+    expect(r.status, r.output).toBe(0);
+    expect(r.state.issues).toHaveLength(1);
+    expect(r.state.issues[0]?.comments).toHaveLength(1);
+    expect(r.state.issues[0]?.comments[0]).toContain("on #9, the promotion of `44439387f000` into production, found failures");
+    expect(r.state.issues[0]?.labels).toEqual([]);
+  });
+
+  it("reports a gating failure and a report-only one each on its own issue, listing each job once", () => {
+    const r = report("staging", true, { issues: [], jobs: [...E2E, ...FUZZ] });
+    expect(r.status, r.output).toBe(0);
+    expect(r.state.issues.map((i) => i.title).sort()).toEqual([DAILY, FINDINGS].sort());
+    const daily = r.state.issues.find((i) => i.title === DAILY) as ReportIssue;
+    const findings = r.state.issues.find((i) => i.title === FINDINGS) as ReportIssue;
+    expect(daily.comments[0]).toContain("[e2e (3/8)]");
+    expect(daily.comments[0]).not.toContain("fuzz (1/4)");
+    expect(findings.comments[0]).toContain("[fuzz (1/4)]");
+    expect(findings.comments[0]).not.toContain("e2e (3/8)");
+    expect(handed(daily) && handed(findings)).toBe(true);
+  });
+
+  it("closes the findings issue on a run whose report-only jobs all pass, and never on a red one", () => {
+    const red = report("staging", true, { issues: [open(7, FINDINGS, [BOT])], jobs: [{ ...E2E[0], name: "release build" }] });
+    expect(red.status, red.output).toBe(0);
+    expect(red.state.issues.find((i) => i.number === 7)?.state).toBe("open");
+    const green = report("staging", false, { issues: [open(7, FINDINGS, [BOT])], jobs: [] });
+    expect(green.status, green.output).toBe(0);
+    expect(green.state.issues.map((i) => [i.number, i.state])).toEqual([[7, "closed"]]);
+    expect(green.state.issues[0]?.comments.at(-1)).toContain("passed every report-only job.");
+  });
+
+  it("calls a red result the API lists no job for red, with the run's link standing in", () => {
+    const r = report("staging", true, { issues: [], jobs: [] });
+    expect(r.status, r.output).toBe(0);
+    expect(r.state.issues.map((i) => i.title)).toEqual([DAILY]);
+    expect(r.state.issues[0]?.comments[0]).toContain("| [the run](https://github.com/acme/game/actions/runs/88) | a job did not pass; see the run |");
+  });
+
   it("reports a red promotion on staging's open issue, opening no issue of its own", () => {
-    const r = report("promotion", true, { issues: [open(4, DAILY, [BOT])], jobs: FUZZ });
+    const r = report("promotion", true, { issues: [open(4, DAILY, [BOT])], jobs: E2E });
     expect(r.status, r.output).toBe(0);
     expect(r.state.issues.map((i) => i.title)).toEqual([DAILY]);
     const daily = r.state.issues[0] as ReportIssue;
     expect(daily.comments).toHaveLength(1);
     expect(daily.comments[0]).toContain("on #9, the promotion of `44439387f000` into production, failed:");
-    expect(daily.comments[0]).toContain("[fuzz (1/4)](https://github.com/acme/game/actions/runs/88/job/1)");
+    expect(daily.comments[0]).toContain("[e2e (3/8)](https://github.com/acme/game/actions/runs/88/job/2)");
     expect(daily.comments[0]).toContain("one red `_staging`, one issue, one fix");
     // Already the bot's: nothing is added.
     expect(daily.labels).toEqual([]);
   });
 
   it("hands staging's open issue to the bot when a red promotion reports on it and nobody has it", () => {
-    const r = report("promotion", true, { issues: [open(4, DAILY)], jobs: FUZZ });
+    const r = report("promotion", true, { issues: [open(4, DAILY)], jobs: E2E });
     expect(r.status, r.output).toBe(0);
     expect(r.state.issues).toHaveLength(1);
     expect(handed(r.state.issues[0] as ReportIssue)).toBe(true);
   });
 
   it("opens a red promotion's own issue for the bot when staging has none open", () => {
-    const r = report("promotion", true, { issues: [], jobs: FUZZ });
+    const r = report("promotion", true, { issues: [], jobs: E2E });
     expect(r.status, r.output).toBe(0);
     expect(r.state.issues.map((i) => i.title)).toEqual([CANDIDATE]);
     expect(handed(r.state.issues[0] as ReportIssue)).toBe(true);
   });
 
   it("takes a promotion's open issue over for a red run on staging, retitled so the freeze finds it", () => {
-    const r = report("staging", true, { issues: [open(5, CANDIDATE, [BOT])], jobs: FUZZ });
+    const r = report("staging", true, { issues: [open(5, CANDIDATE, [BOT])], jobs: E2E });
     expect(r.status, r.output).toBe(0);
     expect(r.state.issues.map((i) => [i.number, i.title])).toEqual([[5, DAILY]]);
     const taken = r.state.issues[0] as ReportIssue;
@@ -1454,7 +1532,7 @@ if (pos[0] === "api") {
   });
 
   it("opens staging's issue as before when the promotion's will not take a new title", () => {
-    const r = report("staging", true, { issues: [open(5, CANDIDATE, [BOT])], jobs: FUZZ, refuseRetitle: true });
+    const r = report("staging", true, { issues: [open(5, CANDIDATE, [BOT])], jobs: E2E, refuseRetitle: true });
     expect(r.status, r.output).toBe(0);
     expect(r.state.issues.map((i) => [i.number, i.title])).toEqual([[5, CANDIDATE], [6, DAILY]]);
     expect(handed(r.state.issues[1] as ReportIssue)).toBe(true);
@@ -1462,7 +1540,7 @@ if (pos[0] === "api") {
   });
 
   it("opens staging's issue for the bot when neither is open, and comments on it when it is", () => {
-    const first = report("staging", true, { issues: [], jobs: FUZZ });
+    const first = report("staging", true, { issues: [], jobs: E2E });
     expect(first.status, first.output).toBe(0);
     expect(first.state.issues.map((i) => i.title)).toEqual([DAILY]);
     expect(handed(first.state.issues[0] as ReportIssue)).toBe(true);
