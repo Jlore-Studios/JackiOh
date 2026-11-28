@@ -22045,6 +22045,7 @@
       "run_id": "46118541606",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 640,
       "started_at": "2026-11-28T06:51:29Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -44947,9 +44948,33 @@
         "title": "Patch: End turn keeps reading a move as left while a card is picked up or an attacker is aimed, so it no longer pulses as if the turn is done and Confirm end turn still asks",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "60039074ce46e2c7d142a95016df1dd68ff726ff",
+        "issue": 5265,
+        "merged_at": "2026-11-28T07:22:54Z",
+        "n": 640,
+        "pr": 5281,
+        "queued_at": "2026-11-28T07:22:54Z",
+        "sha": "11172e7925707e8a99db7775d066553eae1e2db6",
+        "status": "queued",
+        "title": "Patch: a card change that outgrows the daily fuzz's seed count fails its own pull request, not the next daily run",
+        "tries": 0
       }
     ],
-    "count": 639
+    "count": 640
   },
   "statistics": {
     "at": "2026-11-28T07:17:46Z"
