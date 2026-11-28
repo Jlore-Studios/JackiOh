@@ -22073,6 +22073,13 @@
     "5284": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-28T07:37:00Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: the change is client-only presentation in one module (apps/web/src/audio/engine.ts) plus its test, a ruling note and a doc line, about 6 files."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
