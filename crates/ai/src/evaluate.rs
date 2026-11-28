@@ -1631,8 +1631,8 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// (`can_swing`; with `w.deft_defense_attacks` a Deft unit in Defense Position too, R49), ascending by attack.
 /// Taunts soak the attackers they bind (`damage_past_taunts_with`, in the opponent's better order with
 /// `w.best_attack_order_past_taunts`, R3937000; a third with `w.giga_cleave_read`, R4257000); each remaining
-/// attack goes through `subsystems::projected_hero_damage` (armor, which a Pierce hit skips, R346, and the
-/// Anti-oneshot cap), summed.
+/// attack goes through `subsystems::projected_hero_damage` (`projected_hero_damage_worn` with
+/// `w.armor_wear_read`) (armor, which a Pierce hit skips, R346, and the Anti-oneshot cap), summed.
 /// With `w.gauntlet_bars_face_attacks`, an attack `attack_restriction` bars from the hero (a Unit inside The
 /// Gauntlet, R1849005) lands nothing past the Taunts. With `w.brittle_crumbles_before_swing`, a unit its own
 /// Brittle tick destroys first counts none (`crumbles_before_swing`, R3793000), read as at the end of the turn
@@ -1645,7 +1645,9 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// (R4402000), an attacker a Taunt's strike back destroys swings no more, and a Frenzy one that destroys the
 /// Taunt it attacked and survives has its swings back to `attacks_per_turn`; an exile and a Cleave splash's
 /// kill free none. With `w.splash_trample_read` (R4805000), a Cleave splash lands on every unit it strikes,
-/// and a Trample attacker's tramples over each onto the hero.
+/// and a Trample attacker's tramples over each onto the hero. With `w.armor_wear_read` (R5228000), each hit on
+/// the hero, a Trample excess included, meets the hero's Armor less the points the walk's earlier hits wore off
+/// it (R5183000).
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     face_threat_from(state, attacker, w, false)
 }
@@ -1787,10 +1789,12 @@ pub fn damage_past_taunts(
 /// splash's kill free none. With `w.splash_trample_read` (R4805000), a Cleave splash also meets each unit
 /// that binds nothing more (one without Taunt, a Taunt the walk has passed) as the walk left it, spending
 /// the pools, and a Trample attacker's sends what it deals beyond that unit's health to the hero (§4.4
-/// step 9). With `w.damage_rider_read` too (R5229000), each hit on the hero that leaves it life adds its
-/// source's Burn rider (§4.4 step 7, `riders_of`), and that Burn counts as one more unpierced hit after the
-/// attacks, the tick at the turn's end (R4154000), through what the pools have left; a Toxic rider ticks at
-/// the hero's own turn start (R3540001) and counts nothing here.
+/// step 9). With `w.armor_wear_read` (R5228000), each hit on the hero, a Trample excess included, meets the
+/// hero's Armor less the points the walk's earlier hits wore off it (R5183000). With `w.damage_rider_read`
+/// too (R5229000), each hit on the hero that leaves it life adds its source's Burn rider (§4.4 step 7,
+/// `riders_of`), and that Burn counts as one more unpierced hit after the attacks, the tick at the turn's
+/// end (R4154000), through what the pools and the worn Armor have left; a Toxic rider ticks at the hero's
+/// own turn start (R3540001) and counts nothing here.
 pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
@@ -1859,6 +1863,33 @@ impl WalkPools {
     }
 }
 
+/// R5228000: the hero a walk's hits land on, and the points of its own Armor they have worn off (R5183000).
+struct HeroHits {
+    hero: PlayerId,
+    wear: bool,
+    worn: i32,
+}
+
+impl HeroHits {
+    fn new(hero: PlayerId, w: &EvalWeights) -> Self {
+        Self {
+            hero,
+            wear: w.armor_wear_read,
+            worn: 0,
+        }
+    }
+
+    /// What a hit of `amount` deals the hero (§4.4 steps 2 and 3): through the Armor the walk's earlier hits
+    /// left with `armor_wear_read`, through the whole Armor without it.
+    fn hit(&mut self, state: &GameState, amount: i32, pierce: bool) -> i32 {
+        if self.wear {
+            subsystems::projected_hero_damage_worn(state, self.hero, amount, pierce, &mut self.worn)
+        } else {
+            subsystems::projected_hero_damage(state, self.hero, amount, pierce)
+        }
+    }
+}
+
 /// The order `soak_past_taunts` sends each Taunt's bound attackers in (R3937000, R4257000).
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum WalkOrder {
@@ -1897,6 +1928,8 @@ fn soak_past_taunts(
     let mut total = 0;
     // R4064000: what the defender's pools have left as the walk's hits land, in the order it counts them.
     let mut pool = pools.defender;
+    // R5228000: the Armor the walk's hits have worn off the hero, in the order it counts them.
+    let mut hero = HeroHits::new(defender, w);
     // R4402000: each attacker's standing once a Taunt's strike back meets it, with `w`'s flag only.
     let mut standing: IndexMap<&str, AttackerStand> = IndexMap::new();
     // R4805000: the units a splash meets that bind nothing more (no Taunt, a Taunt the walk has passed, a
@@ -2026,8 +2059,7 @@ fn soak_past_taunts(
             }
             // Step 9: what Trample lands beyond the Taunt's health is a hit on the hero (R63).
             if has_keyword(&keywords, KeywordKind::Trample) && dealt > stands[i].health {
-                let excess =
-                    subsystems::projected_hero_damage(state, defender, dealt - stands[i].health, pierce);
+                let excess = hero.hit(state, dealt - stands[i].health, pierce);
                 total += soaked(&mut pool, excess);
             }
             // The splash belongs to the attack rather than to the hit (R63), so it lands even when the hit on
@@ -2058,7 +2090,7 @@ fn soak_past_taunts(
                             });
                             if let Some(stand) = met.as_mut() {
                                 let (to_hero, kills) =
-                                    splash_onto(state, defender, &from, attack, tramples, stand, &mut pool);
+                                    splash_onto(state, &mut hero, &from, attack, tramples, stand, &mut pool);
                                 total += to_hero;
                                 if kills {
                                     let left = left_behind(state, stand, exiling, w);
@@ -2071,7 +2103,7 @@ fn soak_past_taunts(
                     // Every stand is a Taunt: only Taunts enter the walk, and a Reborn body without one leaves it.
                     let (to_hero, kills) = splash_onto(
                         state,
-                        defender,
+                        &mut hero,
                         &from,
                         attack,
                         tramples,
@@ -2161,20 +2193,14 @@ fn soak_past_taunts(
             continue;
         }
         let pierce = pierces(state, Some(attacker), None);
-        let dealt = soaked(
-            &mut pool,
-            subsystems::projected_hero_damage(state, defender, *hit, pierce),
-        );
+        let dealt = soaked(&mut pool, hero.hit(state, *hit, pierce));
         total += dealt;
         if pools.read && w.damage_rider_read && total < hero_life {
             rider_burn = rider_burn.saturating_add(riders_of(state, attacker).after(dealt).0);
         }
     }
     if rider_burn > 0 {
-        total += soaked(
-            &mut pool,
-            subsystems::projected_hero_damage(state, defender, rider_burn, false),
-        );
+        total += soaked(&mut pool, hero.hit(state, rider_burn, false));
     }
     (total, breaker_behind, cleave_behind)
 }
@@ -2191,11 +2217,12 @@ fn dealt_to(state: &GameState, attack: i32, stand: &TauntStand, pierce: bool) ->
 }
 
 /// One Cleave splash of `attack` from `from` on `stand` as the walk left it (§4.4 step 10), through `pool`
-/// (R4064000); with `tramples`, what it deals beyond the stand's health hits `defender`'s hero (step 9, R63).
-/// It pops a shield or takes what it deals off the health. The hero damage, and whether it destroys the stand.
+/// (R4064000); with `tramples`, what it deals beyond the stand's health hits the hero, through the Armor `hero`
+/// has left (step 9, R63, R5228000). It pops a shield or takes what it deals off the health. The hero damage,
+/// and whether it destroys the stand.
 fn splash_onto(
     state: &GameState,
-    defender: PlayerId,
+    hero: &mut HeroHits,
     from: &Side,
     attack: i32,
     tramples: bool,
@@ -2209,8 +2236,7 @@ fn splash_onto(
         return (0, false);
     }
     let to_hero = if tramples && splash.dealt > stand.health {
-        let excess =
-            subsystems::projected_hero_damage(state, defender, splash.dealt - stand.health, from.pierce);
+        let excess = hero.hit(state, splash.dealt - stand.health, from.pierce);
         soaked(pool, excess)
     } else {
         0

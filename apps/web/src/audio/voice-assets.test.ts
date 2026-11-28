@@ -116,7 +116,7 @@ const REQUIRED_KEYS: readonly string[] = Object.entries(CATALOG)
   .filter(voicedNow);
 
 /**
- * #2498: `table` with each voiced hook's text (a trigger's lines) and each portrait's five lines
+ * #2498: `table` with each voiced hook's text (a trigger's lines, a pool's, R5188000) and each portrait's five lines
  * taken from `voiceText` (`voice-text.json`), where the table has none of its own: gen-voice.mjs's
  * join, written again here.
  */
@@ -127,7 +127,7 @@ function withLines(table: Json, voiceText: Json): Json {
     if (!isRecord(entry) || !isRecord(own)) continue;
     for (const [hook, assignment] of Object.entries(entry)) {
       if (!isRecord(assignment) || assignment.voice === undefined || !Object.hasOwn(own, hook)) continue;
-      if (hook === "trigger") assignment.lines ??= own[hook];
+      if (hook === "trigger" || Array.isArray(own[hook])) assignment.lines ??= own[hook];
       else assignment.text ??= own[hook];
     }
   }
@@ -156,13 +156,20 @@ function voicesOf(table: Json): Record<string, Json> {
   return table.voices as Record<string, Json>;
 }
 
-/** The keys a table voices: `<defId>-<hook>` for every hook whose assignment names a voice, and one `<defId>-trigger<n>` key per trigger line (R1088). */
+/**
+ * The keys a table voices: `<defId>-<hook>` for every hook whose assignment names a voice, one
+ * `<defId>-trigger<n>` key per trigger line (R1088), and a pool's `<defId>-<hook>` then `<defId>-<hook><n>`
+ * from 2 (R5188000).
+ */
 function voicedKeys(table: Json): string[] {
   return Object.entries(cardsOf(table)).flatMap(([defId, entry]) =>
     Object.entries(entry).flatMap(([hook, assignment]) => {
       if (!isRecord(assignment) || assignment.voice === undefined) return [];
       if (hook === "trigger" && Array.isArray(assignment.lines)) {
         return (assignment.lines as unknown[]).map((_, i) => `${defId}-trigger${i + 1}`);
+      }
+      if (Array.isArray(assignment.lines)) {
+        return (assignment.lines as unknown[]).map((_, i) => (i === 0 ? `${defId}-${hook}` : `${defId}-${hook}${i + 1}`));
       }
       return [`${defId}-${hook}`];
     }),
@@ -234,13 +241,17 @@ function expectedHash(key: string, table: Json = AUDIO): string | null {
   }
   const entry = cards[defId];
   if (!isRecord(entry)) return null;
-  // R1088: `trigger<n>` resolves to the n-th line of the card's trigger list.
-  const trigger = /^trigger([0-9]+)$/.exec(line);
-  const assignment = trigger !== null ? entry.trigger : entry[line];
+  // R1088: `trigger<n>` resolves to the n-th line of the card's trigger list. R5188000: any other hook's
+  // `<hook><n>`, n from 2, to the n-th line of its pool, and a bare hook to its text or its pool's first.
+  const numbered = /^([A-Za-z]+?)([0-9]+)$/.exec(line);
+  const hook = numbered?.[1] ?? line;
+  const n = numbered === null ? 1 : Number(numbered[2]);
+  if (hook === "trigger" ? numbered === null : numbered !== null && n < 2) return null;
+  const assignment = entry[hook];
   if (!isRecord(assignment) || typeof assignment.voice !== "string") return null;
   const voice = voices[assignment.voice];
   if (!isRecord(voice)) return null;
-  const text = trigger !== null ? (assignment.lines as unknown[])?.[Number(trigger[1]) - 1] : assignment.text;
+  const text = Array.isArray(assignment.lines) ? (assignment.lines as unknown[])[n - 1] : numbered === null ? assignment.text : undefined;
   if (typeof text !== "string") return null;
   if (voice.backend === "sapi") {
     return sapiHash({ voice: voice.voice, rate: voice.rate, semitones: voice.semitones, filter: voice.filter, text });
@@ -306,7 +317,7 @@ function runCheck(extraArgs: readonly string[] = []): CheckRun {
 }
 
 /** A problem line starts with the key it is about (Surface: "each starting with the key"). */
-const KEY_AT_START = /^((?:core|classic|classicplus|meditative|meditativeplus|stinkyscape|stinkyscapeplus|traininggrounds|boss)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:play|attack|death|cast|trigger[0-9]+))(?![a-z0-9])/;
+const KEY_AT_START = /^((?:core|classic|classicplus|meditative|meditativeplus|stinkyscape|stinkyscapeplus|traininggrounds|boss)-[a-z0-9]+(?:-[a-z0-9]+)*-(?:(?:play|attack|death|cast|startOfTurn|endOfTurn|whenever|activate|hurt|hit)[0-9]*|trigger[0-9]+))(?![a-z0-9])/;
 
 function reportedKeys(run: CheckRun): string[] {
   const keys = new Set<string>();
@@ -481,8 +492,8 @@ describe("the committed voice files (B35)", () => {
 });
 
 describe("the voice budget (B36)", () => {
-  it("B36 R501 R1448 R1884000 R3596000 fits the whole set into VOICE_BUDGET_BYTES (24 MiB), counted in 4 KiB blocks", () => {
-    expect(VOICE_BUDGET_BYTES, "the budget R3596000 fixes").toBe(24 * 1024 * 1024);
+  it("B36 R501 R1448 R1884000 R3596000 R5188001 fits the whole set into VOICE_BUDGET_BYTES (32 MiB), counted in 4 KiB blocks", () => {
+    expect(VOICE_BUDGET_BYTES, "the budget R5188001 fixes").toBe(32 * 1024 * 1024);
     const sizes = EXPECTED_KEYS.map((key) => sizeOnDisk(key));
     expect(sizes.filter((size) => size === null), "every expected file exists to be measured").toEqual([]);
     const onDisk = sizes.reduce<number>((sum, size) => sum + Math.ceil((size ?? 0) / BLOCK) * BLOCK, 0);
@@ -505,18 +516,21 @@ describe("the move to card-audio.json5 (R655)", () => {
     expect(wrong, "lines whose voice or text changed in the move").toEqual([]);
   });
 
-  it("R655 R1448 leaves no hook that is only an effect: core-066's attack, once only its rumble, now speaks too", () => {
+  it("R655 R1448 R5188000 leaves no play, attack, death or cast hook that is only an effect: core-066's attack, once only its rumble, now speaks too", () => {
     expect(cardsOf(AUDIO)["core-066"]?.attack, "core-066's attack hook").toEqual({
       voice: "brute",
       text: "Rock bottom!",
       effect: "rumble",
     });
+    // R5188000: a recurring hook may be an effect alone, as the four proof cards' are.
+    const spoken = new Set(["play", "attack", "death", "cast"]);
     const effectOnly = Object.entries(cardsOf(AUDIO)).flatMap(([defId, entry]) =>
       Object.entries(entry)
-        .filter(([, assignment]) => isRecord(assignment) && assignment.voice === undefined)
+        .filter(([hook, assignment]) => spoken.has(hook) && isRecord(assignment) && assignment.voice === undefined)
         .map(([hook]) => `${defId}-${hook}`),
     );
-    expect(effectOnly, "hooks that name no voice").toEqual([]);
+    expect(effectOnly, "spoken hooks that name no voice").toEqual([]);
+    expect(cardsOf(AUDIO)["core-037"]?.startOfTurn, "Gravedigger's start of turn renders nothing").toEqual({ effect: "crumble" });
   });
 });
 

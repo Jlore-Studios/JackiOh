@@ -177,6 +177,9 @@ A Cleave splash in the walk lands on every unit it strikes. A unit without Taunt
 passed, is met as its earlier hits and splashes left it: gone once destroyed, or back as its Reborn body. Each
 splash spends the pools in the engine's order, and a Trample attacker's sends what it deals beyond the unit's
 health to the hero (§4.4 step 9) (`splash_trample_read`, R4805000, #4805; off in `GREEDY_EVAL`).
+Each hit on the defending hero in the walk meets the Armor its earlier hits have worn off it (R5183000); a
+Pierce hit, an aura's Armor and a hero immune to damage wear nothing (`armor_wear_read`, R5228000, #5228; off
+in `GREEDY_EVAL`).
 A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b
@@ -552,6 +555,8 @@ ships before the AI is trained on it is listing it there. It held the Stinkyscap
 (issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000), and is
 empty since. No deal is shaped: the unban lane's dealt-quality table and the option that read it are
 removed (R4702001), so practice, the quality gates and both seats of an arena deal by one rule (R976000).
+A sweep timeout counts a decision re-timed over `AI_SWEEP.decision_ms` × `retime_margin` (1.25, 2,500 ms)
+and, apart in `capped_games`, a game past `max_actions` (R5248000); the reason prints the two apart.
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand, and
 never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block

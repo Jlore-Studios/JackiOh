@@ -15,6 +15,7 @@ import {
   HIDDEN_DEF_ID,
   PAIR_OFFSET_MS,
   RIFFLE_SOUND_DELAY_MS,
+  TRIGGER_LINE_CHANCE,
   VOICE_DELAY_MS,
   VOICE_PRIORITY,
 } from "./constants.ts";
@@ -977,6 +978,156 @@ describe("R655 a card's effect is sent on its hook's moment, through the directo
     for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
 
     expect(sink.sent.filter((cue) => cue.kind !== "sfx")).toEqual([]);
+  });
+});
+
+describe("R5188000 a recurring hook's effect every time, its line the first time and then by chance once a turn", () => {
+  /** #91 with recurring hooks, each a line and an effect; #5 a Spell whose damage hits. */
+  const HOOKED = "core-091";
+  const REC_LINES: CardAudioTable = {
+    voices: LINES.voices,
+    effects: { puff: { sfx: "poof", pitch: 0.7, gain: 1 }, tick: { sfx: "clockTick", pitch: 1, gain: 1 } },
+    cards: {
+      ...LINES.cards,
+      [HOOKED]: {
+        kind: "unit",
+        whenever: { voice: "guard", text: "Again.", effect: "puff" },
+        activate: { voice: "guard", text: "On it.", effect: "tick" },
+        hurt: { voice: "guard", text: "Ow.", effect: "puff" },
+        hit: { voice: "guard", text: "Take that.", effect: "tick" },
+      },
+      "core-005": { kind: "spell", cast: { effect: "tick" }, hit: { voice: "plain", text: "Burn.", effect: "tick" } },
+    },
+    emotes: {},
+  };
+  const marker = (hook: "whenever" | "activate", sourceId = "ua"): GameEvent => ({
+    type: "hookResolving",
+    sourceId,
+    defId: HOOKED,
+    controller: "p1",
+    hook,
+  });
+  const hit = (sourceId: string | null, targetId: string, amount = 1): GameEvent => ({ type: "damage", sourceId, targetId, amount, combat: false });
+  const turn = (player: PlayerId, n: number): GameEvent => ({ type: "turnStarted", player, turn: n });
+  /** Your #91 (`ua`) and the other seat's (`ub`). */
+  const boardView = (units: { ua?: boolean; ub?: boolean } = { ua: true, ub: true }): PlayerView =>
+    baseView({
+      you: emptySide("p1", { units: [units.ua === true ? unit("p1", { instanceId: "ua", defId: HOOKED }) : null, null, null, null, null] }),
+      opponent: emptySide("p2", {
+        hand: { count: 4 },
+        units: [units.ub === true ? unit("p2", { instanceId: "ub", defId: HOOKED }) : null, null, null, null, null],
+      }),
+    });
+
+  /** A director over REC_LINES whose cosmetic rng hands out `draws` in turn (then 0.99), counting each draw. */
+  function recRig(draws: number[] = []): { sink: Recorder; director: SoundDirector; drawn: () => number } {
+    const sink = recorder();
+    let count = 0;
+    const rng = (): number => {
+      count += 1;
+      return draws.shift() ?? 0.99;
+    };
+    return { sink, director: createSoundDirector(sink, REC_LINES, undefined, undefined, rng), drawn: () => count };
+  }
+
+  /** Feeds one action's view (its events after a distinct marker of its own) and flushes it at idle. */
+  function step(director: SoundDirector, n: number, events: GameEvent[], view: PlayerView = boardView()): void {
+    director.onView(withEvents(view, [mana("p2", n), ...events]));
+    director.onIdle();
+  }
+
+  it("R5188000 a recurring line speaks the first time, then at most once a turn per card by TRIGGER_LINE_CHANCE; its effect every time", () => {
+    // 0.9 >= TRIGGER_LINE_CHANCE stays silent; 0.1 < it speaks.
+    expect(0.9).toBeGreaterThanOrEqual(TRIGGER_LINE_CHANCE);
+    expect(0.1).toBeLessThan(TRIGGER_LINE_CHANCE);
+    const { sink, director, drawn } = recRig([0.9, 0.1]);
+    director.onView(boardView());
+    const effects = (): number => sink.sent.filter((c) => c.kind === "effect" && c.hook === "whenever").length;
+    const said = (): string[] => linesSent(sink).filter((line) => line.startsWith(HOOKED));
+
+    // The first time in the game: it speaks, drawing nothing.
+    step(director, 1, [marker("whenever")]);
+    expect(said()).toEqual([`${HOOKED}/whenever!${String(VOICE_PRIORITY.recurring)}`]);
+    expect([effects(), drawn()]).toEqual([1, 0]);
+
+    // Again this turn: the card has spoken, so its effect plays alone, drawing nothing.
+    step(director, 2, [marker("whenever")]);
+    expect(said()).toHaveLength(1);
+    expect([effects(), drawn()]).toEqual([2, 0]);
+
+    // A new turn: a draw at or over the chance keeps it silent, one under it speaks, then the turn is spent.
+    step(director, 3, [turn("p2", 4), marker("whenever")]);
+    expect(said()).toHaveLength(1);
+    expect([effects(), drawn()]).toEqual([3, 1]);
+    step(director, 4, [marker("whenever")]);
+    expect(said()).toHaveLength(2);
+    expect([effects(), drawn()]).toEqual([4, 2]);
+    step(director, 5, [marker("whenever")]);
+    expect(said()).toHaveLength(2);
+    expect([effects(), drawn()]).toEqual([5, 2]);
+
+    // Another of its hooks, the first time it fires, speaks even in a turn the card has spoken in.
+    step(director, 6, [marker("activate")]);
+    expect(said().at(-1)).toBe(`${HOOKED}/activate!${String(VOICE_PRIORITY.recurring)}`);
+    expect(drawn()).toBe(2);
+    // The other seat's copy is its own card: its first Whenever speaks too.
+    step(director, 7, [marker("whenever", "ub")]);
+    expect(said()).toHaveLength(4);
+  });
+
+  it("R5188000 a damaged unit gone from its action's view plays no hurt", () => {
+    const { sink, director } = recRig();
+    director.onView(boardView());
+    // It dies of the hit: the view the action ends in holds it no more.
+    step(director, 1, [hit(null, "ua", 9), destroyed(HOOKED, "ua")], boardView({ ub: true }));
+    expect(sink.sent.filter((c) => c.kind !== "sfx" && (("hook" in c && c.hook === "hurt") || ("line" in c && c.line === "hurt")))).toEqual([]);
+    // Its twin takes a hit it survives: it hurts, effect and line.
+    step(director, 2, [hit(null, "ub", 1)], boardView({ ub: true }));
+    expect(sent(sink).filter((cue) => cue.includes("/hurt"))).toEqual([
+      `effect:${HOOKED}/hurt@0`,
+      `voice:${HOOKED}/hurt@${String(CARD_EFFECT_DELAY_MS)}`,
+    ]);
+  });
+
+  it("R5188000 an entry sends one effect per card and hook", () => {
+    const { sink, director } = recRig();
+    const first = boardView();
+    director.onView(first);
+    const d1 = hit("ub", "ua");
+    const d2 = hit("ua", "ub");
+    const view = withEvents(first, [d1, d2]);
+    director.onView(view);
+    const entry = must(entriesOf(view, [d1])[0], "a damage entry");
+    // One entry that animates both hits, as a cleave's or a swing's both sides are.
+    director.onEntryStart({ ...entry, events: [d1, d2] });
+    const effects = sink.sent.filter((c) => c.kind === "effect").map((c) => `${c.defId}/${"hook" in c ? c.hook : ""}`);
+    expect(effects).toEqual([`${HOOKED}/hurt`, `${HOOKED}/hit`]);
+    // Each card's first hurt and first hit still speak: the effect is what the entry holds to one.
+    expect(linesSent(sink).filter((line) => line.startsWith(HOOKED))).toHaveLength(4);
+  });
+
+  it("R5188000 a Spell no view holds hits as its own cardPlayed named it, and the sentinel's never", () => {
+    const { sink, director } = recRig();
+    const first = boardView();
+    director.onView(first);
+    /** Each entry the runner plans for `events`, started in turn. */
+    const animate = (events: GameEvent[], n: number): void => {
+      const view = withEvents(first, [mana("p2", n), ...events]);
+      director.onView(view);
+      for (const entry of entriesOf(view, view.events)) director.onEntryStart(entry);
+    };
+    animate([played("core-005", "s1"), hit("s1", "hero-p2", 3)], 1);
+    expect(sent(sink).filter((cue) => cue.includes("core-005/hit"))).toEqual([
+      "effect:core-005/hit@0",
+      `voice:core-005/hit@${String(CARD_EFFECT_DELAY_MS)}`,
+    ]);
+    // The other seat's hidden card names nothing, even an instance this seat's events once named.
+    const before = sink.sent.length;
+    animate([played(HIDDEN_DEF_ID, "s1", "p2"), hit("s1", "hero-p1", 3)], 2);
+    expect(sink.sent.slice(before).filter((c) => c.kind === "effect" && c.hook === "hit")).toEqual([]);
+    // A new turn forgets what this one's events named.
+    animate([played("core-005", "s2"), turn("p2", 4), hit("s2", "hero-p1", 3)], 3);
+    expect(sink.sent.slice(before).filter((c) => c.kind === "effect" && c.hook === "hit")).toEqual([]);
   });
 });
 

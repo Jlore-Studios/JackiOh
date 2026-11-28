@@ -17,6 +17,10 @@
 // (`starshipSounded`): what is flushed unstarted (Reduce Motion) keeps it.
 // SIGNATURES (R3389000): the entry a signature's card makes its entrance in sends its bed as it starts
 // (signatureBeds.ts), beside its intro sting and its events' own sounds.
+// RECURRING HOOKS (R5188000): a card's turn, Whenever, Activate, `hurt` and `hit` hooks speak their line
+// the first time each fires in the game, then at most once a turn per card by TRIGGER_LINE_CHANCE
+// (`lineGate`); their effect plays every time, once per entry. A `damage` whose Unit is gone from the
+// view its action ends in plays no `hurt` (`leftField`).
 
 import type { GameEvent, PlayerId, PlayerView, UnitView } from "@jackioh/shared";
 
@@ -27,14 +31,16 @@ import {
   HIDDEN_DEF_ID,
   PAIR_OFFSET_MS,
   PLAY_STACK_MAX,
+  RECURRING_HOOKS,
   RIFFLE_SOUND_DELAY_MS,
+  TRIGGER_LINE_CHANCE,
 } from "./constants.ts";
 import { cuesFor, type CueCard, type CueContext, type PlayFrame } from "./cues.ts";
 import { setPieceBed } from "./setPieceBeds.ts";
 import { signatureBed } from "./signatureBeds.ts";
 import { starshipSounds } from "./starshipSounds.ts";
 import { soundTablesNow } from "./soundTablesLoader.ts";
-import type { CardAudioTable, SoundCue, SoundSink } from "./types.ts";
+import type { CardAudioTable, CardHook, SoundCue, SoundSink } from "./types.ts";
 
 const EMPTY_CARD_AUDIO: CardAudioTable = { voices: {}, effects: {}, cards: {}, emotes: {} };
 
@@ -111,6 +117,50 @@ export function createSoundDirector(
   let drawnLast: { instanceId: string; player: PlayerId } | null = null;
   /** R3334002, R3334003: the events whose Starship sound has been sent in place of their row's. */
   const starshipSent = new WeakSet<GameEvent>();
+  /**
+   * R5188000: every `<card>|<hook>` whose recurring hook has fired, for its first line. Kept for the
+   * director's life, one board's game, a hand-over included.
+   */
+  const heardHooks = new Set<string>();
+  /** R5188000: the cards whose recurring line has spoken this turn. */
+  const spokeThisTurn = new Set<string>();
+  /** R5188000: the defId this seat's events last named each instance by this turn, never the sentinel (`CueContext.named`). */
+  const named = new Map<string, string>();
+  /** R5188000: the `damage` events whose Unit is gone from the view their action ends in. */
+  const leftField = new WeakSet<GameEvent>();
+
+  /** R5188000: whether `card`'s recurring `hook` speaks its line now (`CueContext.lineGate`). */
+  function lineGate(card: string, hook: CardHook): boolean {
+    const key = `${card}|${hook}`;
+    if (!heardHooks.has(key)) {
+      heardHooks.add(key);
+      spokeThisTurn.add(card);
+      return true;
+    }
+    if (spokeThisTurn.has(card) || rng() >= TRIGGER_LINE_CHANCE) return false;
+    spokeThisTurn.add(card);
+    return true;
+  }
+
+  /** R5188000: what this seat's event names its card as, kept for a later `hit` (R203: the sentinel forgets it). */
+  function remember(event: GameEvent): void {
+    let instanceId: string;
+    switch (event.type) {
+      case "cardPlayed":
+      case "summoned":
+      case "trapFired":
+        instanceId = event.instanceId;
+        break;
+      case "hookResolving":
+        instanceId = event.sourceId;
+        break;
+      default:
+        return;
+    }
+    if (instanceId === "" || instanceId === HIDDEN_DEF_ID) return;
+    if (event.defId === HIDDEN_DEF_ID) named.delete(instanceId);
+    else named.set(instanceId, event.defId);
+  }
 
   function ctx(view: PlayerView, castOnDraw: string | null): CueContext {
     return {
@@ -124,6 +174,9 @@ export function createSoundDirector(
       castOnDraw: (instanceId) => castOnDraw !== null && instanceId === castOnDraw,
       random: rng,
       starshipSounded: (event) => starshipSent.has(event),
+      lineGate,
+      survives: (event) => !leftField.has(event),
+      named: (instanceId) => named.get(instanceId),
       ...(card === undefined ? {} : { card }),
     };
   }
@@ -141,6 +194,8 @@ export function createSoundDirector(
       case "turnStarted":
         plays = [];
         drawnLast = null;
+        spokeThisTurn.clear();
+        named.clear();
         return;
       case "drawn":
         drawnLast = { instanceId: event.instanceId, player: event.player };
@@ -168,6 +223,7 @@ export function createSoundDirector(
   function resolve(event: GameEvent, view: PlayerView): readonly SoundCue[] {
     const cast = castAsDrawn(event);
     const cues = cuesFor(event, ctx(view, cast));
+    remember(event);
     if (event.type === "manaChanged") lastMana.set(event.player, event.current);
     if (event.type === "cardPlayed" && event.instanceId !== HIDDEN_DEF_ID) played.add(event.instanceId);
     follow(event, cast !== null);
@@ -251,6 +307,8 @@ export function createSoundDirector(
         played.clear();
         plays = [];
         drawnLast = null;
+        spokeThisTurn.clear();
+        named.clear();
         for (const event of view.events) known.add(event);
         seen = view;
         return;
@@ -260,6 +318,7 @@ export function createSoundDirector(
       const shuffle = lastShuffleOf(batch);
       if (shuffle !== null) riffleAfter.add(shuffle);
       for (const event of batch) {
+        if (event.type === "damage" && event.amount > 0 && findUnit(view, event.targetId) === null) leftField.add(event);
         if (voiced.has(event) || isOwed(event)) continue;
         owed.push({ event, view: planned });
       }
@@ -309,6 +368,8 @@ export function createSoundDirector(
         return;
       }
 
+      // R5188000: a recurring hook's effect plays once per entry, however many of its events the entry animates.
+      const effectsSent = new Set<string>();
       entry.events.forEach((event, k) => {
         const index = owed.findIndex((item) => item.event === event);
         const item = index >= 0 ? owed[index] : undefined;
@@ -319,7 +380,14 @@ export function createSoundDirector(
         const view = item?.view ?? seen;
         if (view === null) return;
         const offset = k > 0 ? PAIR_OFFSET_MS : 0;
-        for (const cue of resolve(event, view)) send(cue, cue.delayMs + offset);
+        for (const cue of resolve(event, view)) {
+          if (cue.kind === "effect" && RECURRING_HOOKS.has(cue.hook)) {
+            const sent = `${cue.defId}|${cue.hook}`;
+            if (effectsSent.has(sent)) continue;
+            effectsSent.add(sent);
+          }
+          send(cue, cue.delayMs + offset);
+        }
       });
     },
 

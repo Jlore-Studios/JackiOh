@@ -710,7 +710,9 @@ reflects the store and writes to it, and `settings-reset` restores the defaults.
 no controls isn't rendered, and an `audio` slot makes `settings-section-audio` appear with the
 slot inside it.
 
-B25. With `confirmEndTurn` on and `hasMovesLeft(highlight)`, the first click on `end-turn` sets
+B25. With `confirmEndTurn` on and a move left (`Game` passes `movesLeft`, `hasMovesLeft` of the idle
+highlight, so a selection in flight counts as one left, #5230; `Board` falls back to
+`hasMovesLeft(highlight)` without it), the first click on `end-turn` sets
 `data-confirm="armed"` and calls no `onControl`, the second calls `onControl("end-turn")`, and a
 new `view` disarms it. With the setting off, or no moves left, one click ends the turn.
 

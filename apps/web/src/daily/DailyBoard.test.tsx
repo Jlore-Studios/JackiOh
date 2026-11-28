@@ -6,17 +6,20 @@
 // the read's forecast, and Watch the replay on a finished game's result. R3840000: a game that ended with the
 // count of games waiting on the player unchanged shows as ended on the slow read and when the tab shows again.
 // R3934000: a finished game whose moves the retention purge took opens as its result, not as a board.
+// R5231000: a finished game that paid tells the page once, as the match screen does (R4977000).
 
 import type { ActionBody, AttackForecast, CombatForecast, PlayerView } from "@jackioh/shared";
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { setAudioEngineForTests } from "../audio/engine.ts";
 import { resetAudioSettingsForTests } from "../audio/settings.ts";
 import { fakeAudioEngine } from "../audio/test/fakeAudio.ts";
 import type { AudioEngine } from "../audio/types.ts";
+import { resetProficiencySyncForTests, useProficiencyAccountSync, type ProficiencyAccountApi } from "../cards/proficiencySync.ts";
 import { modifierListTestid } from "../game/ModifierList.tsx";
 import { formatDateTime } from "../i18n/i18n.ts";
+import type { Account } from "../net/gate.ts";
 import type { DailyExpiredGame, DailyGame } from "../net/daily.ts";
 import { paths } from "../net/navigate.ts";
 import { clearReadCache } from "../net/readCache.ts";
@@ -25,6 +28,7 @@ import { resetSettings, writeSettings } from "../settings/store.ts";
 import { baseView, card, emptySide, opponentModifiers, pendingFor, unit, yourModifiers } from "../test/fixtures.ts";
 import { pressBack } from "../test/history.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
+import { settle } from "../test/settle.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { at, refusal, signIn, stubServer, type Call, type Reply } from "../test/stubServer.ts";
 import { dailyConstants } from "../wasm/index.ts";
@@ -833,4 +837,152 @@ describe("#4846 the board never goes backwards", () => {
   // `expired` always replaces a live board: the purge only moves forward, so it is newer than any live
   // board of this game. The reverse needs no test: a live answer cannot land after a shown `expired`
   // (same-path reads join while one is out per R3206000, and once the game is gone nothing reads).
+});
+
+describe("R5231000 a finished daily game's board announces its paid result", () => {
+  const GAME = "/api/daily/games/g-1";
+
+  /** `announceWallet`'s event, counted: the pill reads the wallet again for each. */
+  function watchWallet(): () => number {
+    let count = 0;
+    const onChanged = (): void => {
+      count += 1;
+    };
+    window.addEventListener("jackioh:wallet-changed", onChanged);
+    onTestFinished(() => {
+      window.removeEventListener("jackioh:wallet-changed", onChanged);
+    });
+    return () => count;
+  }
+
+  /** The shared proficiency sync every gated screen mounts, loaded once; the count is the loads after that. */
+  async function watchProficiency(): Promise<() => number> {
+    onTestFinished(() => {
+      resetProficiencySyncForTests();
+    });
+    const load = vi.fn(() => Promise.resolve({ cards: [] }));
+    const api: ProficiencyAccountApi = { load, put: vi.fn(() => Promise.resolve({ cards: [] })) };
+    const account: Account = {
+      kind: "ready",
+      token: "tok-daily-board",
+      me: { profile: { id: "p1", status: "active" }, needsInviteCode: false, emailVerified: true, currentMatchId: null, email: "p1@example.com" },
+    };
+    renderHook(() => {
+      useProficiencyAccountSync(account, api);
+    });
+    await settle();
+    expect(load).toHaveBeenCalledTimes(1);
+    return () => load.mock.calls.length - 1;
+  }
+
+  function finished(over: Partial<DailyGame> = {}): DailyGame {
+    return dailyGame({
+      seq: 8,
+      view: baseView({ result: { winner: "p1", reason: "concede" } }),
+      over: true,
+      hasMove: false,
+      legal: [],
+      holds: [],
+      ...over,
+    });
+  }
+
+  it("R5231000 the player's own action that ends the game announces the wallet and loads the proficiency once", async () => {
+    const wallet = watchWallet();
+    const reloads = await watchProficiency();
+    serve(dailyGame, (call) => (call.method === "POST" ? { status: 200, body: finished() } : undefined));
+    render(<DailyBoard matchId="g-1" />);
+    const endTurn = await screen.findByTestId("end-turn", undefined, SLOW);
+    expect(wallet()).toBe(0);
+    expect(reloads()).toBe(0);
+
+    fireEvent.click(endTurn);
+    await screen.findByTestId("result-overlay", undefined, SLOW);
+    await settle();
+    expect(wallet()).toBe(1);
+    expect(reloads()).toBe(1);
+  });
+
+  it.each([
+    ["on the opponent's move", baseView({ active: "p2", result: { winner: "p1", reason: "concede" } }), false],
+    ["on time", baseView({ active: "p2", result: { winner: "p2", reason: "disconnect" } }), true],
+  ] as const)("R5231000 a reread that finds the game ended %s announces once", async (_when, view, lostOnTime) => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    const wallet = watchWallet();
+    const reloads = await watchProficiency();
+    let ended = false;
+    const running = dailyGame({ hasMove: false, legal: [CONCEDE], view: baseView({ active: "p2" }), holds: [] });
+    serve(() => (ended ? finished({ view, lostOnTime }) : running));
+    render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId("concede", undefined, SLOW);
+    expect(wallet()).toBe(0);
+    expect(reloads()).toBe(0);
+
+    ended = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DAILY_REREAD_MS);
+    });
+    await screen.findByTestId("result-overlay", undefined, SLOW);
+    await settle();
+    expect(wallet()).toBe(1);
+    expect(reloads()).toBe(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DAILY_REREAD_MS);
+    });
+    await settle();
+    expect(wallet()).toBe(1);
+    expect(reloads()).toBe(1);
+  });
+
+  it("R5231000 a board opened on a game already over announces once, and rerenders and the auto-end-turn resend announce nothing more", async () => {
+    writeSettings({ autoEndTurn: false });
+    const wallet = watchWallet();
+    const reloads = await watchProficiency();
+    const server = serve(() => finished());
+    const { rerender } = render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId("result-overlay", undefined, SLOW);
+    await settle();
+    expect(wallet()).toBe(1);
+    expect(reloads()).toBe(1);
+
+    rerender(<DailyBoard matchId="g-1" />);
+    act(() => {
+      writeSettings({ autoEndTurn: true });
+    });
+    await settle();
+    expect(wallet()).toBe(1);
+    expect(reloads()).toBe(1);
+    expect(server.to("GET", GAME).length).toBeGreaterThan(0);
+  });
+
+  it("R5231000 a voided game announces nothing", async () => {
+    const wallet = watchWallet();
+    const reloads = await watchProficiency();
+    serve(() => finished({ view: baseView({ result: { winner: "draw", reason: "voided" } }) }));
+    render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId("result-overlay", undefined, SLOW);
+    await settle();
+    expect(wallet()).toBe(0);
+    expect(reloads()).toBe(0);
+  });
+
+  it("R5231000 an expired game and a running game announce nothing", async () => {
+    const wallet = watchWallet();
+    const reloads = await watchProficiency();
+    serve(() => expiredGame());
+    render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId(dailyTestid.expired, undefined, SLOW);
+    await settle();
+    expect(wallet()).toBe(0);
+    expect(reloads()).toBe(0);
+    cleanup();
+
+    serve(dailyGame);
+    render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId("concede", undefined, SLOW);
+    await settle();
+    expect(wallet()).toBe(0);
+    expect(reloads()).toBe(0);
+  });
 });

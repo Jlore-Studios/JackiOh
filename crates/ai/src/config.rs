@@ -563,6 +563,12 @@ pub struct EvalWeights {
     /// the side it died on (R2618000), and a unit token's summoned X/X kept (R175). Off, the body is the unit
     /// reset to its owner with its printed stats, as before.
     pub reborn_body_read: bool,
+    /// R5228000, #5228: whether the Taunt walk of `damage_past_taunts_with` (so `face_threat`, the threat and
+    /// pressure terms, `wall_switches_priced` and `ready_gap`) wears the defending hero's own Armor 1 per hit it
+    /// meets (§4.4 step 2, R5183000), Trample excesses first and then the free hits, through one count per walk
+    /// (`subsystems::projected_hero_damage_worn`); a Pierce hit, an aura's or a modifier's Armor and a hero
+    /// immune to damage wear nothing. Off, each hit meets the whole Armor, as before.
+    pub armor_wear_read: bool,
     /// R5229000, #5229: whether the static reads of a hit, read with `pool_and_conversion_read`, follow
     /// §4.4 step 7's riders (R3540002, R4783001, `riders_of`): a hit that leaves its target standing adds
     /// the Burn and the Toxic its source's riders state for what it dealt. `blow` reports them on a target
@@ -813,6 +819,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // screen). A deal screen started first was cut by the session's two-hour limit before its tally, with
     // nothing read, so the fork screen, which resumes after a cut, is its one screen.
     reborn_body_read: true,
+    // #5228: on. Its screen, 400 games on improve-dev against the control at 50dd7c8e75, read 198-202, edge
+    // -0.01 (-0.03 to 0.01); inconclusive (R4319000): 4 decided of 200 (won 1, lost 3), 29 diverged; its scene
+    // tests (crates/ai/tests/ai/armor_wear.rs) settle it (training/improve.md, A screen).
+    armor_wear_read: true,
     // #5229: on. Its screen, 400 games on improve-dev against the control at cce57d1033, read 201-199,
     // edge 0.005 (-0.028 to 0.038); inconclusive (R4319000): 11 decided of 200 (won 6, lost 5), 35
     // diverged; its scene tests settle it (training/improve.md, A screen).
@@ -1103,7 +1113,7 @@ pub const AI_EVOLVE_PROBE_NODES: usize = 16;
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
 /// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
 /// `giga_cleave_read`, `strike_back_survival_read`, `splash_trample_read`, `reborn_body_read`,
-/// `damage_rider_read`) is off.
+/// `armor_wear_read`, `damage_rider_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -1127,6 +1137,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     strike_back_survival_read: false,
     splash_trample_read: false,
     reborn_body_read: false,
+    armor_wear_read: false,
     damage_rider_read: false,
     health: 1.0,
     armor_point: 0.8,

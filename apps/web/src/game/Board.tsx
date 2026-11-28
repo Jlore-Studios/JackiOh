@@ -599,6 +599,7 @@ function ControlButton({
 export default function Board({
   view,
   highlight = NO_HIGHLIGHT,
+  movesLeft,
   enemyLabel,
   controlExtras,
   animating,
@@ -643,7 +644,8 @@ export default function Board({
   const [armedFor, setArmedFor] = useState<PlayerView | null>(null);
   const [pressedFor, setPressedFor] = useState<PlayerView | null>(null);
   const [logOpen, setLogOpen] = useState(false);
-  const actionsRemain = hasMovesLeft(highlight);
+  // #5230: the turn's moves when `Game` says them; else the highlight's (a selection in flight lights only its zones or targets).
+  const actionsRemain = movesLeft ?? hasMovesLeft(highlight);
   const needsConfirm = confirmEndTurn && actionsRemain;
   const armed = needsConfirm && armedFor === view;
   const pressed = pressedFor === view;
